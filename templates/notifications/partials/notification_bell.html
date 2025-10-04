@@ -1,0 +1,116 @@
+<!-- Notification Bell Icon for Header -->
+<div class="dropdown" id="notificationBell">
+    <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fas fa-bell fa-lg"></i>
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none;">
+            0
+        </span>
+    </a>
+    <div class="dropdown-menu dropdown-menu-end" style="min-width: 350px; max-height: 500px; overflow-y: auto;">
+        <div class="dropdown-header d-flex justify-content-between align-items-center">
+            <span class="fw-bold">Notifications</span>
+            <a href="{% url 'notifications:notification-center' %}" class="text-decoration-none small">View All</a>
+        </div>
+        <div class="dropdown-divider"></div>
+        <div id="notificationDropdownContent">
+            <div class="text-center py-3">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-footer text-center">
+            <a href="{% url 'notifications:notification-preferences' %}" class="dropdown-item small">
+                <i class="fas fa-cog me-2"></i>Notification Settings
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update notification bell periodically
+function updateNotificationBell() {
+    fetch('{% url "notifications:unread-count" %}')
+        .then(response => response.json())
+        .then(data => {
+            const badge = document.getElementById('notificationBadge');
+            if (data.count > 0) {
+                badge.textContent = data.count > 99 ? '99+' : data.count;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+// Load notifications when dropdown is opened
+document.getElementById('notificationBell').addEventListener('show.bs.dropdown', function() {
+    const content = document.getElementById('notificationDropdownContent');
+    
+    fetch('{% url "notifications:recent-notifications" %}?limit=5')
+        .then(response => response.json())
+        .then(data => {
+            if (data.notifications.length === 0) {
+                content.innerHTML = '<div class="text-center py-3 text-muted"><i class="fas fa-bell-slash mb-2"></i><br>No notifications</div>';
+            } else {
+                let html = '';
+                data.notifications.forEach(notification => {
+                    html += `
+                        <a href="${notification.url}" class="dropdown-item ${!notification.is_read ? 'bg-light' : ''}">
+                            <div class="d-flex align-items-start">
+                                <div class="me-2">
+                                    <i class="fas ${getNotificationIcon(notification.notification_type)} text-primary"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold">${notification.title}</div>
+                                    <small class="text-muted">${notification.message}</small>
+                                    <div class="small text-muted mt-1">
+                                        <i class="fas fa-clock me-1"></i>${getTimeAgo(notification.created_at)}
+                                    </div>
+                                </div>
+                                ${!notification.is_read ? '<span class="badge bg-primary">New</span>' : ''}
+                            </div>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                    `;
+                });
+                content.innerHTML = html;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            content.innerHTML = '<div class="text-center py-3 text-danger">Error loading notifications</div>';
+        });
+});
+
+function getNotificationIcon(type) {
+    const icons = {
+        'appointment': 'fa-calendar',
+        'work_order': 'fa-wrench',
+        'invoice': 'fa-file-invoice',
+        'payment': 'fa-credit-card',
+        'inspection': 'fa-clipboard-check',
+        'inventory': 'fa-boxes',
+        'vehicle': 'fa-car',
+        'system': 'fa-bell'
+    };
+    return icons[type] || 'fa-bell';
+}
+
+function getTimeAgo(isoDate) {
+    const date = new Date(isoDate);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return Math.floor(seconds / 60) + ' minutes ago';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
+    return Math.floor(seconds / 86400) + ' days ago';
+}
+
+// Update bell every 30 seconds
+updateNotificationBell();
+setInterval(updateNotificationBell, 30000);
+</script>

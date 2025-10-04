@@ -1,0 +1,510 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Vehicle Management - Smart Vehicle Repairs{% endblock %}
+
+{% block extra_css %}
+<style>
+    .vehicle-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+    }
+    
+    .vehicle-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+    
+    .filter-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .table-actions .btn {
+        margin-right: 0.25rem;
+    }
+    
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .mileage-display {
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+    }
+    
+    .vehicle-avatar {
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Vehicle Management</h1>
+            <p class="mb-0 text-muted">Manage vehicle information and service history</p>
+        </div>
+        <div>
+            <a href="{% url 'vehicles:vehicle-create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add New Vehicle
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50 mb-1">Total Vehicles</h6>
+                        <h3 class="mb-0">{{ total_vehicles }}</h3>
+                    </div>
+                    <div class="opacity-50">
+                        <i class="fas fa-car fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50 mb-1">Active</h6>
+                        <h3 class="mb-0">{{ active_vehicles }}</h3>
+                    </div>
+                    <div class="opacity-50">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50 mb-1">In Service</h6>
+                        <h3 class="mb-0">{{ in_service_vehicles }}</h3>
+                    </div>
+                    <div class="opacity-50">
+                        <i class="fas fa-wrench fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card" style="background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50 mb-1">This Month</h6>
+                        <h3 class="mb-0">{{ vehicles.count }}</h3>
+                    </div>
+                    <div class="opacity-50">
+                        <i class="fas fa-calendar fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="get" id="filterForm">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Search</label>
+                    <input type="text" name="search" class="form-control" placeholder="VIN, license plate, make, model..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        {% for status_key, status_label in vehicle_statuses %}
+                        <option value="{{ status_key }}" {% if request.GET.status == status_key %}selected{% endif %}>{{ status_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Make</label>
+                    <select name="make" class="form-select">
+                        <option value="">All Makes</option>
+                        {% for make in makes %}
+                        <option value="{{ make }}" {% if request.GET.make == make %}selected{% endif %}>{{ make }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Customer</label>
+                    <select name="customer" class="form-select">
+                        <option value="">All Customers</option>
+                        {% for customer in customers %}
+                        <option value="{{ customer.id }}" {% if request.GET.customer|add:"0" == customer.id %}selected{% endif %}>
+                            {{ customer.user.get_full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Sort By</label>
+                    <select name="sort" class="form-select">
+                        <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Newest First</option>
+                        <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>Oldest First</option>
+                        <option value="year" {% if request.GET.sort == 'year' %}selected{% endif %}>Year (Ascending)</option>
+                        <option value="-year" {% if request.GET.sort == '-year' %}selected{% endif %}>Year (Descending)</option>
+                        <option value="make" {% if request.GET.sort == 'make' %}selected{% endif %}>Make A-Z</option>
+                        <option value="-make" {% if request.GET.sort == '-make' %}selected{% endif %}>Make Z-A</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Year Range</label>
+                    <div class="row g-1">
+                        <div class="col-6">
+                            <input type="number" name="year_from" class="form-control" placeholder="From" value="{{ year_from }}" min="1900" max="2030">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" name="year_to" class="form-control" placeholder="To" value="{{ year_to }}" min="1900" max="2030">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-9 d-flex align-items-end">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-1"></i> Filter
+                        </button>
+                        <a href="{% url 'vehicles:vehicle-list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Clear
+                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-download me-1"></i> Export
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="exportVehicles('csv')">Export as CSV</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="exportVehicles('pdf')">Export as PDF</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Vehicle List -->
+    <div class="card">
+        <div class="card-header bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Vehicle List ({{ vehicles.count }})</h5>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" onclick="showTableView()">
+                        <i class="fas fa-list"></i> Table
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="showCardView()">
+                        <i class="fas fa-th-large"></i> Cards
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <!-- Table View -->
+            <div id="tableView" class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>
+                                <input type="checkbox" id="selectAll">
+                            </th>
+                            <th>Vehicle</th>
+                            <th>Owner</th>
+                            <th>Details</th>
+                            <th>Mileage</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vehicle in vehicles %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="vehicle-checkbox" value="{{ vehicle.id }}">
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="vehicle-avatar avatar-circle me-2">
+                                        {{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</div>
+                                        <small class="text-muted">{{ vehicle.vin }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <div class="fw-bold">{{ vehicle.owner.user.get_full_name }}</div>
+                                    <small class="text-muted">{{ vehicle.owner.user.email }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <div><i class="fas fa-id-card text-muted me-1"></i> {{ vehicle.license_plate }}</div>
+                                    <div><i class="fas fa-palette text-muted me-1"></i> {{ vehicle.exterior_color|default:"N/A" }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="mileage-display">
+                                    {{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}
+                                </div>
+                            </td>
+                            <td>
+                                {% if vehicle.status == 'active' %}
+                                    <span class="badge bg-success status-badge">Active</span>
+                                {% elif vehicle.status == 'in_service' %}
+                                    <span class="badge bg-warning status-badge">In Service</span>
+                                {% elif vehicle.status == 'sold' %}
+                                    <span class="badge bg-info status-badge">Sold</span>
+                                {% elif vehicle.status == 'totaled' %}
+                                    <span class="badge bg-danger status-badge">Totaled</span>
+                                {% else %}
+                                    <span class="badge bg-secondary status-badge">{{ vehicle.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end table-actions">
+                                <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-sm btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'vehicles:vehicle-service-history' vehicle.id %}" class="btn btn-sm btn-outline-info" title="Service History">
+                                    <i class="fas fa-history"></i>
+                                </a>
+                                <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger" title="Delete" 
+                                        data-vehicle-id="{{ vehicle.id }}" 
+                                        data-vehicle-name="{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}"
+                                        onclick="confirmDelete(this.dataset.vehicleId, this.dataset.vehicleName)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="fas fa-car fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No vehicles found</p>
+                                <a href="{% url 'vehicles:vehicle-create' %}" class="btn btn-primary">Add Your First Vehicle</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Card View (Hidden by default) -->
+            <div id="cardView" class="row g-3 p-3" style="display: none;">
+                {% for vehicle in vehicles %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card vehicle-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="vehicle-avatar avatar-circle me-2" style="width: 50px; height: 50px;">
+                                        {{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h6>
+                                        <small class="text-muted">{{ vehicle.vin }}</small>
+                                    </div>
+                                </div>
+                                {% if vehicle.status == 'active' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif vehicle.status == 'in_service' %}
+                                    <span class="badge bg-warning">In Service</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ vehicle.get_status_display }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="small mb-3">
+                                <div class="mb-2"><i class="fas fa-user text-muted me-2"></i> {{ vehicle.owner.user.get_full_name }}</div>
+                                <div class="mb-2"><i class="fas fa-id-card text-muted me-2"></i> {{ vehicle.license_plate }}</div>
+                                <div class="mb-2"><i class="fas fa-palette text-muted me-2"></i> {{ vehicle.exterior_color|default:"N/A" }}</div>
+                                <div class="mb-2">
+                                    <i class="fas fa-tachometer-alt text-muted me-2"></i> 
+                                    <span class="mileage-display">{{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div>
+                                    <small class="text-muted">{{ vehicle.work_orders.count }} work order{{ vehicle.work_orders.count|pluralize }}</small>
+                                </div>
+                                <div>
+                                    <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-sm btn-primary">View</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="text-center py-5">
+                        <i class="fas fa-car fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No vehicles found</p>
+                        <a href="{% url 'vehicles:vehicle-create' %}" class="btn btn-primary">Add Your First Vehicle</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="card-footer bg-white">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">First</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">Last</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Last</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the vehicle <strong id="vehicleName"></strong>?</p>
+                <p class="text-danger small">This action cannot be undone and will also delete all associated service history, documents, and photos.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Vehicle</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Select all checkboxes
+    document.getElementById('selectAll')?.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.vehicle-checkbox');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+    });
+
+    // Toggle view
+    function showTableView() {
+        document.getElementById('tableView').style.display = 'block';
+        document.getElementById('cardView').style.display = 'none';
+        
+        // Update button states
+        document.querySelectorAll('.btn-group button').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+
+    function showCardView() {
+        document.getElementById('tableView').style.display = 'none';
+        document.getElementById('cardView').style.display = 'block';
+        
+        // Update button states
+        document.querySelectorAll('.btn-group button').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+
+    // Delete confirmation
+    function confirmDelete(vehicleId, vehicleName) {
+        document.getElementById('vehicleName').textContent = vehicleName;
+        const deleteForm = document.getElementById('deleteForm');
+        deleteForm.action = `/vehicles/${vehicleId}/delete/`;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+
+    // Export vehicles
+    function exportVehicles(format) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('format', format);
+        window.location.href = `/vehicles/export/?${params.toString()}`;
+    }
+
+    // Auto-submit filter form on select change
+    document.querySelectorAll('#filterForm select').forEach(select => {
+        select.addEventListener('change', function() {
+            document.getElementById('filterForm').submit();
+        });
+    });
+</script>
+{% endblock %}

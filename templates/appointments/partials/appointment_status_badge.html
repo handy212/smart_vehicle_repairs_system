@@ -1,0 +1,323 @@
+{% load custom_filters %}
+
+<span class="appointment-status-badge status-{{ status|lower }} {% if show_icon %}with-icon{% endif %} {% if size %}badge-{{ size }}{% endif %}"
+      data-status="{{ status }}"
+      {% if tooltip %}title="{{ tooltip }}" data-bs-toggle="tooltip"{% endif %}>
+    
+    {% if show_icon %}
+        {% if status == 'scheduled' %}
+            <i class="fas fa-calendar-check me-1"></i>
+        {% elif status == 'confirmed' %}
+            <i class="fas fa-check-circle me-1"></i>
+        {% elif status == 'in_progress' %}
+            <i class="fas fa-tools me-1"></i>
+        {% elif status == 'completed' %}
+            <i class="fas fa-flag-checkered me-1"></i>
+        {% elif status == 'cancelled' %}
+            <i class="fas fa-times-circle me-1"></i>
+        {% elif status == 'no_show' %}
+            <i class="fas fa-user-times me-1"></i>
+        {% elif status == 'rescheduled' %}
+            <i class="fas fa-calendar-alt me-1"></i>
+        {% elif status == 'pending' %}
+            <i class="fas fa-clock me-1"></i>
+        {% else %}
+            <i class="fas fa-question-circle me-1"></i>
+        {% endif %}
+    {% endif %}
+    
+    {% if use_display_name %}
+        {% if status == 'scheduled' %}Scheduled
+        {% elif status == 'confirmed' %}Confirmed
+        {% elif status == 'in_progress' %}In Progress
+        {% elif status == 'completed' %}Completed
+        {% elif status == 'cancelled' %}Cancelled
+        {% elif status == 'no_show' %}No Show
+        {% elif status == 'rescheduled' %}Rescheduled
+        {% elif status == 'pending' %}Pending
+        {% else %}{{ status|title }}
+        {% endif %}
+    {% else %}
+        {{ status|upper }}
+    {% endif %}
+    
+    {% if show_time and time_info %}
+        <small class="ms-1 opacity-75">({{ time_info }})</small>
+    {% endif %}
+</span>
+
+<style>
+.appointment-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 600;
+    line-height: 1;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.375rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.15s ease-in-out;
+}
+
+/* Size variations */
+.appointment-status-badge.badge-sm {
+    padding: 0.25em 0.5em;
+    font-size: 0.65em;
+}
+
+.appointment-status-badge.badge-lg {
+    padding: 0.5em 0.75em;
+    font-size: 0.85em;
+}
+
+.appointment-status-badge.badge-xl {
+    padding: 0.6em 1em;
+    font-size: 1em;
+}
+
+/* Status color variations */
+.appointment-status-badge.status-scheduled {
+    background-color: #0d6efd;
+    border: 1px solid #0a58ca;
+}
+
+.appointment-status-badge.status-confirmed {
+    background-color: #198754;
+    border: 1px solid #146c43;
+}
+
+.appointment-status-badge.status-in_progress {
+    background-color: #fd7e14;
+    border: 1px solid #e55a00;
+}
+
+.appointment-status-badge.status-completed {
+    background-color: #20c997;
+    border: 1px solid #199d75;
+}
+
+.appointment-status-badge.status-cancelled {
+    background-color: #dc3545;
+    border: 1px solid #bb2d3b;
+}
+
+.appointment-status-badge.status-no_show {
+    background-color: #6f42c1;
+    border: 1px solid #59359a;
+}
+
+.appointment-status-badge.status-rescheduled {
+    background-color: #ffc107;
+    border: 1px solid #e6ac00;
+    color: #000;
+}
+
+.appointment-status-badge.status-pending {
+    background-color: #6c757d;
+    border: 1px solid #565e64;
+}
+
+/* Hover effects */
+.appointment-status-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* Pulse animation for active states */
+.appointment-status-badge.status-in_progress {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(253, 126, 20, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(253, 126, 20, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(253, 126, 20, 0);
+    }
+}
+
+/* Gradient variations for premium look */
+.appointment-status-badge.gradient {
+    background: linear-gradient(135deg, var(--bs-primary), var(--bs-primary-dark, #0a58ca));
+}
+
+.appointment-status-badge.status-scheduled.gradient {
+    background: linear-gradient(135deg, #0d6efd, #0a58ca);
+}
+
+.appointment-status-badge.status-confirmed.gradient {
+    background: linear-gradient(135deg, #198754, #146c43);
+}
+
+.appointment-status-badge.status-in_progress.gradient {
+    background: linear-gradient(135deg, #fd7e14, #e55a00);
+}
+
+.appointment-status-badge.status-completed.gradient {
+    background: linear-gradient(135deg, #20c997, #199d75);
+}
+
+.appointment-status-badge.status-cancelled.gradient {
+    background: linear-gradient(135deg, #dc3545, #bb2d3b);
+}
+
+/* Icon adjustments */
+.appointment-status-badge.with-icon i {
+    font-size: 0.9em;
+}
+
+.appointment-status-badge.badge-sm.with-icon i {
+    font-size: 0.8em;
+}
+
+.appointment-status-badge.badge-lg.with-icon i {
+    font-size: 1em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+    .appointment-status-badge {
+        font-size: 0.65em;
+        padding: 0.3em 0.5em;
+    }
+    
+    .appointment-status-badge.with-icon i {
+        font-size: 0.8em;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .appointment-status-badge {
+        border-width: 0;
+    }
+    
+    .appointment-status-badge.status-rescheduled {
+        color: #000;
+    }
+}
+
+/* Print styles */
+@media print {
+    .appointment-status-badge {
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+    }
+}
+</style>
+
+<script>
+// Initialize tooltips for status badges
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('.appointment-status-badge[data-bs-toggle="tooltip"]'));
+    if (window.bootstrap && window.bootstrap.Tooltip) {
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new window.bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+});
+
+// Function to update status badge dynamically
+function updateStatusBadge(element, newStatus, options = {}) {
+    const badge = element.querySelector('.appointment-status-badge') || element;
+    
+    // Remove old status class
+    badge.className = badge.className.replace(/status-\w+/g, '');
+    
+    // Add new status class
+    badge.classList.add(`status-${newStatus.toLowerCase()}`);
+    badge.setAttribute('data-status', newStatus);
+    
+    // Update icon if present
+    const icon = badge.querySelector('i');
+    if (icon) {
+        // Remove old icon classes
+        icon.className = icon.className.replace(/fa-[\w-]+/g, '');
+        
+        // Add new icon class
+        let iconClass = 'fa-question-circle';
+        switch(newStatus.toLowerCase()) {
+            case 'scheduled': iconClass = 'fa-calendar-check'; break;
+            case 'confirmed': iconClass = 'fa-check-circle'; break;
+            case 'in_progress': iconClass = 'fa-tools'; break;
+            case 'completed': iconClass = 'fa-flag-checkered'; break;
+            case 'cancelled': iconClass = 'fa-times-circle'; break;
+            case 'no_show': iconClass = 'fa-user-times'; break;
+            case 'rescheduled': iconClass = 'fa-calendar-alt'; break;
+            case 'pending': iconClass = 'fa-clock'; break;
+        }
+        icon.classList.add('fas', iconClass, 'me-1');
+    }
+    
+    // Update text content
+    const displayName = options.useDisplayName !== false;
+    let statusText = newStatus.toUpperCase();
+    
+    if (displayName) {
+        switch(newStatus.toLowerCase()) {
+            case 'scheduled': statusText = 'Scheduled'; break;
+            case 'confirmed': statusText = 'Confirmed'; break;
+            case 'in_progress': statusText = 'In Progress'; break;
+            case 'completed': statusText = 'Completed'; break;
+            case 'cancelled': statusText = 'Cancelled'; break;
+            case 'no_show': statusText = 'No Show'; break;
+            case 'rescheduled': statusText = 'Rescheduled'; break;
+            case 'pending': statusText = 'Pending'; break;
+            default: statusText = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+        }
+    }
+    
+    // Update text content (preserve icon and time info)
+    const textNode = Array.from(badge.childNodes).find(node => 
+        node.nodeType === Node.TEXT_NODE && node.textContent.trim()
+    );
+    if (textNode) {
+        textNode.textContent = statusText;
+    } else {
+        // If no text node found, update the entire content carefully
+        const iconHtml = icon ? icon.outerHTML : '';
+        const timeInfo = badge.querySelector('small');
+        const timeHtml = timeInfo ? timeInfo.outerHTML : '';
+        badge.innerHTML = iconHtml + statusText + timeHtml;
+    }
+    
+    // Update tooltip if present
+    if (options.tooltip) {
+        badge.setAttribute('title', options.tooltip);
+        // Refresh tooltip if Bootstrap is available
+        if (window.bootstrap && window.bootstrap.Tooltip) {
+            const tooltip = window.bootstrap.Tooltip.getInstance(badge);
+            if (tooltip) {
+                tooltip.dispose();
+                new window.bootstrap.Tooltip(badge);
+            }
+        }
+    }
+    
+    // Add animation class temporarily
+    badge.classList.add('updating');
+    setTimeout(() => {
+        badge.classList.remove('updating');
+    }, 300);
+}
+
+// CSS for update animation
+const updateStyle = document.createElement('style');
+updateStyle.textContent = `
+    .appointment-status-badge.updating {
+        transform: scale(1.05);
+        transition: transform 0.3s ease;
+    }
+`;
+document.head.appendChild(updateStyle);
+</script>

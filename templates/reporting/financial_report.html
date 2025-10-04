@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Financial Reports - Smart Vehicle Repairs{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-dollar-sign me-2"></i>Financial Reports</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'reporting:report-dashboard' %}">Reports</a></li>
+                    <li class="breadcrumb-item active">Financial</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="col-md-4 text-end">
+            {% include 'reporting/partials/export_buttons.html' %}
+        </div>
+    </div>
+
+    <!-- Date Range Filter -->
+    {% include 'reporting/partials/date_range_picker.html' %}
+
+    <!-- KPI Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-start border-success border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted small mb-1">Total Revenue</p>
+                            <h3 class="mb-0">${{ total_revenue|floatformat:2 }}</h3>
+                            <small class="text-success">
+                                <i class="fas fa-arrow-up"></i> {{ revenue_change }}%
+                            </small>
+                        </div>
+                        <div class="text-success" style="font-size: 2rem;">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-start border-primary border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted small mb-1">Profit Margin</p>
+                            <h3 class="mb-0">{{ profit_margin|floatformat:1 }}%</h3>
+                            <small class="text-primary">
+                                <i class="fas fa-chart-line"></i> Avg: {{ avg_margin|floatformat:1 }}%
+                            </small>
+                        </div>
+                        <div class="text-primary" style="font-size: 2rem;">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-start border-warning border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted small mb-1">Pending Invoices</p>
+                            <h3 class="mb-0">${{ pending_invoices|floatformat:2 }}</h3>
+                            <small class="text-muted">
+                                {{ pending_count }} invoices
+                            </small>
+                        </div>
+                        <div class="text-warning" style="font-size: 2rem;">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-start border-danger border-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted small mb-1">Overdue Amount</p>
+                            <h3 class="mb-0">${{ overdue_amount|floatformat:2 }}</h3>
+                            <small class="text-danger">
+                                {{ overdue_count }} overdue
+                            </small>
+                        </div>
+                        <div class="text-danger" style="font-size: 2rem;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Chart -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Revenue Trend</h5>
+        </div>
+        <div class="card-body">
+            {% include 'reporting/partials/chart_revenue.html' %}
+        </div>
+    </div>
+
+    <!-- Revenue Breakdown -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Revenue by Service Type</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="serviceTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Payment Methods</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="paymentMethodsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Customers by Revenue -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Top Customers by Revenue</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Customer</th>
+                            <th>Total Revenue</th>
+                            <th>Work Orders</th>
+                            <th>Avg Order Value</th>
+                            <th>Last Visit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in top_customers %}
+                        <tr>
+                            <td><strong>{{ forloop.counter }}</strong></td>
+                            <td>
+                                <a href="{% url 'customers:customer-detail' customer.id %}">
+                                    {{ customer.full_name }}
+                                </a>
+                            </td>
+                            <td><strong>${{ customer.total_revenue|floatformat:2 }}</strong></td>
+                            <td>{{ customer.work_order_count }}</td>
+                            <td>${{ customer.avg_order_value|floatformat:2 }}</td>
+                            <td>{{ customer.last_visit_date|date:"M d, Y" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Comparison -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Month-over-Month Comparison</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Revenue</th>
+                            <th>Expenses</th>
+                            <th>Profit</th>
+                            <th>Margin</th>
+                            <th>Change</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for month in monthly_data %}
+                        <tr>
+                            <td><strong>{{ month.month }}</strong></td>
+                            <td>${{ month.revenue|floatformat:2 }}</td>
+                            <td>${{ month.expenses|floatformat:2 }}</td>
+                            <td><strong>${{ month.profit|floatformat:2 }}</strong></td>
+                            <td>{{ month.margin|floatformat:1 }}%</td>
+                            <td>
+                                {% if month.change > 0 %}
+                                <span class="text-success">
+                                    <i class="fas fa-arrow-up"></i> {{ month.change|floatformat:1 }}%
+                                </span>
+                                {% else %}
+                                <span class="text-danger">
+                                    <i class="fas fa-arrow-down"></i> {{ month.change|floatformat:1 }}%
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+// Service Type Chart
+const serviceTypeCtx = document.getElementById('serviceTypeChart').getContext('2d');
+new Chart(serviceTypeCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ service_type_labels|safe }},
+        datasets: [{
+            data: {{ service_type_data|safe }},
+            backgroundColor: [
+                'rgba(79, 70, 229, 0.8)',
+                'rgba(16, 185, 129, 0.8)',
+                'rgba(245, 158, 11, 0.8)',
+                'rgba(239, 68, 68, 0.8)',
+                'rgba(59, 130, 246, 0.8)',
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Payment Methods Chart
+const paymentCtx = document.getElementById('paymentMethodsChart').getContext('2d');
+new Chart(paymentCtx, {
+    type: 'pie',
+    data: {
+        labels: {{ payment_method_labels|safe }},
+        datasets: [{
+            data: {{ payment_method_data|safe }},
+            backgroundColor: [
+                'rgba(16, 185, 129, 0.8)',
+                'rgba(59, 130, 246, 0.8)',
+                'rgba(245, 158, 11, 0.8)',
+                'rgba(139, 92, 246, 0.8)',
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

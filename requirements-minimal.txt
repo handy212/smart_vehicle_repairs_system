@@ -1,0 +1,59 @@
+# Core Django - Essential packages only
+Django>=4.2,<5.0
+django-environ>=0.11.0
+
+# Database
+psycopg2-binary>=2.9.9
+
+# API & Authentication
+djangorestframework>=3.14.0
+djangorestframework-simplejwt>=5.3.0
+django-allauth>=0.57.0
+django-cors-headers>=4.3.0
+
+# User Management & Permissions
+django-role-permissions>=3.1.1
+django-guardian>=2.4.0
+
+# Vehicle Management
+requests>=2.31.0
+
+# Forms & File Management
+django-imagekit>=5.0.0
+Pillow>=10.1.0
+django-storages>=1.14.2
+boto3>=1.33.0
+
+# Money handling
+django-money>=3.4.0
+py-moneyed>=3.0
+
+# Calendar
+icalendar>=5.0.11
+pytz>=2023.3
+
+# Notifications
+django-notifications-hq>=1.8.3
+celery>=5.3.4
+redis>=5.0.1
+
+# Utils
+django-crispy-forms>=2.1
+crispy-bootstrap5>=2.0.0
+django-filter>=23.5
+django-extensions>=3.2.3
+django-debug-toolbar>=4.2.0
+
+# Task Queue
+django-celery-beat>=2.5.0
+django-celery-results>=2.5.1
+
+# API Documentation
+drf-spectacular>=0.27.0
+
+# Excel/CSV Export
+openpyxl>=3.1.2
+django-import-export>=3.3.5
+
+# Caching
+django-redis>=5.4.0

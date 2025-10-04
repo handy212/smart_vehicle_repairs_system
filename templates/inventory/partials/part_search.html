@@ -1,0 +1,649 @@
+{% comment %}
+Part Search Component
+Usage: {% include 'inventory/partials/part_search.html' with form_id='part-search' placeholder='Search parts...' %}
+
+Props:
+- form_id: ID for the search form - optional, defaults to 'part-search-form'
+- input_id: ID for the search input - optional, defaults to 'part-search-input'
+- placeholder: Placeholder text - optional, defaults to 'Search parts by name, number, brand...'
+- show_filters: Boolean to show/hide advanced filters - optional, defaults to True
+- show_suggestions: Boolean to show/hide search suggestions - optional, defaults to True
+- redirect_url: URL to redirect after search - optional, defaults to parts list
+{% endcomment %}
+
+{% load static %}
+
+{% with form_id=form_id|default:'part-search-form' input_id=input_id|default:'part-search-input' show_filters=show_filters|default:True show_suggestions=show_suggestions|default:True %}
+
+<div class="part-search-container">
+    <form method="get" action="{{ redirect_url|default:'/inventory/parts/' }}" id="{{ form_id }}" class="part-search-form">
+        <!-- Preserve existing GET parameters -->
+        {% for key, value in request.GET.items %}
+            {% if key != 'search' and key != 'page' %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endif %}
+        {% endfor %}
+        
+        <div class="search-input-container">
+            <div class="input-group input-group-lg">
+                <span class="input-group-text search-icon">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input type="text" 
+                       class="form-control search-input" 
+                       id="{{ input_id }}"
+                       name="search" 
+                       value="{{ request.GET.search|default:'' }}"
+                       placeholder="{{ placeholder|default:'Search parts by name, number, brand...' }}"
+                       autocomplete="off"
+                       data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                <button class="btn btn-primary search-btn" type="submit">
+                    <i class="fas fa-search me-1"></i>
+                    Search
+                </button>
+                
+                {% if show_filters %}
+                <button class="btn btn-outline-secondary dropdown-toggle" 
+                        type="button" 
+                        data-bs-toggle="dropdown" 
+                        aria-expanded="false"
+                        title="Advanced Filters">
+                    <i class="fas fa-filter"></i>
+                </button>
+                {% endif %}
+            </div>
+            
+            <!-- Search Suggestions Dropdown -->
+            {% if show_suggestions %}
+            <ul class="dropdown-menu search-suggestions" id="{{ input_id }}-suggestions">
+                <li class="dropdown-header">Quick Searches</li>
+                <li><a class="dropdown-item" href="#" data-search="low stock">Low Stock Items</a></li>
+                <li><a class="dropdown-item" href="#" data-search="out of stock">Out of Stock</a></li>
+                <li><a class="dropdown-item" href="#" data-search="needs reorder">Needs Reorder</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li class="dropdown-header">Recent Searches</li>
+                <li id="recent-searches-container">
+                    <!-- Recent searches will be populated here -->
+                </li>
+            </ul>
+            {% endif %}
+            
+            <!-- Advanced Filters Dropdown -->
+            {% if show_filters %}
+            <ul class="dropdown-menu dropdown-menu-end advanced-filters">
+                <li class="dropdown-header">Filter Options</li>
+                <li>
+                    <div class="dropdown-item-text">
+                        <div class="mb-2">
+                            <label class="form-label small">Category</label>
+                            <select class="form-select form-select-sm" name="category">
+                                <option value="">All Categories</option>
+                                <!-- Categories will be populated via JavaScript -->
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Stock Status</label>
+                            <select class="form-select form-select-sm" name="stock_status">
+                                <option value="">All Stock Levels</option>
+                                <option value="in_stock" {% if request.GET.stock_status == 'in_stock' %}selected{% endif %}>In Stock</option>
+                                <option value="low_stock" {% if request.GET.stock_status == 'low_stock' %}selected{% endif %}>Low Stock</option>
+                                <option value="out_of_stock" {% if request.GET.stock_status == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
+                                <option value="needs_reorder" {% if request.GET.stock_status == 'needs_reorder' %}selected{% endif %}>Needs Reorder</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Supplier</label>
+                            <select class="form-select form-select-sm" name="supplier">
+                                <option value="">All Suppliers</option>
+                                <!-- Suppliers will be populated via JavaScript -->
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Price Range</label>
+                            <div class="row g-1">
+                                <div class="col-6">
+                                    <input type="number" class="form-control form-control-sm" 
+                                           name="price_min" placeholder="Min" 
+                                           value="{{ request.GET.price_min }}">
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" class="form-control form-control-sm" 
+                                           name="price_max" placeholder="Max"
+                                           value="{{ request.GET.price_max }}">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fas fa-filter me-1"></i>Apply Filters
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+            {% endif %}
+        </div>
+        
+        <!-- Active Filters Display -->
+        <div class="active-filters" id="active-filters" style="display: none;">
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                <small class="text-muted">Active filters:</small>
+                <div id="filter-tags"></div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">
+                    <i class="fas fa-times me-1"></i>Clear All
+                </button>
+            </div>
+        </div>
+        
+        <!-- Search Results Summary -->
+        <div class="search-results-summary" id="search-results-summary" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mt-2 p-2 bg-light rounded">
+                <small class="text-muted">
+                    <span id="results-count">0</span> parts found
+                    <span id="search-term-display"></span>
+                </small>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="saveSearch()">
+                        <i class="fas fa-bookmark me-1"></i>Save Search
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSearch()">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Quick Action Buttons -->
+<div class="search-quick-actions mt-2" style="display: none;" id="search-quick-actions">
+    <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-sm btn-outline-primary" onclick="bulkSelectResults()">
+            <i class="fas fa-check-square me-1"></i>Select All Results
+        </button>
+        <button class="btn btn-sm btn-outline-success" onclick="exportResults()">
+            <i class="fas fa-download me-1"></i>Export Results
+        </button>
+        <button class="btn btn-sm btn-outline-info" onclick="createPOFromResults()">
+            <i class="fas fa-shopping-cart me-1"></i>Create Purchase Order
+        </button>
+    </div>
+</div>
+
+<!-- CSS Styles -->
+<style>
+    .part-search-container {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+    
+    .search-input-container {
+        position: relative;
+    }
+    
+    .search-input {
+        border-radius: 0.5rem 0 0 0.5rem;
+        font-size: 1rem;
+        padding: 0.75rem 1rem;
+        border-right: none;
+    }
+    
+    .search-input:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        z-index: 10;
+    }
+    
+    .search-icon {
+        background: white;
+        border-right: none;
+        color: #6c757d;
+    }
+    
+    .search-btn {
+        border-radius: 0;
+        border-left: none;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+    }
+    
+    .search-suggestions {
+        width: 100%;
+        max-height: 300px;
+        overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border-radius: 0.375rem;
+        margin-top: 0.25rem;
+    }
+    
+    .search-suggestions .dropdown-item {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    
+    .search-suggestions .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .search-suggestions .dropdown-item.active {
+        background-color: #e7f3ff;
+        color: #0d6efd;
+    }
+    
+    .advanced-filters {
+        min-width: 300px;
+        padding: 1rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .advanced-filters .dropdown-item-text {
+        padding: 0;
+    }
+    
+    .active-filters {
+        animation: slideDown 0.3s ease;
+    }
+    
+    .filter-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        background: #e7f3ff;
+        color: #0d6efd;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .filter-tag .remove-filter {
+        margin-left: 0.5rem;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+    }
+    
+    .filter-tag .remove-filter:hover {
+        opacity: 1;
+    }
+    
+    .search-results-summary {
+        animation: slideDown 0.3s ease;
+    }
+    
+    .search-quick-actions {
+        animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .input-group-lg .form-control {
+            font-size: 0.9rem;
+        }
+        
+        .search-btn {
+            padding: 0.75rem 1rem;
+        }
+        
+        .advanced-filters {
+            min-width: 280px;
+        }
+    }
+    
+    /* Loading state */
+    .search-input.loading {
+        background-image: url("data:image/svg+xml,%3csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M10 2a8 8 0 018 8' stroke='%236c757d' stroke-width='2' fill='none'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+<!-- JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('{{ input_id }}');
+    const searchForm = document.getElementById('{{ form_id }}');
+    const suggestionsContainer = document.getElementById('{{ input_id }}-suggestions');
+    
+    let searchTimeout;
+    let currentSuggestionIndex = -1;
+    
+    // Initialize search functionality
+    initializeSearch();
+    loadRecentSearches();
+    loadFilterOptions();
+    updateActiveFilters();
+    
+    function initializeSearch() {
+        // Real-time search suggestions
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const query = this.value.trim();
+            
+            if (query.length >= 2) {
+                this.classList.add('loading');
+                searchTimeout = setTimeout(() => {
+                    fetchSearchSuggestions(query);
+                }, 300);
+            } else {
+                hideSuggestions();
+            }
+        });
+        
+        // Keyboard navigation
+        searchInput.addEventListener('keydown', function(e) {
+            const suggestions = suggestionsContainer.querySelectorAll('.dropdown-item:not(.dropdown-header):not(.dropdown-divider)');
+            
+            switch(e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    currentSuggestionIndex = Math.min(currentSuggestionIndex + 1, suggestions.length - 1);
+                    updateSuggestionSelection(suggestions);
+                    break;
+                    
+                case 'ArrowUp':
+                    e.preventDefault();
+                    currentSuggestionIndex = Math.max(currentSuggestionIndex - 1, -1);
+                    updateSuggestionSelection(suggestions);
+                    break;
+                    
+                case 'Enter':
+                    if (currentSuggestionIndex >= 0 && suggestions[currentSuggestionIndex]) {
+                        e.preventDefault();
+                        selectSuggestion(suggestions[currentSuggestionIndex]);
+                    }
+                    break;
+                    
+                case 'Escape':
+                    hideSuggestions();
+                    break;
+            }
+        });
+        
+        // Form submission
+        searchForm.addEventListener('submit', function(e) {
+            const query = searchInput.value.trim();
+            if (query) {
+                saveToRecentSearches(query);
+                showSearchResults();
+            }
+        });
+        
+        // Click outside to hide suggestions
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                hideSuggestions();
+            }
+        });
+    }
+    
+    function fetchSearchSuggestions(query) {
+        fetch(`/inventory/parts/search-suggestions/?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                displaySuggestions(data.suggestions || []);
+                searchInput.classList.remove('loading');
+            })
+            .catch(error => {
+                console.error('Error fetching suggestions:', error);
+                searchInput.classList.remove('loading');
+            });
+    }
+    
+    function displaySuggestions(suggestions) {
+        const container = suggestionsContainer;
+        const existingItems = container.querySelectorAll('.search-suggestion');
+        existingItems.forEach(item => item.remove());
+        
+        if (suggestions.length > 0) {
+            const divider = document.createElement('li');
+            divider.className = 'dropdown-divider';
+            divider.classList.add('search-suggestion');
+            
+            const header = document.createElement('li');
+            header.className = 'dropdown-header search-suggestion';
+            header.textContent = 'Suggestions';
+            
+            container.insertBefore(header, container.firstChild);
+            container.insertBefore(divider, header.nextSibling);
+            
+            suggestions.forEach(suggestion => {
+                const item = document.createElement('li');
+                item.className = 'search-suggestion';
+                
+                const link = document.createElement('a');
+                link.className = 'dropdown-item';
+                link.href = '#';
+                link.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${suggestion.name}</strong>
+                            <br><small class="text-muted">${suggestion.part_number}</small>
+                        </div>
+                        <small class="text-muted">${suggestion.stock} in stock</small>
+                    </div>
+                `;
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    searchInput.value = suggestion.name;
+                    searchForm.submit();
+                });
+                
+                item.appendChild(link);
+                container.insertBefore(item, container.children[2]);
+            });
+            
+            showSuggestions();
+        }
+    }
+    
+    function updateSuggestionSelection(suggestions) {
+        suggestions.forEach((item, index) => {
+            item.classList.toggle('active', index === currentSuggestionIndex);
+        });
+    }
+    
+    function selectSuggestion(suggestion) {
+        const searchTerm = suggestion.textContent.trim().split('\n')[0];
+        searchInput.value = searchTerm;
+        hideSuggestions();
+        searchForm.submit();
+    }
+    
+    function showSuggestions() {
+        suggestionsContainer.classList.add('show');
+        searchInput.setAttribute('aria-expanded', 'true');
+    }
+    
+    function hideSuggestions() {
+        suggestionsContainer.classList.remove('show');
+        searchInput.setAttribute('aria-expanded', 'false');
+        currentSuggestionIndex = -1;
+    }
+    
+    function loadRecentSearches() {
+        const recentSearches = JSON.parse(localStorage.getItem('part-recent-searches') || '[]');
+        const container = document.getElementById('recent-searches-container');
+        
+        if (recentSearches.length > 0) {
+            container.innerHTML = '';
+            recentSearches.slice(0, 5).forEach(search => {
+                const item = document.createElement('a');
+                item.className = 'dropdown-item';
+                item.href = '#';
+                item.textContent = search;
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    searchInput.value = search;
+                    searchForm.submit();
+                });
+                container.appendChild(item);
+            });
+        } else {
+            container.innerHTML = '<span class="dropdown-item-text text-muted small">No recent searches</span>';
+        }
+    }
+    
+    function saveToRecentSearches(query) {
+        let recentSearches = JSON.parse(localStorage.getItem('part-recent-searches') || '[]');
+        recentSearches = recentSearches.filter(search => search !== query);
+        recentSearches.unshift(query);
+        recentSearches = recentSearches.slice(0, 10);
+        localStorage.setItem('part-recent-searches', JSON.stringify(recentSearches));
+    }
+    
+    function loadFilterOptions() {
+        // Load categories
+        fetch('/inventory/categories/')
+            .then(response => response.json())
+            .then(data => {
+                const categorySelect = document.querySelector('select[name="category"]');
+                data.categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = category.name;
+                    option.selected = category.id == '{{ request.GET.category }}';
+                    categorySelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error loading categories:', error));
+        
+        // Load suppliers
+        fetch('/inventory/suppliers/list/')
+            .then(response => response.json())
+            .then(data => {
+                const supplierSelect = document.querySelector('select[name="supplier"]');
+                data.suppliers.forEach(supplier => {
+                    const option = document.createElement('option');
+                    option.value = supplier.id;
+                    option.textContent = supplier.name;
+                    option.selected = supplier.id == '{{ request.GET.supplier }}';
+                    supplierSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error loading suppliers:', error));
+    }
+    
+    function updateActiveFilters() {
+        const params = new URLSearchParams(window.location.search);
+        const filterTags = document.getElementById('filter-tags');
+        const activeFilters = document.getElementById('active-filters');
+        
+        const filters = [];
+        
+        params.forEach((value, key) => {
+            if (key !== 'search' && key !== 'page' && value) {
+                let displayName = key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                filters.push({ key, value, displayName });
+            }
+        });
+        
+        if (filters.length > 0) {
+            filterTags.innerHTML = filters.map(filter => 
+                `<span class="filter-tag">
+                    ${filter.displayName}: ${filter.value}
+                    <i class="fas fa-times remove-filter" onclick="removeFilter('${filter.key}')"></i>
+                </span>`
+            ).join('');
+            activeFilters.style.display = 'block';
+        } else {
+            activeFilters.style.display = 'none';
+        }
+    }
+    
+    function showSearchResults() {
+        const searchTerm = searchInput.value.trim();
+        const summary = document.getElementById('search-results-summary');
+        const termDisplay = document.getElementById('search-term-display');
+        const quickActions = document.getElementById('search-quick-actions');
+        
+        if (searchTerm) {
+            termDisplay.textContent = `for "${searchTerm}"`;
+            summary.style.display = 'block';
+            quickActions.style.display = 'block';
+        }
+    }
+});
+
+// Global functions
+function clearFilters() {
+    const form = document.getElementById('{{ form_id }}');
+    const inputs = form.querySelectorAll('select, input[type="number"]');
+    inputs.forEach(input => {
+        if (input.name !== 'search') {
+            input.value = '';
+        }
+    });
+}
+
+function clearAllFilters() {
+    window.location.href = window.location.pathname + '?search=' + encodeURIComponent(document.getElementById('{{ input_id }}').value);
+}
+
+function removeFilter(filterKey) {
+    const params = new URLSearchParams(window.location.search);
+    params.delete(filterKey);
+    window.location.href = window.location.pathname + '?' + params.toString();
+}
+
+function clearSearch() {
+    window.location.href = window.location.pathname;
+}
+
+function saveSearch() {
+    const searchTerm = document.getElementById('{{ input_id }}').value.trim();
+    const params = new URLSearchParams(window.location.search);
+    
+    if (searchTerm || params.toString()) {
+        const savedSearches = JSON.parse(localStorage.getItem('part-saved-searches') || '[]');
+        const searchData = {
+            name: searchTerm || 'Filtered Search',
+            url: window.location.search,
+            date: new Date().toISOString()
+        };
+        
+        savedSearches.unshift(searchData);
+        localStorage.setItem('part-saved-searches', JSON.stringify(savedSearches.slice(0, 20)));
+        
+        alert('Search saved successfully!');
+    }
+}
+
+function bulkSelectResults() {
+    // Implementation depends on the results page
+    console.log('Bulk select functionality');
+}
+
+function exportResults() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', 'csv');
+    window.location.href = window.location.pathname + '?' + params.toString();
+}
+
+function createPOFromResults() {
+    const params = new URLSearchParams(window.location.search);
+    window.location.href = '/inventory/purchase-orders/create/?' + params.toString();
+}
+</script>
+
+{% endwith %}

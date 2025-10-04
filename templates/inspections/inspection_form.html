@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if inspection %}Edit{% else %}New{% endif %} Inspection - Smart Vehicle Repairs{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<style>
+    .category-section {
+        background: #f8f9fa;
+        border-left: 4px solid var(--primary);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .inspection-item {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .critical-item {
+        border-left: 4px solid var(--danger);
+    }
+    .rating-stars {
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+    .rating-stars i {
+        color: #ddd;
+    }
+    .rating-stars i.active {
+        color: #ffc107;
+    }
+    .pass-fail-toggle {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .pass-fail-toggle .btn {
+        flex: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>
+                <i class="fas fa-clipboard-check me-2"></i>
+                {% if inspection %}Edit Inspection{% else %}New Inspection{% endif %}
+            </h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inspections:inspection-list' %}">Inspections</a></li>
+                    <li class="breadcrumb-item active">{% if inspection %}Edit{% else %}New{% endif %}</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'inspections:inspection-list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-times me-2"></i>Cancel
+            </a>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="inspectionForm">
+        {% csrf_token %}
+        
+        <!-- Basic Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Basic Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.template|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.vehicle|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.performed_by|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.inspection_date|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.odometer_reading|as_crispy_field }}
+                    </div>
+                    <div class="col-12">
+                        {{ form.notes|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inspection Items (Dynamic based on template) -->
+        <div id="inspectionItems" class="mb-4">
+            {% for category in categories %}
+            <div class="category-section">
+                <h4><i class="fas fa-folder-open me-2"></i>{{ category.name }}</h4>
+                {% if category.description %}
+                <p class="text-muted">{{ category.description }}</p>
+                {% endif %}
+                
+                {% for item in category.items.all %}
+                {% include 'inspections/partials/inspection_item.html' with item=item %}
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Photos -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Photos & Documentation</h5>
+            </div>
+            <div class="card-body">
+                {% include 'inspections/partials/photo_upload.html' %}
+            </div>
+        </div>
+
+        <!-- Signatures -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Signatures</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Technician Signature</h6>
+                        {% include 'inspections/partials/signature_pad.html' with signature_type='technician' %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Customer Signature (Optional)</h6>
+                        {% include 'inspections/partials/signature_pad.html' with signature_type='customer' %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                        <i class="fas fa-arrow-left me-2"></i>Cancel
+                    </button>
+                    <div>
+                        <button type="submit" name="status" value="draft" class="btn btn-outline-primary">
+                            <i class="fas fa-save me-2"></i>Save as Draft
+                        </button>
+                        <button type="submit" name="status" value="completed" class="btn btn-success">
+                            <i class="fas fa-check-circle me-2"></i>Complete Inspection
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialize Select2
+    $('#id_template, #id_vehicle, #id_technician').select2({
+        theme: 'bootstrap-5',
+        width: '100%'
+    });
+    
+    // Rating stars
+    $('.rating-stars i').click(function() {
+        const rating = $(this).data('rating');
+        const container = $(this).closest('.rating-stars');
+        const input = container.find('input[type="hidden"]');
+        
+        input.val(rating);
+        
+        container.find('i').each(function(index) {
+            if (index < rating) {
+                $(this).addClass('active');
+            } else {
+                $(this).removeClass('active');
+            }
+        });
+    });
+    
+    // Pass/Fail toggle
+    $('.pass-fail-toggle .btn').click(function() {
+        const container = $(this).closest('.pass-fail-toggle');
+        const input = container.find('input[type="hidden"]');
+        const value = $(this).data('value');
+        
+        container.find('.btn').removeClass('active');
+        $(this).addClass('active');
+        input.val(value);
+    });
+    
+    // Form validation
+    $('#inspectionForm').submit(function(e) {
+        // Add custom validation here
+        return true;
+    });
+});
+</script>
+{% endblock %}

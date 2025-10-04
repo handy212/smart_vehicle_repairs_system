@@ -1,0 +1,152 @@
+{% comment %}
+Kanban Board Partial - Advanced drag-and-drop work order management
+Usage: {% include 'workorders/partials/kanban_board.html' with status_groups=status_groups %}
+{% endcomment %}
+
+<div class="kanban-board" id="kanban-board">
+    {% for status_code, status_data in status_groups.items %}
+    <div class="kanban-column" data-status="{{ status_code }}">
+        <div class="kanban-header">
+            <div>
+                <h6 class="mb-0">{{ status_data.label }}</h6>
+                <small class="text-muted">{{ status_data.count }} work orders</small>
+            </div>
+            <div class="column-count">{{ status_data.count }}</div>
+        </div>
+        
+        <div class="kanban-cards sortable-list" id="kanban-{{ status_code }}">
+            {% for workorder in status_data.workorders %}
+            {% include 'workorders/partials/kanban_card.html' with workorder=workorder %}
+            {% empty %}
+            <div class="empty-column-message text-center text-muted py-4">
+                <i class="fas fa-inbox fa-2x mb-2"></i>
+                <p class="mb-0 small">No work orders</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+// Initialize SortableJS for kanban columns
+document.addEventListener('DOMContentLoaded', function() {
+    const kanbanColumns = document.querySelectorAll('.sortable-list');
+    
+    kanbanColumns.forEach(column => {
+        new Sortable(column, {
+            group: 'kanban-workorders',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            onEnd: function(evt) {
+                handleStatusChange(evt);
+            }
+        });
+    });
+    
+    function handleStatusChange(evt) {
+        const workorderId = evt.item.dataset.workorderId;
+        const newStatus = evt.to.closest('.kanban-column').dataset.status;
+        const oldStatus = evt.from.closest('.kanban-column').dataset.status;
+        
+        if (newStatus !== oldStatus) {
+            updateWorkOrderStatus(workorderId, newStatus, oldStatus, evt);
+        }
+    }
+    
+    function updateWorkOrderStatus(workorderId, newStatus, oldStatus, evt) {
+        // Implementation for status update via AJAX
+        console.log(`Updating work order ${workorderId} from ${oldStatus} to ${newStatus}`);
+        
+        fetch(`/workorders/${workorderId}/update-status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: `status=${newStatus}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update the card's status attribute
+                evt.item.dataset.currentStatus = newStatus;
+                
+                // Update column counts
+                updateColumnCounts();
+                
+                // Show success notification
+                showNotification('success', `Work order moved to ${data.status_display}`);
+            } else {
+                // Revert the move on error
+                revertMove(evt);
+                showNotification('error', 'Failed to update status: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            revertMove(evt);
+            showNotification('error', 'An error occurred while updating the status.');
+        });
+    }
+    
+    function revertMove(evt) {
+        // Move the item back to its original position
+        const item = evt.item;
+        const oldParent = evt.from;
+        const oldIndex = evt.oldIndex;
+        
+        item.remove();
+        
+        if (oldIndex >= oldParent.children.length) {
+            oldParent.appendChild(item);
+        } else {
+            oldParent.insertBefore(item, oldParent.children[oldIndex]);
+        }
+    }
+    
+    function updateColumnCounts() {
+        document.querySelectorAll('.kanban-column').forEach(column => {
+            const count = column.querySelectorAll('.kanban-card').length;
+            column.querySelector('.column-count').textContent = count;
+        });
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function showNotification(type, message) {
+        // Simple notification system
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 1060; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
+    }
+});
+</script>

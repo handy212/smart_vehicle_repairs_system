@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}System Settings - Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+.setting-card {
+    transition: all 0.2s;
+}
+.setting-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.setting-group {
+    border-left: 3px solid #0d6efd;
+    padding-left: 15px;
+    margin-bottom: 20px;
+}
+.color-preview {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    border: 2px solid #dee2e6;
+    display: inline-block;
+    vertical-align: middle;
+}
+.setting-row {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+.setting-row:last-child {
+    border-bottom: none;
+}
+.secret-value {
+    font-family: monospace;
+    letter-spacing: 2px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-cog text-primary"></i> System Settings</h2>
+            <p class="text-muted mb-0">Configure system-wide settings and preferences</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-outline-primary" onclick="testEmail()">
+                <i class="fas fa-envelope"></i> Test Email
+            </button>
+            <button type="button" class="btn btn-outline-success" onclick="testSMS()">
+                <i class="fas fa-sms"></i> Test SMS
+            </button>
+        </div>
+    </div>
+
+    <!-- Category Pills -->
+    <div class="d-flex overflow-auto mb-4 pb-2" style="gap: 10px;">
+        {% for code, name in categories %}
+        <a href="?category={{ code }}" 
+           class="btn btn-{% if current_category == code %}primary{% else %}outline-primary{% endif %} text-nowrap">
+            <i class="fas fa-{% if code == 'company' %}building{% elif code == 'branding' %}palette{% elif code == 'email' %}envelope{% elif code == 'sms' %}sms{% elif code == 'payment' %}credit-card{% elif code == 'notification' %}bell{% elif code == 'security' %}shield-alt{% elif code == 'business' %}briefcase{% elif code == 'integration' %}plug{% elif code == 'maintenance' %}tools{% else %}cog{% endif %} me-1"></i>
+            {{ name }}
+            <span class="badge bg-light text-dark ms-1">{{ settings|length }}</span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Settings Content -->
+    {% if settings %}
+    <form method="post" action="{% url 'admin_panel:settings_bulk_update' %}">
+        {% csrf_token %}
+        <input type="hidden" name="category" value="{{ current_category }}">
+        
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-{% if current_category == 'company' %}building{% elif current_category == 'branding' %}palette{% elif current_category == 'email' %}envelope{% elif current_category == 'sms' %}sms{% elif current_category == 'payment' %}credit-card{% elif current_category == 'notification' %}bell{% elif current_category == 'security' %}shield-alt{% elif current_category == 'business' %}briefcase{% elif current_category == 'integration' %}plug{% elif current_category == 'maintenance' %}tools{% else %}cog{% endif %}"></i>
+                    {{ current_category_name }} Settings
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% for setting in settings %}
+                <div class="setting-row">
+                    <div class="row align-items-center">
+                        <div class="col-md-4">
+                            <label class="form-label mb-1">
+                                <strong>{{ setting.key|title }}</strong>
+                                {% if setting.is_secret %}
+                                <span class="badge bg-warning text-dark ms-1">
+                                    <i class="fas fa-lock"></i> Secret
+                                </span>
+                                {% endif %}
+                            </label>
+                            <br>
+                            <small class="text-muted">{{ setting.description }}</small>
+                        </div>
+                        <div class="col-md-6">
+                            {% if 'color' in setting.key %}
+                                <!-- Color Picker -->
+                                <div class="input-group">
+                                    <input type="color" class="form-control form-control-color" 
+                                           name="setting_{{ setting.id }}" 
+                                           value="{{ setting.value|default:'#000000' }}">
+                                    <input type="text" class="form-control" 
+                                           value="{{ setting.value }}" 
+                                           onchange="this.previousElementSibling.value=this.value">
+                                </div>
+                            {% elif setting.key|slice:':3' == 'is_' or 'enabled' in setting.key or setting.value == 'true' or setting.value == 'false' %}
+                                <!-- Boolean Toggle -->
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="setting_{{ setting.id }}" 
+                                           value="true"
+                                           {% if setting.value == 'true' or setting.value == 'on' %}checked{% endif %}>
+                                    <label class="form-check-label">
+                                        {% if setting.value == 'true' or setting.value == 'on' %}Enabled{% else %}Disabled{% endif %}
+                                    </label>
+                                </div>
+                            {% elif 'password' in setting.key or 'secret' in setting.key or 'key' in setting.key and setting.key != 'key' %}
+                                <!-- Password/Secret Field -->
+                                <div class="input-group">
+                                    <input type="password" class="form-control secret-field" 
+                                           name="setting_{{ setting.id }}" 
+                                           value="{{ setting.value }}"
+                                           placeholder="••••••••">
+                                    <button class="btn btn-outline-secondary" type="button" 
+                                            onclick="togglePassword(this)">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            {% elif 'hours' in setting.key and ':' in setting.value or 'time' in setting.key %}
+                                <!-- Time Field -->
+                                <input type="time" class="form-control" 
+                                       name="setting_{{ setting.id }}" 
+                                       value="{{ setting.value }}">
+                            {% elif setting.key|slice:'-4:' == 'rate' or setting.key|slice:'-10:' == 'percentage' or 'price' in setting.key or 'amount' in setting.key %}
+                                <!-- Number Field -->
+                                <div class="input-group">
+                                    {% if 'percentage' in setting.key %}
+                                    <span class="input-group-text">%</span>
+                                    {% elif 'currency' not in setting.key %}
+                                    <span class="input-group-text">{{ currency_symbol }}</span>
+                                    {% endif %}
+                                    <input type="number" class="form-control" 
+                                           name="setting_{{ setting.id }}" 
+                                           value="{{ setting.value }}"
+                                           step="0.01">
+                                </div>
+                            {% elif 'message' in setting.key or 'description' in setting.key or 'signature' in setting.key %}
+                                <!-- Textarea -->
+                                <textarea class="form-control" 
+                                          name="setting_{{ setting.id }}" 
+                                          rows="3">{{ setting.value }}</textarea>
+                            {% else %}
+                                <!-- Regular Text Input -->
+                                <input type="text" class="form-control" 
+                                       name="setting_{{ setting.id }}" 
+                                       value="{{ setting.value }}"
+                                       {% if setting.is_secret %}placeholder="••••••••"{% endif %}>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" 
+                                       name="active_{{ setting.id }}" 
+                                       {% if setting.is_active %}checked{% endif %}>
+                                <label class="form-check-label text-muted">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="card-footer bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i>
+                        Changes will be applied immediately after saving
+                    </small>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save All Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Quick Actions for specific categories -->
+    {% if current_category == 'branding' %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6 class="mb-0">
+                <i class="fas fa-upload"></i> Upload Branding Assets
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" action="{% url 'admin_panel:upload_branding' %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Company Logo</label>
+                        <input type="file" class="form-control" name="logo" accept="image/*">
+                        <small class="text-muted">Recommended: 200x50px PNG with transparent background</small>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Dark Mode Logo</label>
+                        <input type="file" class="form-control" name="logo_dark" accept="image/*">
+                        <small class="text-muted">Optional: For dark backgrounds</small>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Favicon</label>
+                        <input type="file" class="form-control" name="favicon" accept="image/x-icon,image/png">
+                        <small class="text-muted">32x32px or 64x64px ICO/PNG</small>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Login Background</label>
+                        <input type="file" class="form-control" name="login_background" accept="image/*">
+                        <small class="text-muted">High resolution image (1920x1080px recommended)</small>
+                    </div>
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-upload"></i> Upload Files
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if current_category == 'company' %}
+    <div class="alert alert-info mt-4">
+        <h6><i class="fas fa-info-circle"></i> Company Information</h6>
+        <p class="mb-0">
+            This information appears on invoices, receipts, and official documents. 
+            Make sure to keep it up to date and accurate.
+        </p>
+    </div>
+    {% endif %}
+
+    {% if current_category == 'sms' %}
+    <div class="alert alert-warning mt-4">
+        <h6><i class="fas fa-exclamation-triangle"></i> SMS Configuration (Hubtel)</h6>
+        <p class="mb-2">To enable SMS notifications:</p>
+        <ol class="mb-0">
+            <li>Sign up for a Hubtel account at <a href="https://developers.hubtel.com" target="_blank">developers.hubtel.com</a></li>
+            <li>Get your Client ID and Client Secret from the API Keys section</li>
+            <li>Register a Sender ID (max 11 characters, alphanumeric)</li>
+            <li>Enter credentials above and test with a phone number</li>
+        </ol>
+    </div>
+    {% endif %}
+
+    {% if current_category == 'email' %}
+    <div class="alert alert-info mt-4">
+        <h6><i class="fas fa-info-circle"></i> Email Configuration</h6>
+        <p class="mb-2">SMTP Settings for common providers:</p>
+        <ul class="mb-0">
+            <li><strong>Gmail:</strong> smtp.gmail.com (Port 587, TLS) - Use App Password</li>
+            <li><strong>Outlook:</strong> smtp-mail.outlook.com (Port 587, TLS)</li>
+            <li><strong>Yahoo:</strong> smtp.mail.yahoo.com (Port 465, SSL)</li>
+            <li><strong>SendGrid:</strong> smtp.sendgrid.net (Port 587, TLS)</li>
+        </ul>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-cog fa-4x text-muted mb-3"></i>
+            <h4>No Settings Found</h4>
+            <p class="text-muted">This category doesn't have any settings yet.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePassword(button) {
+    const input = button.closest('.input-group').querySelector('input');
+    const icon = button.querySelector('i');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+function testEmail() {
+    if (confirm('Send a test email to verify configuration?')) {
+        fetch('{% url "admin_panel:test_email" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Test email sent successfully! Check your inbox.');
+            } else {
+                alert('❌ Failed to send test email: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('❌ Error: ' + error);
+        });
+    }
+}
+
+function testSMS() {
+    const phoneNumber = prompt('Enter phone number to send test SMS (include country code, e.g., +1234567890):');
+    if (phoneNumber) {
+        fetch('{% url "admin_panel:test_sms" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ phone: phoneNumber })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('✅ Test SMS sent successfully!');
+            } else {
+                alert('❌ Failed to send test SMS: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('❌ Error: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}

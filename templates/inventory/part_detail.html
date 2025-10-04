@@ -1,0 +1,570 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}{{ part.name }} - Part Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .part-detail-card {
+        background: white;
+        border-radius: 0.5rem;
+        border: 1px solid var(--gray-200);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .part-image-container {
+        background: var(--gray-50);
+        border-radius: 0.5rem;
+        min-height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: var(--gray-50);
+        border-radius: 0.375rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    
+    .transaction-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--gray-200);
+        display: flex;
+        justify-content: between;
+        align-items: center;
+    }
+    
+    .transaction-item:last-child {
+        border-bottom: none;
+    }
+    
+    .transaction-type {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .transaction-purchase { background: var(--success); color: white; }
+    .transaction-sale { background: var(--info); color: white; }
+    .transaction-adjustment { background: var(--warning); color: white; }
+    .transaction-damage { background: var(--danger); color: white; }
+    .transaction-return { background: var(--secondary); color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:part_list' %}">Parts</a></li>
+                    <li class="breadcrumb-item active">{{ part.name }}</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-0">{{ part.name }}</h1>
+            <p class="text-muted">{{ part.part_number }}</p>
+        </div>
+        {% if can_edit %}
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" onclick="adjustStock()">
+                <i class="fas fa-adjust me-1"></i> Adjust Stock
+            </button>
+            <a href="{% url 'inventory:part_edit' part.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i> Edit Part
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        <!-- Part Details -->
+        <div class="col-lg-8">
+            <!-- Basic Info -->
+            <div class="part-detail-card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="part-image-container">
+                                {% if part.image %}
+                                <img src="{{ part.image.url }}" alt="{{ part.name }}" 
+                                     class="img-fluid rounded" style="max-height: 200px;">
+                                {% else %}
+                                <div class="text-center">
+                                    <i class="fas fa-cog fa-4x text-muted mb-2"></i>
+                                    <p class="text-muted small">No image available</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5>Part Information</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted">Part Number</label>
+                                    <p class="fw-medium">{{ part.part_number }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted">Category</label>
+                                    <p class="fw-medium">
+                                        {% if part.category %}
+                                            {{ part.category.name }}
+                                        {% else %}
+                                            <span class="text-muted">Uncategorized</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted">Brand</label>
+                                    <p class="fw-medium">
+                                        {% if part.brand %}
+                                            {{ part.brand }}
+                                        {% else %}
+                                            <span class="text-muted">Not specified</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted">Model</label>
+                                    <p class="fw-medium">
+                                        {% if part.model %}
+                                            {{ part.model }}
+                                        {% else %}
+                                            <span class="text-muted">Not specified</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted">Unit</label>
+                                    <p class="fw-medium">{{ part.get_unit_display }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label text-muted">Status</label>
+                                    <span class="badge 
+                                        {% if part.status == 'active' %}bg-success
+                                        {% elif part.status == 'discontinued' %}bg-warning
+                                        {% elif part.status == 'backordered' %}bg-info
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ part.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {% if part.description %}
+                            <div class="mt-3">
+                                <label class="form-label text-muted">Description</label>
+                                <p>{{ part.description }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Statistics -->
+            <div class="part-detail-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Stock Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value text-primary">{{ part.quantity_in_stock }}</div>
+                            <div class="stat-label">In Stock</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value text-warning">{{ part.quantity_reserved }}</div>
+                            <div class="stat-label">Reserved</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value text-success">{{ available_stock }}</div>
+                            <div class="stat-label">Available</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value text-info">{{ part.quantity_on_order }}</div>
+                            <div class="stat-label">On Order</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value text-secondary">{{ part.reorder_point }}</div>
+                            <div class="stat-label">Reorder Point</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value text-secondary">{{ part.minimum_stock }}</div>
+                            <div class="stat-label">Min Stock</div>
+                        </div>
+                    </div>
+                    
+                    {% if needs_reorder %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Reorder Needed:</strong> Stock level ({{ part.quantity_in_stock }}) is at or below reorder point ({{ part.reorder_point }}).
+                        Suggested reorder quantity: {{ part.reorder_quantity }} {{ part.get_unit_display }}.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Pricing -->
+            <div class="part-detail-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Pricing Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Cost Price</label>
+                            <p class="h5 text-danger">${{ part.cost_price|floatformat:2 }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Selling Price</label>
+                            <p class="h5 text-success">${{ part.selling_price|floatformat:2 }}</p>
+                        </div>
+                    </div>
+                    {% if part.cost_price and part.selling_price %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Markup</label>
+                            <p class="fw-medium">
+                                ${{ part.selling_price|floatformat:2|sub:part.cost_price|floatformat:2 }}
+                                ({% widthratio part.selling_price|sub:part.cost_price part.cost_price 100 %}%)
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Inventory Value</label>
+                            <p class="fw-medium">${{ part.cost_price|mul:part.quantity_in_stock|floatformat:2 }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Transactions -->
+            <div class="part-detail-card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Transactions</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_transactions %}
+                        {% for transaction in recent_transactions %}
+                        <div class="transaction-item">
+                            <div class="d-flex align-items-center flex-grow-1">
+                                <span class="transaction-type transaction-{{ transaction.transaction_type }} me-3">
+                                    {% if transaction.transaction_type == 'purchase' %}
+                                        <i class="fas fa-plus me-1"></i>
+                                    {% elif transaction.transaction_type == 'sale' %}
+                                        <i class="fas fa-minus me-1"></i>
+                                    {% elif transaction.transaction_type == 'adjustment' %}
+                                        <i class="fas fa-adjust me-1"></i>
+                                    {% elif transaction.transaction_type == 'damage' %}
+                                        <i class="fas fa-exclamation me-1"></i>
+                                    {% elif transaction.transaction_type == 'return' %}
+                                        <i class="fas fa-undo me-1"></i>
+                                    {% endif %}
+                                    {{ transaction.get_transaction_type_display }}
+                                </span>
+                                <div class="flex-grow-1">
+                                    <div class="fw-medium">
+                                        {% if transaction.quantity > 0 %}+{% endif %}{{ transaction.quantity }} {{ part.get_unit_display }}
+                                    </div>
+                                    {% if transaction.reason %}
+                                    <small class="text-muted">{{ transaction.reason }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-medium">Balance: {{ transaction.balance_after }}</div>
+                                <small class="text-muted">
+                                    {{ transaction.created_at|date:"M d, Y H:i" }}
+                                    {% if transaction.created_by %}
+                                    by {{ transaction.created_by.get_full_name }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-history fa-2x mb-2"></i>
+                            <p class="mb-0">No transactions recorded</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Stats -->
+            <div class="part-detail-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Total Purchased:</span>
+                        <span class="fw-medium">{{ total_purchased }} {{ part.get_unit_display }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Total Used:</span>
+                        <span class="fw-medium">{{ total_used }} {{ part.get_unit_display }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Current Stock:</span>
+                        <span class="fw-medium">{{ part.quantity_in_stock }} {{ part.get_unit_display }}</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Stock Value:</span>
+                        <span class="fw-medium text-success">${{ part.cost_price|mul:part.quantity_in_stock|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supplier Info -->
+            {% if part.preferred_supplier %}
+            <div class="part-detail-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Preferred Supplier</h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold">{{ part.preferred_supplier.name }}</h6>
+                    <p class="text-muted small mb-2">{{ part.preferred_supplier.supplier_code }}</p>
+                    {% if part.preferred_supplier.contact_person %}
+                    <p class="small mb-1">
+                        <i class="fas fa-user me-2"></i>{{ part.preferred_supplier.contact_person }}
+                    </p>
+                    {% endif %}
+                    {% if part.preferred_supplier.email %}
+                    <p class="small mb-1">
+                        <i class="fas fa-envelope me-2"></i>
+                        <a href="mailto:{{ part.preferred_supplier.email }}">{{ part.preferred_supplier.email }}</a>
+                    </p>
+                    {% endif %}
+                    {% if part.preferred_supplier.phone %}
+                    <p class="small mb-0">
+                        <i class="fas fa-phone me-2"></i>
+                        <a href="tel:{{ part.preferred_supplier.phone }}">{{ part.preferred_supplier.phone }}</a>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- All Suppliers -->
+            {% if part.suppliers.exists %}
+            <div class="part-detail-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">All Suppliers</h5>
+                </div>
+                <div class="card-body">
+                    {% for supplier in part.suppliers.all %}
+                    <div class="d-flex justify-content-between align-items-center py-2 
+                               {% if not forloop.last %}border-bottom{% endif %}">
+                        <div>
+                            <div class="fw-medium">{{ supplier.name }}</div>
+                            <small class="text-muted">{{ supplier.supplier_code }}</small>
+                        </div>
+                        {% if supplier == part.preferred_supplier %}
+                        <span class="badge bg-primary">Preferred</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Location -->
+            {% if part.location %}
+            <div class="part-detail-card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Location</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">
+                        <i class="fas fa-map-marker-alt me-2"></i>{{ part.location }}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notes -->
+            {% if part.notes %}
+            <div class="part-detail-card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Notes</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ part.notes|linebreaks }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Stock Adjustment Modal -->
+<div class="modal fade" id="stockAdjustmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Adjust Stock - {{ part.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <strong>Current Stock:</strong> {{ part.quantity_in_stock }} {{ part.get_unit_display }}
+                </div>
+                
+                <form id="stock-adjustment-form">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="adjustment-type" class="form-label">Adjustment Type</label>
+                        <select class="form-select" id="adjustment-type" name="adjustment_type" required>
+                            <option value="adjustment">Manual Adjustment</option>
+                            <option value="damage">Damage/Loss</option>
+                            <option value="count">Physical Count</option>
+                            <option value="return">Return to Supplier</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="quantity-change" class="form-label">Quantity Change</label>
+                        <input type="number" class="form-control" id="quantity-change" 
+                               name="quantity_change" required placeholder="+/- quantity">
+                        <div class="form-text">Use positive numbers to add stock, negative to remove</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="adjustment-reason" class="form-label">Reason</label>
+                        <input type="text" class="form-control" id="adjustment-reason" 
+                               name="reason" required placeholder="Reason for adjustment">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="adjustment-notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="adjustment-notes" 
+                                  name="notes" rows="3" placeholder="Additional notes"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitStockAdjustment()">
+                    Adjust Stock
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function adjustStock() {
+    const modal = new bootstrap.Modal(document.getElementById('stockAdjustmentModal'));
+    modal.show();
+}
+
+function submitStockAdjustment() {
+    const form = document.getElementById('stock-adjustment-form');
+    const formData = new FormData(form);
+    
+    fetch(`/inventory/parts/{{ part.pk }}/adjust-stock/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('success', data.message);
+            const modal = bootstrap.Modal.getInstance(document.getElementById('stockAdjustmentModal'));
+            modal.hide();
+            // Refresh page to show updated stock
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('danger', 'Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('danger', 'An error occurred while adjusting stock.');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(type, message) {
+    // Create toast element if container doesn't exist
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '1080';
+        document.body.appendChild(toastContainer);
+    }
+    
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    toastContainer.innerHTML = toastHtml;
+    const toastElement = toastContainer.querySelector('.toast');
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        toastElement.remove();
+    });
+}
+</script>
+{% endblock %}

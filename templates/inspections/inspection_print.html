@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inspection Report - {{ inspection.template.name }}</title            <div class="info-item">
+                <label>Technician:</label>
+                <value>{{ inspection.performed_by.get_full_name }}</value>
+            </div>  <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #4f46e5;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #4f46e5;
+            font-size: 24px;
+        }
+        .info-section {
+            margin-bottom: 20px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .info-item {
+            margin-bottom: 10px;
+        }
+        .info-item label {
+            font-weight: bold;
+            display: block;
+            color: #666;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        .info-item value {
+            display: block;
+            font-size: 14px;
+        }
+        .category {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+        }
+        .category-header {
+            background-color: #4f46e5;
+            color: white;
+            padding: 8px 12px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .result-item {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            page-break-inside: avoid;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-pass {
+            background-color: #d1fae5;
+            border-left: 4px solid #10b981;
+        }
+        .result-fail {
+            background-color: #fee2e2;
+            border-left: 4px solid #ef4444;
+        }
+        .result-warning {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-critical {
+            background-color: #ef4444;
+            color: white;
+        }
+        .badge-pass {
+            background-color: #10b981;
+            color: white;
+        }
+        .badge-fail {
+            background-color: #ef4444;
+            color: white;
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        .summary-card {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .summary-card.pass {
+            background-color: #d1fae5;
+            border: 2px solid #10b981;
+        }
+        .summary-card.fail {
+            background-color: #fee2e2;
+            border: 2px solid #ef4444;
+        }
+        .summary-card.warning {
+            background-color: #fef3c7;
+            border: 2px solid #f59e0b;
+        }
+        .summary-card h2 {
+            margin: 0;
+            font-size: 32px;
+        }
+        .summary-card p {
+            margin: 5px 0 0 0;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        .signature-section {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            page-break-inside: avoid;
+        }
+        .signature-box {
+            border: 1px solid #ddd;
+            padding: 10px;
+            min-height: 100px;
+        }
+        .signature-box img {
+            max-width: 100%;
+            height: auto;
+        }
+        .signature-label {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Print Button -->
+    <div class="no-print" style="text-align: center; margin-bottom: 20px;">
+        <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px; cursor: pointer;">
+            Print Report
+        </button>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>Vehicle Inspection Report</h1>
+        <p>{{ inspection.template.name }}</p>
+    </div>
+
+    <!-- Inspection Information -->
+    <div class="info-section">
+        <div class="info-grid">
+            <div class="info-item">
+                <label>Inspection Date</label>
+                <value>{{ inspection.inspection_date|date:"F d, Y" }}</value>
+            </div>
+            <div class="info-item">
+                <label>Inspection ID</label>
+                <value>#{{ inspection.id }}</value>
+            </div>
+            <div class="info-item">
+                <label>Vehicle</label>
+                <value>{{ inspection.vehicle }}</value>
+            </div>
+            <div class="info-item">
+                <label>VIN</label>
+                <value>{{ inspection.vehicle.vin }}</value>
+            </div>
+            <div class="info-item">
+                <label>Customer</label>
+                <value>{{ inspection.vehicle.owner.full_name }}</value>
+            </div>
+            <div class="info-item">
+                <label>Contact</label>
+                <value>{{ inspection.vehicle.owner.phone }}</value>
+            </div>
+            <div class="info-item">
+                <label>Technician</label>
+                <value>{{ inspection.technician.get_full_name }}</value>
+            </div>
+            <div class="info-item">
+                <label>Odometer Reading</label>
+                <value>{{ inspection.odometer_reading|floatformat:0 }} miles</value>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary">
+        <div class="summary-card pass">
+            <h2>{{ inspection.pass_count }}</h2>
+            <p>Passed</p>
+        </div>
+        <div class="summary-card fail">
+            <h2>{{ inspection.fail_count }}</h2>
+            <p>Failed</p>
+        </div>
+        <div class="summary-card warning">
+            <h2>{{ inspection.warning_count }}</h2>
+            <p>Warnings</p>
+        </div>
+    </div>
+
+    <!-- Inspection Results -->
+    {% for category in inspection.template.categories.all %}
+    <div class="category">
+        <div class="category-header">
+            {{ category.name }}
+        </div>
+        {% for item in category.items.all %}
+        {% with result=inspection.get_result_for_item|item.id %}
+        <div class="result-item {% if result.status == 'pass' %}result-pass{% elif result.status == 'fail' %}result-fail{% elif result.status == 'warning' %}result-warning{% endif %}">
+            <div style="display: flex; justify-content: space-between;">
+                <div style="flex-grow: 1;">
+                    <strong>{{ item.name }}</strong>
+                    {% if item.is_critical %}
+                    <span class="badge badge-critical">Critical</span>
+                    {% endif %}
+                    
+                    {% if result %}
+                    <div style="margin-top: 5px;">
+                        {% if item.item_type == 'pass_fail' %}
+                        <span class="badge {% if result.status == 'pass' %}badge-pass{% else %}badge-fail{% endif %}">
+                            {{ result.get_status_display }}
+                        </span>
+                        {% elif item.item_type == 'rating' %}
+                        Rating: {{ result.rating_value }}/5
+                        {% elif item.item_type == 'measurement' %}
+                        {{ result.measurement_value }} {{ item.measurement_unit }}
+                        {% elif item.item_type == 'condition' %}
+                        Condition: {{ result.condition }}
+                        {% endif %}
+                        
+                        {% if result.notes %}
+                        <p style="margin: 5px 0 0 0; color: #666; font-size: 11px;">{{ result.notes }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+    </div>
+    {% endfor %}
+
+    <!-- Notes -->
+    {% if inspection.notes %}
+    <div class="info-section">
+        <div class="info-item">
+            <label>Additional Notes</label>
+            <value>{{ inspection.notes }}</value>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Signatures -->
+    <div class="signature-section">
+        <div>
+            <div class="signature-label">Technician Signature</div>
+            <div class="signature-box">
+                {% if inspection.technician_signature %}
+                <img src="{{ inspection.technician_signature.url }}" alt="Technician Signature">
+                <p style="margin-top: 10px; font-size: 10px;">
+                    {{ inspection.performed_by.get_full_name }}<br>
+                    {{ inspection.technician_signature_date|date:"M d, Y H:i" }}
+                </p>
+                {% else %}
+                <p style="color: #999;">Not signed</p>
+                {% endif %}
+            </div>
+        </div>
+        <div>
+            <div class="signature-label">Customer Signature</div>
+            <div class="signature-box">
+                {% if inspection.customer_signature %}
+                <img src="{{ inspection.customer_signature.url }}" alt="Customer Signature">
+                <p style="margin-top: 10px; font-size: 10px;">
+                    {{ inspection.vehicle.owner.full_name }}<br>
+                    {{ inspection.customer_signature_date|date:"M d, Y H:i" }}
+                </p>
+                {% else %}
+                <p style="color: #999;">Not signed</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>Smart Vehicle Repairs System | Generated on {{ now|date:"F d, Y H:i" }}</p>
+        <p>This is a computer-generated document. No signature is required for validity.</p>
+    </div>
+</body>
+</html>

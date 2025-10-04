@@ -1,0 +1,22 @@
+{% comment %}
+Task Status Badge Partial
+Usage: {% include 'workorders/partials/task_status_badge.html' with status=task.status %}
+{% endcomment %}
+
+{% if status == 'pending' %}
+    <span class="badge bg-secondary">Pending</span>
+{% elif status == 'in_progress' %}
+    <span class="badge bg-warning">
+        <i class="fas fa-spinner fa-spin me-1"></i>In Progress
+    </span>
+{% elif status == 'completed' %}
+    <span class="badge bg-success">
+        <i class="fas fa-check me-1"></i>Completed
+    </span>
+{% elif status == 'skipped' %}
+    <span class="badge bg-secondary">
+        <i class="fas fa-forward me-1"></i>Skipped
+    </span>
+{% else %}
+    <span class="badge bg-secondary">{{ status|title }}</span>
+{% endif %}

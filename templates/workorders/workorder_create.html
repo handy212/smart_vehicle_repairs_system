@@ -1,0 +1,407 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Create Work Order - Smart Vehicle Repairs{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+<style>
+    .form-section {
+        background: white;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--gray-200);
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .select2-container .select2-selection--single {
+        height: 38px;
+        border-color: #ced4da;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 36px;
+        padding-left: 12px;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    
+    .customer-info {
+        background: var(--gray-50);
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+    
+    .vehicle-info {
+        background: var(--gray-50);
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'workorders:list' %}">Work Orders</a></li>
+                    <li class="breadcrumb-item active">Create Work Order</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">Create Work Order</h1>
+                    <p class="text-muted mb-0">Set up a new service work order</p>
+                </div>
+                <div>
+                    <a href="{% url 'workorders:list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="workorder-form">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Left Column -->
+            <div class="col-lg-8">
+                <!-- Customer & Vehicle Selection -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-user text-primary"></i>
+                        Customer & Vehicle
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customer" class="form-label">Customer <span class="text-danger">*</span></label>
+                                <select class="form-select select2" id="customer" name="customer" required>
+                                    <option value="">Select Customer</option>
+                                    {% for customer in customers %}
+                                        <option value="{{ customer.id }}" 
+                                                data-email="{{ customer.user.email }}"
+                                                data-phone="{{ customer.phone|default:'' }}"
+                                                data-address="{{ customer.address|default:'' }}">
+                                            {{ customer.user.first_name }} {{ customer.user.last_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="customer-info" id="customer-info">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <small class="text-muted">Email:</small><br>
+                                            <span id="customer-email"></span>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Phone:</small><br>
+                                            <span id="customer-phone"></span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">Address:</small><br>
+                                        <span id="customer-address"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="vehicle" class="form-label">Vehicle <span class="text-danger">*</span></label>
+                                <select class="form-select select2" id="vehicle" name="vehicle" required disabled>
+                                    <option value="">Select Customer First</option>
+                                </select>
+                                <div class="vehicle-info" id="vehicle-info">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <small class="text-muted">VIN:</small><br>
+                                            <span id="vehicle-vin"></span>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Mileage:</small><br>
+                                            <span id="vehicle-mileage"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Work Order Details -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-clipboard text-primary"></i>
+                        Work Order Details
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="priority" class="form-label">Priority</label>
+                                <select class="form-select" id="priority" name="priority">
+                                    {% for value, label in priority_choices %}
+                                        <option value="{{ value }}" {% if value == 'normal' %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="estimated_completion" class="form-label">Estimated Completion</label>
+                                <input type="text" class="form-control" id="estimated_completion" name="estimated_completion"
+                                       placeholder="Select date and time">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="customer_concerns" class="form-label">Customer Concerns <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="customer_concerns" name="customer_concerns" rows="4" 
+                                  placeholder="Describe what the customer is experiencing or requesting..." required></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="special_instructions" class="form-label">Special Instructions</label>
+                        <textarea class="form-control" id="special_instructions" name="special_instructions" rows="3" 
+                                  placeholder="Special instructions for staff (not visible to customer)"></textarea>
+                    </div>
+                </div>
+
+                <!-- Vehicle Condition -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-car text-primary"></i>
+                        Vehicle Condition
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="odometer_in" class="form-label">Odometer Reading (miles)</label>
+                                <input type="number" class="form-control" id="odometer_in" name="odometer_in" 
+                                       min="0" step="1" placeholder="Current mileage" required>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-lg-4">
+                <!-- Technician Assignment -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-wrench text-primary"></i>
+                        Technician Assignment
+                    </h5>
+                    
+                    <div class="mb-3">
+                        <label for="primary_technician" class="form-label">Primary Technician</label>
+                        <select class="form-select select2" id="primary_technician" name="primary_technician">
+                            <option value="">Select Primary Technician</option>
+                            {% for tech in technicians %}
+                                <option value="{{ tech.id }}">{{ tech.first_name }} {{ tech.last_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="assigned_technicians" class="form-label">Additional Technicians</label>
+                        <select class="form-select select2" id="assigned_technicians" name="assigned_technicians" multiple>
+                            {% for tech in technicians %}
+                                <option value="{{ tech.id }}">{{ tech.first_name }} {{ tech.last_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Hold Ctrl/Cmd to select multiple technicians</div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-bolt text-primary"></i>
+                        Quick Actions
+                    </h5>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary" id="add-from-template">
+                            <i class="fas fa-clipboard-list me-2"></i> Use Service Template
+                        </button>
+                        <button type="button" class="btn btn-outline-success" id="schedule-appointment">
+                            <i class="fas fa-calendar me-2"></i> Schedule Follow-up
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-section">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save me-2"></i> Create Work Order
+                        </button>
+                        <a href="{% url 'workorders:list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize Select2
+    $('.select2').select2({
+        theme: 'bootstrap-5',
+        width: '100%'
+    });
+    
+    // Initialize date picker
+    flatpickr('#estimated_completion', {
+        enableTime: true,
+        dateFormat: 'Y-m-d H:i',
+        minDate: 'today',
+        time_24hr: false
+    });
+    
+    // Customer selection handler
+    $('#customer').change(function() {
+        const customerId = $(this).val();
+        const customerData = $(this).find('option:selected').data();
+        
+        if (customerId) {
+            // Show customer info
+            $('#customer-email').text(customerData.email || 'N/A');
+            $('#customer-phone').text(customerData.phone || 'N/A');
+            $('#customer-address').text(customerData.address || 'N/A');
+            $('#customer-info').show();
+            
+            // Load customer vehicles
+            loadCustomerVehicles(customerId);
+        } else {
+            $('#customer-info').hide();
+            $('#vehicle').prop('disabled', true).empty().append('<option value=\"\">Select Customer First</option>');
+            $('#vehicle-info').hide();
+        }
+    });
+    
+    // Vehicle selection handler
+    $('#vehicle').change(function() {
+        const vehicleData = $(this).find('option:selected').data();
+        
+        if ($(this).val()) {
+            $('#vehicle-vin').text(vehicleData.vin || 'N/A');
+            $('#vehicle-mileage').text(vehicleData.mileage ? vehicleData.mileage + ' miles' : 'N/A');
+            $('#vehicle-info').show();
+            
+            // Auto-fill odometer reading if available
+            if (vehicleData.mileage) {
+                $('#odometer_in').val(vehicleData.mileage);
+            }
+        } else {
+            $('#vehicle-info').hide();
+        }
+    });
+    
+    // Load customer vehicles function
+    function loadCustomerVehicles(customerId) {
+        $.get(`/workorders/customer/${customerId}/vehicles/`)
+            .done(function(data) {
+                const vehicleSelect = $('#vehicle');
+                vehicleSelect.empty().append('<option value=\"\">Select Vehicle</option>');
+                
+                data.vehicles.forEach(function(vehicle) {
+                    const option = $('<option></option>')
+                        .attr('value', vehicle.id)
+                        .attr('data-vin', vehicle.vin)
+                        .attr('data-mileage', vehicle.current_mileage)
+                        .text(vehicle.display);
+                    vehicleSelect.append(option);
+                });
+                
+                vehicleSelect.prop('disabled', false);
+            })
+            .fail(function() {
+                alert('Error loading vehicles for this customer');
+                $('#vehicle').prop('disabled', true);
+            });
+    }
+    
+    // Form validation
+    $('#workorder-form').submit(function(e) {
+        let isValid = true;
+        const requiredFields = ['customer', 'vehicle', 'customer_concerns'];
+        
+        requiredFields.forEach(function(fieldName) {
+            const field = $(`[name=\"${fieldName}\"]`);
+            if (!field.val().trim()) {
+                field.addClass('is-invalid');
+                isValid = false;
+            } else {
+                field.removeClass('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fill in all required fields');
+            return false;
+        }
+        
+        // Show loading state
+        const submitBtn = $(this).find('button[type=\"submit\"]');
+        submitBtn.prop('disabled', true).html('<i class=\"fas fa-spinner fa-spin me-2\"></i> Creating...');
+    });
+    
+    // Remove validation errors on input
+    $('input, select, textarea').on('input change', function() {
+        $(this).removeClass('is-invalid');
+    });
+    
+    // Service template functionality (placeholder)
+    $('#add-from-template').click(function() {
+        alert('Service template functionality coming soon!');
+    });
+    
+    // Schedule appointment functionality (placeholder)
+    $('#schedule-appointment').click(function() {
+        alert('Appointment scheduling integration coming soon!');
+    });
+});
+</script>
+{% endblock %}

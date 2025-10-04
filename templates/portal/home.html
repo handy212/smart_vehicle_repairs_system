@@ -1,0 +1,257 @@
+{% extends "portal/base_customer.html" %}
+{% load static %}
+
+{% block title %}My Portal - {{ customer.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .portal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    .stat-card {
+        border-left: 4px solid #667eea;
+        transition: transform 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+    }
+    .quick-action-card {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        transition: transform 0.2s;
+    }
+    .quick-action-card:hover {
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}
+
+{% block portal_content %}
+<!-- Portal Header -->
+<div class="portal-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-user-circle me-2"></i>
+                    Welcome back, {{ customer.full_name|default:user.get_full_name }}!
+                </h1>
+                <p class="mb-0 opacity-75">
+                    <i class="fas fa-envelope me-2"></i>{{ customer.email }}
+                    <i class="fas fa-phone ms-3 me-2"></i>{{ customer.phone }}
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                <a href="{% url 'portal:book-appointment' %}" class="btn btn-light btn-lg">
+                    <i class="fas fa-calendar-plus me-2"></i>Book Appointment
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">My Vehicles</h6>
+                            <h2 class="mb-0">{{ total_vehicles }}</h2>
+                        </div>
+                        <div class="text-primary" style="font-size: 2.5rem;">
+                            <i class="fas fa-car"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Upcoming Appointments</h6>
+                            <h2 class="mb-0">{{ upcoming_appointments }}</h2>
+                        </div>
+                        <div class="text-warning" style="font-size: 2.5rem;">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Pending Invoices</h6>
+                            <h2 class="mb-0">{{ pending_invoices }}</h2>
+                        </div>
+                        <div class="text-danger" style="font-size: 2.5rem;">
+                            <i class="fas fa-file-invoice"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Spent</h6>
+                            <h2 class="mb-0">GH₵{{ total_spent|floatformat:0 }}</h2>
+                        </div>
+                        <div class="text-success" style="font-size: 2.5rem;">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <a href="{% url 'portal:my-vehicles' %}" class="text-decoration-none">
+                <div class="card quick-action-card text-center h-100">
+                    <div class="card-body py-4">
+                        <i class="fas fa-car fa-3x mb-3"></i>
+                        <h5 class="mb-0">My Vehicles</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-md-3">
+            <a href="{% url 'portal:my-appointments' %}" class="text-decoration-none">
+                <div class="card quick-action-card text-center h-100">
+                    <div class="card-body py-4">
+                        <i class="fas fa-calendar-alt fa-3x mb-3"></i>
+                        <h5 class="mb-0">My Appointments</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-md-3">
+            <a href="{% url 'portal:my-invoices' %}" class="text-decoration-none">
+                <div class="card quick-action-card text-center h-100">
+                    <div class="card-body py-4">
+                        <i class="fas fa-file-invoice fa-3x mb-3"></i>
+                        <h5 class="mb-0">My Invoices</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        
+        <div class="col-md-3">
+            <a href="{% url 'portal:my-history' %}" class="text-decoration-none">
+                <div class="card quick-action-card text-center h-100">
+                    <div class="card-body py-4">
+                        <i class="fas fa-history fa-3x mb-3"></i>
+                        <h5 class="mb-0">Service History</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+    
+    <div class="row g-4">
+        <!-- Recent Appointments -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar me-2"></i>Recent Appointments
+                    </h5>
+                    <a href="{% url 'portal:my-appointments' %}" class="btn btn-sm btn-light">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_appointments %}
+                        {% for appointment in recent_appointments %}
+                            {% include 'portal/partials/appointment_card.html' with appointment=appointment %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-calendar-times fa-3x mb-3"></i>
+                            <p>No appointments yet</p>
+                            <a href="{% url 'portal:book-appointment' %}" class="btn btn-primary">
+                                Book Your First Appointment
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Invoices -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-invoice me-2"></i>Recent Invoices
+                    </h5>
+                    <a href="{% url 'portal:my-invoices' %}" class="btn btn-sm btn-light">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_invoices %}
+                        {% for invoice in recent_invoices %}
+                            {% include 'portal/partials/invoice_card.html' with invoice=invoice %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-file-invoice fa-3x mb-3"></i>
+                            <p>No invoices yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- My Vehicles -->
+    {% if vehicles %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-car me-2"></i>My Vehicles
+                    </h5>
+                    <a href="{% url 'portal:my-vehicles' %}" class="btn btn-sm btn-light">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        {% for vehicle in vehicles %}
+                        <div class="col-md-6 col-lg-3">
+                            {% include 'portal/partials/vehicle_card.html' with vehicle=vehicle %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

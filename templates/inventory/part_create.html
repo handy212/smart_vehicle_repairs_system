@@ -1,0 +1,648 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Add New Part - Inventory{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: white;
+        border-radius: 0.5rem;
+        border: 1px solid var(--gray-200);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-header {
+        background: var(--gray-50);
+        border-bottom: 1px solid var(--gray-200);
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+    }
+    
+    .section-title {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+    
+    .section-body {
+        padding: 1.5rem;
+    }
+    
+    .image-upload-area {
+        border: 2px dashed var(--gray-300);
+        border-radius: 0.5rem;
+        padding: 2rem;
+        text-align: center;
+        background: var(--gray-50);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .image-upload-area:hover {
+        border-color: var(--primary);
+        background: rgba(13, 110, 253, 0.05);
+    }
+    
+    .image-preview {
+        max-width: 200px;
+        max-height: 200px;
+        border-radius: 0.375rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .pricing-calculator {
+        background: var(--gray-50);
+        padding: 1rem;
+        border-radius: 0.375rem;
+        border: 1px solid var(--gray-200);
+    }
+    
+    .calculator-result {
+        font-size: 1.125rem;
+        font-weight: 600;
+        padding: 0.5rem;
+        background: white;
+        border-radius: 0.25rem;
+        border: 1px solid var(--gray-300);
+    }
+    
+    .stock-warning {
+        background: #fff8e1;
+        border: 1px solid #ffb74d;
+        border-radius: 0.375rem;
+        padding: 0.75rem;
+        margin-top: 0.5rem;
+    }
+    
+    .barcode-generator {
+        text-align: center;
+        padding: 1rem;
+        background: var(--gray-50);
+        border-radius: 0.375rem;
+        border: 1px dashed var(--gray-300);
+    }
+    
+    .form-help {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        margin-top: 0.25rem;
+    }
+    
+    .required-indicator {
+        color: var(--danger);
+        margin-left: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:part_list' %}">Parts</a></li>
+                    <li class="breadcrumb-item active">Add New Part</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-0">Add New Part</h1>
+            <p class="text-muted">Create a new inventory part with complete information</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Parts
+            </a>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="part-form">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Main Form -->
+            <div class="col-lg-8">
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">Basic Information</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">
+                                    Part Name <span class="required-indicator">*</span>
+                                </label>
+                                {{ form.name|add_class:"form-control" }}
+                                {% if form.name.help_text %}
+                                <div class="form-help">{{ form.name.help_text }}</div>
+                                {% endif %}
+                                {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">{{ form.name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.part_number.id_for_label }}" class="form-label">
+                                    Part Number <span class="required-indicator">*</span>
+                                </label>
+                                <div class="input-group">
+                                    {{ form.part_number|add_class:"form-control" }}
+                                    <button type="button" class="btn btn-outline-secondary" onclick="generatePartNumber()">
+                                        <i class="fas fa-magic"></i>
+                                    </button>
+                                </div>
+                                <div class="form-help">Unique identifier for this part</div>
+                                {% if form.part_number.errors %}
+                                <div class="invalid-feedback d-block">{{ form.part_number.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
+                                {{ form.category|add_class:"form-select" }}
+                                {% if form.category.errors %}
+                                <div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                                {{ form.status|add_class:"form-select" }}
+                                {% if form.status.errors %}
+                                <div class="invalid-feedback d-block">{{ form.status.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="{{ form.brand.id_for_label }}" class="form-label">Brand</label>
+                                {{ form.brand|add_class:"form-control" }}
+                                {% if form.brand.errors %}
+                                <div class="invalid-feedback d-block">{{ form.brand.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="{{ form.model.id_for_label }}" class="form-label">Model</label>
+                                {{ form.model|add_class:"form-control" }}
+                                {% if form.model.errors %}
+                                <div class="invalid-feedback d-block">{{ form.model.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="{{ form.unit.id_for_label }}" class="form-label">Unit</label>
+                                {{ form.unit|add_class:"form-select" }}
+                                {% if form.unit.errors %}
+                                <div class="invalid-feedback d-block">{{ form.unit.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-12">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                                {{ form.description|add_class:"form-control" }}
+                                <div class="form-help">Detailed description of the part and its usage</div>
+                                {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock Information -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">Stock Information</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="{{ form.quantity_in_stock.id_for_label }}" class="form-label">
+                                    Initial Stock Quantity
+                                </label>
+                                {{ form.quantity_in_stock|add_class:"form-control" }}
+                                <div class="form-help">Starting inventory quantity</div>
+                                {% if form.quantity_in_stock.errors %}
+                                <div class="invalid-feedback d-block">{{ form.quantity_in_stock.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="{{ form.minimum_stock.id_for_label }}" class="form-label">
+                                    Minimum Stock Level
+                                </label>
+                                {{ form.minimum_stock|add_class:"form-control" }}
+                                <div class="form-help">Minimum quantity to keep in stock</div>
+                                {% if form.minimum_stock.errors %}
+                                <div class="invalid-feedback d-block">{{ form.minimum_stock.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="{{ form.reorder_point.id_for_label }}" class="form-label">
+                                    Reorder Point
+                                </label>
+                                {{ form.reorder_point|add_class:"form-control" }}
+                                <div class="form-help">Quantity that triggers reorder alert</div>
+                                {% if form.reorder_point.errors %}
+                                <div class="invalid-feedback d-block">{{ form.reorder_point.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.reorder_quantity.id_for_label }}" class="form-label">
+                                    Reorder Quantity
+                                </label>
+                                {{ form.reorder_quantity|add_class:"form-control" }}
+                                <div class="form-help">Suggested quantity to order when restocking</div>
+                                {% if form.reorder_quantity.errors %}
+                                <div class="invalid-feedback d-block">{{ form.reorder_quantity.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.location.id_for_label }}" class="form-label">Storage Location</label>
+                                {{ form.location|add_class:"form-control" }}
+                                <div class="form-help">Where this part is stored (shelf, bin, etc.)</div>
+                                {% if form.location.errors %}
+                                <div class="invalid-feedback d-block">{{ form.location.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="stock-warning mt-3" id="stock-warning" style="display: none;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Warning:</strong> <span id="stock-warning-text"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing Information -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">Pricing Information</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="{{ form.cost_price.id_for_label }}" class="form-label">
+                                    Cost Price
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    {{ form.cost_price|add_class:"form-control" }}
+                                </div>
+                                <div class="form-help">What you pay for this part</div>
+                                {% if form.cost_price.errors %}
+                                <div class="invalid-feedback d-block">{{ form.cost_price.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.selling_price.id_for_label }}" class="form-label">
+                                    Selling Price
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    {{ form.selling_price|add_class:"form-control" }}
+                                </div>
+                                <div class="form-help">What you charge customers</div>
+                                {% if form.selling_price.errors %}
+                                <div class="invalid-feedback d-block">{{ form.selling_price.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="pricing-calculator mt-3" id="pricing-calculator" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label class="form-label small">Markup Amount</label>
+                                    <div class="calculator-result text-success" id="markup-amount">$0.00</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Markup Percentage</label>
+                                    <div class="calculator-result text-info" id="markup-percentage">0%</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Profit Margin</label>
+                                    <div class="calculator-result text-primary" id="profit-margin">0%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Supplier Information -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">Supplier Information</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label for="{{ form.preferred_supplier.id_for_label }}" class="form-label">
+                                    Preferred Supplier
+                                </label>
+                                {{ form.preferred_supplier|add_class:"form-select" }}
+                                <div class="form-help">Primary supplier for this part</div>
+                                {% if form.preferred_supplier.errors %}
+                                <div class="invalid-feedback d-block">{{ form.preferred_supplier.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label for="{{ form.suppliers.id_for_label }}" class="form-label">
+                                    Additional Suppliers
+                                </label>
+                                {{ form.suppliers|add_class:"form-select" }}
+                                <div class="form-help">Other suppliers who can provide this part (hold Ctrl to select multiple)</div>
+                                {% if form.suppliers.errors %}
+                                <div class="invalid-feedback d-block">{{ form.suppliers.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Information -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">Additional Information</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                                {{ form.notes|add_class:"form-control" }}
+                                <div class="form-help">Any additional notes or special instructions</div>
+                                {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">{{ form.notes.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Part Image -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">Part Image</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="image-upload-area" onclick="document.getElementById('{{ form.image.id_for_label }}').click()">
+                            <div id="image-preview" style="display: none;">
+                                <img id="preview-img" class="image-preview" alt="Part preview">
+                                <div class="mt-2">
+                                    <small class="text-muted">Click to change image</small>
+                                </div>
+                            </div>
+                            <div id="image-placeholder">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                <p class="mb-0">Click to upload part image</p>
+                                <small class="text-muted">PNG, JPG up to 5MB</small>
+                            </div>
+                        </div>
+                        {{ form.image|add_class:"d-none" }}
+                        {% if form.image.errors %}
+                        <div class="invalid-feedback d-block mt-2">{{ form.image.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Barcode Generator -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">Barcode</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="barcode-generator">
+                            <div id="barcode-display">
+                                <i class="fas fa-barcode fa-3x text-muted mb-2"></i>
+                                <p class="text-muted mb-0">Barcode will be generated automatically</p>
+                                <small class="text-muted">Based on part number</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">Quick Actions</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-primary" onclick="fillSampleData()">
+                                <i class="fas fa-magic me-2"></i>Fill Sample Data
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="clearForm()">
+                                <i class="fas fa-eraser me-2"></i>Clear Form
+                            </button>
+                            <button type="button" class="btn btn-outline-info" onclick="duplicateFromExisting()">
+                                <i class="fas fa-copy me-2"></i>Duplicate Existing Part
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-section">
+                    <div class="section-body">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-save me-2"></i>Create Part
+                            </button>
+                            <button type="submit" name="save_and_add" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Save & Add Another
+                            </button>
+                            <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Image preview functionality
+document.getElementById('{{ form.image.id_for_label }}').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('preview-img').src = e.target.result;
+            document.getElementById('image-preview').style.display = 'block';
+            document.getElementById('image-placeholder').style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Pricing calculator
+function updatePricingCalculator() {
+    const costPrice = parseFloat(document.getElementById('{{ form.cost_price.id_for_label }}').value) || 0;
+    const sellingPrice = parseFloat(document.getElementById('{{ form.selling_price.id_for_label }}').value) || 0;
+    
+    if (costPrice > 0 && sellingPrice > 0) {
+        const markupAmount = sellingPrice - costPrice;
+        const markupPercentage = (markupAmount / costPrice) * 100;
+        const profitMargin = (markupAmount / sellingPrice) * 100;
+        
+        document.getElementById('markup-amount').textContent = '$' + markupAmount.toFixed(2);
+        document.getElementById('markup-percentage').textContent = markupPercentage.toFixed(1) + '%';
+        document.getElementById('profit-margin').textContent = profitMargin.toFixed(1) + '%';
+        document.getElementById('pricing-calculator').style.display = 'block';
+    } else {
+        document.getElementById('pricing-calculator').style.display = 'none';
+    }
+}
+
+// Stock level warnings
+function checkStockLevels() {
+    const initialStock = parseInt(document.getElementById('{{ form.quantity_in_stock.id_for_label }}').value) || 0;
+    const minStock = parseInt(document.getElementById('{{ form.minimum_stock.id_for_label }}').value) || 0;
+    const reorderPoint = parseInt(document.getElementById('{{ form.reorder_point.id_for_label }}').value) || 0;
+    
+    const warning = document.getElementById('stock-warning');
+    const warningText = document.getElementById('stock-warning-text');
+    
+    if (reorderPoint > 0 && initialStock <= reorderPoint) {
+        warningText.textContent = 'Initial stock is at or below the reorder point. Consider ordering more stock.';
+        warning.style.display = 'block';
+    } else if (minStock > 0 && initialStock < minStock) {
+        warningText.textContent = 'Initial stock is below minimum stock level.';
+        warning.style.display = 'block';
+    } else if (reorderPoint > 0 && minStock > 0 && reorderPoint <= minStock) {
+        warningText.textContent = 'Reorder point should typically be higher than minimum stock level.';
+        warning.style.display = 'block';
+    } else {
+        warning.style.display = 'none';
+    }
+}
+
+// Event listeners for calculations
+document.getElementById('{{ form.cost_price.id_for_label }}').addEventListener('input', updatePricingCalculator);
+document.getElementById('{{ form.selling_price.id_for_label }}').addEventListener('input', updatePricingCalculator);
+
+document.getElementById('{{ form.quantity_in_stock.id_for_label }}').addEventListener('input', checkStockLevels);
+document.getElementById('{{ form.minimum_stock.id_for_label }}').addEventListener('input', checkStockLevels);
+document.getElementById('{{ form.reorder_point.id_for_label }}').addEventListener('input', checkStockLevels);
+
+// Generate part number
+function generatePartNumber() {
+    const category = document.getElementById('{{ form.category.id_for_label }}').value;
+    const name = document.getElementById('{{ form.name.id_for_label }}').value;
+    
+    let partNumber = '';
+    
+    if (category && name) {
+        // Get category code (first 3 letters of category name)
+        const categorySelect = document.getElementById('{{ form.category.id_for_label }}');
+        const categoryText = categorySelect.options[categorySelect.selectedIndex].text;
+        const categoryCode = categoryText.substring(0, 3).toUpperCase();
+        
+        // Get name code (first 3 letters of name, removing spaces)
+        const nameCode = name.replace(/\s+/g, '').substring(0, 3).toUpperCase();
+        
+        // Generate random number
+        const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        
+        partNumber = `${categoryCode}-${nameCode}-${randomNum}`;
+    } else {
+        // Generate basic part number
+        const timestamp = Date.now().toString().slice(-6);
+        partNumber = `PART-${timestamp}`;
+    }
+    
+    document.getElementById('{{ form.part_number.id_for_label }}').value = partNumber;
+}
+
+// Fill sample data
+function fillSampleData() {
+    if (confirm('This will fill the form with sample data. Continue?')) {
+        document.getElementById('{{ form.name.id_for_label }}').value = 'Sample Auto Part';
+        document.getElementById('{{ form.part_number.id_for_label }}').value = 'SAM-AUT-001';
+        document.getElementById('{{ form.description.id_for_label }}').value = 'This is a sample auto part for testing purposes.';
+        document.getElementById('{{ form.brand.id_for_label }}').value = 'Sample Brand';
+        document.getElementById('{{ form.model.id_for_label }}').value = 'Model X';
+        document.getElementById('{{ form.quantity_in_stock.id_for_label }}').value = '50';
+        document.getElementById('{{ form.minimum_stock.id_for_label }}').value = '10';
+        document.getElementById('{{ form.reorder_point.id_for_label }}').value = '15';
+        document.getElementById('{{ form.reorder_quantity.id_for_label }}').value = '25';
+        document.getElementById('{{ form.cost_price.id_for_label }}').value = '25.00';
+        document.getElementById('{{ form.selling_price.id_for_label }}').value = '35.00';
+        document.getElementById('{{ form.location.id_for_label }}').value = 'Shelf A-1';
+        
+        updatePricingCalculator();
+        checkStockLevels();
+    }
+}
+
+// Clear form
+function clearForm() {
+    if (confirm('This will clear all form data. Continue?')) {
+        document.getElementById('part-form').reset();
+        document.getElementById('image-preview').style.display = 'none';
+        document.getElementById('image-placeholder').style.display = 'block';
+        document.getElementById('pricing-calculator').style.display = 'none';
+        document.getElementById('stock-warning').style.display = 'none';
+    }
+}
+
+// Duplicate from existing part
+function duplicateFromExisting() {
+    // This would typically open a modal to select an existing part
+    alert('This feature would allow you to select an existing part and copy its details to this form.');
+}
+
+// Form validation
+document.getElementById('part-form').addEventListener('submit', function(e) {
+    const requiredFields = ['{{ form.name.id_for_label }}', '{{ form.part_number.id_for_label }}'];
+    let hasErrors = false;
+    
+    requiredFields.forEach(function(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (!field.value.trim()) {
+            field.classList.add('is-invalid');
+            hasErrors = true;
+        } else {
+            field.classList.remove('is-invalid');
+        }
+    });
+    
+    if (hasErrors) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+    }
+});
+
+// Auto-generate part number when name or category changes
+document.getElementById('{{ form.name.id_for_label }}').addEventListener('blur', function() {
+    const partNumberField = document.getElementById('{{ form.part_number.id_for_label }}');
+    if (!partNumberField.value) {
+        generatePartNumber();
+    }
+});
+
+document.getElementById('{{ form.category.id_for_label }}').addEventListener('change', function() {
+    const partNumberField = document.getElementById('{{ form.part_number.id_for_label }}');
+    if (!partNumberField.value) {
+        generatePartNumber();
+    }
+});
+</script>
+{% endblock %}

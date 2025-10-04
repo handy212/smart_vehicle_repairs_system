@@ -1,0 +1,438 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Edit {{ customer.user.get_full_name }} - Smart Vehicle Repairs{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+    }
+    
+    .form-section h5 {
+        color: #374151;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .form-section h5 i {
+        color: #667eea;
+    }
+    
+    .required-field::after {
+        content: " *";
+        color: #dc2626;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+    
+    .business-fields {
+        background-color: #f9fafb;
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        border: 1px dashed #d1d5db;
+    }
+    
+    .submit-buttons {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        padding: 1.5rem 0;
+        border-top: 2px solid #e5e7eb;
+        margin-top: 2rem;
+        z-index: 10;
+    }
+    
+    .customer-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+        margin: -1rem -1rem 1.5rem -1rem;
+    }
+    
+    .customer-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: white;
+        color: #667eea;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+        border: 3px solid rgba(255,255,255,0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'customers:customer-list' %}">Customers</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'customers:customer-detail' customer.pk %}">{{ customer.user.get_full_name }}</a></li>
+            <li class="breadcrumb-item active">Edit</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8 col-xl-9">
+            <!-- Main Form Card -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <!-- Customer Header -->
+                    <div class="customer-header">
+                        <div class="d-flex align-items-center">
+                            <div class="customer-avatar me-3">
+                                {{ customer.user.get_full_name|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <h4 class="mb-1">Edit Customer Profile</h4>
+                                <p class="mb-0 opacity-75">
+                                    <i class="fas fa-user me-2"></i>{{ customer.user.get_full_name }}
+                                    <span class="mx-2">•</span>
+                                    <i class="fas fa-envelope me-2"></i>{{ customer.user.email }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post" id="customerForm">
+                        {% csrf_token %}
+                        
+                        <!-- Display Form Errors -->
+                        {% if form.errors %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Please correct the following errors:</strong>
+                            <ul class="mb-0 mt-2">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endif %}
+
+                        <!-- Success Message -->
+                        {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+
+                        <!-- Personal Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-user"></i> Personal Information</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.first_name.id_for_label }}" class="form-label required-field">First Name</label>
+                                    {% render_field form.first_name class="form-control" placeholder="Enter first name" %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.last_name.id_for_label }}" class="form-label required-field">Last Name</label>
+                                    {% render_field form.last_name class="form-control" placeholder="Enter last name" %}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.email.id_for_label }}" class="form-label required-field">Email</label>
+                                    {% render_field form.email class="form-control" type="email" placeholder="customer@example.com" %}
+                                    <div class="help-text">Used for login and communications</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
+                                    {% render_field form.phone_number class="form-control" placeholder="+1 (555) 123-4567" %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Customer Type & Status -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-tag"></i> Customer Details</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.customer_type.id_for_label }}" class="form-label required-field">Customer Type</label>
+                                    {% render_field form.customer_type class="form-select" %}
+                                    <div class="help-text">Individual, Business, or Fleet</div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                                    {% render_field form.status class="form-select" %}
+                                </div>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label for="{{ form.preferred_contact_method.id_for_label }}" class="form-label">Preferred Contact Method</label>
+                                {% render_field form.preferred_contact_method class="form-select" %}
+                            </div>
+                        </div>
+
+                        <!-- Business Information (Conditional) -->
+                        <div class="form-section business-fields {% if customer.customer_type == 'individual' %}d-none{% endif %}" id="businessFields">
+                            <h5><i class="fas fa-building"></i> Business Information</h5>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <small>These fields are required for Business and Fleet customers</small>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.company_name.id_for_label }}" class="form-label">Company Name</label>
+                                    {% render_field form.company_name class="form-control" placeholder="ABC Company Inc." %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.tax_id.id_for_label }}" class="form-label">Tax ID / EIN</label>
+                                    {% render_field form.tax_id class="form-control" placeholder="12-3456789" %}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.payment_terms.id_for_label }}" class="form-label">Payment Terms</label>
+                                    {% render_field form.payment_terms class="form-select" %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.credit_limit.id_for_label }}" class="form-label">Credit Limit</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        {% render_field form.credit_limit class="form-control" placeholder="0.00" %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Address Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-map-marker-alt"></i> Service Address</h5>
+                            <div class="mb-3">
+                                <label for="{{ form.service_address.id_for_label }}" class="form-label">Service Address</label>
+                                {% render_field form.service_address class="form-control" placeholder="Primary service/pickup address" %}
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.service_city.id_for_label }}" class="form-label">City</label>
+                                    {% render_field form.service_city class="form-control" placeholder="City" %}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.service_state.id_for_label }}" class="form-label">State</label>
+                                    {% render_field form.service_state class="form-control" placeholder="State" %}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.service_zip_code.id_for_label }}" class="form-label">ZIP Code</label>
+                                    {% render_field form.service_zip_code class="form-control" placeholder="12345" %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Billing Address (Optional) -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-file-invoice"></i> Billing Address <small class="text-muted">(Optional - if different from service address)</small></h5>
+                            <div class="mb-3">
+                                <label for="{{ form.billing_address.id_for_label }}" class="form-label">Billing Address</label>
+                                {% render_field form.billing_address class="form-control" placeholder="Billing address if different from service address" %}
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.billing_city.id_for_label }}" class="form-label">Billing City</label>
+                                    {% render_field form.billing_city class="form-control" placeholder="Billing city" %}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.billing_state.id_for_label }}" class="form-label">Billing State</label>
+                                    {% render_field form.billing_state class="form-control" placeholder="Billing state" %}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.billing_zip_code.id_for_label }}" class="form-label">Billing ZIP</label>
+                                    {% render_field form.billing_zip_code class="form-control" placeholder="12345" %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sticky Submit Buttons -->
+                        <div class="submit-buttons">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                            <a href="{% url 'customers:customer-detail' customer.pk %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <a href="{% url 'customers:customer-delete' customer.pk %}" class="btn btn-danger btn-lg float-end" 
+                               onclick="return confirm('Are you sure you want to delete this customer? This action cannot be undone.')">
+                                <i class="fas fa-trash me-2"></i>Delete Customer
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4 col-xl-3">
+            <!-- Customer Info Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle text-primary me-2"></i>
+                        Customer Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="mb-2">
+                            <strong>Customer Since:</strong><br>
+                            <span class="text-muted">{{ customer.created_at|date:"M d, Y" }}</span>
+                        </li>
+                        <li class="mb-2">
+                            <strong>Customer ID:</strong><br>
+                            <span class="text-muted">#{{ customer.id|stringformat:"05d" }}</span>
+                        </li>
+                        <li class="mb-2">
+                            <strong>Vehicles:</strong><br>
+                            <span class="text-muted">{{ customer.vehicles.count }}</span>
+                        </li>
+                        <li class="mb-0">
+                            <strong>Last Updated:</strong><br>
+                            <span class="text-muted">{{ customer.updated_at|date:"M d, Y g:i A" }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt text-warning me-2"></i>
+                        Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'customers:customer-detail' customer.pk %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye me-2"></i>View Profile
+                        </a>
+                        <a href="#" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-car me-2"></i>Add Vehicle
+                        </a>
+                        <a href="#" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-file-invoice me-2"></i>Create Invoice
+                        </a>
+                        <a href="#" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-envelope me-2"></i>Send Email
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tips Card -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        Tips
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Changes are saved immediately
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Email changes require verification
+                        </li>
+                        <li class="mb-0">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Customer will be notified of major changes
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const customerTypeField = document.getElementById('{{ form.customer_type.id_for_label }}');
+        const businessFields = document.getElementById('businessFields');
+        
+        // Show/hide business fields based on customer type
+        function toggleBusinessFields() {
+            const customerType = customerTypeField.value;
+            if (customerType === 'business' || customerType === 'fleet') {
+                businessFields.classList.remove('d-none');
+            } else {
+                businessFields.classList.add('d-none');
+            }
+        }
+        
+        // Initial check
+        toggleBusinessFields();
+        
+        // Listen for changes
+        customerTypeField.addEventListener('change', toggleBusinessFields);
+        
+        // Form validation
+        const form = document.getElementById('customerForm');
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+        
+        // Auto-save indicator
+        let saveTimeout;
+        const formInputs = form.querySelectorAll('input, select, textarea');
+        formInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                clearTimeout(saveTimeout);
+                // Show saving indicator
+                const indicator = document.createElement('span');
+                indicator.className = 'badge bg-info ms-2';
+                indicator.textContent = 'Unsaved changes';
+                indicator.id = 'saveIndicator';
+                
+                const existing = document.getElementById('saveIndicator');
+                if (existing) existing.remove();
+                
+                document.querySelector('h4').appendChild(indicator);
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,1024 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}{{ workorder.work_order_number }} - Work Order Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-section {
+        background: white;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--gray-200);
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .info-item {
+        display: flex;
+        margin-bottom: 0.75rem;
+    }
+    
+    .info-label {
+        font-weight: 500;
+        color: var(--gray-600);
+        min-width: 140px;
+        margin-right: 1rem;
+    }
+    
+    .info-value {
+        color: var(--gray-800);
+    }
+    
+    .status-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-bottom: 1.5rem;
+    }
+    
+    .timeline-item:not(:last-child)::before {
+        content: '';
+        position: absolute;
+        left: -1.5rem;
+        top: 1rem;
+        width: 2px;
+        height: calc(100% - 1rem);
+        background: var(--gray-300);
+    }
+    
+    .timeline-item::after {
+        content: '';
+        position: absolute;
+        left: -1.75rem;
+        top: 0.25rem;
+        width: 0.75rem;
+        height: 0.75rem;
+        background: var(--primary);
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px var(--primary);
+    }
+    
+    .timeline-item.completed::after {
+        background: var(--success);
+        box-shadow: 0 0 0 2px var(--success);
+    }
+    
+    .task-card {
+        border: 1px solid var(--gray-200);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .task-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .task-card.completed {
+        background: var(--gray-50);
+        border-color: var(--success);
+    }
+    
+    .part-card {
+        border: 1px solid var(--gray-200);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: white;
+    }
+    
+    .part-card.installed {
+        border-color: var(--success);
+        background: rgba(16, 185, 129, 0.05);
+    }
+    
+    .time-tracker {
+        background: var(--gray-50);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .timer-display {
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--primary);
+        text-align: center;
+        margin: 1rem 0;
+    }
+    
+    .note-card {
+        border-left: 4px solid var(--gray-300);
+        background: var(--gray-50);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0 0.5rem 0.5rem 0;
+    }
+    
+    .note-card.important {
+        border-left-color: var(--warning);
+        background: rgba(245, 158, 11, 0.1);
+    }
+    
+    .note-card.customer {
+        border-left-color: var(--info);
+        background: rgba(59, 130, 246, 0.1);
+    }
+    
+    .signature-pad {
+        border: 2px dashed var(--gray-300);
+        border-radius: 0.5rem;
+        background: white;
+    }
+    
+    .cost-summary {
+        background: var(--gray-50);
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+    
+    .cost-item {
+        display: flex;
+        justify-content: between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .cost-item:last-child {
+        border-bottom: none;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .btn-floating {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1000;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'workorders:list' %}">Work Orders</a></li>
+                            <li class="breadcrumb-item active">{{ workorder.work_order_number }}</li>
+                        </ol>
+                    </nav>
+                    <h1 class="h3 mb-1">{{ workorder.work_order_number }}</h1>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        {% include 'workorders/partials/status_badge.html' with status=workorder.status %}
+                        {% include 'workorders/partials/priority_badge.html' with priority=workorder.priority %}
+                        {% if workorder.is_overdue %}
+                            <span class="badge bg-danger">Overdue</span>
+                        {% endif %}
+                        {% if workorder.requires_approval %}
+                            <span class="badge bg-warning">Needs Approval</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    {% if can_edit %}
+                    <a href="{% url 'workorders:edit' workorder.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-1"></i> Edit
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'workorders:print' workorder.pk %}" target="_blank" class="btn btn-outline-success">
+                        <i class="fas fa-print me-1"></i> Print
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Actions
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% if workorder.status == 'draft' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="intake">
+                                <i class="fas fa-play me-2"></i>Start Intake
+                            </a></li>
+                            {% elif workorder.status == 'intake' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="diagnosis">
+                                <i class="fas fa-search me-2"></i>Start Diagnosis
+                            </a></li>
+                            {% elif workorder.status == 'diagnosis' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="awaiting_approval">
+                                <i class="fas fa-clipboard-check me-2"></i>Request Approval
+                            </a></li>
+                            {% elif workorder.status == 'awaiting_approval' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="approved">
+                                <i class="fas fa-check me-2"></i>Mark Approved
+                            </a></li>
+                            {% elif workorder.status == 'approved' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="in_progress">
+                                <i class="fas fa-wrench me-2"></i>Start Work
+                            </a></li>
+                            {% elif workorder.status == 'in_progress' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="quality_check">
+                                <i class="fas fa-clipboard-check me-2"></i>Quality Check
+                            </a></li>
+                            <li><a class="dropdown-item status-update" href="#" data-status="paused">
+                                <i class="fas fa-pause me-2"></i>Pause Work
+                            </a></li>
+                            {% elif workorder.status == 'quality_check' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="completed">
+                                <i class="fas fa-check-circle me-2"></i>Mark Completed
+                            </a></li>
+                            {% elif workorder.status == 'completed' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="invoiced">
+                                <i class="fas fa-file-invoice me-2"></i>Mark Invoiced
+                            </a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-warning" href="#" id="add-note-btn">
+                                <i class="fas fa-sticky-note me-2"></i>Add Note
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Basic Information -->
+            <div class="detail-section">
+                <h5 class="section-title">
+                    <i class="fas fa-info-circle text-primary"></i>
+                    Basic Information
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <div class="info-label">Customer:</div>
+                            <div class="info-value">
+                                <strong>{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</strong>
+                                <br><small class="text-muted">{{ workorder.customer.user.email }}</small>
+                                {% if workorder.customer.phone %}
+                                <br><small class="text-muted">{{ workorder.customer.phone }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Vehicle:</div>
+                            <div class="info-value">
+                                <strong>{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</strong>
+                                <br><small class="text-muted">{{ workorder.vehicle.license_plate }}</small>
+                                {% if workorder.vehicle.vin %}
+                                <br><small class="text-muted">VIN: {{ workorder.vehicle.vin }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if workorder.odometer_in %}
+                        <div class="info-item">
+                            <div class="info-label">Odometer:</div>
+                            <div class="info-value">{{ workorder.odometer_in|floatformat:0 }} miles</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <div class="info-label">Primary Technician:</div>
+                            <div class="info-value">
+                                {% if workorder.primary_technician %}
+                                    <strong>{{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}</strong>
+                                {% else %}
+                                    <span class="text-muted">Not assigned</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Created:</div>
+                            <div class="info-value">{{ workorder.created_at|date:"M d, Y H:i" }}</div>
+                        </div>
+                        {% if workorder.estimated_completion %}
+                        <div class="info-item">
+                            <div class="info-label">Estimated Completion:</div>
+                            <div class="info-value">{{ workorder.estimated_completion|date:"M d, Y H:i" }}</div>
+                        </div>
+                        {% endif %}
+                        {% if workorder.completed_at %}
+                        <div class="info-item">
+                            <div class="info-label">Completed:</div>
+                            <div class="info-value">{{ workorder.completed_at|date:"M d, Y H:i" }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if workorder.customer_concerns %}
+                <div class="mt-3">
+                    <div class="info-label">Customer Concerns:</div>
+                    <div class="info-value">{{ workorder.customer_concerns }}</div>
+                </div>
+                {% endif %}
+                
+                {% if workorder.diagnosis_notes %}
+                <div class="mt-3">
+                    <div class="info-label">Diagnosis Notes:</div>
+                    <div class="info-value">{{ workorder.diagnosis_notes }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Service Tasks -->
+            <div class="detail-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="section-title mb-0">
+                        <i class="fas fa-tasks text-primary"></i>
+                        Service Tasks
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary" id="add-task-btn">
+                        <i class="fas fa-plus me-1"></i> Add Task
+                    </button>
+                </div>
+                
+                {% for task in workorder.tasks.all %}
+                <div class="task-card {% if task.status == 'completed' %}completed{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ task.get_task_type_display }} - {{ task.description }}</h6>
+                            {% if task.detailed_notes %}
+                            <p class="text-muted mb-2 small">{{ task.detailed_notes }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            {% include 'workorders/partials/task_status_badge.html' with status=task.status %}
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    {% if task.status == 'pending' %}
+                                    <li><a class="dropdown-item task-status-update" href="#" data-task-id="{{ task.id }}" data-status="in_progress">
+                                        <i class="fas fa-play me-2"></i>Start Task
+                                    </a></li>
+                                    {% elif task.status == 'in_progress' %}
+                                    <li><a class="dropdown-item task-status-update" href="#" data-task-id="{{ task.id }}" data-status="completed">
+                                        <i class="fas fa-check me-2"></i>Mark Complete
+                                    </a></li>
+                                    <li><a class="dropdown-item task-status-update" href="#" data-task-id="{{ task.id }}" data-status="skipped">
+                                        <i class="fas fa-forward me-2"></i>Skip Task
+                                    </a></li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3">
+                            <small class="text-muted">Assigned To:</small><br>
+                            {% if task.assigned_to %}
+                                <span class="badge bg-success">{{ task.assigned_to.first_name }} {{ task.assigned_to.last_name }}</span>
+                            {% else %}
+                                <span class="text-muted">Unassigned</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Estimated Hours:</small><br>
+                            <strong>{{ task.estimated_hours|floatformat:1 }}h</strong>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Actual Hours:</small><br>
+                            <strong>{{ task.actual_hours|floatformat:1 }}h</strong>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Labor Cost:</small><br>
+                            <strong>${{ task.labor_cost|floatformat:2 }}</strong>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4 text-muted">
+                    <i class="fas fa-tasks fa-2x mb-2"></i>
+                    <p class="mb-0">No tasks added yet</p>
+                    <button class="btn btn-primary mt-2" id="add-first-task-btn">
+                        <i class="fas fa-plus me-1"></i> Add First Task
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Parts Used -->
+            <div class="detail-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="section-title mb-0">
+                        <i class="fas fa-cogs text-primary"></i>
+                        Parts Used
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary" id="add-part-btn">
+                        <i class="fas fa-plus me-1"></i> Add Part
+                    </button>
+                </div>
+                
+                {% for part in workorder.parts.all %}
+                <div class="part-card {% if part.status == 'installed' %}installed{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ part.part_name }}</h6>
+                            <p class="text-muted mb-1 small">Part #: {{ part.part_number }}</p>
+                            {% if part.description %}
+                            <p class="text-muted mb-2 small">{{ part.description }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            {% include 'workorders/partials/part_status_badge.html' with status=part.status %}
+                            <div class="mt-1">
+                                <small class="text-muted">Qty: {{ part.quantity|floatformat:0 }}</small><br>
+                                <strong>${{ part.selling_price|floatformat:2 }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4 text-muted">
+                    <i class="fas fa-cogs fa-2x mb-2"></i>
+                    <p class="mb-0">No parts added yet</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="detail-section">
+                <h5 class="section-title">
+                    <i class="fas fa-history text-primary"></i>
+                    Recent Activity
+                </h5>
+                
+                <div class="status-timeline">
+                    {% for note in recent_notes %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ note.get_note_type_display }}</strong>
+                            <small class="text-muted">{{ note.created_at|date:"M d, H:i" }}</small>
+                        </div>
+                        <p class="mb-1">{{ note.note }}</p>
+                        <small class="text-muted">by {{ note.created_by.first_name }} {{ note.created_by.last_name }}</small>
+                    </div>
+                    {% endfor %}
+                    
+                    {% for log in recent_time_logs %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between">
+                            <strong>Time Log</strong>
+                            <small class="text-muted">{{ log.created_at|date:"M d, H:i" }}</small>
+                        </div>
+                        <p class="mb-1">{{ log.technician.first_name }} {{ log.technician.last_name }} - {{ log.duration_hours|floatformat:1 }}h</p>
+                        <small class="text-muted">{{ log.description }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4">
+            <!-- Time Tracking -->
+            {% if can_work %}
+            <div class="detail-section">
+                <h5 class="section-title">
+                    <i class="fas fa-clock text-primary"></i>
+                    Time Tracking
+                </h5>
+                
+                <div class="time-tracker">
+                    <div class="timer-display" id="timer-display">00:00:00</div>
+                    <div class="text-center">
+                        <button class="btn btn-success me-2" id="clock-in-btn">
+                            <i class="fas fa-play me-1"></i> Clock In
+                        </button>
+                        <button class="btn btn-danger" id="clock-out-btn" disabled>
+                            <i class="fas fa-stop me-1"></i> Clock Out
+                        </button>
+                    </div>
+                    <div class="mt-3">
+                        <input type="text" class="form-control form-control-sm" id="work-description" 
+                               placeholder="What are you working on?">
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Cost Summary -->
+            <div class="detail-section">
+                <h5 class="section-title">
+                    <i class="fas fa-calculator text-primary"></i>
+                    Cost Summary
+                </h5>
+                
+                <div class="cost-summary">
+                    <div class="cost-item">
+                        <span>Labor Cost:</span>
+                        <span>${{ total_labor_cost|floatformat:2 }}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Parts Cost:</span>
+                        <span>${{ total_parts_cost|floatformat:2 }}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Estimated Hours:</span>
+                        <span>{{ total_estimated_hours|floatformat:1 }}h</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Actual Hours:</span>
+                        <span>{{ total_actual_hours|floatformat:1 }}h</span>
+                    </div>
+                    <hr>
+                    <div class="cost-item">
+                        <span><strong>Total Cost:</strong></span>
+                        <span><strong>${{ total_labor_cost|add:total_parts_cost|floatformat:2 }}</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="detail-section">
+                <h5 class="section-title">
+                    <i class="fas fa-bolt text-primary"></i>
+                    Quick Actions
+                </h5>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" id="add-photo-btn">
+                        <i class="fas fa-camera me-2"></i> Add Photo
+                    </button>
+                    <button class="btn btn-outline-success" id="customer-approval-btn">
+                        <i class="fas fa-signature me-2"></i> Get Customer Approval
+                    </button>
+                    <button class="btn btn-outline-info" id="send-update-btn">
+                        <i class="fas fa-envelope me-2"></i> Send Customer Update
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Note Modal -->
+<div class="modal fade" id="addNoteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Note</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-note-form">
+                    <div class="mb-3">
+                        <label for="note-type" class="form-label">Note Type</label>
+                        <select class="form-select" id="note-type" required>
+                            <option value="general">General</option>
+                            <option value="internal">Internal Note</option>
+                            <option value="customer">Customer Communication</option>
+                            <option value="technician">Technician Note</option>
+                            <option value="parts">Parts Note</option>
+                            <option value="quality">Quality Check Note</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="note-text" class="form-label">Note</label>
+                        <textarea class="form-control" id="note-text" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="note-important">
+                        <label class="form-check-label" for="note-important">
+                            Mark as important
+                        </label>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="note-customer-visible">
+                        <label class="form-check-label" for="note-customer-visible">
+                            Visible to customer
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-note-btn">Save Note</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Service Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-task-form">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="task-type" class="form-label">Task Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="task-type" name="task_type" required>
+                            <option value="repair">Repair</option>
+                            <option value="maintenance">Maintenance</option>
+                            <option value="inspection">Inspection</option>
+                            <option value="diagnostic">Diagnostic</option>
+                            <option value="replacement">Replacement</option>
+                            <option value="adjustment">Adjustment</option>
+                            <option value="cleaning">Cleaning</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="task-description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="task-description" name="description" 
+                               placeholder="Brief description of the task" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="task-notes" class="form-label">Detailed Notes</label>
+                        <textarea class="form-control" id="task-notes" name="detailed_notes" rows="3"
+                                  placeholder="Additional notes or instructions"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="task-assigned-to" class="form-label">Assign To</label>
+                                <select class="form-select" id="task-assigned-to" name="assigned_to">
+                                    <option value="">Unassigned</option>
+                                    {% for tech in technicians %}
+                                    <option value="{{ tech.id }}">{{ tech.first_name }} {{ tech.last_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="task-estimated-hours" class="form-label">Estimated Hours</label>
+                                <input type="number" class="form-control" id="task-estimated-hours" 
+                                       name="estimated_hours" min="0" step="0.25" placeholder="0.0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="task-labor-rate" class="form-label">Labor Rate ($/hour)</label>
+                        <input type="number" class="form-control" id="task-labor-rate" 
+                               name="labor_rate" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-task-btn">Add Task</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Action Button -->
+{% if can_work %}
+<button class="btn btn-primary btn-floating" id="floating-timer" title="Quick Time Track">
+    <i class="fas fa-clock"></i>
+</button>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let timerInterval = null;
+    let startTime = null;
+    let currentTimeLogId = null;
+    
+    // Timer functions
+    function startTimer() {
+        startTime = new Date();
+        timerInterval = setInterval(updateTimerDisplay, 1000);
+        document.getElementById('clock-in-btn').disabled = true;
+        document.getElementById('clock-out-btn').disabled = false;
+        updateTimerDisplay();
+    }
+    
+    function stopTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        startTime = null;
+        document.getElementById('clock-in-btn').disabled = false;
+        document.getElementById('clock-out-btn').disabled = true;
+        document.getElementById('timer-display').textContent = '00:00:00';
+    }
+    
+    function updateTimerDisplay() {
+        if (startTime) {
+            const now = new Date();
+            const diff = now - startTime;
+            const hours = Math.floor(diff / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            
+            document.getElementById('timer-display').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    // Clock in/out handlers
+    document.getElementById('clock-in-btn')?.addEventListener('click', function() {
+        const description = document.getElementById('work-description').value.trim();
+        if (!description) {
+            alert('Please describe what you\'re working on');
+            return;
+        }
+        
+        fetch(`/workorders/{{ workorder.id }}/time-clock/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                action: 'clock_in',
+                description: description
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentTimeLogId = data.time_log_id;
+                startTimer();
+                showToast('success', 'Clocked in successfully!');
+            } else {
+                showToast('danger', 'Error clocking in: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while clocking in.');
+        });
+    });
+    
+    document.getElementById('clock-out-btn')?.addEventListener('click', function() {
+        if (!currentTimeLogId) {
+            showToast('danger', 'No active time log found');
+            return;
+        }
+        
+        fetch(`/workorders/{{ workorder.id }}/time-clock/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                action: 'clock_out',
+                time_log_id: currentTimeLogId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                stopTimer();
+                currentTimeLogId = null;
+                showToast('success', `Clocked out! Duration: ${data.duration_hours}h, Cost: $${data.labor_cost}`);
+                // Refresh page to show updated data
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                showToast('danger', 'Error clocking out: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while clocking out.');
+        });
+    });
+    
+    // Status update handlers
+    document.querySelectorAll('.status-update').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const newStatus = this.dataset.status;
+            
+            if (confirm(`Are you sure you want to change the status to "${newStatus}"?`)) {
+                updateWorkOrderStatus(newStatus);
+            }
+        });
+    });
+    
+    // Add note handler
+    document.getElementById('add-note-btn')?.addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('addNoteModal'));
+        modal.show();
+    });
+    
+    // Add task handlers
+    document.getElementById('add-task-btn')?.addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('addTaskModal'));
+        modal.show();
+    });
+    
+    document.getElementById('add-first-task-btn')?.addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('addTaskModal'));
+        modal.show();
+    });
+    
+    document.getElementById('save-task-btn')?.addEventListener('click', function() {
+        const form = document.getElementById('add-task-form');
+        const formData = new FormData(form);
+        
+        fetch(`/workorders/{{ workorder.id }}/add-task/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', data.message);
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addTaskModal'));
+                modal.hide();
+                // Reset form
+                form.reset();
+                // Refresh page to show new task
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('danger', 'Error adding task: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while adding the task.');
+        });
+    });
+    
+    // Task status update handlers
+    document.querySelectorAll('.task-status-update').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const taskId = this.dataset.taskId;
+            const newStatus = this.dataset.status;
+            
+            fetch(`/workorders/{{ workorder.id }}/tasks/${taskId}/update-status/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: `status=${newStatus}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', data.message);
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('danger', 'Error updating task: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('danger', 'An error occurred while updating the task.');
+            });
+        });
+    });
+    
+    document.getElementById('save-note-btn')?.addEventListener('click', function() {
+        const noteType = document.getElementById('note-type').value;
+        const noteText = document.getElementById('note-text').value.trim();
+        const isImportant = document.getElementById('note-important').checked;
+        const isCustomerVisible = document.getElementById('note-customer-visible').checked;
+        
+        if (!noteText) {
+            alert('Please enter a note');
+            return;
+        }
+        
+        fetch(`/workorders/{{ workorder.id }}/add-note/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                note_type: noteType,
+                note: noteText,
+                is_important: isImportant,
+                is_customer_visible: isCustomerVisible
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', 'Note added successfully!');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addNoteModal'));
+                modal.hide();
+                // Refresh page to show new note
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('danger', 'Error adding note: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while adding the note.');
+        });
+    });
+    
+    // Helper functions
+    function updateWorkOrderStatus(newStatus) {
+        fetch(`/workorders/{{ workorder.id }}/update-status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: `status=${newStatus}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', 'Status updated successfully!');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('danger', 'Error updating status: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while updating the status.');
+        });
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function showToast(type, message) {
+        // Create toast element if container doesn't exist
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.style.zIndex = '1080';
+            document.body.appendChild(toastContainer);
+        }
+        
+        const toastHtml = `
+            <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        
+        toastContainer.innerHTML = toastHtml;
+        const toastElement = toastContainer.querySelector('.toast');
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
+        
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastElement.remove();
+        });
+    }
+});
+</script>
+{% endblock %}

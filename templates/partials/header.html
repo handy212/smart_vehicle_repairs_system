@@ -1,0 +1,93 @@
+{% load static %}
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
+    <div class="container-fluid">
+        <!-- Brand -->
+        <a class="navbar-brand d-flex align-items-center" href="/">
+            {% if LOGO_PATH %}
+                <img src="{{ MEDIA_URL }}{{ LOGO_PATH }}" alt="{{ SITE_NAME }}" style="height: 40px; margin-right: 10px;">
+            {% else %}
+                <i class="fas fa-car-side me-2"></i>
+            {% endif %}
+            <span>{{ SITE_NAME|default:'Smart Vehicle Repairs' }}</span>
+        </a>
+        
+        <!-- Mobile Toggle -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <!-- Navigation Links -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-center">
+                {% if user.is_authenticated %}
+                    {% if user.is_staff %}
+                        <!-- Search (Staff Only) -->
+                        <li class="nav-item me-3">
+                            <form class="d-flex" action="{% url 'search' %}" method="get">
+                                <div class="input-group">
+                                    <input class="form-control form-control-sm" type="search" placeholder="Search..." name="q" aria-label="Search">
+                                    <button class="btn btn-outline-secondary btn-sm" type="submit">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </li>
+                        
+                        <!-- Notifications (Staff Only) -->
+                        <li class="nav-item me-2">
+                            {% include 'notifications/partials/notification_bell.html' %}
+                        </li>
+                    {% endif %}
+                    
+                    <!-- User Menu -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            {% if user.profile_picture %}
+                                <img src="{{ user.profile_picture.url }}" class="rounded-circle me-2" width="32" height="32" alt="{{ user.get_full_name }}">
+                            {% else %}
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 0.9rem;">
+                                    {{ user.first_name.0|upper }}{{ user.last_name.0|upper }}
+                                </div>
+                            {% endif %}
+                            <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><h6 class="dropdown-header">{{ user.email }}</h6></li>
+                            <li><span class="dropdown-item-text"><small class="text-muted">Role: {{ user.get_role_display }}</small></span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="fas fa-user me-2"></i> My Profile</a></li>
+                            <li><a class="dropdown-item" href="{% url 'password_change' %}"><i class="fas fa-key me-2"></i> Change Password</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                {% if user.role == 'customer' %}
+                                    <form method="post" action="{% url 'customer_logout' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="fas fa-sign-out-alt me-2"></i> Logout
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <form method="post" action="{% url 'logout' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="fas fa-sign-out-alt me-2"></i> Logout
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <!-- Guest Links -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-primary btn-sm" href="{% url 'register' %}">Sign Up</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>

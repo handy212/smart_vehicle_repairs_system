@@ -1,0 +1,585 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+<style>
+    .invoice-status {
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+    .amount-cell {
+        font-weight: 600;
+        text-align: right;
+    }
+    .filters-card {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    .table th {
+        background-color: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .badge-paid { background-color: #28a745; }
+    .badge-partial { background-color: #ffc107; color: #212529; }
+    .badge-overdue { background-color: #dc3545; }
+    .badge-draft { background-color: #6c757d; }
+    .badge-sent { background-color: #17a2b8; }
+    .badge-viewed { background-color: #6610f2; }
+    .badge-void { background-color: #e83e8c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-file-invoice-dollar me-2"></i>{{ page_title }}
+            </h1>
+            <p class="text-muted">Manage customer invoices and billing</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group" role="group">
+                <a href="{% url 'billing:invoice_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>New Invoice
+                </a>
+                <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-download me-2"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" data-export="csv">Export as CSV</a></li>
+                    <li><a class="dropdown-item" href="#" data-export="pdf">Export as PDF</a></li>
+                    <li><a class="dropdown-item" href="#" data-export="excel">Export as Excel</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card filters-card">
+                <div class="card-body">
+                    <form method="get" class="row align-items-end">
+                        <div class="col-md-3">
+                            <label for="search" class="form-label">Search</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" class="form-control" id="search" name="search" 
+                                       placeholder="Invoice #, Customer, Vehicle..." 
+                                       value="{{ search_query }}">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">All Statuses</option>
+                                {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="customer" class="form-label">Customer</label>
+                            <select class="form-select" id="customer" name="customer">
+                                <option value="">All Customers</option>
+                                {% for customer in customers %}
+                                <option value="{{ customer.id }}" {% if customer_filter == customer.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ customer.get_full_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="date_range" class="form-label">Date Range</label>
+                            <select class="form-select" id="date_range" name="date_range">
+                                <option value="">All Time</option>
+                                <option value="today">Today</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="quarter">This Quarter</option>
+                                <option value="year">This Year</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter me-2"></i>Filter
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-invoice fa-2x text-primary mb-2"></i>
+                    <h5 class="card-title">{{ page_obj.paginator.count }}</h5>
+                    <p class="card-text text-muted">Total Invoices</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                    <h5 class="card-title">
+                        {{ page_obj.object_list|length }}
+                    </h5>
+                    <p class="card-text text-muted">Filtered Results</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                    <h5 class="card-title">
+                        {% for invoice in page_obj.object_list %}
+                            {% if invoice.status == 'overdue' %}{{ forloop.counter }}{% endif %}
+                        {% endfor %}
+                    </h5>
+                    <p class="card-text text-muted">Overdue</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <i class="fas fa-dollar-sign fa-2x text-info mb-2"></i>
+                    <h5 class="card-title">
+                        ${% for invoice in page_obj.object_list %}{{ invoice.total|add:0 }}{% endfor %}
+                    </h5>
+                    <p class="card-text text-muted">Total Value</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoices Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list me-2"></i>Invoices
+                    </h5>
+                    <div class="d-flex align-items-center">
+                        <span class="text-muted me-3">
+                            Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+                        </span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary" data-view="table">
+                                <i class="fas fa-table"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" data-view="cards">
+                                <i class="fas fa-th-large"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if page_obj.object_list %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="invoicesTable">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <input type="checkbox" class="form-check-input" id="selectAllInvoices">
+                                    </th>
+                                    <th>Invoice #</th>
+                                    <th>Customer</th>
+                                    <th>Vehicle</th>
+                                    <th>Date</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="text-end">Paid</th>
+                                    <th class="text-end">Balance</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for invoice in page_obj.object_list %}
+                                <tr data-invoice-id="{{ invoice.id }}">
+                                    <td>
+                                        <input type="checkbox" class="form-check-input invoice-checkbox" 
+                                               value="{{ invoice.id }}">
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'billing:invoice_detail' invoice.id %}" 
+                                           class="text-decoration-none fw-bold">
+                                            {{ invoice.invoice_number }}
+                                        </a>
+                                        {% if invoice.work_order %}
+                                        <br>
+                                        <small class="text-muted">WO: {{ invoice.work_order.work_order_number }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ invoice.customer.get_full_name }}</strong>
+                                            {% if invoice.customer.email %}
+                                            <br>
+                                            <small class="text-muted">{{ invoice.customer.email }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            {{ invoice.vehicle.year }} {{ invoice.vehicle.make }} {{ invoice.vehicle.model }}
+                                            <br>
+                                            <small class="text-muted">{{ invoice.vehicle.vin|slice:":8" }}...</small>
+                                        </div>
+                                    </td>
+                                    <td>{{ invoice.invoice_date|date:"M d, Y" }}</td>
+                                    <td>
+                                        {{ invoice.due_date|date:"M d, Y" }}
+                                        {% if invoice.is_overdue %}
+                                        <br>
+                                        <small class="text-danger">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            {{ invoice.days_overdue }} days overdue
+                                        </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-{{ invoice.status }} invoice-status">
+                                            {{ invoice.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="amount-cell">${{ invoice.total|floatformat:2 }}</td>
+                                    <td class="amount-cell">${{ invoice.amount_paid|floatformat:2 }}</td>
+                                    <td class="amount-cell">
+                                        <span class="{% if invoice.amount_due > 0 %}text-danger{% else %}text-success{% endif %}">
+                                            ${{ invoice.amount_due|floatformat:2 }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'billing:invoice_detail' invoice.id %}" 
+                                               class="btn btn-outline-primary" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if invoice.status == 'draft' %}
+                                            <a href="{% url 'billing:invoice_edit' invoice.id %}" 
+                                               class="btn btn-outline-secondary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% endif %}
+                                            <a href="{% url 'billing:invoice_print' invoice.id %}" 
+                                               class="btn btn-outline-info" title="Print" target="_blank">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                            {% if invoice.amount_due > 0 %}
+                                            <a href="{% url 'billing:payment_create' %}?invoice_id={{ invoice.id }}" 
+                                               class="btn btn-outline-success" title="Record Payment">
+                                                <i class="fas fa-dollar-sign"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-invoice fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">No invoices found</h5>
+                        <p class="text-muted">Create your first invoice to get started.</p>
+                        <a href="{% url 'billing:invoice_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create Invoice
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Invoice pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if customer_filter %}customer={{ customer_filter }}&{% endif %}page=1">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if customer_filter %}customer={{ customer_filter }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if customer_filter %}customer={{ customer_filter }}&{% endif %}page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if customer_filter %}customer={{ customer_filter }}&{% endif %}page={{ page_obj.next_page_number }}">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if customer_filter %}customer={{ customer_filter }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Bulk Actions Modal -->
+<div class="modal fade" id="bulkActionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="bulkAction" class="form-label">Select Action</label>
+                    <select class="form-select" id="bulkAction">
+                        <option value="">Choose action...</option>
+                        <option value="send">Send Invoices</option>
+                        <option value="print">Print Invoices</option>
+                        <option value="export">Export Selected</option>
+                        <option value="mark_sent">Mark as Sent</option>
+                    </select>
+                </div>
+                <div id="selectedInvoices">
+                    <p><strong>Selected Invoices:</strong></p>
+                    <ul id="selectedInvoicesList"></ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="executeBulkAction">Execute Action</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toast function fallback
+    function showToast(message, type = 'info') {
+        console.log(`Toast (${type}): ${message}`);
+        // You can integrate with Bootstrap toast, SweetAlert, or any other notification library here
+        alert(`${type.toUpperCase()}: ${message}`);
+    }
+    
+    // Initialize DataTable
+    const table = $('#invoicesTable').DataTable({
+        pageLength: 25,
+        order: [[4, 'desc']], // Sort by date descending
+        columnDefs: [
+            { orderable: false, targets: [0, 10] }, // Disable sorting for checkbox and actions
+            { searchable: false, targets: [0, 10] }
+        ],
+        language: {
+            search: "",
+            searchPlaceholder: "Search invoices..."
+        }
+    });
+
+    // Select all checkboxes
+    document.getElementById('selectAllInvoices').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.invoice-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = this.checked;
+        });
+        updateBulkActions();
+    });
+
+    // Individual checkbox change
+    document.querySelectorAll('.invoice-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
+    });
+
+    function updateBulkActions() {
+        const selected = document.querySelectorAll('.invoice-checkbox:checked');
+        const bulkBtn = document.getElementById('bulkActionsBtn');
+        
+        if (selected.length > 0) {
+            if (!bulkBtn) {
+                // Create bulk actions button
+                const btnGroup = document.querySelector('.card-header .d-flex .btn-group');
+                const newBtn = document.createElement('button');
+                newBtn.id = 'bulkActionsBtn';
+                newBtn.className = 'btn btn-warning ms-2';
+                newBtn.innerHTML = `<i class="fas fa-tasks me-2"></i>Bulk Actions (${selected.length})`;
+                newBtn.setAttribute('data-bs-toggle', 'modal');
+                newBtn.setAttribute('data-bs-target', '#bulkActionsModal');
+                btnGroup.parentNode.insertBefore(newBtn, btnGroup.nextSibling);
+            } else {
+                bulkBtn.innerHTML = `<i class="fas fa-tasks me-2"></i>Bulk Actions (${selected.length})`;
+            }
+        } else if (bulkBtn) {
+            bulkBtn.remove();
+        }
+    }
+
+    // Export functionality
+    document.querySelectorAll('[data-export]').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const format = this.getAttribute('data-export');
+            
+            // Build export URL based on format
+            let exportUrl;
+            if (format === 'csv') {
+                exportUrl = "{% url 'billing:export_invoices_csv' %}";
+            } else if (format === 'pdf') {
+                exportUrl = "{% url 'billing:export_invoices_pdf' %}";
+            } else {
+                showToast('Export format not supported yet', 'warning');
+                return;
+            }
+            
+            // Get current filters and append to URL
+            const params = new URLSearchParams(window.location.search);
+            const filterParams = [];
+            if (params.get('status')) filterParams.push('status=' + encodeURIComponent(params.get('status')));
+            if (params.get('customer')) filterParams.push('customer=' + encodeURIComponent(params.get('customer')));
+            if (params.get('search')) filterParams.push('search=' + encodeURIComponent(params.get('search')));
+            
+            if (filterParams.length > 0) {
+                exportUrl += '?' + filterParams.join('&');
+            }
+            
+            // Show loading toast
+            showToast('Preparing export...', 'info');
+            
+            // Create temporary link for download
+            const link = document.createElement('a');
+            link.href = exportUrl;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    });
+
+    // Bulk actions - wait for DOM and Bootstrap to be ready
+    setTimeout(function() {
+        const executeBulkBtn = document.getElementById('executeBulkAction');
+        if (executeBulkBtn) {
+        executeBulkBtn.addEventListener('click', function() {
+            const bulkActionSelect = document.getElementById('bulkAction');
+            if (!bulkActionSelect) {
+                showToast('Bulk action selector not found', 'error');
+                return;
+            }
+            
+            const action = bulkActionSelect.value;
+            const selectedIds = Array.from(document.querySelectorAll('input[name="invoice_ids"]:checked'))
+                                    .map(cb => cb.value);
+            
+            if (selectedIds.length === 0) {
+                showToast('Please select at least one invoice', 'warning');
+                return;
+            }
+        
+        if (action === 'export') {
+            // Create form for bulk export
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{% url 'billing:bulk_export_invoices' %}";
+            
+            // Add CSRF token
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = 'csrfmiddlewaretoken';
+            csrfToken.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            form.appendChild(csrfToken);
+            
+            // Add selected invoice IDs
+            selectedIds.forEach(id => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'invoice_ids';
+                input.value = id;
+                form.appendChild(input);
+            });
+            
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+            
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('bulkActionsModal')).hide();
+            showToast(`Exporting ${selectedIds.length} invoices...`, 'info');
+        } else {
+            showToast('Action not implemented yet', 'warning');
+        }
+        });
+        }
+    }, 100); // Small delay to ensure Bootstrap modal is initialized
+
+    // View toggle (table/cards)
+    document.querySelectorAll('[data-view]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const view = this.getAttribute('data-view');
+            document.querySelectorAll('[data-view]').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Toggle view (placeholder - implement view switching)
+            console.log('Switching to view:', view);
+        });
+    });
+
+    // Quick filters
+    document.getElementById('status').addEventListener('change', function() {
+        if (this.value) {
+            const url = new URL(window.location);
+            url.searchParams.set('status', this.value);
+            window.location.href = url.toString();
+        }
+    });
+});
+</script>
+{% endblock %}

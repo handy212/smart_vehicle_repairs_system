@@ -1,0 +1,168 @@
+{% comment %}
+Kanban Card Partial - Individual work order card for drag-and-drop
+Usage: {% include 'workorders/partials/kanban_card.html' with workorder=workorder %}
+{% endcomment %}
+
+<div class="kanban-card" data-workorder-id="{{ workorder.id }}" data-current-status="{{ workorder.status }}">
+    <!-- Work Order Header -->
+    <div class="d-flex justify-content-between align-items-start mb-2">
+        <a href="{% url 'workorders:detail' workorder.pk %}" class="workorder-number text-decoration-none">
+            {{ workorder.work_order_number }}
+        </a>
+        {% include 'workorders/partials/priority_badge.html' with priority=workorder.priority %}
+    </div>
+    
+    <!-- Customer Information -->
+    <div class="customer-info">
+        <div class="customer-avatar">
+            {{ workorder.customer.user.first_name|first }}{{ workorder.customer.user.last_name|first }}
+        </div>
+        <div>
+            <div class="fw-medium small">{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</div>
+            <small class="text-muted">{{ workorder.customer.user.email|truncatechars:25 }}</small>
+        </div>
+    </div>
+    
+    <!-- Vehicle Information -->
+    <div class="vehicle-info">
+        <i class="fas fa-car me-1"></i>
+        {{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}
+        <br>
+        <small class="text-muted">{{ workorder.vehicle.license_plate }}</small>
+    </div>
+    
+    <!-- Primary Technician -->
+    {% if workorder.primary_technician %}
+    <div class="mt-2">
+        <span class="technician-badge">
+            <i class="fas fa-wrench me-1"></i>
+            {{ workorder.primary_technician.first_name|truncatechars:10 }} {{ workorder.primary_technician.last_name|truncatechars:10 }}
+        </span>
+    </div>
+    {% endif %}
+    
+    <!-- Customer Concerns (truncated) -->
+    {% if workorder.customer_concerns %}
+    <div class="mt-2">
+        <small class="text-muted d-block">Concerns:</small>
+        <small class="text-dark">{{ workorder.customer_concerns|truncatechars:80 }}</small>
+    </div>
+    {% endif %}
+    
+    <!-- Progress Information -->
+    {% if workorder.task_count > 0 %}
+    <div class="progress-info">
+        <div class="task-progress">
+            <span>Tasks: {{ workorder.completed_tasks_count }}/{{ workorder.task_count }}</span>
+            <span>{% widthratio workorder.completed_tasks_count workorder.task_count|default:1 100 %}%</span>
+        </div>
+        <div class="progress progress-bar-small">
+            <div class="progress-bar bg-success" role="progressbar" 
+                 style="width: {% widthratio workorder.completed_tasks_count workorder.task_count|default:1 100 %}%"></div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Card Footer -->
+    <div class="d-flex justify-content-between align-items-center mt-2 pt-2" style="border-top: 1px solid var(--gray-200);">
+        <small class="text-muted">
+            {{ workorder.created_at|date:"M d" }}
+            {% if workorder.is_overdue %}
+                <i class="fas fa-exclamation-triangle text-warning ms-1" title="Overdue"></i>
+            {% endif %}
+        </small>
+        <div class="btn-group btn-group-sm">
+            <a href="{% url 'workorders:detail' workorder.pk %}" class="btn btn-outline-primary btn-sm" title="View Details">
+                <i class="fas fa-eye"></i>
+            </a>
+            {% if request.user.role in 'admin,manager,receptionist' %}
+            <a href="{% url 'workorders:edit' workorder.pk %}" class="btn btn-outline-secondary btn-sm" title="Edit">
+                <i class="fas fa-edit"></i>
+            </a>
+            {% endif %}
+            <button class="btn btn-outline-info btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" title="Quick Actions">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'workorders:print' workorder.pk %}" target="_blank">
+                    <i class="fas fa-print me-2"></i>Print
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                {% if workorder.status == 'draft' %}
+                <li><a class="dropdown-item text-success quick-status-update" href="#" 
+                       data-workorder-id="{{ workorder.id }}" data-status="intake">
+                    <i class="fas fa-play me-2"></i>Start Intake
+                </a></li>
+                {% elif workorder.status == 'intake' %}
+                <li><a class="dropdown-item text-warning quick-status-update" href="#" 
+                       data-workorder-id="{{ workorder.id }}" data-status="diagnosis">
+                    <i class="fas fa-search me-2"></i>Start Diagnosis
+                </a></li>
+                {% elif workorder.status == 'in_progress' %}
+                <li><a class="dropdown-item text-primary quick-status-update" href="#" 
+                       data-workorder-id="{{ workorder.id }}" data-status="quality_check">
+                    <i class="fas fa-clipboard-check me-2"></i>Quality Check
+                </a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+// Quick status update handlers for dropdown actions
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.quick-status-update').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const workorderId = this.dataset.workorderId;
+            const newStatus = this.dataset.status;
+            
+            if (confirm(`Are you sure you want to change the status to "${newStatus}"?`)) {
+                updateWorkOrderStatusQuick(workorderId, newStatus);
+            }
+        });
+    });
+    
+    function updateWorkOrderStatusQuick(workorderId, newStatus) {
+        fetch(`/workorders/${workorderId}/update-status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: `status=${newStatus}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload the page to reflect changes
+                location.reload();
+            } else {
+                alert('Error updating status: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the status.');
+        });
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>

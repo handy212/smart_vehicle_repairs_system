@@ -1,0 +1,285 @@
+<div class="service-bay-selector">
+    <h6 class="mb-3">
+        <i class="fas fa-warehouse me-2"></i>
+        Service Bay Assignment
+    </h6>
+    
+    {% if service_bays %}
+    <div class="bay-selection">
+        <!-- Auto-assign option -->
+        <div class="bay-option auto-assign" data-bay-id="" onclick="selectServiceBay('')">
+            <div class="bay-header">
+                <div class="bay-icon">
+                    <i class="fas fa-magic"></i>
+                </div>
+                <div class="bay-info">
+                    <div class="bay-name">Auto-assign</div>
+                    <div class="bay-type">System will choose best available bay</div>
+                </div>
+            </div>
+            <div class="bay-status">
+                <span class="badge bg-info">Recommended</span>
+            </div>
+        </div>
+        
+        <!-- Individual service bays -->
+        {% for bay in service_bays %}
+        <div class="bay-option {% if not bay.is_available %}unavailable{% endif %} 
+                    {% if bay.id == selected_bay_id %}selected{% endif %}"
+             data-bay-id="{{ bay.id }}"
+             {% if bay.is_available %}onclick="selectServiceBay('{{ bay.id }}')"{% endif %}>
+            <div class="bay-header">
+                <div class="bay-icon">
+                    <i class="fas fa-{% if bay.bay_type == 'diagnostic' %}laptop-medical{% elif bay.bay_type == 'specialty' %}tools{% elif bay.bay_type == 'quick_service' %}tachometer-alt{% elif bay.bay_type == 'body_shop' %}hammer{% else %}warehouse{% endif %}"></i>
+                </div>
+                <div class="bay-info">
+                    <div class="bay-name">{{ bay.name }}</div>
+                    <div class="bay-type">{{ bay.get_bay_type_display }}</div>
+                    {% if bay.equipment_available %}
+                    <div class="bay-equipment">
+                        <small class="text-muted">{{ bay.equipment_available|truncatewords:5 }}</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="bay-status">
+                {% if bay.is_available %}
+                    <span class="badge bg-success">
+                        <i class="fas fa-check me-1"></i>Available
+                    </span>
+                {% else %}
+                    <span class="badge bg-{% if bay.status == 'occupied' %}warning{% elif bay.status == 'maintenance' %}danger{% else %}secondary{% endif %}">
+                        {% if bay.status == 'occupied' %}
+                            <i class="fas fa-car me-1"></i>
+                        {% elif bay.status == 'maintenance' %}
+                            <i class="fas fa-wrench me-1"></i>
+                        {% else %}
+                            <i class="fas fa-times me-1"></i>
+                        {% endif %}
+                        {{ bay.get_status_display }}
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if selected_bay %}
+    <div class="selected-bay-info mt-3 p-3 bg-light rounded">
+        <h6 class="mb-2">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            Selected: {{ selected_bay.name }}
+        </h6>
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-1"><strong>Type:</strong> {{ selected_bay.get_bay_type_display }}</p>
+                <p class="mb-1"><strong>Capacity:</strong> {{ selected_bay.capacity }} vehicle{{ selected_bay.capacity|pluralize }}</p>
+            </div>
+            <div class="col-md-6">
+                <p class="mb-1"><strong>Status:</strong> {{ selected_bay.get_status_display }}</p>
+                {% if selected_bay.equipment_available %}
+                <p class="mb-1"><strong>Equipment:</strong> {{ selected_bay.equipment_available }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="no-bays text-center py-3">
+        <i class="fas fa-warehouse fa-2x text-muted mb-2"></i>
+        <p class="text-muted mb-0">No service bays available</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.bay-selection {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.bay-option {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bay-option:hover:not(.unavailable) {
+    border-color: #007bff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.bay-option.selected {
+    border-color: #007bff;
+    background-color: #f8f9ff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+.bay-option.unavailable {
+    background-color: #f8f9fa;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.bay-option.auto-assign {
+    border: 2px dashed #6c757d;
+    background: linear-gradient(45deg, #f8f9fa 25%, transparent 25%, transparent 75%, #f8f9fa 75%),
+                linear-gradient(45deg, #f8f9fa 25%, transparent 25%, transparent 75%, #f8f9fa 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+}
+
+.bay-header {
+    display: flex;
+    align-items: center;
+}
+
+.bay-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.2rem;
+    color: #6c757d;
+}
+
+.bay-option.selected .bay-icon {
+    background: #007bff;
+    color: white;
+}
+
+.bay-option.auto-assign .bay-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.bay-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #212529;
+}
+
+.bay-type {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.bay-equipment {
+    margin-top: 0.25rem;
+}
+
+.bay-status .badge {
+    font-size: 0.75rem;
+}
+
+.selected-bay-info {
+    border: 1px solid #b8daff;
+    background-color: #e7f3ff !important;
+}
+</style>
+
+<script>
+function selectServiceBay(bayId) {
+    // Remove previous selection
+    document.querySelectorAll('.bay-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+    
+    // Select new bay
+    event.target.closest('.bay-option').classList.add('selected');
+    
+    // Update form field if it exists
+    const bayInput = document.querySelector('select[name="service_bay"], #id_service_bay');
+    if (bayInput) {
+        bayInput.value = bayId;
+        
+        // Trigger change event for Select2 or regular select
+        if (window.jQuery && window.jQuery(bayInput).data('select2')) {
+            window.jQuery(bayInput).trigger('change');
+        } else {
+            bayInput.dispatchEvent(new Event('change'));
+        }
+    }
+    
+    // Update selected bay info
+    updateSelectedBayInfo(bayId);
+    
+    // Emit custom event for parent components
+    document.dispatchEvent(new CustomEvent('serviceBaySelected', {
+        detail: { bayId: bayId }
+    }));
+    
+    // Check availability for new bay selection
+    if (typeof checkAvailability === 'function') {
+        checkAvailability();
+    }
+}
+
+function updateSelectedBayInfo(bayId) {
+    const selectedBay = document.querySelector('.bay-option.selected');
+    const infoContainer = document.querySelector('.selected-bay-info');
+    
+    if (selectedBay && infoContainer) {
+        const bayName = selectedBay.querySelector('.bay-name').textContent;
+        const bayType = selectedBay.querySelector('.bay-type').textContent;
+        
+        let infoHtml = `
+            <h6 class="mb-2">
+                <i class="fas fa-check-circle text-success me-2"></i>
+                Selected: ${bayName}
+            </h6>
+        `;
+        
+        if (!bayId) { // Auto-assign
+            infoHtml += `
+                <p class="mb-0 text-muted">
+                    The system will automatically assign the best available service bay based on the service type and availability.
+                </p>
+            `;
+        } else {
+            infoHtml += `
+                <div class="row">
+                    <div class="col-md-12">
+                        <p class="mb-1"><strong>Type:</strong> ${bayType}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        infoContainer.innerHTML = infoHtml;
+    }
+}
+
+// Auto-select bay if pre-filled
+document.addEventListener('DOMContentLoaded', function() {
+    const bayInput = document.querySelector('select[name="service_bay"], #id_service_bay');
+    if (bayInput && bayInput.value) {
+        const matchingBay = document.querySelector(`[data-bay-id="${bayInput.value}"]`);
+        if (matchingBay) {
+            matchingBay.classList.add('selected');
+            updateSelectedBayInfo(bayInput.value);
+        }
+    } else {
+        // Select auto-assign by default
+        const autoAssign = document.querySelector('.bay-option.auto-assign');
+        if (autoAssign) {
+            autoAssign.classList.add('selected');
+            updateSelectedBayInfo('');
+        }
+    }
+});
+</script>

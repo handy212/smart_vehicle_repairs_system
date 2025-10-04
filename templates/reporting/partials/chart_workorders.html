@@ -1,0 +1,52 @@
+<canvas id="workordersChart" height="80"></canvas>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('workordersChart').getContext('2d');
+    
+    // Sample data - replace with actual data from backend
+    const chartData = {
+        labels: {{ workorder_labels|safe|default:"['Pending', 'In Progress', 'Completed', 'Cancelled']" }},
+        datasets: [{
+            label: 'Work Orders',
+            data: {{ workorder_data|safe|default:"[5, 12, 45, 3]" }},
+            backgroundColor: [
+                'rgba(245, 158, 11, 0.8)',
+                'rgba(59, 130, 246, 0.8)',
+                'rgba(16, 185, 129, 0.8)',
+                'rgba(239, 68, 68, 0.8)',
+            ],
+            borderWidth: 0
+        }]
+    };
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.parsed.y + ' orders';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+});
+</script>

@@ -1,0 +1,111 @@
+<!-- Notification Dropdown (alternative to bell, shows full notifications) -->
+<div class="notifications-dropdown">
+    <div class="notifications-header">
+        <h6 class="mb-0">Recent Notifications</h6>
+        <a href="{% url 'notifications:mark-all-as-read' %}" class="text-decoration-none small">Mark all read</a>
+    </div>
+    
+    <div class="notifications-list" id="notificationsDropdownList">
+        <!-- Notifications will be loaded here via JavaScript -->
+        <div class="text-center py-3">
+            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notifications-footer">
+        <a href="{% url 'notifications:notification-center' %}" class="btn btn-sm btn-primary w-100">
+            View All Notifications
+        </a>
+    </div>
+</div>
+
+<style>
+.notifications-dropdown {
+    width: 100%;
+    max-width: 400px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.notifications-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.notifications-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+.notification-dropdown-item {
+    padding: 1rem;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.notification-dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+.notification-dropdown-item.unread {
+    background-color: #f0f4ff;
+}
+.notifications-footer {
+    padding: 0.75rem;
+    border-top: 1px solid #e0e0e0;
+}
+</style>
+
+<script>
+function loadNotificationsDropdown() {
+    const list = document.getElementById('notificationsDropdownList');
+    
+    fetch('{% url "notifications:recent-notifications" %}?limit=10')
+        .then(response => response.json())
+        .then(data => {
+            if (data.notifications.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-bell-slash fa-2x mb-2"></i>
+                        <p class="mb-0">No notifications</p>
+                    </div>
+                `;
+            } else {
+                let html = '';
+                data.notifications.forEach(notification => {
+                    html += `
+                        <div class="notification-dropdown-item ${!notification.is_read ? 'unread' : ''}" 
+                             onclick="window.location.href='${notification.url}'">
+                            <div class="d-flex align-items-start">
+                                <i class="fas ${getNotificationIcon(notification.notification_type)} fa-lg text-primary me-3 mt-1"></i>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">${notification.title}</h6>
+                                    <p class="mb-1 small text-muted">${notification.message}</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>${getTimeAgo(notification.created_at)}
+                                    </small>
+                                </div>
+                                ${!notification.is_read ? '<span class="badge bg-primary ms-2">New</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                list.innerHTML = html;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            list.innerHTML = `
+                <div class="text-center py-4 text-danger">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <p class="mb-0">Error loading notifications</p>
+                </div>
+            `;
+        });
+}
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', loadNotificationsDropdown);
+</script>

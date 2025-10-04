@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    /* Customer Portal Specific Styles */
+    .customer-portal .sidebar {
+        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+        border-right: 2px solid #dee2e6;
+    }
+    
+    .customer-portal .nav-link {
+        color: #495057;
+        font-weight: 500;
+        border-radius: 8px;
+        margin: 2px 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .customer-portal .nav-link:hover {
+        background: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+        transform: translateX(4px);
+    }
+    
+    .customer-portal .nav-link.active {
+        background: #28a745;
+        color: white;
+    }
+    
+    .customer-portal .nav-link i {
+        width: 20px;
+        text-align: center;
+        margin-right: 8px;
+    }
+    
+    .customer-portal .main-content {
+        background: #f8f9fa;
+        min-height: calc(100vh - 76px);
+    }
+    
+    /* Customer info card styling */
+    .customer-info-card {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        border-radius: 12px;
+    }
+    
+    /* Support modal custom styling */
+    .modal-header {
+        background: #28a745;
+        color: white;
+        border-bottom: none;
+    }
+    
+    .modal-header .btn-close {
+        filter: invert(1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<body class="customer-portal">
+    <!-- Customer Portal Container -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Customer Sidebar -->
+            {% if user.is_authenticated and user.role == 'customer' %}
+                {% include 'portal/partials/customer_sidebar.html' %}
+            {% endif %}
+            
+            <!-- Main Content -->
+            <main class="{% if user.is_authenticated and user.role == 'customer' %}col-md-9 col-lg-10{% else %}col-12{% endif %} ms-sm-auto px-md-4 main-content">
+                <!-- Messages -->
+                {% include 'partials/messages.html' %}
+                
+                <!-- Page Header -->
+                {% block page_header %}{% endblock %}
+                
+                <!-- Page Content -->
+                {% block portal_content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+</body>
+{% endblock %}

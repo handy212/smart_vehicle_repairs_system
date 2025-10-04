@@ -1,0 +1,441 @@
+"""
+Views for appointments app
+"""
+from rest_framework import viewsets, status, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Q, Count
+from django.utils import timezone
+from datetime import datetime, timedelta, time
+
+# Notification triggers
+from apps.notifications_app.triggers import notification_triggers
+
+from .models import Appointment, ServiceBay, AppointmentReminder
+from .serializers import (
+    AppointmentListSerializer,
+    AppointmentDetailSerializer,
+    AppointmentCreateSerializer,
+    AppointmentUpdateSerializer,
+    ServiceBaySerializer,
+    AppointmentReminderSerializer,
+    CalendarDaySerializer,
+    TechnicianScheduleSerializer
+)
+
+
+class ServiceBayViewSet(viewsets.ModelViewSet):
+    """ViewSet for service bay management"""
+    serializer_class = ServiceBaySerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['status', 'bay_type', 'is_active']
+    search_fields = ['name', 'equipment_available']
+    ordering_fields = ['name', 'bay_type']
+    ordering = ['name']
+    
+    def get_queryset(self):
+        return ServiceBay.objects.all()
+    
+    @action(detail=False, methods=['get'])
+    def available(self, request):
+        """Get available service bays"""
+        bays = self.get_queryset().filter(status='available', is_active=True)
+        serializer = self.get_serializer(bays, many=True)
+        return Response(serializer.data)
+
+
+class AppointmentViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for appointment operations
+    
+    Provides comprehensive appointment management including:
+    - CRUD operations
+    - Calendar views
+    - Scheduling and rescheduling
+    - Status management
+    - Technician assignment
+    """
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = [
+        'status', 'service_type', 'priority', 'appointment_date',
+        'customer', 'vehicle', 'service_bay'
+    ]
+    search_fields = [
+        'appointment_number', 'customer__user__first_name',
+        'customer__user__last_name', 'customer__company_name',
+        'vehicle__vin', 'vehicle__license_plate', 'customer_concerns'
+    ]
+    ordering_fields = ['appointment_date', 'appointment_time', 'priority', 'created_at']
+    ordering = ['appointment_date', 'appointment_time']
+    
+    def get_queryset(self):
+        """Get queryset with optimizations"""
+        return Appointment.objects.select_related(
+            'customer', 'customer__user', 'vehicle', 'service_bay',
+            'confirmed_by', 'created_by'
+        ).prefetch_related('assigned_technicians').all()
+    
+    def get_serializer_class(self):
+        """Return appropriate serializer based on action"""
+        if self.action == 'list':
+            return AppointmentListSerializer
+        elif self.action == 'create':
+            return AppointmentCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return AppointmentUpdateSerializer
+        return AppointmentDetailSerializer
+    
+    def perform_create(self, serializer):
+        """Create appointment with created_by tracking"""
+        serializer.save(created_by=self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def confirm(self, request, pk=None):
+        """Confirm appointment"""
+        appointment = self.get_object()
+        
+        if appointment.status != 'pending':
+            return Response(
+                {'error': 'Only pending appointments can be confirmed'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        confirmation_method = request.data.get('confirmation_method', 'phone')
+        
+        appointment.status = 'confirmed'
+        appointment.confirmed_by = request.user
+        appointment.confirmed_at = timezone.now()
+        appointment.confirmation_method = confirmation_method
+        appointment.save()
+        
+        # Send confirmation notification
+        try:
+            notification_triggers.appointment_confirmed(appointment)
+        except Exception as e:
+            # Log but don't fail the request
+            print(f"Failed to send appointment confirmation notification: {e}")
+        
+        serializer = AppointmentDetailSerializer(appointment)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def check_in(self, request, pk=None):
+        """Check in customer for appointment"""
+        appointment = self.get_object()
+        
+        if appointment.status not in ['pending', 'confirmed']:
+            return Response(
+                {'error': 'Appointment cannot be checked in'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        appointment.checked_in = True
+        appointment.check_in_time = timezone.now()
+        appointment.status = 'in_progress'
+        appointment.save()
+        
+        serializer = AppointmentDetailSerializer(appointment)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        """Mark appointment as completed"""
+        appointment = self.get_object()
+        
+        if appointment.status != 'in_progress':
+            return Response(
+                {'error': 'Only in-progress appointments can be completed'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        appointment.status = 'completed'
+        appointment.save()
+        
+        # Update vehicle last service date
+        vehicle = appointment.vehicle
+        vehicle.last_service_date = appointment.appointment_date
+        vehicle.save()
+        
+        # Send vehicle ready notification
+        try:
+            notification_triggers.vehicle_ready(appointment)
+        except Exception as e:
+            print(f"Failed to send vehicle ready notification: {e}")
+        
+        serializer = AppointmentDetailSerializer(appointment)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """Cancel appointment"""
+        appointment = self.get_object()
+        
+        if appointment.status in ['completed', 'cancelled']:
+            return Response(
+                {'error': 'Appointment cannot be cancelled'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        cancellation_reason = request.data.get('reason', '')
+        
+        appointment.status = 'cancelled'
+        appointment.cancellation_reason = cancellation_reason
+        appointment.cancelled_at = timezone.now()
+        appointment.save()
+        
+        # Send cancellation notification
+        try:
+            notification_triggers.appointment_cancelled(appointment, cancellation_reason)
+        except Exception as e:
+            print(f"Failed to send appointment cancellation notification: {e}")
+        
+        serializer = AppointmentDetailSerializer(appointment)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def reschedule(self, request, pk=None):
+        """Reschedule appointment to new date/time"""
+        appointment = self.get_object()
+        
+        new_date = request.data.get('appointment_date')
+        new_time = request.data.get('appointment_time')
+        
+        if not new_date or not new_time:
+            return Response(
+                {'error': 'New date and time are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate new date/time
+        try:
+            new_date = datetime.strptime(new_date, '%Y-%m-%d').date()
+            new_time = datetime.strptime(new_time, '%H:%M:%S').time()
+        except ValueError:
+            return Response(
+                {'error': 'Invalid date or time format'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if in past
+        new_datetime = datetime.combine(new_date, new_time)
+        if new_datetime < timezone.now():
+            return Response(
+                {'error': 'Cannot reschedule to past date/time'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        appointment.appointment_date = new_date
+        appointment.appointment_time = new_time
+        appointment.status = 'rescheduled'
+        appointment.save()
+        
+        serializer = AppointmentDetailSerializer(appointment)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def send_reminder(self, request, pk=None):
+        """Manually send reminder for appointment"""
+        appointment = self.get_object()
+        
+        reminder_type = request.data.get('reminder_type', 'email')
+        
+        # Create reminder record
+        reminder = AppointmentReminder.objects.create(
+            appointment=appointment,
+            reminder_type=reminder_type,
+            scheduled_send_time=timezone.now(),
+            status='sent',
+            sent_at=timezone.now()
+        )
+        
+        # Mark appointment reminder as sent
+        appointment.reminder_sent = True
+        appointment.reminder_sent_at = timezone.now()
+        appointment.save()
+        
+        return Response({
+            'message': 'Reminder sent successfully',
+            'reminder_type': reminder_type
+        })
+    
+    @action(detail=False, methods=['get'])
+    def calendar(self, request):
+        """Get calendar view of appointments"""
+        # Get date range
+        start_date_str = request.query_params.get('start_date')
+        end_date_str = request.query_params.get('end_date')
+        
+        if not start_date_str or not end_date_str:
+            # Default to current week
+            today = timezone.now().date()
+            start_date = today - timedelta(days=today.weekday())
+            end_date = start_date + timedelta(days=6)
+        else:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        
+        # Get appointments in range
+        appointments = self.get_queryset().filter(
+            appointment_date__gte=start_date,
+            appointment_date__lte=end_date
+        ).exclude(status='cancelled')
+        
+        # Group by date
+        calendar_data = []
+        current_date = start_date
+        while current_date <= end_date:
+            day_appointments = appointments.filter(appointment_date=current_date)
+            calendar_data.append({
+                'date': current_date,
+                'appointments': AppointmentListSerializer(day_appointments, many=True).data,
+                'total_appointments': day_appointments.count(),
+                'available_slots': 10 - day_appointments.count()  # Assuming 10 slots per day
+            })
+            current_date += timedelta(days=1)
+        
+        return Response(calendar_data)
+    
+    @action(detail=False, methods=['get'])
+    def today(self, request):
+        """Get today's appointments"""
+        today = timezone.now().date()
+        appointments = self.get_queryset().filter(
+            appointment_date=today
+        ).exclude(status='cancelled')
+        
+        serializer = AppointmentListSerializer(appointments, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def upcoming(self, request):
+        """Get upcoming appointments"""
+        today = timezone.now().date()
+        days = int(request.query_params.get('days', 7))
+        end_date = today + timedelta(days=days)
+        
+        appointments = self.get_queryset().filter(
+            appointment_date__gte=today,
+            appointment_date__lte=end_date,
+            status__in=['pending', 'confirmed']
+        )
+        
+        serializer = AppointmentListSerializer(appointments, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def overdue(self, request):
+        """Get overdue appointments (no-shows)"""
+        now = timezone.now()
+        appointments = self.get_queryset().filter(
+            Q(status='pending') | Q(status='confirmed')
+        ).filter(
+            appointment_date__lt=now.date()
+        ) | self.get_queryset().filter(
+            appointment_date=now.date(),
+            appointment_time__lt=now.time(),
+            status__in=['pending', 'confirmed']
+        )
+        
+        serializer = AppointmentListSerializer(appointments, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def available_slots(self, request):
+        """Get available time slots for a given date"""
+        date_str = request.query_params.get('date')
+        if not date_str:
+            return Response(
+                {'error': 'Date parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response(
+                {'error': 'Invalid date format. Use YYYY-MM-DD'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get booked appointments for the date
+        booked = self.get_queryset().filter(
+            appointment_date=selected_date,
+            status__in=['pending', 'confirmed', 'in_progress']
+        ).values_list('appointment_time', flat=True)
+        
+        # Generate time slots (8 AM to 5 PM, hourly)
+        all_slots = []
+        for hour in range(8, 17):
+            slot_time = time(hour, 0)
+            all_slots.append({
+                'time': slot_time.strftime('%H:%M'),
+                'available': slot_time not in booked
+            })
+        
+        return Response({
+            'date': selected_date,
+            'slots': all_slots,
+            'total_slots': len(all_slots),
+            'available_slots': len([s for s in all_slots if s['available']])
+        })
+    
+    @action(detail=False, methods=['get'])
+    def technician_schedule(self, request):
+        """Get schedule for specific technician"""
+        technician_id = request.query_params.get('technician_id')
+        date_str = request.query_params.get('date', timezone.now().date().isoformat())
+        
+        if not technician_id:
+            return Response(
+                {'error': 'Technician ID is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response(
+                {'error': 'Invalid date format'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get technician's appointments
+        appointments = self.get_queryset().filter(
+            assigned_technicians__id=technician_id,
+            appointment_date=selected_date
+        ).exclude(status='cancelled')
+        
+        # Calculate total hours
+        total_minutes = sum(apt.estimated_duration for apt in appointments)
+        total_hours = total_minutes / 60
+        
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        technician = User.objects.get(pk=technician_id)
+        
+        return Response({
+            'technician_id': technician_id,
+            'technician_name': technician.get_full_name(),
+            'date': selected_date,
+            'appointments': AppointmentListSerializer(appointments, many=True).data,
+            'total_hours': round(total_hours, 2)
+        })
+
+
+class AppointmentReminderViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet for appointment reminders (read-only)"""
+    serializer_class = AppointmentReminderSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['appointment', 'reminder_type', 'status']
+    ordering = ['-scheduled_send_time']
+    
+    def get_queryset(self):
+        return AppointmentReminder.objects.select_related(
+            'appointment', 'appointment__customer', 'appointment__customer__user'
+        ).all()
+

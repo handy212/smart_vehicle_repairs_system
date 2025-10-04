@@ -1,0 +1,94 @@
+<div class="signature-pad-container" data-signature-type="{{ signature_type }}">
+    <canvas id="signaturePad_{{ signature_type }}" class="signature-canvas"></canvas>
+    <input type="hidden" name="signature_{{ signature_type }}" id="signatureData_{{ signature_type }}">
+    
+    <div class="signature-controls mt-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSignature('{{ signature_type }}')">
+            <i class="fas fa-eraser me-1"></i>Clear
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="saveSignature('{{ signature_type }}')">
+            <i class="fas fa-save me-1"></i>Save
+        </button>
+    </div>
+</div>
+
+<style>
+.signature-pad-container {
+    border: 2px dashed #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    background: white;
+}
+.signature-canvas {
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    width: 100%;
+    height: 200px;
+    touch-action: none;
+    cursor: crosshair;
+}
+.signature-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script>
+// Initialize signature pads
+const signaturePads = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const canvas = document.getElementById('signaturePad_{{ signature_type }}');
+    if (canvas) {
+        // Set canvas size
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas.getContext('2d').scale(ratio, ratio);
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Initialize SignaturePad
+        signaturePads['{{ signature_type }}'] = new SignaturePad(canvas, {
+            backgroundColor: 'rgb(255, 255, 255)',
+            penColor: 'rgb(0, 0, 0)',
+            minWidth: 1,
+            maxWidth: 2.5,
+        });
+    }
+});
+
+function clearSignature(type) {
+    if (signaturePads[type]) {
+        signaturePads[type].clear();
+        document.getElementById('signatureData_' + type).value = '';
+    }
+}
+
+function saveSignature(type) {
+    if (signaturePads[type]) {
+        if (signaturePads[type].isEmpty()) {
+            alert('Please provide a signature first.');
+            return;
+        }
+        
+        // Get signature as data URL
+        const dataURL = signaturePads[type].toDataURL('image/png');
+        document.getElementById('signatureData_' + type).value = dataURL;
+        
+        // Show confirmation
+        alert('Signature saved successfully!');
+    }
+}
+
+// Prevent scrolling when signing
+document.addEventListener('touchmove', function(e) {
+    if (e.target.classList.contains('signature-canvas')) {
+        e.preventDefault();
+    }
+}, { passive: false });
+</script>

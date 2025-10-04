@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
+<style>
+    .metric-card {
+        background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+        border-left: 4px solid #28a745;
+        transition: transform 0.2s;
+    }
+    .metric-card:hover {
+        transform: translateY(-2px);
+    }
+    .metric-card.overdue {
+        border-left-color: #dc3545;
+    }
+    .metric-card.pending {
+        border-left-color: #ffc107;
+    }
+    .metric-card.revenue {
+        border-left-color: #007bff;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+    .activity-item {
+        border-left: 3px solid #dee2e6;
+        transition: border-color 0.2s;
+    }
+    .activity-item:hover {
+        border-left-color: #007bff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-dollar-sign me-2"></i>{{ page_title }}
+            </h1>
+            <p class="text-muted">Financial overview and billing activities</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group" role="group">
+                <a href="{% url 'billing:invoice_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>New Invoice
+                </a>
+                <a href="{% url 'billing:estimate_create' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-file-invoice me-2"></i>New Estimate
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Date Range Filter -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body py-3">
+                    <form method="get" class="row align-items-center">
+                        <div class="col-md-3">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                                   value="{{ start_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" 
+                                   value="{{ end_date|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fas fa-filter me-2"></i>Filter
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card metric-card revenue">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Total Invoiced</h6>
+                            <h3 class="card-title mb-0">${{ total_invoiced|floatformat:2 }}</h3>
+                        </div>
+                        <div class="text-primary">
+                            <i class="fas fa-file-invoice fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Total Paid</h6>
+                            <h3 class="card-title mb-0">${{ total_paid|floatformat:2 }}</h3>
+                        </div>
+                        <div class="text-success">
+                            <i class="fas fa-money-bill-wave fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card pending">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Outstanding</h6>
+                            <h3 class="card-title mb-0">${{ outstanding|floatformat:2 }}</h3>
+                        </div>
+                        <div class="text-warning">
+                            <i class="fas fa-clock fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card metric-card overdue">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-subtitle mb-2 text-muted">Overdue Invoices</h6>
+                            <h3 class="card-title mb-0">{{ overdue_invoices }}</h3>
+                        </div>
+                        <div class="text-danger">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Activity -->
+    <div class="row">
+        <!-- Revenue Chart -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Revenue Overview
+                    </h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-primary active" data-period="30">30 Days</button>
+                        <button type="button" class="btn btn-outline-primary" data-period="90">90 Days</button>
+                        <button type="button" class="btn btn-outline-primary" data-period="365">1 Year</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tachometer-alt me-2"></i>Quick Stats
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">Pending Estimates</span>
+                        <span class="badge bg-warning">{{ pending_estimates }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">Collection Rate</span>
+                        <span class="text-success">
+                            {% if total_invoiced > 0 %}
+                                {% widthratio total_paid 1 total_invoiced %}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">Avg. Invoice Amount</span>
+                        <span class="fw-bold">
+                            {% if avg_invoice_amount %}
+                                ${{ avg_invoice_amount|floatformat:2 }}
+                            {% else %}
+                                $0.00
+                            {% endif %}
+                        </span>
+                    </div>
+                    <hr>
+                    <div class="text-center">
+                        <a href="{% url 'billing:invoice_list' %}?status=overdue" class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>View Overdue
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row mt-4">
+        <!-- Recent Invoices -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>Recent Invoices
+                    </h5>
+                    <a href="{% url 'billing:invoice_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_invoices %}
+                        <div class="list-group list-group-flush">
+                            {% for invoice in recent_invoices %}
+                            <div class="list-group-item activity-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <a href="{% url 'billing:invoice_detail' invoice.id %}" class="text-decoration-none">
+                                                {{ invoice.invoice_number }}
+                                            </a>
+                                        </h6>
+                                        <p class="mb-1 text-muted">{{ invoice.customer }}</p>
+                                        <small class="text-muted">{{ invoice.created_at|date:"M d, Y" }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="fw-bold">${{ invoice.total|floatformat:2 }}</span>
+                                        <br>
+                                        <span class="badge bg-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'overdue' %}danger{% elif invoice.status == 'partial' %}warning{% else %}secondary{% endif %}">
+                                            {{ invoice.get_status_display }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No recent invoices</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Payments -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-credit-card me-2"></i>Recent Payments
+                    </h5>
+                    <a href="{% url 'billing:payment_list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_payments %}
+                        <div class="list-group list-group-flush">
+                            {% for payment in recent_payments %}
+                            <div class="list-group-item activity-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ payment.payment_number }}</h6>
+                                        <p class="mb-1 text-muted">{{ payment.customer }}</p>
+                                        <small class="text-muted">
+                                            {{ payment.get_payment_method_display }} • {{ payment.payment_date|date:"M d, Y" }}
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="fw-bold text-success">${{ payment.amount|floatformat:2 }}</span>
+                                        <br>
+                                        <span class="badge bg-success">{{ payment.get_status_display }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-credit-card fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No recent payments</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Revenue Chart
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        const revenueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [{
+                    label: 'Revenue',
+                    data: [12000, 19000, 3000, 5000],
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: 'Payments',
+                    data: [10000, 15000, 8000, 12000],
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Period filter buttons
+        document.querySelectorAll('[data-period]').forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('[data-period]').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // Update chart data (placeholder - implement AJAX call)
+                const period = this.getAttribute('data-period');
+                console.log('Loading data for period:', period);
+            });
+        });
+    });
+</script>
+{% endblock %}

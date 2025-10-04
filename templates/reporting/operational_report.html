@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Operational Reports - Smart Vehicle Repairs{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-cogs me-2"></i>Operational Reports</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'reporting:report-dashboard' %}">Reports</a></li>
+                    <li class="breadcrumb-item active">Operational</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="col-md-4 text-end">
+            {% include 'reporting/partials/export_buttons.html' %}
+        </div>
+    </div>
+
+    <!-- Date Range Filter -->
+    {% include 'reporting/partials/date_range_picker.html' %}
+
+    <!-- KPI Cards -->
+    {% include 'reporting/partials/kpi_cards.html' with type='operational' %}
+
+    <!-- Work Order Analytics -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Work Order Status Distribution</h5>
+        </div>
+        <div class="card-body">
+            {% include 'reporting/partials/chart_workorders.html' %}
+        </div>
+    </div>
+
+    <!-- Technician Performance -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Technician Performance</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Technician</th>
+                            <th>Completed Work Orders</th>
+                            <th>Avg Completion Time</th>
+                            <th>Total Labor Hours</th>
+                            <th>Revenue Generated</th>
+                            <th>Customer Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tech in technician_performance %}
+                        <tr>
+                            <td><strong>{{ tech.name }}</strong></td>
+                            <td>{{ tech.completed_orders }}</td>
+                            <td>{{ tech.avg_completion_time }} hrs</td>
+                            <td>{{ tech.total_hours|floatformat:1 }}</td>
+                            <td>${{ tech.revenue|floatformat:2 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2">{{ tech.rating|floatformat:1 }}</span>
+                                    <div>
+                                        {% for i in "12345" %}
+                                        <i class="fas fa-star {% if forloop.counter <= tech.rating %}text-warning{% else %}text-muted{% endif %}"></i>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Bay Utilization -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Service Bay Utilization</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="bayUtilizationChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Appointment Analytics -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Appointment Status</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="appointmentStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Peak Hours</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="peakHoursChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Average Times -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Average Processing Times</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <h3 class="mb-2">{{ avg_turnaround|floatformat:1 }}</h3>
+                        <p class="text-muted mb-0 small">Avg Turnaround (hrs)</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <h3 class="mb-2">{{ avg_wait_time|floatformat:1 }}</h3>
+                        <p class="text-muted mb-0 small">Avg Wait Time (min)</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <h3 class="mb-2">{{ avg_inspection|floatformat:1 }}</h3>
+                        <p class="text-muted mb-0 small">Avg Inspection (min)</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <h3 class="mb-2">{{ customer_satisfaction }}%</h3>
+                        <p class="text-muted mb-0 small">Customer Satisfaction</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+// Charts initialization
+// Bay Utilization Chart
+const bayCtx = document.getElementById('bayUtilizationChart').getContext('2d');
+new Chart(bayCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ bay_labels|safe }},
+        datasets: [{
+            label: 'Utilization %',
+            data: {{ bay_utilization|safe }},
+            backgroundColor: 'rgba(79, 70, 229, 0.8)'
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100
+            }
+        }
+    }
+});
+
+// Appointment Status Chart
+const appointmentCtx = document.getElementById('appointmentStatusChart').getContext('2d');
+new Chart(appointmentCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Completed', 'Cancelled', 'No-Show', 'Scheduled'],
+        datasets: [{
+            data: {{ appointment_status_data|safe }},
+            backgroundColor: [
+                'rgba(16, 185, 129, 0.8)',
+                'rgba(239, 68, 68, 0.8)',
+                'rgba(245, 158, 11, 0.8)',
+                'rgba(59, 130, 246, 0.8)',
+            ]
+        }]
+    }
+});
+
+// Peak Hours Chart
+const peakCtx = document.getElementById('peakHoursChart').getContext('2d');
+new Chart(peakCtx, {
+    type: 'line',
+    data: {
+        labels: {{ hour_labels|safe }},
+        datasets: [{
+            label: 'Appointments',
+            data: {{ hourly_appointments|safe }},
+            borderColor: 'rgba(79, 70, 229, 1)',
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
