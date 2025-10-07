@@ -15,7 +15,6 @@ class SystemSettings(models.Model):
     System-wide configuration settings
     """
     CATEGORY_CHOICES = (
-        ('general', 'General'),
         ('company', 'Company Info'),
         ('branding', 'Branding & Theme'),
         ('email', 'Email Settings'),
@@ -45,6 +44,11 @@ class SystemSettings(models.Model):
     
     def __str__(self):
         return f"{self.category} - {self.key}"
+    
+    @property
+    def display_name(self):
+        """Convert key to human-readable display name"""
+        return self.key.replace('_', ' ').title()
     
     @classmethod
     def get_setting(cls, key, default=None):

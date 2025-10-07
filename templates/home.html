@@ -20,183 +20,177 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
   
   <style>
-    :root {
-      --primary-color: {{ PRIMARY_COLOR|default:'#4f46e5' }};
-      --secondary-color: {{ SECONDARY_COLOR|default:'#6c757d' }};
-      --success-color: {{ SUCCESS_COLOR|default:'#10b981' }};
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    
+
     body {
-      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-      {% if LOGIN_BACKGROUND %}
-      background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('{{ MEDIA_URL }}{{ LOGIN_BACKGROUND }}') no-repeat center center fixed;
-      background-size: cover;
-      {% else %}
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      {% endif %}
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 2rem 1rem;
     }
+    
+    {% if LOGIN_BACKGROUND %}
+    body {
+      background: linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.85)), url('{{ MEDIA_URL }}{{ LOGIN_BACKGROUND }}') no-repeat center center fixed;
+      background-size: cover;
+    }
+    {% else %}
+    body {
+      background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
+    }
+    {% endif %}
 
-    .hero-container {
-      max-width: 1200px;
+    .main-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+      max-width: 900px;
       width: 100%;
+      padding: 3rem 2.5rem;
     }
     
-    .hero-card {
-      background: rgba(255, 255, 255, 0.98);
-      backdrop-filter: blur(10px);
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      overflow: hidden;
-    }
-    
-    .hero-header {
-      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-      color: white;
-      padding: 3rem 2rem;
-      text-align: center;
-    }
-    
-    .company-logo {
-      max-height: 80px;
-      margin-bottom: 1rem;
-      filter: brightness(0) invert(1);
-    }
-    
-    .hero-title {
-      font-size: 2.5rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-    
-    .hero-tagline {
-      font-size: 1.2rem;
-      opacity: 0.9;
-      margin-bottom: 0;
-    }
-    
-    .hero-body {
-      padding: 3rem 2rem;
-    }
-    
-    .login-section-title {
+    .logo-container {
       text-align: center;
       margin-bottom: 2rem;
     }
-    
-    .login-section-title h2 {
-      font-size: 1.8rem;
-      color: #333;
-      margin-bottom: 0.5rem;
+
+    .company-logo {
+      max-height: 60px;
+      margin-bottom: 1rem;
     }
-    
-    .login-section-title p {
-      color: #6c757d;
-      font-size: 1rem;
-    }
-    
-    .login-options {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 2rem;
-      margin-bottom: 3rem;
-    }
-    
-    .login-card {
-      background: white;
-      border: 2px solid #e5e7eb;
-      border-radius: 15px;
-      padding: 2rem;
-      text-align: center;
-      transition: all 0.3s ease;
-      cursor: pointer;
-      text-decoration: none;
-      display: block;
-    }
-    
-    .login-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-      border-color: var(--primary-color);
-    }
-    
-    .login-card.staff {
-      border-color: var(--primary-color);
-      background: linear-gradient(to bottom, rgba(79, 70, 229, 0.02), white);
-    }
-    
-    .login-card.customer {
-      border-color: var(--success-color);
-      background: linear-gradient(to bottom, rgba(16, 185, 129, 0.02), white);
-    }
-    
-    .login-icon {
-      font-size: 4rem;
+
+    .logo-icon {
+      font-size: 3rem;
+      color: #6366f1;
       margin-bottom: 1rem;
     }
     
-    .login-card.staff .login-icon {
-      color: var(--primary-color);
-    }
-    
-    .login-card.customer .login-icon {
-      color: var(--success-color);
-    }
-    
-    .login-card h3 {
-      font-size: 1.5rem;
+    .main-card h1 {
+      color: #1e293b;
+      font-weight: 700;
+      font-size: 2rem;
+      text-align: center;
       margin-bottom: 0.5rem;
-      color: #333;
     }
     
-    .login-card p {
-      color: #6c757d;
-      margin-bottom: 1.5rem;
-      font-size: 0.95rem;
+    .tagline {
+      color: #64748b;
+      text-align: center;
+      margin-bottom: 3rem;
+      font-size: 1.05rem;
     }
     
-    .login-btn {
-      padding: 0.75rem 2rem;
+    .portal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+    
+    .portal-card {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      text-decoration: none;
+      display: block;
+      transition: all 0.2s ease;
+    }
+    
+    .portal-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      border-color: #6366f1;
+    }
+
+    .portal-card.customer:hover {
+      border-color: #10b981;
+    }
+    
+    .portal-icon {
+      width: 70px;
+      height: 70px;
+      margin: 0 auto 1.25rem;
+      background: white;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      transition: transform 0.2s ease;
+    }
+
+    .portal-card:hover .portal-icon {
+      transform: scale(1.1);
+    }
+    
+    .portal-card.staff .portal-icon {
+      background: #eef2ff;
+      color: #6366f1;
+    }
+    
+    .portal-card.customer .portal-icon {
+      background: #ecfdf5;
+      color: #10b981;
+    }
+    
+    .portal-card h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #1e293b;
+    }
+    
+    .portal-card p {
+      color: #64748b;
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    
+    .portal-btn {
+      padding: 0.75rem 1.5rem;
       border-radius: 8px;
       border: none;
       font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-decoration: none;
-      display: inline-block;
-    }
-    
-    .login-btn.staff-btn {
-      background: var(--primary-color);
+      font-size: 0.95rem;
       color: white;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
     }
     
-    .login-btn.customer-btn {
-      background: var(--success-color);
-      color: white;
+    .portal-btn.staff-btn {
+      background: #6366f1;
     }
     
-    .login-btn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    .portal-btn.customer-btn {
+      background: #10b981;
     }
     
-    .company-info {
-      background: #f8f9fa;
-      border-radius: 15px;
-      padding: 2rem;
+    .portal-card:hover .portal-btn {
+      transform: translateY(-2px);
+    }
+    
+    .info-section {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 1.5rem;
       margin-bottom: 2rem;
     }
     
     .info-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1.5rem;
+      gap: 1.25rem;
     }
     
     .info-item {
@@ -208,176 +202,215 @@
     .info-icon {
       width: 40px;
       height: 40px;
-      background: var(--primary-color);
+      background: #6366f1;
       color: white;
-      border-radius: 10px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.2rem;
+      font-size: 1rem;
+      flex-shrink: 0;
     }
     
-    .info-content h4 {
-      font-size: 0.85rem;
-      color: #6c757d;
+    .info-text h4 {
+      font-size: 0.7rem;
+      color: #64748b;
       margin-bottom: 0.25rem;
       text-transform: uppercase;
-      font-weight: 600;
+      font-weight: 700;
       letter-spacing: 0.5px;
     }
     
-    .info-content p {
+    .info-text p {
       margin: 0;
-      color: #333;
-      font-weight: 500;
-      font-size: 1rem;
+      color: #1e293b;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .info-text a {
+      color: #1e293b;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .info-text a:hover {
+      color: #6366f1;
     }
     
-    .footer-note {
+    .footer-section {
       text-align: center;
       padding-top: 2rem;
-      border-top: 1px solid #e5e7eb;
-      color: #6c757d;
-      font-size: 0.9rem;
+      border-top: 1px solid #e2e8f0;
+      color: #64748b;
+      font-size: 0.85rem;
+    }
+
+    .footer-section p {
+      margin-bottom: 0.25rem;
+    }
+
+    .footer-section a {
+      color: #6366f1;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    .footer-section a:hover {
+      color: #4f46e5;
     }
     
     @media (max-width: 768px) {
-      .hero-title {
-        font-size: 2rem;
+      body {
+        padding: 1rem;
+      }
+
+      .main-card {
+        padding: 2rem 1.5rem;
+      }
+
+      .main-card h1 {
+        font-size: 1.75rem;
       }
       
-      .hero-tagline {
+      .tagline {
         font-size: 1rem;
+        margin-bottom: 2rem;
       }
       
-      .login-options {
+      .portal-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
       }
       
       .info-grid {
         grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .portal-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.75rem;
       }
     }
   </style>
 </head>
 <body>
-  <div class="hero-container">
-    <div class="hero-card">
-      <!-- Hero Header -->
-      <div class="hero-header">
-        {% if LOGO_PATH %}
-          <img src="{{ MEDIA_URL }}{{ LOGO_PATH }}" alt="{{ SITE_NAME }}" class="company-logo">
-        {% else %}
-          <i class="fas fa-car-side" style="font-size: 4rem; margin-bottom: 1rem;"></i>
-        {% endif %}
-        <h1 class="hero-title">{{ COMPANY_NAME|default:'Smart Vehicle Repairs' }}</h1>
-        <p class="hero-tagline">{{ COMPANY_TAGLINE|default:'Your Trusted Auto Service Partner' }}</p>
-      </div>
-      
-      <!-- Hero Body -->
-      <div class="hero-body">
-        <!-- Login Section -->
-        <div class="login-section-title">
-          <h2>Choose Your Portal</h2>
-          <p>Select your login type to continue</p>
-        </div>
-        
-        <div class="login-options">
-          <!-- Staff Login -->
-          <a href="{% url 'login' %}" class="login-card staff">
-            <div class="login-icon">
-              <i class="fas fa-user-tie"></i>
-            </div>
-            <h3>Staff Portal</h3>
-            <p>For managers, technicians, receptionists, and administrators</p>
-            <span class="login-btn staff-btn">
-              <i class="fas fa-sign-in-alt me-2"></i>Staff Login
-            </span>
-          </a>
-          
-          <!-- Customer Portal -->
-          <a href="{% url 'customer_login' %}" class="login-card customer">
-            <div class="login-icon">
-              <i class="fas fa-user"></i>
-            </div>
-            <h3>Customer Portal</h3>
-            <p>Book appointments, track repairs, and manage your vehicles</p>
-            <span class="login-btn customer-btn">
-              <i class="fas fa-sign-in-alt me-2"></i>Customer Login
-            </span>
-          </a>
-        </div>
-        
-        <!-- Company Info -->
-        {% if COMPANY_EMAIL or COMPANY_PHONE or COMPANY_ADDRESS %}
-        <div class="company-info">
-          <div class="info-grid">
-            {% if COMPANY_EMAIL %}
-            <div class="info-item">
-              <div class="info-icon">
-                <i class="fas fa-envelope"></i>
-              </div>
-              <div class="info-content">
-                <h4>Email</h4>
-                <p><a href="mailto:{{ COMPANY_EMAIL }}" style="text-decoration: none; color: inherit;">{{ COMPANY_EMAIL }}</a></p>
-              </div>
-            </div>
-            {% endif %}
-            
-            {% if COMPANY_PHONE %}
-            <div class="info-item">
-              <div class="info-icon">
-                <i class="fas fa-phone"></i>
-              </div>
-              <div class="info-content">
-                <h4>Phone</h4>
-                <p><a href="tel:{{ COMPANY_PHONE }}" style="text-decoration: none; color: inherit;">{{ COMPANY_PHONE }}</a></p>
-              </div>
-            </div>
-            {% endif %}
-            
-            {% if COMPANY_ADDRESS %}
-            <div class="info-item">
-              <div class="info-icon">
-                <i class="fas fa-map-marker-alt"></i>
-              </div>
-              <div class="info-content">
-                <h4>Address</h4>
-                <p>{{ COMPANY_ADDRESS }}{% if COMPANY_CITY %}, {{ COMPANY_CITY }}{% endif %}</p>
-              </div>
-            </div>
-            {% endif %}
-            
-            {% if COMPANY_WEBSITE %}
-            <div class="info-item">
-              <div class="info-icon">
-                <i class="fas fa-globe"></i>
-              </div>
-              <div class="info-content">
-                <h4>Website</h4>
-                <p><a href="{{ COMPANY_WEBSITE }}" target="_blank" style="text-decoration: none; color: inherit;">Visit Website</a></p>
-              </div>
-            </div>
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-6">
+        <div class="main-card">
+          <!-- Logo -->
+          <div class="logo-container">
+            {% if LOGO_PATH %}
+              <img src="{{ MEDIA_URL }}{{ LOGO_PATH }}" alt="{{ SITE_NAME }}" class="company-logo">
+            {% else %}
+              <i class="fas fa-car-side logo-icon"></i>
             {% endif %}
           </div>
-        </div>
-        {% endif %}
-        
-        <!-- Footer Note -->
-        <div class="footer-note">
-          <p class="mb-2">
-            <i class="fas fa-shield-alt me-2"></i>
-            Secure and reliable vehicle management system
-          </p>
-          <p class="mb-0">
-            &copy; 2025 {{ COMPANY_NAME|default:'Smart Vehicle Repairs' }}. All rights reserved.
-          </p>
-          <p class="mt-2 mb-0">
-            <small>
-              <a href="/api/docs/" style="text-decoration: none; color: inherit;" class="me-2">API Docs</a> •
-              <a href="/admin-panel/" style="text-decoration: none; color: inherit;" class="ms-2">Admin Panel</a>
-            </small>
-          </p>
+          
+          <!-- <h1>{{ COMPANY_NAME|default:'Smart Vehicle Repairs' }}</h1> -->
+          <!-- <p class="tagline">{{ COMPANY_TAGLINE|default:'Your Trusted Auto Service Partner' }}</p> -->
+          
+          <!-- Portal Cards -->
+          <div class="portal-grid">
+            <!-- Staff Portal -->
+            <a href="{% url 'login' %}" class="portal-card staff">
+              <div class="portal-icon">
+                <i class="fas fa-user-tie"></i>
+              </div>
+              <h3>Staff Portal</h3>
+              <p>For managers, technicians, and administrators</p>
+              <span class="portal-btn staff-btn">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Staff Login</span>
+              </span>
+            </a>
+            
+            <!-- Customer Portal -->
+            <a href="{% url 'customer_login' %}" class="portal-card customer">
+              <div class="portal-icon">
+                <i class="fas fa-user"></i>
+              </div>
+              <h3>Customer Portal</h3>
+              <p>Book appointments and track your repairs</p>
+              <span class="portal-btn customer-btn">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Customer Login</span>
+              </span>
+            </a>
+          </div>
+          
+          <!-- Company Info -->
+          {% if COMPANY_EMAIL or COMPANY_PHONE or COMPANY_ADDRESS or COMPANY_WEBSITE %}
+          <div class="info-section">
+            <div class="info-grid">
+              {% if COMPANY_EMAIL %}
+              <div class="info-item">
+                <div class="info-icon">
+                  <i class="fas fa-envelope"></i>
+                </div>
+                <div class="info-text">
+                  <h4>Email</h4>
+                  <p><a href="mailto:{{ COMPANY_EMAIL }}">{{ COMPANY_EMAIL }}</a></p>
+                </div>
+              </div>
+              {% endif %}
+              
+              {% if COMPANY_PHONE %}
+              <div class="info-item">
+                <div class="info-icon">
+                  <i class="fas fa-phone"></i>
+                </div>
+                <div class="info-text">
+                  <h4>Phone</h4>
+                  <p><a href="tel:{{ COMPANY_PHONE }}">{{ COMPANY_PHONE }}</a></p>
+                </div>
+              </div>
+              {% endif %}
+              
+              {% if COMPANY_ADDRESS %}
+              <div class="info-item">
+                <div class="info-icon">
+                  <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <div class="info-text">
+                  <h4>Address</h4>
+                  <p>{{ COMPANY_ADDRESS }}{% if COMPANY_CITY %}, {{ COMPANY_CITY }}{% endif %}</p>
+                </div>
+              </div>
+              {% endif %}
+              
+              {% if COMPANY_WEBSITE %}
+              <div class="info-item">
+                <div class="info-icon">
+                  <i class="fas fa-globe"></i>
+                </div>
+                <div class="info-text">
+                  <h4>Website</h4>
+                  <p><a href="{{ COMPANY_WEBSITE }}" target="_blank">Visit Website</a></p>
+                </div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+          
+          <!-- Footer -->
+          <div class="footer-section">
+            <p>
+              <i class="fas fa-shield-alt"></i>
+              Secure and reliable service
+            </p>
+            <p>
+              &copy; 2025 {{ COMPANY_NAME }}. All rights reserved.
+            </p>
+            <p>
+              Developed by <a href="https://safetracksystems.com" target="_blank">SafeTrack Systems</a>
+            </p>
+          </div>
         </div>
       </div>
     </div>

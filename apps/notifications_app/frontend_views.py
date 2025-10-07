@@ -201,10 +201,17 @@ def get_unread_count(request):
 def get_recent_notifications(request):
     """AJAX: Get recent notifications for dropdown"""
     limit = int(request.GET.get('limit', 5))
+    unread_only = request.GET.get('unread_only', 'false').lower() == 'true'
     
-    notifications = Notification.objects.filter(
-        recipient=request.user
-    ).order_by('-created_at')[:limit]
+    # Base query
+    notifications = Notification.objects.filter(recipient=request.user)
+    
+    # Filter for unread only if requested
+    if unread_only:
+        notifications = notifications.filter(is_read=False)
+    
+    # Order and limit
+    notifications = notifications.order_by('-created_at')[:limit]
     
     data = []
     for notification in notifications:

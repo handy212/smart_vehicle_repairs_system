@@ -1,36 +1,112 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load inspection_tags %}
 
 {% block title %}Inspection Details - Smart Vehicle Repairs{% endblock %}
 
-{% block                         <div class="col-md-6">
-                            <p class="mb-1 text-muted small">Technician</p>
-                            <p class="mb-0">{{ inspection.performed_by.get_full_name }}</p>
-                        </div>a_css %}
+{% block extra_css %}
 <style>
+    .info-card {
+        border: none;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .info-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    .info-label {
+        font-size: 0.75rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+    .info-value {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #212529;
+    }
+    .result-item {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background 0.2s;
+    }
+    .result-item:last-child {
+        border-bottom: none;
+    }
+    .result-item:hover {
+        background: #f8f9fa;
+    }
     .result-pass {
-        background-color: #d1fae5;
-        border-left: 4px solid #10b981;
+        border-left: 3px solid #10b981;
+        background: #f0fdf4;
     }
     .result-fail {
-        background-color: #fee2e2;
-        border-left: 4px solid #ef4444;
+        border-left: 3px solid #ef4444;
+        background: #fef2f2;
     }
     .result-warning {
-        background-color: #fef3c7;
-        border-left: 4px solid #f59e0b;
+        border-left: 3px solid #f59e0b;
+        background: #fffbeb;
+    }
+    .result-name {
+        flex: 1;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    .result-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .category-header {
+        background: #f8f9fa;
+        padding: 0.75rem 1rem;
+        border-left: 4px solid var(--bs-primary);
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+    .summary-stats {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .stat-card {
+        flex: 1;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+    }
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+    .stat-label {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
     }
     .photo-gallery {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 0.75rem;
     }
     .photo-item {
         position: relative;
         padding-top: 100%;
         overflow: hidden;
-        border-radius: 0.5rem;
+        border-radius: 0.375rem;
         cursor: pointer;
+        border: 2px solid #e5e7eb;
+    }
+    .photo-item:hover {
+        border-color: var(--bs-primary);
     }
     .photo-item img {
         position: absolute;
@@ -41,14 +117,15 @@
         object-fit: cover;
     }
     .signature-box {
-        border: 1px solid #dee2e6;
+        border: 2px dashed #dee2e6;
         border-radius: 0.5rem;
-        padding: 1rem;
+        padding: 1.5rem;
         background: #f8f9fa;
-        min-height: 150px;
+        min-height: 120px;
+        text-align: center;
     }
     .signature-box img {
-        max-width: 100%;
+        max-width: 200px;
         height: auto;
     }
 </style>
@@ -96,114 +173,134 @@
             </div>
         </div>
     </div>
+    
+    <!-- Hidden Delete Form -->
+    <form id="deleteForm" method="post" action="{% url 'inspections:inspection-delete' inspection.id %}" style="display: none;">
+        {% csrf_token %}
+    </form>
 
     <div class="row">
         <!-- Left Column -->
         <div class="col-lg-8">
             <!-- Basic Information -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Inspection Information</h5>
+            <div class="card info-card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Inspection Information</h5>
+                    {% if inspection.status == 'completed' %}
+                    <span class="badge bg-white text-success">Completed</span>
+                    {% elif inspection.status == 'in_progress' %}
+                    <span class="badge bg-white text-warning">In Progress</span>
+                    {% elif inspection.status == 'approved' %}
+                    <span class="badge bg-white text-info">Approved</span>
+                    {% else %}
+                    <span class="badge bg-white text-secondary">Draft</span>
+                    {% endif %}
                 </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p class="text-muted small mb-1">Template</p>
-                            <h6>{{ inspection.template.name }}</h6>
+                <div class="card-body p-0">
+                    <div class="info-item">
+                        <div class="info-label">Template</div>
+                        <div class="info-value">{{ inspection.template.name }}</div>
+                    </div>
+                    <div class="row g-0">
+                        <div class="col-md-4">
+                            <div class="info-item">
+                                <div class="info-label">Date</div>
+                                <div class="info-value">{{ inspection.inspection_date|date:"M d, Y" }}</div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <p class="text-muted small mb-1">Status</p>
-                            {% if inspection.status == 'completed' %}
-                            <span class="badge bg-success">Completed</span>
-                            {% elif inspection.status == 'in_progress' %}
-                            <span class="badge bg-warning">In Progress</span>
-                            {% elif inspection.status == 'approved' %}
-                            <span class="badge bg-info">Approved</span>
-                            {% else %}
-                            <span class="badge bg-secondary">Draft</span>
-                            {% endif %}
+                        <div class="col-md-4">
+                            <div class="info-item">
+                                <div class="info-label">Technician</div>
+                                <div class="info-value">{{ inspection.technician.get_full_name }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="info-item">
+                                <div class="info-label">Odometer</div>
+                                <div class="info-value">{{ inspection.odometer_reading|floatformat:0 }} mi</div>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <p class="text-muted small mb-1">Inspection Date</p>
-                            <p class="mb-0">{{ inspection.inspection_date|date:"F d, Y" }}</p>
-                        </div>
-                        <div class="col-md-4">
-                            <p class="text-muted small mb-1">Technician</p>
-                            <p class="mb-0">{{ inspection.technician.get_full_name }}</p>
-                        </div>
-                        <div class="col-md-4">
-                            <p class="text-muted small mb-1">Odometer Reading</p>
-                            <p class="mb-0">{{ inspection.odometer_reading|floatformat:0 }} miles</p>
-                        </div>
-                    </div>
-                    
                     {% if inspection.notes %}
-                    <div class="mb-0">
-                        <p class="text-muted small mb-1">Notes</p>
-                        <p class="mb-0">{{ inspection.notes }}</p>
+                    <div class="info-item">
+                        <div class="info-label">Notes</div>
+                        <div class="info-value">{{ inspection.notes }}</div>
                     </div>
                     {% endif %}
                 </div>
             </div>
 
             <!-- Inspection Results -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Inspection Results</h5>
+            <div class="card info-card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Inspection Results</h5>
                 </div>
                 <div class="card-body">
+                    <!-- Summary Statistics -->
+                    <div class="summary-stats">
+                        <div class="stat-card" style="background: #f0fdf4; border: 2px solid #10b981;">
+                            <div class="stat-number text-success">{{ pass_count|default:0 }}</div>
+                            <div class="stat-label">Passed</div>
+                        </div>
+                        <div class="stat-card" style="background: #fef2f2; border: 2px solid #ef4444;">
+                            <div class="stat-number text-danger">{{ fail_count|default:0 }}</div>
+                            <div class="stat-label">Failed</div>
+                        </div>
+                        <div class="stat-card" style="background: #f3f4f6; border: 2px solid #9ca3af;">
+                            <div class="stat-number text-secondary">{{ inspection.results.count|default:0 }}</div>
+                            <div class="stat-label">Total Items</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Results by Category -->
                     {% for category in inspection.template.categories.all %}
+                    <div class="category-header">
+                        <i class="fas fa-folder me-2"></i>{{ category.name }}
+                        <small class="text-muted ms-2">({{ category.items.count }} items)</small>
+                    </div>
+                    
                     <div class="mb-4">
-                        <h6 class="text-primary">
-                            <i class="fas fa-folder-open me-2"></i>{{ category.name }}
-                        </h6>
-                        
                         {% for item in category.items.all %}
-                        {% with result=inspection.get_result_for_item|item.id %}
-                        <div class="p-3 mb-2 rounded {% if result.status == 'pass' %}result-pass{% elif result.status == 'fail' %}result-fail{% elif result.status == 'warning' %}result-warning{% endif %}">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <strong>{{ item.name }}</strong>
-                                    {% if item.is_critical %}
-                                    <span class="badge bg-danger ms-2">Critical</span>
-                                    {% endif %}
-                                    
-                                    {% if result %}
-                                    <div class="mt-2">
-                                        {% if item.item_type == 'pass_fail' %}
-                                        <span class="badge {% if result.status == 'pass' %}bg-success{% else %}bg-danger{% endif %}">
-                                            {{ result.get_status_display }}
-                                        </span>
-                                        {% elif item.item_type == 'rating' %}
-                                        <div class="rating-display">
-                                            {% for i in "12345" %}
-                                            <i class="fas fa-star {% if forloop.counter <= result.rating_value %}text-warning{% else %}text-muted{% endif %}"></i>
-                                            {% endfor %}
-                                        </div>
-                                        {% elif item.item_type == 'measurement' %}
-                                        <p class="mb-0">{{ result.measurement_value }} {{ item.measurement_unit }}</p>
-                                        {% elif item.item_type == 'condition' %}
-                                        <span class="badge bg-info">{{ result.condition }}</span>
-                                        {% endif %}
-                                        
-                                        {% if result.notes %}
-                                        <p class="mb-0 mt-2 text-muted small">{{ result.notes }}</p>
-                                        {% endif %}
-                                    </div>
-                                    {% else %}
-                                    <p class="mb-0 text-muted small">Not inspected</p>
-                                    {% endif %}
-                                </div>
-                                
-                                {% if result.photo %}
-                                <div class="ms-3">
-                                    <img src="{{ result.photo.url }}" alt="Photo" style="width: 80px; height: 80px; object-fit: cover; border-radius: 0.25rem;">
-                                </div>
+                        {% with result=results_by_item|get_item:item.id|default:None %}
+                        <div class="result-item {% if result.result == 'pass' %}result-pass{% elif result.result == 'fail' %}result-fail{% elif result.result == 'advisory' %}result-warning{% endif %}">
+                            <div class="result-name">
+                                <strong>{{ item.name }}</strong>
+                                {% if item.is_critical %}
+                                <i class="fas fa-exclamation-triangle text-danger ms-1" title="Critical"></i>
+                                {% endif %}
+                                {% if result.notes %}
+                                <br><small class="text-muted">{{ result.notes }}</small>
                                 {% endif %}
                             </div>
+                            
+                            <div class="text-end">
+                                {% if result %}
+                                    {% if item.item_type == 'pass_fail' %}
+                                    <span class="badge result-badge {% if result.result == 'pass' %}bg-success{% else %}bg-danger{% endif %}">
+                                        <i class="fas {% if result.result == 'pass' %}fa-check{% else %}fa-times{% endif %} me-1"></i>
+                                        {{ result.get_result_display }}
+                                    </span>
+                                    {% elif item.item_type == 'rating' %}
+                                    <div>
+                                        {% for i in "12345" %}
+                                        <i class="fas fa-star {% if forloop.counter <= result.rating_value %}text-warning{% else %}text-muted{% endif %}" style="font-size: 0.75rem;"></i>
+                                        {% endfor %}
+                                    </div>
+                                    {% elif item.item_type == 'measurement' %}
+                                    <span class="badge bg-info result-badge">{{ result.measurement_value }} {{ item.measurement_unit }}</span>
+                                    {% elif item.item_type == 'condition' %}
+                                    <span class="badge bg-secondary result-badge">{{ result.condition }}</span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="badge bg-light text-muted result-badge">Not checked</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if result.photo %}
+                            <div class="ms-2">
+                                <img src="{{ result.photo.url }}" alt="Photo" style="width: 50px; height: 50px; object-fit: cover; border-radius: 0.25rem; border: 2px solid #e5e7eb;">
+                            </div>
+                            {% endif %}
                         </div>
                         {% endwith %}
                         {% endfor %}
@@ -211,6 +308,119 @@
                     {% endfor %}
                 </div>
             </div>
+
+            <!-- Vehicle Damage Assessment -->
+            {% if inspection.vehicle_damage %}
+            <div class="card info-card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-car-crash me-2"></i>Vehicle Damage Assessment</h5>
+                </div>
+                <div class="card-body">
+                    <div class="vehicle-damage-display">
+                        <!-- Vehicle Diagram Container -->
+                        <div class="vehicle-diagram-container position-relative mb-3">
+                            <div id="vehicleDamageDisplay" class="vehicle-svg-container">
+                                <!-- SVG will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Damage Summary -->
+                        <div class="damage-summary">
+                            <div class="row" id="damageSummary">
+                                <!-- Summary will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <script>
+            // Load and display vehicle damage for detail view
+            document.addEventListener('DOMContentLoaded', function() {
+                const damageData = JSON.parse('{{ inspection.vehicle_damage|escapejs }}');
+                
+                if (damageData && damageData.length > 0) {
+                    loadVehicleDamageDisplay(damageData);
+                }
+            });
+            
+            function loadVehicleDamageDisplay(damageData) {
+                fetch('/media/scratch/scratch_dents.svg')
+                    .then(response => response.text())
+                    .then(svgText => {
+                        const container = document.getElementById('vehicleDamageDisplay');
+                        container.innerHTML = svgText;
+                        
+                        const svg = container.querySelector('svg');
+                        if (svg) {
+                            svg.style.width = '100%';
+                            svg.style.height = 'auto';
+                            
+                            // Add damage markers
+                            damageData.forEach(damage => {
+                                const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                                marker.setAttribute('cx', `${damage.x}%`);
+                                marker.setAttribute('cy', `${damage.y}%`);
+                                marker.setAttribute('r', '8');
+                                marker.setAttribute('stroke', 'white');
+                                marker.setAttribute('stroke-width', '2');
+                                
+                                const colors = {
+                                    scratch: '#ffc107',
+                                    dent: '#dc3545',
+                                    rust: '#6c757d',
+                                    crack: '#0dcaf0'
+                                };
+                                marker.setAttribute('fill', colors[damage.type] || '#6c757d');
+                                
+                                const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                                title.textContent = damage.type.charAt(0).toUpperCase() + damage.type.slice(1);
+                                marker.appendChild(title);
+                                
+                                svg.appendChild(marker);
+                            });
+                            
+                            // Update summary
+                            updateDamageSummary(damageData);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading vehicle SVG:', error);
+                    });
+            }
+            
+            function updateDamageSummary(damageData) {
+                const summary = {};
+                damageData.forEach(damage => {
+                    summary[damage.type] = (summary[damage.type] || 0) + 1;
+                });
+                
+                const summaryContainer = document.getElementById('damageSummary');
+                summaryContainer.innerHTML = '';
+                
+                const colors = {
+                    scratch: { bg: '#fff3cd', border: '#ffc107', icon: 'fa-exclamation-triangle' },
+                    dent: { bg: '#f8d7da', border: '#dc3545', icon: 'fa-circle' },
+                    rust: { bg: '#e2e3e5', border: '#6c757d', icon: 'fa-circle-notch' },
+                    crack: { bg: '#d1ecf1', border: '#0dcaf0', icon: 'fa-bolt' }
+                };
+                
+                Object.entries(summary).forEach(([type, count]) => {
+                    const color = colors[type] || colors.crack;
+                    const col = document.createElement('div');
+                    col.className = 'col-md-3 mb-2';
+                    col.innerHTML = `
+                        <div class="p-2 rounded" style="background: ${color.bg}; border-left: 4px solid ${color.border};">
+                            <i class="fas ${color.icon} me-2"></i>
+                            <strong>${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+                            <span class="badge bg-secondary ms-2">${count}</span>
+                        </div>
+                    `;
+                    summaryContainer.appendChild(col);
+                });
+            }
+            </script>
+            {% endif %}
 
             <!-- Photos -->
             {% if inspection.photos.all %}
@@ -287,8 +497,8 @@
                         </div>
                         <div class="col-4">
                             <div class="p-3 bg-warning bg-opacity-10 rounded">
-                                <h3 class="mb-0 text-warning">{{ inspection.warning_count }}</h3>
-                                <small class="text-muted">Warning</small>
+                                <h3 class="mb-0 text-warning">{{ advisory_count }}</h3>
+                                <small class="text-muted">Advisory</small>
                             </div>
                         </div>
                     </div>
@@ -374,7 +584,7 @@ function emailInspection() {
 function deleteInspection() {
     if (confirm('Are you sure you want to delete this inspection? This cannot be undone.')) {
         // Submit delete form
-        window.location.href = "{% url 'inspections:inspection-delete' inspection.id %}";
+        document.getElementById('deleteForm').submit();
     }
 }
 </script>

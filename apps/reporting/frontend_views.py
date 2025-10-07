@@ -42,10 +42,14 @@ def financial_report(request):
     
     # Revenue metrics
     invoices = Invoice.objects.filter(created_at__gte=start_date)
-    total_revenue = invoices.aggregate(total=Sum('total_amount'))['total'] or 0
-    total_paid = invoices.filter(status='paid').aggregate(total=Sum('total_amount'))['total'] or 0
-    total_pending = invoices.filter(status='pending').aggregate(total=Sum('total_amount'))['total'] or 0
-    total_overdue = invoices.filter(status='overdue').aggregate(total=Sum('total_amount'))['total'] or 0
+    total_revenue = invoices.aggregate(total=Sum('total'))['total'] or 0
+    total_revenue = float(total_revenue)
+    total_paid = invoices.filter(status='paid').aggregate(total=Sum('total'))['total'] or 0
+    total_paid = float(total_paid)
+    total_pending = invoices.filter(status='pending').aggregate(total=Sum('total'))['total'] or 0
+    total_pending = float(total_pending)
+    total_overdue = invoices.filter(status='overdue').aggregate(total=Sum('total'))['total'] or 0
+    total_overdue = float(total_overdue)
     
     # Calculate profit margin (revenue - labor - parts costs)
     # For simplicity, assuming 40% margin
@@ -66,22 +70,30 @@ def financial_report(request):
             created_at__gte=month_start,
             created_at__lte=month_end,
             status='paid'
-        ).aggregate(total=Sum('total_amount'))['total'] or 0
+        ).aggregate(total=Sum('total'))['total'] or 0
+        month_revenue = float(month_revenue)
         
         month_profit = month_revenue * 0.40  # 40% margin
         
         revenue_labels.insert(0, month_date.strftime('%b %Y'))
-        revenue_data.insert(0, float(month_revenue))
-        profit_data.insert(0, float(month_profit))
+        revenue_data.insert(0, month_revenue)
+        profit_data.insert(0, month_profit)
     
-    # Service type breakdown
+    # Service type breakdown - using work_order customer_concerns and description
     service_type_labels = ['General Service', 'Repair', 'Inspection', 'Maintenance', 'Other']
+    service_revenue = float(invoices.filter(work_order__customer_concerns__icontains='service').aggregate(total=Sum('total'))['total'] or 0)
+    repair_revenue = float(invoices.filter(work_order__customer_concerns__icontains='repair').aggregate(total=Sum('total'))['total'] or 0)
+    inspection_revenue = float(invoices.filter(work_order__customer_concerns__icontains='inspection').aggregate(total=Sum('total'))['total'] or 0)
+    maintenance_revenue = float(invoices.filter(work_order__customer_concerns__icontains='maintenance').aggregate(total=Sum('total'))['total'] or 0)
+    other_revenue = total_revenue - (service_revenue + repair_revenue + inspection_revenue + maintenance_revenue)
+    other_revenue = max(0, other_revenue)  # Ensure non-negative
+    
     service_type_data = [
-        float(invoices.filter(invoice_items__description__icontains='service').aggregate(total=Sum('total_amount'))['total'] or 0),
-        float(invoices.filter(invoice_items__description__icontains='repair').aggregate(total=Sum('total_amount'))['total'] or 0),
-        float(invoices.filter(invoice_items__description__icontains='inspection').aggregate(total=Sum('total_amount'))['total'] or 0),
-        float(invoices.filter(invoice_items__description__icontains='maintenance').aggregate(total=Sum('total_amount'))['total'] or 0),
-        float(total_revenue * 0.1),  # Estimate other
+        service_revenue,
+        repair_revenue,
+        inspection_revenue,
+        maintenance_revenue,
+        other_revenue,
     ]
     
     # Payment methods breakdown
@@ -96,7 +108,7 @@ def financial_report(request):
     
     # Top customers
     top_customers = Customer.objects.annotate(
-        total_spent=Sum('invoices__total_amount')
+        total_spent=Sum('invoices__total')
     ).order_by('-total_spent')[:10]
     
     context = {
@@ -141,8 +153,8 @@ def operational_report(request):
     # Technician performance
     from apps.accounts.models import User
     technicians = User.objects.filter(role='technician', is_active=True).annotate(
-        completed_jobs=Count('assigned_workorders', filter=Q(assigned_workorders__status='completed')),
-        avg_time=Avg('assigned_workorders__actual_hours')
+        completed_jobs=Count('assigned_work_orders', filter=Q(assigned_work_orders__status='completed')),
+        avg_time=Avg('assigned_work_orders__actual_labor_hours')
     ).order_by('-completed_jobs')
     
     # Appointment statistics
@@ -159,7 +171,7 @@ def operational_report(request):
     
     # Average completion times
     avg_completion_time = workorders.filter(status='completed').aggregate(
-        avg_time=Avg('actual_hours')
+        avg_time=Avg('actual_labor_hours')
     )['avg_time'] or 0
     
     context = {
@@ -184,14 +196,14 @@ def inventory_report(request):
     
     # Inventory statistics
     total_parts = parts.count()
-    in_stock = parts.filter(quantity_on_hand__gt=0).count()
-    low_stock = parts.filter(quantity_on_hand__lte=F('reorder_point')).count()
-    out_of_stock = parts.filter(quantity_on_hand=0).count()
+    in_stock = parts.filter(quantity_in_stock__gt=0).count()
+    low_stock = parts.filter(quantity_in_stock__lte=F('reorder_point')).count()
+    out_of_stock = parts.filter(quantity_in_stock=0).count()
     
     # Inventory value
-    total_value = parts.aggregate(
-        total=Sum(F('quantity_on_hand') * F('cost'))
-    )['total'] or 0
+    total_value = float(parts.aggregate(
+        total=Sum(F('quantity_in_stock') * F('cost_price'))
+    )['total'] or 0)
     
     context = {
         'total_parts': total_parts,
@@ -217,7 +229,7 @@ def customer_report(request):
     
     # Customer lifetime value
     customers_with_value = customers.annotate(
-        lifetime_value=Sum('invoices__total_amount')
+        lifetime_value=Sum('invoices__total')
     ).order_by('-lifetime_value')[:20]
     
     context = {

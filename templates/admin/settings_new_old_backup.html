@@ -1,0 +1,480 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}System Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Modern Settings Page Styles */
+    .settings-wrapper {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: calc(100vh - 60px);
+        padding: 2rem 0;
+    }
+    
+    .settings-header {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    
+    .settings-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+    
+    .settings-header .subtitle {
+        color: #64748b;
+        font-size: 1rem;
+    }
+    
+    /* Modern Tab Navigation */
+    .settings-nav {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+        position: sticky;
+        top: 80px;
+        z-index: 100;
+    }
+    
+    .settings-tabs {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 1rem;
+    }
+    
+    .settings-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        background: transparent;
+        color: #64748b;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        white-space: nowrap;
+    }
+    
+    .settings-tab:hover {
+        background: #f1f5f9;
+        color: #334155;
+        transform: translateY(-2px);
+    }
+    
+    .settings-tab.active {
+        background: var(--brand-color);
+        color: white;
+        border-color: var(--brand-color);
+        box-shadow: 0 4px 12px rgba(var(--brand-color-rgb), 0.3);
+    }
+    
+    .settings-tab i {
+        font-size: 1.1rem;
+    }
+    
+    /* Settings Content Card */
+    .settings-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .settings-card-header {
+        background: linear-gradient(135deg, var(--brand-color) 0%, var(--brand-color-dark, #6366f1) 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-bottom: none;
+    }
+    
+    .settings-card-header h5 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .settings-card-body {
+        padding: 2rem;
+    }
+    
+    /* Setting Item Styles */
+    .setting-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .setting-item:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        border-color: var(--brand-color);
+        transform: translateY(-2px);
+    }
+    
+    .setting-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .setting-header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+    
+    .setting-info {
+        flex: 1;
+    }
+    
+    .setting-label {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .setting-description {
+        font-size: 0.875rem;
+        color: #64748b;
+        line-height: 1.5;
+    }
+    
+    .setting-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .badge-secret {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .badge-required {
+        background: #fecaca;
+        color: #991b1b;
+    }
+    
+    /* Form Controls */
+    .setting-control {
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+        width: 100%;
+    }
+    
+    .setting-control:focus {
+        border-color: var(--brand-color);
+        box-shadow: 0 0 0 3px rgba(var(--brand-color-rgb), 0.1);
+        outline: none;
+    }
+    
+    .setting-switch {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .form-switch .form-check-input {
+        width: 3rem;
+        height: 1.5rem;
+        cursor: pointer;
+    }
+    
+    .form-switch .form-check-input:checked {
+        background-color: var(--brand-color);
+        border-color: var(--brand-color);
+    }
+    
+    .setting-toggle-label {
+        font-weight: 500;
+        color: #334155;
+    }
+    
+    /* Color Picker */
+    .color-picker-group {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    .color-preview {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        border: 3px solid #e2e8f0;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    
+    .color-preview:hover {
+        transform: scale(1.05);
+        border-color: var(--brand-color);
+    }
+    
+    .color-text-input {
+        flex: 1;
+    }
+    
+    /* Password Toggle Button */
+    .password-toggle-btn {
+        border: 2px solid #e2e8f0;
+        border-left: none;
+        background: #f8fafc;
+        color: #64748b;
+        transition: all 0.2s;
+    }
+    
+    .password-toggle-btn:hover {
+        background: #e2e8f0;
+        color: #334155;
+    }
+    
+    /* Card Footer */
+    .settings-card-footer {
+        background: #f8fafc;
+        padding: 1.5rem 2rem;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .save-button {
+        background: var(--brand-color);
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 10px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(var(--brand-color-rgb), 0.3);
+    }
+    
+    .save-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(var(--brand-color-rgb), 0.4);
+    }
+    
+    /* Quick Actions */
+    .quick-actions-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-top: 2rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    
+    .quick-actions-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .quick-actions-header h6 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0;
+    }
+    
+    .upload-area {
+        background: #f8fafc;
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: all 0.3s;
+    }
+    
+    .upload-area:hover {
+        border-color: var(--brand-color);
+        background: #f1f5f9;
+    }
+    
+    .upload-label {
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .upload-hint {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-top: 0.5rem;
+    }
+    
+    /* Info Alert Boxes */
+    .info-box {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        border: none;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        border-left: 4px solid #3b82f6;
+    }
+    
+    .warning-box {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: none;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        border-left: 4px solid #f59e0b;
+    }
+    
+    .info-box h6,
+    .warning-box h6 {
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        color: #cbd5e1;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state h4 {
+        color: #64748b;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .empty-state p {
+        color: #94a3b8;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .settings-wrapper {
+            padding: 1rem 0;
+        }
+        
+        .settings-header {
+            padding: 1.5rem;
+        }
+        
+        .settings-tabs {
+            flex-direction: column;
+        }
+        
+        .settings-tab {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .setting-header {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .color-picker-group {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-wrapper">
+    <div class="container-fluid px-4">
+        <!-- Header -->
+        <div class="settings-header">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1>
+                        <i class="fas fa-cog"></i> System Settings
+                    </h1>
+                    <p class="subtitle mb-0">Configure and customize your system preferences</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="settings-nav">
+            <div class="settings-tabs">
+                {% for category in categories %}
+                <a href="?category={{ category.value }}" 
+                   class="settings-tab {% if category.value == current_category %}active{% endif %}">
+                    <i class="{{ category.icon }}"></i>
+                    <span>{{ category.label }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Settings Form -->
+        {% if settings %}
+        <form method="post" action="{% url 'admin_panel:update_settings' %}">
+            {% csrf_token %}
+            <input type="hidden" name="category" value="{{ current_category }}">
+            
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <h5>
+                        <i class="fas {{ current_category_icon }}"></i>
+                        {{ current_category_label }} Settings
+                    </h5>
+                </div>
+                
+                <div class="settings-card-body">
+                    {% for setting in settings %}
+                    <div class="setting-item">
+                        <div class="setting-header">
+                            <div class="setting-info">
+                                <div class="setting-label">
+                                    {{ setting.display_name }}
+                                    {% if setting.is_secret %}
+                                        <span class="setting-badge badge-secret">
+                                            <i class="fas fa-lock"></i> Secret
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="setting-description">{{ setting.description }}</div>
+                            </div>

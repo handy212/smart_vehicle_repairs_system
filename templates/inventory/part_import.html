@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Import Parts{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Import Parts</h1>
+            <p class="text-muted mb-0">Upload CSV or Excel file to import multiple parts at once</p>
+        </div>
+        <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Parts
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Upload Form -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-upload me-2"></i>Upload File</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="file" class="form-label">Select CSV or Excel File</label>
+                            <input type="file" name="file" id="file" class="form-control" accept=".csv,.xlsx,.xls" required>
+                            <div class="form-text">Supported formats: CSV, Excel (.xlsx, .xls)</div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-file-import me-2"></i>Import Parts
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Import Errors -->
+            {% if import_errors %}
+            <div class="card border-warning">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Import Errors</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3">The following rows had errors during import:</p>
+                    <div class="alert alert-light" style="max-height: 400px; overflow-y: auto;">
+                        <ul class="mb-0">
+                            {% for error in import_errors %}
+                            <li class="text-danger">{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Instructions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-1"></i> Instructions</h6>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0 ps-3">
+                        <li class="mb-2">Download the template file below</li>
+                        <li class="mb-2">Fill in your parts data</li>
+                        <li class="mb-2">Save as CSV or Excel format</li>
+                        <li class="mb-2">Upload the file using the form</li>
+                        <li>Review the import results</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Template Download -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-download me-1"></i> Download Template</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-3">Download a sample template with the correct column headers:</p>
+                    <a href="{% url 'inventory:part_import_template' %}" class="btn btn-info btn-sm w-100 mb-2">
+                        <i class="fas fa-file-csv me-1"></i> Download CSV Template
+                    </a>
+                </div>
+            </div>
+
+            <!-- Required Fields -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-asterisk me-1 text-danger"></i> Required Fields</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2"><strong>Required columns:</strong></p>
+                    <ul class="small mb-3">
+                        <li><code>part_number</code> - Unique identifier</li>
+                        <li><code>name</code> - Part name</li>
+                    </ul>
+                    
+                    <p class="small mb-2"><strong>Optional columns:</strong></p>
+                    <ul class="small mb-0">
+                        <li><code>description</code></li>
+                        <li><code>category</code></li>
+                        <li><code>supplier</code></li>
+                        <li><code>manufacturer</code></li>
+                        <li><code>manufacturer_part_number</code></li>
+                        <li><code>quantity_in_stock</code></li>
+                        <li><code>minimum_stock</code></li>
+                        <li><code>reorder_point</code></li>
+                        <li><code>reorder_quantity</code></li>
+                        <li><code>cost_price</code></li>
+                        <li><code>selling_price</code></li>
+                        <li><code>bin_location</code></li>
+                        <li><code>shelf</code></li>
+                        <li><code>unit</code> (unit/box/case/pallet)</li>
+                        <li><code>is_active</code> (true/false)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

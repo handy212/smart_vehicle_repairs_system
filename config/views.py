@@ -363,15 +363,76 @@ def logout_view(request):
     return redirect('home')
 
 
+@login_required
 def search_view(request):
     """
-    Global search view (placeholder)
+    Global search view - searches across customers, vehicles, work orders, and appointments
     """
+    from django.db.models import Q
+    from apps.customers.models import Customer
+    from apps.vehicles.models import Vehicle
+    from apps.workorders.models import WorkOrder
+    from apps.appointments.models import Appointment
+    
+    # Only staff can search
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('dashboard')
+    
     query = request.GET.get('q', '')
+    
+    customers = []
+    vehicles = []
+    workorders = []
+    appointments = []
+    
+    if query and len(query) >= 2:  # Only search if query is at least 2 characters
+        # Search customers (via user relationship)
+        customers = Customer.objects.filter(
+            Q(user__first_name__icontains=query) | 
+            Q(user__last_name__icontains=query) | 
+            Q(user__email__icontains=query) | 
+            Q(user__phone__icontains=query) | 
+            Q(customer_number__icontains=query) | 
+            Q(company_name__icontains=query)
+        ).select_related('user')[:10]
+        
+        # Search vehicles
+        vehicles = Vehicle.objects.filter(
+            Q(make__icontains=query) | 
+            Q(model__icontains=query) | 
+            Q(license_plate__icontains=query) | 
+            Q(vin__icontains=query)
+        ).select_related('owner', 'owner__user')[:10]
+        
+        # Search work orders
+        workorders = WorkOrder.objects.filter(
+            Q(work_order_number__icontains=query) | 
+            Q(customer_concerns__icontains=query) | 
+            Q(diagnosis_notes__icontains=query) |
+            Q(special_instructions__icontains=query) |
+            Q(vehicle__license_plate__icontains=query) | 
+            Q(customer__user__first_name__icontains=query) | 
+            Q(customer__user__last_name__icontains=query)
+        ).select_related('vehicle', 'customer', 'customer__user')[:10]
+        
+        # Search appointments
+        appointments = Appointment.objects.filter(
+            Q(appointment_number__icontains=query) | 
+            Q(special_instructions__icontains=query) |
+            Q(customer_concerns__icontains=query) |
+            Q(customer__user__first_name__icontains=query) | 
+            Q(customer__user__last_name__icontains=query) | 
+            Q(vehicle__license_plate__icontains=query)
+        ).select_related('customer', 'customer__user', 'vehicle')[:10]
     
     context = {
         'query': query,
-        'results': [],
+        'customers': customers,
+        'vehicles': vehicles,
+        'workorders': workorders,
+        'appointments': appointments,
+        'total_results': len(customers) + len(vehicles) + len(workorders) + len(appointments),
     }
     
     return render(request, 'search_results.html', context)

@@ -64,6 +64,8 @@ class Command(BaseCommand):
                 'approve_part_requests': ('inventory', 'Approve Part Requests', 'Approve technician part requests'),
                 'view_inventory_reports': ('reports', 'View Inventory Reports', 'View inventory reports'),
                 'view_service_history': ('vehicles', 'View Service History', 'View vehicle service history'),
+                'edit_own_profile': ('customers', 'Edit Own Profile', 'Edit own profile information'),
+                'change_own_password': ('customers', 'Change Own Password', 'Change own password'),
             }
             
             # Create all permissions

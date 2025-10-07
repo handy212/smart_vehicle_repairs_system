@@ -1,93 +1,78 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load widget_tweaks %}
 
 {% block title %}Parts Catalog{% endblock %}
 
 {% block extra_css %}
-<link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 <style>
-    .search-filters {
-        background: white;
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        border: 1px solid var(--gray-200);
+    .stock-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
     }
+    .stock-normal { background: #198754; color: white; }
+    .stock-low { background: #ffc107; color: #000; }
+    .stock-critical { background: #dc3545; color: white; }
+    .stock-out { background: #6c757d; color: white; }
     
-    .part-card {
-        background: white;
-        border-radius: 0.5rem;
-        border: 1px solid var(--gray-200);
-        transition: all 0.2s;
-    }
-    
-    .part-card:hover {
-        border-color: var(--primary);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    
-    .part-image {
-        width: 60px;
-        height: 60px;
-        background: var(--gray-100);
-        border-radius: 0.375rem;
+    .part-image-sm {
+        width: 40px;
+        height: 40px;
+        background: #f8f9fa;
+        border-radius: 0.25rem;
         display: flex;
         align-items: center;
         justify-content: center;
     }
     
-    .stock-indicator {
-        width: 4px;
-        height: 100%;
-        border-radius: 2px;
+    .table > :not(caption) > * > * {
+        padding: 0.75rem 0.5rem;
     }
     
-    .stock-normal { background: var(--success); }
-    .stock-low { background: var(--warning); }
-    .stock-critical { background: var(--danger); }
-    .stock-out { background: var(--gray-400); }
-    
-    .part-actions {
-        opacity: 0;
-        transition: opacity 0.2s;
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
     }
     
-    .part-card:hover .part-actions {
-        opacity: 1;
+    .inactive-part {
+        background-color: #f8f9fa !important;
+        opacity: 0.7;
     }
     
-    @media (max-width: 768px) {
-        .part-actions {
-            opacity: 1;
-        }
+    .inactive-part td {
+        color: #6c757d;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-0">Parts Catalog</h1>
-            <p class="text-muted">{{ total_parts }} parts • {{ low_stock_count }} low stock • {{ out_of_stock_count }} out of stock</p>
+            <h1 class="h3 mb-1">Parts Catalog</h1>
+            <p class="text-muted mb-0">
+                {{ total_parts }} parts • 
+                <span class="text-warning">{{ low_stock_count }} low stock</span> • 
+                <span class="text-danger">{{ out_of_stock_count }} out of stock</span>
+            </p>
         </div>
         {% if can_edit %}
         <div class="d-flex gap-2">
             <a href="{% url 'inventory:part_create' %}" class="btn btn-primary">
                 <i class="fas fa-plus me-1"></i> Add Part
             </a>
+            <a href="{% url 'inventory:part_import' %}" class="btn btn-success">
+                <i class="fas fa-file-import me-1"></i> Import
+            </a>
             <div class="dropdown">
                 <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                     <i class="fas fa-download me-1"></i> Export
                 </button>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="?export=csv">
+                    <li><a class="dropdown-item" href="?export=csv{% for key, value in request.GET.items %}{% if key != 'export' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
                         <i class="fas fa-file-csv me-2"></i>Export CSV
                     </a></li>
-                    <li><a class="dropdown-item" href="?export=pdf">
+                    <li><a class="dropdown-item" href="?export=pdf{% for key, value in request.GET.items %}{% if key != 'export' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
                         <i class="fas fa-file-pdf me-2"></i>Export PDF
                     </a></li>
                 </ul>
@@ -96,283 +81,305 @@
         {% endif %}
     </div>
 
-    <!-- Search & Filters -->
-    <div class="search-filters">
-        <form method="get" id="filter-form">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Search Parts</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="search" value="{{ search }}" 
-                               placeholder="Name, part number, brand...">
-                        <button class="btn btn-outline-secondary" type="submit">
-                            <i class="fas fa-search"></i>
-                        </button>
+    <!-- Search & Filters Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" id="filterForm">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Search Parts</label>
+                        <input type="text" name="search" class="form-control" 
+                               placeholder="Name, part number, brand..." 
+                               value="{{ request.GET.search }}">
                     </div>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Category</label>
-                    <select class="form-select" name="category">
-                        <option value="">All Categories</option>
-                        {% for category in categories %}
-                        <option value="{{ category.id }}" {% if category.id == category_id %}selected{% endif %}>
-                            {{ category.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Supplier</label>
-                    <select class="form-select" name="supplier">
-                        <option value="">All Suppliers</option>
-                        {% for supplier in suppliers %}
-                        <option value="{{ supplier.id }}" {% if supplier.id == supplier_id %}selected{% endif %}>
-                            {{ supplier.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Stock Level</label>
-                    <select class="form-select" name="stock_level">
-                        <option value="">All Levels</option>
-                        <option value="low" {% if stock_level == 'low' %}selected{% endif %}>Low Stock</option>
-                        <option value="reorder" {% if stock_level == 'reorder' %}selected{% endif %}>Needs Reorder</option>
-                        <option value="out" {% if stock_level == 'out' %}selected{% endif %}>Out of Stock</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Status</label>
-                    <select class="form-select" name="status">
-                        <option value="">All Status</option>
-                        <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
-                        <option value="discontinued" {% if status == 'discontinued' %}selected{% endif %}>Discontinued</option>
-                        <option value="backordered" {% if status == 'backordered' %}selected{% endif %}>Backordered</option>
-                    </select>
-                </div>
-                <div class="col-md-1">
-                    <label class="form-label">&nbsp;</label>
-                    <div class="d-flex gap-1">
+                    
+                    <div class="col-md-2">
+                        <label class="form-label">Category</label>
+                        <select name="category" class="form-select">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>
+                                {{ category.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label">Supplier</label>
+                        <select name="supplier" class="form-select">
+                            <option value="">All Suppliers</option>
+                            {% for supplier in suppliers %}
+                            <option value="{{ supplier.id }}" {% if request.GET.supplier == supplier.id|stringformat:"s" %}selected{% endif %}>
+                                {{ supplier.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label">Stock Level</label>
+                        <select name="stock_level" class="form-select">
+                            <option value="">All Levels</option>
+                            <option value="in_stock" {% if request.GET.stock_level == 'in_stock' %}selected{% endif %}>In Stock</option>
+                            <option value="low" {% if request.GET.stock_level == 'low' %}selected{% endif %}>Low Stock</option>
+                            <option value="out" {% if request.GET.stock_level == 'out' %}selected{% endif %}>Out of Stock</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="active" {% if request.GET.status == 'active' or not request.GET.status %}selected{% endif %}>Active Only</option>
+                            <option value="all" {% if request.GET.status == 'all' %}selected{% endif %}>All Status</option>
+                            <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive Only</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-12">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-filter"></i>
+                            <i class="fas fa-search me-1"></i> Search
                         </button>
                         <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i>
+                            <i class="fas fa-times me-1"></i> Clear
                         </a>
                     </div>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 
-    <!-- Parts Grid -->
-    <div class="row" id="parts-container">
-        {% for part in parts %}
-        <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
-            <div class="part-card h-100">
-                <!-- Stock Indicator -->
-                <div class="stock-indicator 
-                    {% if part.quantity_in_stock == 0 %}stock-out
-                    {% elif part.quantity_in_stock <= part.minimum_stock %}stock-critical
-                    {% elif part.quantity_in_stock <= part.reorder_point %}stock-low
-                    {% else %}stock-normal{% endif %}">
-                </div>
-                
-                <div class="card-body">
-                    <div class="d-flex align-items-start mb-3">
-                        <div class="part-image me-3">
-                            {% if part.image %}
-                            <img src="{{ part.image.url }}" alt="{{ part.name }}" class="img-fluid rounded">
-                            {% else %}
-                            <i class="fas fa-cog fa-2x text-muted"></i>
-                            {% endif %}
-                        </div>
-                        <div class="flex-grow-1 min-w-0">
-                            <h6 class="fw-bold mb-1">
-                                <a href="{% url 'inventory:part_detail' part.pk %}" class="text-decoration-none stretched-link">
-                                    {{ part.name|truncatechars:30 }}
+    <!-- Parts Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="partsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 60px;"></th>
+                            <th>Part Number</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Supplier</th>
+                            <th class="text-center">In Stock</th>
+                            <th class="text-end">Price</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for part in parts %}
+                        <tr{% if not part.is_active %} class="inactive-part"{% endif %}>
+                            <!-- Image -->
+                            <td>
+                                <div class="part-image-sm">
+                                    {% if part.image %}
+                                    <img src="{{ part.image.url }}" alt="{{ part.name }}" class="img-fluid rounded">
+                                    {% else %}
+                                    <i class="fas fa-cog text-muted"></i>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            
+                            <!-- Part Number -->
+                            <td>
+                                <a href="{% url 'inventory:part_detail' part.pk %}" class="text-decoration-none fw-medium">
+                                    {{ part.part_number }}
                                 </a>
-                            </h6>
-                            <p class="text-muted small mb-1">{{ part.part_number }}</p>
-                            {% if part.brand %}
-                            <p class="text-muted small mb-0">{{ part.brand }}</p>
-                            {% endif %}
-                        </div>
-                        <div class="part-actions">
-                            {% if can_edit %}
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
-                                        type="button" data-bs-toggle="dropdown" style="position: relative; z-index: 10;">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" href="{% url 'inventory:part_edit' part.pk %}">
-                                        <i class="fas fa-edit me-2"></i>Edit
-                                    </a></li>
-                                    <li><button class="dropdown-item" onclick="adjustStock({{ part.pk }})">
-                                        <i class="fas fa-adjust me-2"></i>Adjust Stock
-                                    </button></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ part.pk }})">
-                                        <i class="fas fa-trash me-2"></i>Delete
-                                    </a></li>
-                                </ul>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Stock Info -->
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <small class="text-muted">In Stock:</small>
-                        <span class="fw-medium
-                            {% if part.quantity_in_stock == 0 %}text-danger
-                            {% elif part.quantity_in_stock <= part.minimum_stock %}text-warning
-                            {% else %}text-success{% endif %}">
-                            {{ part.quantity_in_stock }} {{ part.get_unit_display }}
-                        </span>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <small class="text-muted">Available:</small>
-                        <span class="fw-medium">{{ part.available_stock|default:0 }} {{ part.get_unit_display }}</span>
-                    </div>
-
-                    {% if part.selling_price %}
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <small class="text-muted">Price:</small>
-                        <span class="fw-medium text-success">${{ part.selling_price|floatformat:2 }}</span>
-                    </div>
-                    {% endif %}
-
-                    {% if part.location %}
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">Location:</small>
-                        <span class="small">{{ part.location }}</span>
-                    </div>
-                    {% endif %}
-                </div>
-
-                <!-- Status Badge -->
-                <div class="card-footer bg-transparent border-0 pt-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        {% if part.quantity_in_stock == 0 %}
-                        <span class="badge bg-danger">Out of Stock</span>
-                        {% elif part.quantity_in_stock <= part.minimum_stock %}
-                        <span class="badge bg-warning">Low Stock</span>
-                        {% elif part.quantity_in_stock <= part.reorder_point %}
-                        <span class="badge bg-info">Reorder</span>
-                        {% else %}
-                        <span class="badge bg-success">In Stock</span>
-                        {% endif %}
-
-                        {% if part.category %}
-                        <span class="badge bg-light text-dark">{{ part.category.name }}</span>
-                        {% endif %}
-                    </div>
-                </div>
+                            </td>
+                            
+                            <!-- Name -->
+                            <td>
+                                <a href="{% url 'inventory:part_detail' part.pk %}" class="text-decoration-none">
+                                    {{ part.name }}
+                                </a>
+                                {% if part.description %}
+                                <br><small class="text-muted">{{ part.description|truncatewords:8 }}</small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Category -->
+                            <td>
+                                {% if part.category %}
+                                <span class="badge bg-light text-dark">{{ part.category.name }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Supplier -->
+                            <td>
+                                {% if part.preferred_supplier %}
+                                {{ part.preferred_supplier.name }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- In Stock -->
+                            <td class="text-center">
+                                <span class="fw-medium
+                                    {% if part.quantity_in_stock == 0 %}text-danger
+                                    {% elif part.quantity_in_stock <= part.minimum_stock %}text-warning
+                                    {% else %}text-success{% endif %}">
+                                    {{ part.quantity_in_stock }}
+                                </span>
+                                <small class="text-muted d-block">{{ part.get_unit_display }}</small>
+                                {% if part.quantity_reserved > 0 %}
+                                <small class="text-warning d-block">({{ part.quantity_reserved }} reserved)</small>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Selling Price -->
+                            <td class="text-end">
+                                {% if part.selling_price %}
+                                <span class="text-success fw-medium">${{ part.selling_price|floatformat:2 }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Status Badge -->
+                            <td class="text-center">
+                                {% if not part.is_active %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% elif part.quantity_in_stock == 0 %}
+                                <span class="badge stock-badge stock-out">Out of Stock</span>
+                                {% elif part.quantity_in_stock <= part.minimum_stock %}
+                                <span class="badge stock-badge stock-critical">Critical</span>
+                                {% elif part.quantity_in_stock <= part.reorder_point %}
+                                <span class="badge stock-badge stock-low">Low Stock</span>
+                                {% else %}
+                                <span class="badge stock-badge stock-normal">In Stock</span>
+                                {% endif %}
+                            </td>
+                            
+                            <!-- Actions -->
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'inventory:part_detail' part.pk %}" 
+                                       class="btn btn-outline-primary" 
+                                       title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if can_edit %}
+                                    <a href="{% url 'inventory:part_edit' part.pk %}" 
+                                       class="btn btn-outline-secondary" 
+                                       title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="btn btn-outline-danger" 
+                                            data-part-id="{{ part.pk }}"
+                                            data-part-name="{{ part.name|escapejs }}"
+                                            onclick="confirmDelete(this.dataset.partId, this.dataset.partName)"
+                                            title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="fas fa-search fa-3x text-muted mb-3 d-block"></i>
+                                <h5 class="text-muted">No parts found</h5>
+                                <p class="text-muted">Try adjusting your search criteria or add a new part.</p>
+                                {% if can_edit %}
+                                <a href="{% url 'inventory:part_create' %}" class="btn btn-primary mt-2">
+                                    <i class="fas fa-plus me-1"></i> Add First Part
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="text-center py-5">
-                <i class="fas fa-search fa-3x text-muted mb-3"></i>
-                <h5 class="text-muted">No parts found</h5>
-                <p class="text-muted">Try adjusting your search criteria or add a new part.</p>
-                {% if can_edit %}
-                <a href="{% url 'inventory:part_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus me-1"></i> Add First Part
-                </a>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
     </div>
 
     <!-- Pagination -->
     {% if parts.has_other_pages %}
-    <nav aria-label="Parts pagination">
-        <ul class="pagination justify-content-center">
-            {% if parts.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ parts.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                    <i class="fas fa-chevron-left"></i>
-                </a>
-            </li>
-            {% endif %}
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <div class="text-muted">
+            Showing {{ parts.start_index }} to {{ parts.end_index }} of {{ parts.paginator.count }} parts
+        </div>
+        
+        <nav aria-label="Parts pagination">
+            <ul class="pagination mb-0">
+                {% if parts.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ parts.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                </li>
+                {% endif %}
 
-            {% for num in parts.paginator.page_range %}
-            {% if parts.number == num %}
-            <li class="page-item active">
-                <span class="page-link">{{ num }}</span>
-            </li>
-            {% elif num > parts.number|add:'-3' and num < parts.number|add:'3' %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
-            </li>
-            {% endif %}
-            {% endfor %}
+                {% for num in parts.paginator.page_range %}
+                    {% if parts.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > parts.number|add:'-3' and num < parts.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
 
-            {% if parts.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ parts.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
-                    <i class="fas fa-chevron-right"></i>
-                </a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
+                {% if parts.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ parts.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ parts.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        
+        <div>
+            <select class="form-select form-select-sm" id="perPageSelect" style="width: auto;">
+                <option value="20" {% if per_page == 20 %}selected{% endif %}>20 per page</option>
+                <option value="40" {% if per_page == 40 %}selected{% endif %}>40 per page</option>
+            </select>
+        </div>
+    </div>
     {% endif %}
 </div>
 
-<!-- Stock Adjustment Modal -->
-<div class="modal fade" id="stockAdjustmentModal" tabindex="-1">
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Adjust Stock</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="stock-adjustment-form">
-                    {% csrf_token %}
-                    <input type="hidden" id="part-id" name="part_id">
-                    
-                    <div class="mb-3">
-                        <label for="adjustment-type" class="form-label">Adjustment Type</label>
-                        <select class="form-select" id="adjustment-type" name="adjustment_type" required>
-                            <option value="adjustment">Manual Adjustment</option>
-                            <option value="damage">Damage/Loss</option>
-                            <option value="count">Physical Count</option>
-                            <option value="return">Return to Supplier</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="quantity-change" class="form-label">Quantity Change</label>
-                        <input type="number" class="form-control" id="quantity-change" 
-                               name="quantity_change" required placeholder="+/- quantity">
-                        <div class="form-text">Use positive numbers to add stock, negative to remove</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="adjustment-reason" class="form-label">Reason</label>
-                        <input type="text" class="form-control" id="adjustment-reason" 
-                               name="reason" required placeholder="Reason for adjustment">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="adjustment-notes" class="form-label">Notes</label>
-                        <textarea class="form-control" id="adjustment-notes" 
-                                  name="notes" rows="3" placeholder="Additional notes"></textarea>
-                    </div>
-                </form>
+                <p>Are you sure you want to delete this part?</p>
+                <p class="fw-bold mb-0" id="deletePartName"></p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitStockAdjustment()">
-                    Adjust Stock
-                </button>
+                <form method="post" id="deleteForm" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Delete
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -380,111 +387,19 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize Select2 for better dropdowns
-    $('.form-select').select2({
-        theme: 'bootstrap-5',
-        width: '100%'
-    });
-    
-    // Auto-submit form on filter change
-    document.querySelectorAll('#filter-form select').forEach(select => {
-        select.addEventListener('change', function() {
-            document.getElementById('filter-form').submit();
-        });
-    });
+function confirmDelete(partId, partName) {
+    document.getElementById('deletePartName').textContent = partName;
+    document.getElementById('deleteForm').action = `/inventory/parts/${partId}/delete/`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+// Handle per-page selection
+document.getElementById('perPageSelect')?.addEventListener('change', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('per_page', this.value);
+    urlParams.set('page', '1'); // Reset to first page
+    window.location.search = urlParams.toString();
 });
-
-function adjustStock(partId) {
-    document.getElementById('part-id').value = partId;
-    const modal = new bootstrap.Modal(document.getElementById('stockAdjustmentModal'));
-    modal.show();
-}
-
-function submitStockAdjustment() {
-    const form = document.getElementById('stock-adjustment-form');
-    const formData = new FormData(form);
-    const partId = document.getElementById('part-id').value;
-    
-    fetch(`/inventory/parts/${partId}/adjust-stock/`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('success', data.message);
-            const modal = bootstrap.Modal.getInstance(document.getElementById('stockAdjustmentModal'));
-            modal.hide();
-            // Refresh page to show updated stock
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            showToast('danger', 'Error: ' + data.error);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('danger', 'An error occurred while adjusting stock.');
-    });
-}
-
-function confirmDelete(partId) {
-    if (confirm('Are you sure you want to delete this part? This action cannot be undone.')) {
-        // Implementation for delete would go here
-        showToast('info', 'Delete functionality not yet implemented');
-    }
-}
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-function showToast(type, message) {
-    // Create toast element if container doesn't exist
-    let toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toast-container';
-        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-        toastContainer.style.zIndex = '1080';
-        document.body.appendChild(toastContainer);
-    }
-    
-    const toastHtml = `
-        <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body">${message}</div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    `;
-    
-    toastContainer.innerHTML = toastHtml;
-    const toastElement = toastContainer.querySelector('.toast');
-    const toast = new bootstrap.Toast(toastElement);
-    toast.show();
-    
-    toastElement.addEventListener('hidden.bs.toast', function() {
-        toastElement.remove();
-    });
-}
 </script>
 {% endblock %}

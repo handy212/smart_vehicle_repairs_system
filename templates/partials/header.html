@@ -1,14 +1,14 @@
 {% load static %}
-<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top" style="z-index: 1000;">
     <div class="container-fluid">
         <!-- Brand -->
-        <a class="navbar-brand d-flex align-items-center" href="/">
+        <a class="navbar-brand d-flex align-items-center" href="{% if user.is_authenticated %}{% if user.role == 'customer' %}{% url 'portal:home' %}{% else %}{% url 'dashboard' %}{% endif %}{% else %}/{% endif %}">
             {% if LOGO_PATH %}
                 <img src="{{ MEDIA_URL }}{{ LOGO_PATH }}" alt="{{ SITE_NAME }}" style="height: 40px; margin-right: 10px;">
             {% else %}
                 <i class="fas fa-car-side me-2"></i>
             {% endif %}
-            <span>{{ SITE_NAME|default:'Smart Vehicle Repairs' }}</span>
+            <span>{{ SITE_NAME }}</span>
         </a>
         
         <!-- Mobile Toggle -->
@@ -18,22 +18,60 @@
         
         <!-- Navigation Links -->
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto align-items-center">
+            {% if user.is_authenticated and user.is_staff %}
+                <!-- Centered Search with Quick Actions (Staff Only) -->
+                <div class="mx-auto d-flex align-items-center" style="max-width: 600px; width: 100%;">
+                    <form class="d-flex flex-grow-1 me-2" action="{% url 'search' %}" method="get">
+                        <div class="input-group">
+                            <input class="form-control" type="search" placeholder="Search customers, vehicles, work orders..." name="q" aria-label="Search" style="border-radius: 20px 0 0 20px;">
+                            <button class="btn btn-outline-secondary" type="submit" style="border-radius: 0 20px 20px 0;">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <!-- Quick Create Actions -->
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-primary" data-bs-toggle="dropdown" aria-expanded="false" title="Quick Create">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% if user.role in 'admin,manager,receptionist' %}
+                            <li><h6 class="dropdown-header">Quick Create</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'customers:customer-create' %}">
+                                <i class="fas fa-user-plus me-2"></i>New Customer
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'vehicles:vehicle-create' %}">
+                                <i class="fas fa-car me-2"></i>New Vehicle
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'appointments:appointment-create' %}">
+                                <i class="fas fa-calendar-plus me-2"></i>New Appointment
+                            </a></li>
+                            {% endif %}
+                            {% if user.role in 'admin,manager,receptionist,technician' %}
+                            <li><a class="dropdown-item" href="{% url 'workorders:create' %}">
+                                <i class="fas fa-wrench me-2"></i>New Work Order
+                            </a></li>
+                            {% endif %}
+                            {% if user.role in 'admin,manager,receptionist' %}
+                            <li><a class="dropdown-item" href="{% url 'billing:invoice_create' %}">
+                                <i class="fas fa-file-invoice me-2"></i>New Invoice
+                            </a></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <ul class="navbar-nav align-items-center">
                 {% if user.is_authenticated %}
                     {% if user.is_staff %}
-                        <!-- Search (Staff Only) -->
-                        <li class="nav-item me-3">
-                            <form class="d-flex" action="{% url 'search' %}" method="get">
-                                <div class="input-group">
-                                    <input class="form-control form-control-sm" type="search" placeholder="Search..." name="q" aria-label="Search">
-                                    <button class="btn btn-outline-secondary btn-sm" type="submit">
-                                        <i class="fas fa-search"></i>
-                                    </button>
-                                </div>
-                            </form>
-                        </li>
-                        
                         <!-- Notifications (Staff Only) -->
+                        <li class="nav-item me-2">
+                            {% include 'notifications/partials/notification_bell.html' %}
+                        </li>
+                    {% elif user.role == 'customer' %}
+                        <!-- Notifications (Customer) -->
                         <li class="nav-item me-2">
                             {% include 'notifications/partials/notification_bell.html' %}
                         </li>
@@ -55,9 +93,15 @@
                             <li><h6 class="dropdown-header">{{ user.email }}</h6></li>
                             <li><span class="dropdown-item-text"><small class="text-muted">Role: {{ user.get_role_display }}</small></span></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="fas fa-user me-2"></i> My Profile</a></li>
-                            <li><a class="dropdown-item" href="{% url 'password_change' %}"><i class="fas fa-key me-2"></i> Change Password</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                            {% if user.role == 'customer' %}
+                                <li><a class="dropdown-item" href="{% url 'portal:profile-settings' %}"><i class="fas fa-user me-2"></i> My Profile</a></li>
+                                <li><a class="dropdown-item" href="{% url 'portal:change-password' %}"><i class="fas fa-key me-2"></i> Change Password</a></li>
+                                <li><a class="dropdown-item" href="{% url 'portal:home' %}"><i class="fas fa-tachometer-alt me-2"></i> Portal Dashboard</a></li>
+                            {% else %}
+                                <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="fas fa-user me-2"></i> My Profile</a></li>
+                                <li><a class="dropdown-item" href="{% url 'password_change' %}"><i class="fas fa-key me-2"></i> Change Password</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                            {% endif %}
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 {% if user.role == 'customer' %}

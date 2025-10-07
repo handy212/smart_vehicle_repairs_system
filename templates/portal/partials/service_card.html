@@ -17,7 +17,7 @@
                             {{ service.created_at|date:"M d, Y" }}
                         </small>
                     </div>
-                    <span class="badge bg-{{ service.status == 'completed'|yesno:'success,' }}{{ service.status == 'in_progress'|yesno:'warning,' }}{{ service.status == 'pending'|yesno:'info,secondary' }}">
+                    <span class="badge bg-{% if service.status == 'completed' %}success{% elif service.status == 'in_progress' %}warning{% elif service.status == 'pending' %}info{% else %}secondary{% endif %}">
                         {{ service.get_status_display }}
                     </span>
                 </div>
@@ -53,17 +53,8 @@
                     {% endif %}
                 </div>
                 
-                <div class="mt-3">
-                    <a href="{% url 'workorders:workorder-detail' service.id %}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-eye me-1"></i> View Details
-                    </a>
-                    
-                    {% if service.invoice %}
-                    <a href="{% url 'billing:invoice-detail' service.invoice.id %}" class="btn btn-sm btn-outline-secondary">
-                        <i class="fas fa-file-invoice me-1"></i> View Invoice
-                    </a>
-                    {% endif %}
-                </div>
+                <!-- TODO: Add customer-specific service detail view -->
+                <!-- Staff workorder and invoice detail pages are not accessible to customers for security reasons -->
             </div>
         </div>
     </div>
@@ -73,7 +64,7 @@
 .service-icon {
     width: 50px;
     height: 50px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, black) 100%);
     border-radius: 10px;
     display: flex;
     align-items: center;

@@ -1,4 +1,5 @@
-{% extends "base.html" %}
+{% ex{% block extra_css %}
+<style>se.html" %}
 {% load static %}
 
 {% block page_title %}{{ page_title }}{% endblock %}
@@ -6,7 +7,7 @@
 {% block extra_css %}
 <style>
     .invoice-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, black) 100%);
         color: white;
         border-radius: 10px;
         padding: 2rem;

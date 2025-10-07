@@ -30,4 +30,7 @@ urlpatterns = [
     path('<int:pk>/notes/', frontend_views.customer_notes_ajax, name='customer-notes-ajax'),
     path('<int:pk>/vehicles/', frontend_views.customer_vehicles_ajax, name='customer-vehicles-ajax'),
     path('<int:pk>/history/', frontend_views.customer_history_ajax, name='customer-history-ajax'),
+    
+    # API Endpoints for inspection creation flow
+    path('<int:pk>/vehicles-api/', frontend_views.customer_vehicles_api, name='customer-vehicles-api'),
 ]

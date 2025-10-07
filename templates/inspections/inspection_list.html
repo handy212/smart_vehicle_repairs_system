@@ -5,17 +5,11 @@
 
 {% block extra_css %}
 <style>
-    .inspection-card {
-        transition: transform 0.2s;
+    .table tbody tr {
+        transition: background-color 0.2s;
     }
-    .inspection-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .status-badge {
-        font-size: 0.75rem;
-        padding: 0.35rem 0.65rem;
-        border-radius: 0.25rem;
+    .table tbody tr:hover {
+        background-color: rgba(0,0,0,0.02);
     }
 </style>
 {% endblock %}
@@ -91,101 +85,126 @@
         </div>
     </div>
 
-    <!-- Inspections Grid -->
-    <div class="row">
-        {% for inspection in inspections %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card inspection-card h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <h5 class="card-title mb-0">
-                            <a href="{% url 'inspections:inspection-detail' inspection.id %}" class="text-decoration-none">
-                                {{ inspection.template.name }}
-                            </a>
-                        </h5>
-                        {% if inspection.status == 'completed' %}
-                        <span class="badge bg-success status-badge">Completed</span>
-                        {% elif inspection.status == 'in_progress' %}
-                        <span class="badge bg-warning status-badge">In Progress</span>
-                        {% elif inspection.status == 'approved' %}
-                        <span class="badge bg-info status-badge">Approved</span>
-                        {% else %}
-                        <span class="badge bg-secondary status-badge">Draft</span>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="mb-3">
-                        <p class="mb-1 text-muted small">Vehicle</p>
-                        <p class="mb-0"><strong>{{ inspection.vehicle }}</strong></p>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <p class="mb-1 text-muted small">Customer</p>
-                        <p class="mb-0">{{ inspection.vehicle.owner.full_name }}</p>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <p class="mb-1 text-muted small">Technician</p>
-                            <p class="mb-0">{{ inspection.performed_by.get_full_name }}</p>
-                        </div>
-                        <div class="col-6">
-                            <p class="mb-1 text-muted small">Date</p>
-                            <p class="mb-0">{{ inspection.inspection_date|date:"M d, Y" }}</p>
-                        </div>
-                    </div>
-                    
-                    {% if inspection.odometer_reading %}
-                    <div class="mb-3">
-                        <p class="mb-1 text-muted small">Odometer</p>
-                        <p class="mb-0">{{ inspection.odometer_reading|floatformat:0 }} miles</p>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Quick Stats -->
-                    <div class="d-flex justify-content-between text-center border-top pt-3">
-                        <div>
-                            <small class="text-muted">Pass</small>
-                            <p class="mb-0 text-success fw-bold">{{ inspection.pass_count }}</p>
-                        </div>
-                        <div>
-                            <small class="text-muted">Fail</small>
-                            <p class="mb-0 text-danger fw-bold">{{ inspection.fail_count }}</p>
-                        </div>
-                        <div>
-                            <small class="text-muted">Photos</small>
-                            <p class="mb-0 fw-bold">{{ inspection.photos.count }}</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-light">
-                    <div class="btn-group w-100" role="group">
-                        <a href="{% url 'inspections:inspection-detail' inspection.id %}" 
-                           class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-eye"></i> View
-                        </a>
-                        {% if inspection.status != 'approved' %}
-                        <a href="{% url 'inspections:inspection-edit' inspection.id %}" 
-                           class="btn btn-sm btn-outline-secondary">
-                            <i class="fas fa-edit"></i> Edit
-                        </a>
-                        {% endif %}
-                        <a href="{% url 'inspections:inspection-print' inspection.id %}" 
-                           class="btn btn-sm btn-outline-info" target="_blank">
-                            <i class="fas fa-print"></i> Print
-                        </a>
-                    </div>
-                </div>
+    <!-- Inspections Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Template</th>
+                            <th>Vehicle</th>
+                            <th>Customer</th>
+                            <th>Technician</th>
+                            <th>Date</th>
+                            <th class="text-center">Odometer</th>
+                            <th class="text-center">Results</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inspection in inspections %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'inspections:inspection-detail' inspection.id %}" class="text-decoration-none">
+                                    <strong>{{ inspection.template.name }}</strong>
+                                </a>
+                            </td>
+                            <td>
+                                <i class="fas fa-car me-1 text-muted"></i>
+                                {{ inspection.vehicle }}
+                            </td>
+                            <td>
+                                <i class="fas fa-user me-1 text-muted"></i>
+                                {{ inspection.vehicle.owner.full_name }}
+                            </td>
+                            <td>
+                                <i class="fas fa-user-tie me-1 text-muted"></i>
+                                {{ inspection.performed_by.get_full_name }}
+                            </td>
+                            <td>
+                                <i class="fas fa-calendar me-1 text-muted"></i>
+                                {{ inspection.inspection_date|date:"M d, Y" }}
+                            </td>
+                            <td class="text-center">
+                                {% if inspection.odometer_reading %}
+                                <span class="badge bg-light text-dark">
+                                    {{ inspection.odometer_reading|floatformat:0 }} mi
+                                </span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-2">
+                                    <span class="badge bg-success" title="Pass">
+                                        <i class="fas fa-check"></i> {{ inspection.pass_count }}
+                                    </span>
+                                    <span class="badge bg-danger" title="Fail">
+                                        <i class="fas fa-times"></i> {{ inspection.fail_count }}
+                                    </span>
+                                    {% if inspection.photos.count > 0 %}
+                                    <span class="badge bg-info" title="Photos">
+                                        <i class="fas fa-camera"></i> {{ inspection.photos.count }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                {% if inspection.status == 'completed' %}
+                                <span class="badge bg-success">Completed</span>
+                                {% elif inspection.status == 'in_progress' %}
+                                <span class="badge bg-warning text-dark">In Progress</span>
+                                {% elif inspection.status == 'approved' %}
+                                <span class="badge bg-info">Approved</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Draft</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'inspections:inspection-detail' inspection.id %}" 
+                                       class="btn btn-outline-primary" 
+                                       title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if inspection.status != 'approved' %}
+                                    <a href="{% url 'inspections:inspection-edit' inspection.id %}" 
+                                       class="btn btn-outline-secondary" 
+                                       title="Edit Inspection">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    <a href="{% url 'inspections:inspection-print' inspection.id %}" 
+                                       class="btn btn-outline-info" 
+                                       target="_blank" 
+                                       title="Print Inspection">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                    <a href="{% url 'inspections:inspection-pdf' inspection.id %}" 
+                                       class="btn btn-outline-danger" 
+                                       title="Download PDF">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No inspections found. 
+                                    <a href="{% url 'inspections:inspection-create' %}">Create your first inspection</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="alert alert-info text-center">
-                <i class="fas fa-info-circle me-2"></i>
-                No inspections found. <a href="{% url 'inspections:inspection-create' %}">Create your first inspection</a>
-            </div>
-        </div>
-        {% endfor %}
     </div>
 
     <!-- Pagination -->

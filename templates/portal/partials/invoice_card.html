@@ -8,7 +8,7 @@
                         <i class="fas fa-file-invoice text-primary me-2"></i>
                         Invoice #{{ invoice.invoice_number }}
                     </h5>
-                    <span class="badge bg-{{ invoice.status == 'paid'|yesno:'success,' }}{{ invoice.status == 'pending'|yesno:'warning,' }}{{ invoice.status == 'sent'|yesno:'info,' }}{{ invoice.status == 'overdue'|yesno:'danger,' }}{{ invoice.status == 'cancelled'|yesno:'secondary,warning' }} px-3 py-2">
+                    <span class="badge bg-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'pending' %}warning{% elif invoice.status == 'sent' %}info{% elif invoice.status == 'overdue' %}danger{% elif invoice.status == 'cancelled' %}secondary{% else %}warning{% endif %} px-3 py-2">
                         {{ invoice.get_status_display }}
                     </span>
                 </div>
@@ -26,11 +26,7 @@
                         {% if invoice.work_order %}
                         <div class="col-12">
                             <small class="text-muted d-block">Related Work Order</small>
-                            <strong>
-                                <a href="{% url 'workorders:workorder-detail' invoice.work_order.id %}" class="text-decoration-none">
-                                    WO #{{ invoice.work_order.work_order_number }}
-                                </a>
-                            </strong>
+                            <strong>WO #{{ invoice.work_order.work_order_number }}</strong>
                         </div>
                         {% endif %}
                         {% if invoice.vehicle %}
@@ -73,13 +69,7 @@
         <hr>
         
         <div class="d-flex gap-2 justify-content-end">
-            <a href="{% url 'billing:invoice-detail' invoice.id %}" class="btn btn-sm btn-outline-primary">
-                <i class="fas fa-eye me-1"></i> View Invoice
-            </a>
-            
-            <a href="{% url 'billing:invoice-print' invoice.id %}" target="_blank" class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-print me-1"></i> Print
-            </a>
+            <!-- Invoice details visible in card -->
             
             {% if invoice.status != 'paid' and invoice.status != 'cancelled' %}
             <a href="{% url 'portal:make-payment' invoice.id %}" class="btn btn-sm btn-success">

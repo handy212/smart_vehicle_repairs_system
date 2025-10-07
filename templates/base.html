@@ -32,18 +32,26 @@
     
     <!-- Custom CSS -->
     <link href="{% static 'css/custom.css' %}" rel="stylesheet">
+    <link href="{% static 'css/brand-colors.css' %}" rel="stylesheet">
     
     {% block extra_css %}{% endblock %}
     
     <style>
         :root {
+            /* Dynamic Brand Colors from Admin Settings */
             --primary: {{ PRIMARY_COLOR|default:'#4f46e5' }};
-            --primary-dark: #4338ca;
-            --primary-light: #6366f1;
-            --success: #10b981;
+            --secondary: {{ SECONDARY_COLOR|default:'#6b7280' }};
+            --success: {{ SUCCESS_COLOR|default:'#10b981' }};
+            --danger: {{ DANGER_COLOR|default:'#ef4444' }};
             --warning: #f59e0b;
-            --danger: #ef4444;
             --info: #3b82f6;
+            
+            /* Computed Colors */
+            --primary-dark: color-mix(in srgb, var(--primary) 85%, black);
+            --primary-light: color-mix(in srgb, var(--primary) 70%, white);
+            --primary-rgb: {{ PRIMARY_COLOR|default:'79, 70, 229' }};
+            
+            /* Gray Scale */
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
@@ -54,8 +62,183 @@
             --gray-700: #374151;
             --gray-800: #1f2937;
             --gray-900: #111827;
+            
+            /* Background Colors */
             --bg-body: #f4f6f8;
             --bg-card: #ffffff;
+            
+            /* Bootstrap Override */
+            --bs-primary: var(--primary);
+            --bs-primary-rgb: var(--primary-rgb);
+            --bs-secondary: var(--secondary);
+            --bs-success: var(--success);
+            --bs-danger: var(--danger);
+            --bs-warning: var(--warning);
+            --bs-info: var(--info);
+        }
+        
+        /* === CENTRALIZED UTILITY CLASSES === */
+        
+        /* Page Headers with Gradient (Used across all admin pages) */
+        .page-header-gradient,
+        .vehicle-header,
+        .booking-header,
+        .book-header,
+        .appointments-header,
+        .invoices-header,
+        .history-header,
+        .inspection-header,
+        .notification-header,
+        .customer-header,
+        .estimate-header,
+        .payment-header-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, black) 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        /* Success Gradient Headers */
+        .payment-header,
+        .payment-header-success {
+            background: linear-gradient(135deg, var(--success) 0%, color-mix(in srgb, var(--success) 85%, black) 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        /* Danger Gradient Headers */
+        .delete-header,
+        .danger-header {
+            background: linear-gradient(135deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 85%, black) 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        /* Info Cards with Border Accent */
+        .info-card,
+        .stat-card {
+            border-left: 4px solid var(--primary);
+            transition: transform 0.2s;
+        }
+        
+        .info-card:hover,
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+        }
+        
+        /* Primary Text & Borders */
+        .text-primary-custom {
+            color: var(--primary) !important;
+        }
+        
+        .border-primary-custom {
+            border-color: var(--primary) !important;
+        }
+        
+        .border-left-primary {
+            border-left: 4px solid var(--primary);
+        }
+        
+        /* Background Utilities */
+        .bg-primary-custom {
+            background-color: var(--primary) !important;
+            color: white;
+        }
+        
+        .bg-primary-light {
+            background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+        }
+        
+        /* Button Enhancements */
+        .btn-primary-custom {
+            background: var(--primary) !important;
+            border-color: var(--primary) !important;
+            color: white !important;
+        }
+        
+        .btn-primary-custom:hover {
+            background: var(--primary-dark) !important;
+            border-color: var(--primary-dark) !important;
+        }
+        
+        /* Stats Cards with Gradients */
+        .stats-card-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, var(--secondary)) 100%);
+            color: white;
+            border: none;
+            transition: transform 0.2s;
+        }
+        
+        .stats-card-success {
+            background: linear-gradient(135deg, var(--success) 0%, color-mix(in srgb, var(--success) 120%, white) 100%);
+            color: white;
+            border: none;
+        }
+        
+        .stats-card-danger {
+            background: linear-gradient(135deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 70%, #e83e8c) 100%);
+            color: white;
+            border: none;
+        }
+        
+        .stats-card-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+            border: none;
+        }
+        
+        /* Filter Tabs */
+        .filter-tabs .nav-link {
+            color: var(--gray-600);
+        }
+        
+        .filter-tabs .nav-link.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+        }
+        
+        /* Time Slots & Selections */
+        .time-slot.selected,
+        .selected-item {
+            background: var(--primary) !important;
+            color: white !important;
+            border-color: var(--primary) !important;
+        }
+        
+        /* Payment Method Cards */
+        .payment-method-card.active {
+            border-color: var(--primary);
+            background-color: color-mix(in srgb, var(--primary) 5%, white);
+        }
+        
+        .payment-method-card:hover {
+            border-color: var(--primary);
+        }
+        
+        /* Quick Action Cards */
+        .quick-action-card {
+            background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, var(--secondary)) 100%);
+            color: white;
+            border: none;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        
+        .quick-action-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.2);
+        }
+        
+        /* Notification Badges */
+        .notification-badge.unread {
+            border-left-color: var(--primary);
+        }
+        
+        .notification-badge .badge-primary {
+            background-color: var(--primary);
         }
         
         body {
@@ -73,20 +256,112 @@
             font-size: 1.5rem;
         }
         
+        /* === BOOTSTRAP OVERRIDES === */
+        
         .btn-primary {
             background-color: var(--primary);
             border-color: var(--primary);
         }
         
-        .btn-primary:hover {
+        .btn-primary:hover,
+        .btn-primary:focus,
+        .btn-primary:active {
             background-color: var(--primary-dark);
             border-color: var(--primary-dark);
         }
         
+        .btn-outline-primary {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .bg-primary {
+            background-color: var(--primary) !important;
+        }
+        
+        .text-primary {
+            color: var(--primary) !important;
+        }
+        
+        .border-primary {
+            border-color: var(--primary) !important;
+        }
+        
+        .badge.bg-primary {
+            background-color: var(--primary) !important;
+        }
+        
+        .alert-primary {
+            background-color: color-mix(in srgb, var(--primary) 10%, white);
+            border-color: color-mix(in srgb, var(--primary) 20%, white);
+            color: var(--primary-dark);
+        }
+        
+        .list-group-item.active {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .page-link:hover {
+            color: var(--primary);
+        }
+        
+        .page-item.active .page-link {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .form-range::-webkit-slider-thumb {
+            background-color: var(--primary);
+        }
+        
+        .form-range::-moz-range-thumb {
+            background-color: var(--primary);
+        }
+        
+        .progress-bar {
+            background-color: var(--primary);
+        }
+        
         .sidebar {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            bottom: 0;
+            z-index: 99;
             min-height: calc(100vh - 56px);
             background: white;
             border-right: 1px solid var(--gray-200);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* Sidebar scrollbar styling */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+            background: var(--gray-100);
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--gray-400);
+            border-radius: 3px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--gray-500);
         }
         
         .sidebar .nav-link {
@@ -138,6 +413,20 @@
         
         .main-content {
             padding: 2rem;
+            margin-left: 0;
+        }
+        
+        /* Add left margin when sidebar is visible */
+        @media (min-width: 768px) {
+            .main-content.with-sidebar {
+                margin-left: 16.666667%; /* col-md-3 = 25%, col-lg-2 = 16.666667% */
+            }
+        }
+        
+        @media (min-width: 992px) {
+            .main-content.with-sidebar {
+                margin-left: 16.666667%; /* col-lg-2 */
+            }
         }
         
         .card {
@@ -185,6 +474,25 @@
             padding: 1.5rem 0;
             margin-top: 3rem;
         }
+        
+        /* Notification Bell Animation */
+        @keyframes bell-shake {
+            0%, 100% { transform: rotate(0deg); }
+            10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
+            20%, 40%, 60%, 80% { transform: rotate(10deg); }
+        }
+        
+        .fa-shake {
+            animation: bell-shake 0.8s ease-in-out;
+        }
+        
+        /* Toast notification positioning */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+        }
     </style>
 </head>
 <body>
@@ -202,7 +510,7 @@
             {% endif %}
             
             <!-- Main Content -->
-            <main class="{% if user.is_authenticated and user.is_staff %}col-md-9 col-lg-10{% else %}col-12{% endif %} ms-sm-auto px-md-4 main-content">
+            <main class="{% if user.is_authenticated and user.is_staff %}col-md-9 col-lg-10 with-sidebar{% else %}col-12{% endif %} ms-sm-auto px-md-4 main-content">
                 <!-- Messages -->
                 {% include 'partials/messages.html' %}
                 
@@ -218,7 +526,7 @@
     <!-- Footer -->
     <footer class="text-center text-muted">
         <div class="container">
-            <p class="mb-0">&copy; 2025 {{ COMPANY_NAME|default:'Smart Vehicle Repairs' }}. All rights reserved.</p>
+            <p class="mb-0">&copy; 2025 {{ COMPANY_NAME|default:SITE_NAME }}. All rights reserved.</p>
             <p class="mb-0">
                 {% if COMPANY_EMAIL %}<a href="mailto:{{ COMPANY_EMAIL }}" class="text-decoration-none me-2">{{ COMPANY_EMAIL }}</a>{% endif %}
                 {% if COMPANY_PHONE %}<span class="me-2">•</span><a href="tel:{{ COMPANY_PHONE }}" class="text-decoration-none">{{ COMPANY_PHONE }}</a>{% endif %}

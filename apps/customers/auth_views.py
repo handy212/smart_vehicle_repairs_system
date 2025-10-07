@@ -11,6 +11,12 @@ from django import forms
 from django.contrib.auth import get_user_model
 from apps.customers.models import Customer
 from django.db import transaction
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
+from django.conf import settings
 
 User = get_user_model()
 
@@ -76,12 +82,26 @@ def customer_register(request):
                         user=user,
                         customer_type='individual',  # Default for self-registered customers
                     )
-                    
-                    # Log the user in
-                    login(request, user)
-                    
-                    messages.success(request, f'Welcome {user.first_name}! Your account has been created successfully.')
-                    return redirect('portal:home')
+                
+                # Log the user in (outside transaction to avoid session conflicts)
+                # Create a fresh session to avoid race conditions
+                try:
+                    # Try to cycle the session key first (prevents session fixation)
+                    if hasattr(request, 'session'):
+                        if request.session.session_key:
+                            request.session.cycle_key()
+                        else:
+                            # Create a new session if one doesn't exist
+                            request.session.create()
+                except Exception:
+                    # If cycling fails, flush and create new
+                    request.session.flush()
+                
+                # Now login with a clean session
+                login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+                
+                messages.success(request, f'Welcome {user.first_name}! Your account has been created successfully.')
+                return redirect('portal:home')
                     
             except Exception as e:
                 messages.error(request, f'Registration failed: {str(e)}')
@@ -150,15 +170,167 @@ def customer_login(request):
     return render(request, 'customers/customer_login.html', {'form': form})
 
 
-@login_required
 def customer_logout(request):
     """Customer logout view"""
+    if not request.user.is_authenticated:
+        return redirect('customer_login')
     logout(request)
     messages.success(request, 'You have been logged out successfully.')
     return redirect('customer_login')
 
 
+class CustomerPasswordResetForm(forms.Form):
+    """Customer password reset request form"""
+    email = forms.EmailField(required=True, label="Email Address")
+
+
+class CustomerPasswordResetConfirmForm(forms.Form):
+    """Customer password reset confirmation form"""
+    new_password = forms.CharField(
+        widget=forms.PasswordInput,
+        min_length=8,
+        required=True,
+        label="New Password"
+    )
+    confirm_password = forms.CharField(
+        widget=forms.PasswordInput,
+        required=True,
+        label="Confirm Password"
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('new_password')
+        confirm = cleaned_data.get('confirm_password')
+        
+        if password and confirm and password != confirm:
+            raise forms.ValidationError('Passwords do not match.')
+        
+        return cleaned_data
+
+
 def customer_forgot_password(request):
     """Customer password reset request"""
-    # TODO: Implement password reset with email
-    return render(request, 'customers/customer_forgot_password.html')
+    if request.user.is_authenticated and hasattr(request.user, 'customer_profile'):
+        return redirect('portal:home')
+    
+    if request.method == 'POST':
+        form = CustomerPasswordResetForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            try:
+                user = User.objects.get(email=email, role='customer')
+                
+                # Generate password reset token
+                token = default_token_generator.make_token(user)
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                
+                # Build reset link
+                reset_link = request.build_absolute_uri(
+                    f'/customer/reset-password/{uid}/{token}/'
+                )
+                
+                # Prepare email context
+                context = {
+                    'user': user,
+                    'reset_link': reset_link,
+                    'site_name': getattr(settings, 'SITE_NAME', 'Smart Vehicle Repairs'),
+                }
+                
+                # Send password reset email
+                subject = 'Password Reset Request'
+                message = f"""
+Hello {user.get_full_name()},
+
+You requested to reset your password for your customer account.
+
+Click the link below to reset your password:
+{reset_link}
+
+This link will expire in 24 hours.
+
+If you did not request this password reset, please ignore this email.
+
+Best regards,
+{context['site_name']} Team
+"""
+                
+                try:
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [user.email],
+                        fail_silently=False,
+                    )
+                    messages.success(
+                        request,
+                        'Password reset instructions have been sent to your email address.'
+                    )
+                except Exception as e:
+                    messages.warning(
+                        request,
+                        f'Password reset link generated, but email could not be sent. '
+                        f'Please contact support. Error: {str(e)}'
+                    )
+                    # Still show success to user for security (don't reveal if email exists)
+                
+                return redirect('customer_login')
+                
+            except User.DoesNotExist:
+                # For security, don't reveal if email exists or not
+                messages.success(
+                    request,
+                    'If an account exists with that email, password reset instructions have been sent.'
+                )
+                return redirect('customer_login')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error)
+    else:
+        form = CustomerPasswordResetForm()
+    
+    return render(request, 'customers/customer_forgot_password.html', {'form': form})
+
+
+def customer_reset_password_confirm(request, uidb64, token):
+    """Customer password reset confirmation"""
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid, role='customer')
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+    
+    if user is not None and default_token_generator.check_token(user, token):
+        if request.method == 'POST':
+            form = CustomerPasswordResetConfirmForm(request.POST)
+            if form.is_valid():
+                # Set new password
+                new_password = form.cleaned_data['new_password']
+                user.set_password(new_password)
+                user.save()
+                
+                messages.success(
+                    request,
+                    'Your password has been reset successfully. You can now login with your new password.'
+                )
+                return redirect('customer_login')
+            else:
+                for error in form.errors.values():
+                    messages.error(request, error)
+        else:
+            form = CustomerPasswordResetConfirmForm()
+        
+        context = {
+            'form': form,
+            'validlink': True,
+            'uidb64': uidb64,
+            'token': token,
+        }
+        return render(request, 'customers/customer_reset_password_confirm.html', context)
+    else:
+        messages.error(
+            request,
+            'The password reset link is invalid or has expired. Please request a new one.'
+        )
+        return redirect('customer_forgot_password')

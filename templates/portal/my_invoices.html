@@ -1,12 +1,13 @@
-{% extends "base.html" %}
+{% extends "portal/base_customer.html" %}
 {% load static %}
 
 {% block title %}My Invoices{% endblock %}
 
 {% block extra_css %}
+{{ block.super }}
 <style>
     .invoices-header {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
         color: white;
         padding: 2rem 0;
         margin-bottom: 2rem;
@@ -17,7 +18,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block portal_content %}
 <div class="invoices-header">
     <div class="container">
         <h1>

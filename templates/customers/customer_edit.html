@@ -7,7 +7,7 @@
 {% block extra_css %}
 <style>
     .card-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
         color: white;
     }
     
@@ -31,7 +31,7 @@
     }
     
     .form-section h5 i {
-        color: #667eea;
+        color: var(--primary-color);
     }
     
     .required-field::after {
@@ -63,7 +63,7 @@
     }
     
     .customer-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
         color: white;
         padding: 1.5rem;
         border-radius: 0.5rem 0.5rem 0 0;
@@ -75,7 +75,7 @@
         height: 60px;
         border-radius: 50%;
         background: white;
-        color: #667eea;
+        color: var(--primary-color);
         display: flex;
         align-items: center;
         justify-content: center;

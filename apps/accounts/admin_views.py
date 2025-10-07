@@ -75,7 +75,7 @@ def admin_dashboard(request):
 @user_passes_test(is_admin)
 def system_settings(request):
     """System settings management"""
-    category = request.GET.get('category', 'general')
+    category = request.GET.get('category', 'company')
     
     if request.method == 'POST':
         setting_id = request.POST.get('setting_id')
@@ -131,8 +131,33 @@ def system_settings(request):
         return redirect('admin_panel:settings')
     
     settings = SystemSettings.objects.filter(category=category).order_by('key')
-    categories = SystemSettings.CATEGORY_CHOICES
-    current_category_name = dict(categories).get(category, 'General')
+    
+    # Map categories with icons
+    category_icons = {
+        'company': 'fas fa-building',
+        'branding': 'fas fa-palette',
+        'email': 'fas fa-envelope',
+        'sms': 'fas fa-sms',
+        'payment': 'fas fa-credit-card',
+        'notification': 'fas fa-bell',
+        'security': 'fas fa-shield-alt',
+        'business': 'fas fa-briefcase',
+        'integration': 'fas fa-plug',
+        'maintenance': 'fas fa-wrench',
+    }
+    
+    # Format categories for template
+    categories = [
+        {
+            'value': cat[0],
+            'label': cat[1],
+            'icon': category_icons.get(cat[0], 'fas fa-cog')
+        }
+        for cat in SystemSettings.CATEGORY_CHOICES
+    ]
+    
+    current_category_label = dict(SystemSettings.CATEGORY_CHOICES).get(category, 'General')
+    current_category_icon = category_icons.get(category, 'fas fa-cog')
     
     # Get currency symbol for display
     currency_symbol = SystemSettings.get_setting('currency_symbol', '$')
@@ -141,7 +166,8 @@ def system_settings(request):
         'settings': settings,
         'categories': categories,
         'current_category': category,
-        'current_category_name': current_category_name,
+        'current_category_label': current_category_label,
+        'current_category_icon': current_category_icon,
         'currency_symbol': currency_symbol,
     }
     
@@ -1031,7 +1057,7 @@ def upload_branding(request):
                 key='logo_path',
                 defaults={'category': 'branding', 'description': 'Company logo path'}
             )
-            setting.value = f'branding/logo_{logo_file.name}'
+            setting.value = f'logo_{logo_file.name}'
             setting.updated_by = request.user
             setting.save()
             uploaded_count += 1
@@ -1050,7 +1076,7 @@ def upload_branding(request):
                 key='logo_dark_path',
                 defaults={'category': 'branding', 'description': 'Company logo for dark backgrounds'}
             )
-            setting.value = f'branding/logo_dark_{logo_file.name}'
+            setting.value = f'logo_dark_{logo_file.name}'
             setting.updated_by = request.user
             setting.save()
             uploaded_count += 1
@@ -1069,7 +1095,7 @@ def upload_branding(request):
                 key='favicon_path',
                 defaults={'category': 'branding', 'description': 'Site favicon path'}
             )
-            setting.value = f'branding/favicon_{favicon_file.name}'
+            setting.value = f'favicon_{favicon_file.name}'
             setting.updated_by = request.user
             setting.save()
             uploaded_count += 1
@@ -1088,7 +1114,7 @@ def upload_branding(request):
                 key='login_background',
                 defaults={'category': 'branding', 'description': 'Login page background image'}
             )
-            setting.value = f'branding/login_bg_{bg_file.name}'
+            setting.value = f'login_bg_{bg_file.name}'
             setting.updated_by = request.user
             setting.save()
             uploaded_count += 1

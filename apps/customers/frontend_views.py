@@ -402,3 +402,42 @@ def customer_history_ajax(request, pk):
         
     except Customer.DoesNotExist:
         return JsonResponse({'error': 'Customer not found'}, status=404)
+
+
+@login_required
+def customer_vehicles_api(request, pk):
+    """API endpoint to get customer's vehicles"""
+    # Check authentication for AJAX
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    try:
+        customer = Customer.objects.select_related('user').get(pk=pk)
+        
+        vehicles = customer.vehicles.filter(status='active').select_related('owner')
+        
+        vehicles_data = [{
+            'id': vehicle.id,
+            'display_name': f"{vehicle.year} {vehicle.make} {vehicle.model}",
+            'vin': vehicle.vin,
+            'license_plate': vehicle.license_plate,
+            'year': vehicle.year,
+            'make': vehicle.make,
+            'model': vehicle.model,
+            'color': vehicle.exterior_color,
+        } for vehicle in vehicles]
+        
+        customer_data = {
+            'id': customer.id,
+            'full_name': customer.user.get_full_name(),
+            'email': customer.user.email,
+            'phone': customer.phone,
+        }
+        
+        return JsonResponse({
+            'customer': customer_data,
+            'vehicles': vehicles_data
+        })
+        
+    except Customer.DoesNotExist:
+        return JsonResponse({'error': 'Customer not found'}, status=404)

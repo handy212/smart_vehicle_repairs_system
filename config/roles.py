@@ -83,4 +83,6 @@ class Customer(AbstractUserRole):
         'view_own_workorders': True,
         'view_own_invoices': True,
         'view_service_history': True,
+        'edit_own_profile': True,
+        'change_own_password': True,
     }

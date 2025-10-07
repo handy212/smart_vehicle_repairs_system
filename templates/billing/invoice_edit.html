@@ -5,17 +5,8 @@
 
 {% block extra_css %}
 <style>
-    .invoice-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 10px;
-        margin-bottom: 2rem;
-    }
-    
     .info-card {
         background: #f8f9fa;
-        border-left: 4px solid #667eea;
         padding: 1rem;
         margin-bottom: 1rem;
         border-radius: 5px;
@@ -30,7 +21,7 @@
     }
     
     .section-title {
-        color: #667eea;
+        color: var(--primary-color);
         font-weight: 600;
         margin-bottom: 1rem;
         padding-bottom: 0.5rem;
@@ -47,7 +38,7 @@
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Header -->
-    <div class="invoice-header">
+    <div class="page-header-primary rounded p-4 mb-4">
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h2 class="mb-1">

@@ -6,10 +6,6 @@
 
 {% block extra_css %}
 <style>
-    .card-header {
-        background: linear-gradient(135deg, #2142d6 0%, #764ba2 100%);
-        color: white;
-    }
     
     .form-section {
         margin-bottom: 2rem;
@@ -31,7 +27,7 @@
     }
     
     .form-section h5 i {
-        color: #667eea;
+        color: var(--primary-color);
     }
     
     .required-field::after {
@@ -79,7 +75,7 @@
         <div class="col-lg-8 col-xl-9">
             <!-- Main Form Card -->
             <div class="card shadow-sm">
-                <div class="card-header">
+                <div class="card-header bg-brand text-white">
                     <h4 class="mb-0">
                         <i class="fas fa-user-plus me-2"></i>
                         Add New Customer

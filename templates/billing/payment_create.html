@@ -7,15 +7,7 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
 <style>
-    .payment-wizard {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 10px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-    }
     .invoice-card {
-        border-left: 4px solid #28a745;
         transition: transform 0.2s;
     }
     .invoice-card:hover {
@@ -74,7 +66,7 @@
     </div>
 
     <!-- Payment Wizard Header -->
-    <div class="payment-wizard">
+    <div class="page-header-primary rounded p-4 mb-4">
         <div class="row align-items-center">
             <div class="col-md-8">
                 <h2 class="mb-2">Payment Recording Wizard</h2>
@@ -126,7 +118,7 @@
 
                             <div class="invoice-list" id="invoiceList">
                                 {% for invoice in invoices %}
-                                <div class="invoice-card card mb-3" data-invoice-id="{{ invoice.id }}"
+                                <div class="invoice-card card border-success-left mb-3" data-invoice-id="{{ invoice.id }}"
                                      data-search="{{ invoice.invoice_number }} {{ invoice.customer.get_full_name }} {{ invoice.vehicle.make }} {{ invoice.vehicle.model }}">
                                     <div class="card-body">
                                         <div class="row align-items-center">

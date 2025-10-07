@@ -166,6 +166,13 @@ class VehicleInspection(models.Model):
     notes = models.TextField(blank=True)
     recommendations = models.TextField(blank=True, help_text="Recommended services or repairs")
     
+    # Vehicle Damage Assessment
+    vehicle_damage = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="JSON data of marked damage locations on vehicle diagram"
+    )
+    
     # Timestamps
     completed_at = models.DateTimeField(null=True, blank=True)
     sent_to_customer_at = models.DateTimeField(null=True, blank=True)

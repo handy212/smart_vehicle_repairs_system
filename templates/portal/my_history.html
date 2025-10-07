@@ -1,12 +1,13 @@
-{% extends "base.html" %}
+{% extends "portal/base_customer.html" %}
 {% load static %}
 
 {% block title %}Service History{% endblock %}
 
 {% block extra_css %}
+{{ block.super }}
 <style>
     .history-header {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
         color: white;
         padding: 2rem 0;
         margin-bottom: 2rem;
@@ -27,7 +28,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block portal_content %}
 <div class="history-header">
     <div class="container">
         <h1>
@@ -129,7 +130,7 @@
                                 </span>
                             </td>
                             <td>
-                                <a href="{% url 'inspections:inspection-detail' inspection.id %}" class="btn btn-sm btn-outline-primary">
+                                <a href="{% url 'portal:inspection-detail' inspection.id %}" class="btn btn-sm btn-outline-primary">
                                     <i class="fas fa-eye"></i> View
                                 </a>
                             </td>

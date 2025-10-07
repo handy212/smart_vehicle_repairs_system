@@ -5,15 +5,7 @@
 
 {% block extra_css %}
 <style>
-    .notification-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 10px;
-        margin-bottom: 2rem;
-    }
     .notification-item {
-        border-left: 4px solid transparent;
         transition: all 0.3s ease;
         cursor: pointer;
     }
@@ -23,7 +15,7 @@
     }
     .notification-item.unread {
         background-color: #f0f4ff;
-        border-left-color: #667eea;
+        border-left-color: var(--primary-color);
     }
     .notification-item.unread .notification-title {
         font-weight: 600;
@@ -35,7 +27,7 @@
         display: inline-block;
     }
     .notification-badge.unread {
-        background-color: #667eea;
+        background-color: var(--primary-color);
     }
     .filter-pills .btn {
         border-radius: 20px;
@@ -64,7 +56,7 @@
 {% block content %}
 <div class="container-fluid">
     <!-- Header -->
-    <div class="notification-header">
+    <div class="page-header-primary rounded p-4 mb-4">
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h1 class="mb-2">

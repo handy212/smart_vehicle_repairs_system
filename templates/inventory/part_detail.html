@@ -247,18 +247,18 @@
                             <p class="h5 text-success">${{ part.selling_price|floatformat:2 }}</p>
                         </div>
                     </div>
-                    {% if part.cost_price and part.selling_price %}
+                    {% if markup_amount is not None %}
                     <div class="row">
                         <div class="col-md-6">
                             <label class="form-label text-muted">Markup</label>
                             <p class="fw-medium">
-                                ${{ part.selling_price|floatformat:2|sub:part.cost_price|floatformat:2 }}
-                                ({% widthratio part.selling_price|sub:part.cost_price part.cost_price 100 %}%)
+                                ${{ markup_amount|floatformat:2 }}
+                                {% if markup_percentage is not None %}({{ markup_percentage|floatformat:1 }}%){% endif %}
                             </p>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label text-muted">Inventory Value</label>
-                            <p class="fw-medium">${{ part.cost_price|mul:part.quantity_in_stock|floatformat:2 }}</p>
+                            <p class="fw-medium">${{ inventory_value|floatformat:2|default:"0.00" }}</p>
                         </div>
                     </div>
                     {% endif %}
@@ -342,7 +342,7 @@
                     <hr>
                     <div class="d-flex justify-content-between">
                         <span class="text-muted">Stock Value:</span>
-                        <span class="fw-medium text-success">${{ part.cost_price|mul:part.quantity_in_stock|floatformat:2 }}</span>
+                        <span class="fw-medium text-success">${{ inventory_value|floatformat:2|default:"0.00" }}</span>
                     </div>
                 </div>
             </div>

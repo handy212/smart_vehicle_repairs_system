@@ -1,22 +1,12 @@
-{% extends "base.html" %}
+{% extends "portal/base_customer.html" %}
 {% load static %}
 
 {% block title %}My Vehicles{% endblock %}
 
-{% block extra_css %}
-<style>
-    .vehicles-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="vehicles-header">
-    <div class="container">
+<!-- Page Header -->
+<div class="portal-header">
+    <div class="container-fluid px-4">
         <h1>
             <i class="fas fa-car me-2"></i>
             My Vehicles
@@ -25,30 +15,61 @@
     </div>
 </div>
 
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'portal:home' %}">Portal Home</a></li>
-                    <li class="breadcrumb-item active">My Vehicles</li>
-                </ol>
-            </nav>
-        </div>
-        <div class="col-md-4 text-end">
-            <a href="{% url 'portal:book-appointment' %}" class="btn btn-primary">
-                <i class="fas fa-calendar-plus me-2"></i>Book Service
-            </a>
-        </div>
-    </div>
+<!-- Main Content -->
+<div class="container-fluid px-4 py-4">
     
     {% if vehicles %}
-    <div class="row g-4">
-        {% for vehicle in vehicles %}
-        <div class="col-md-6 col-lg-4">
-            {% include 'portal/partials/vehicle_card.html' with vehicle=vehicle %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+                {% for vehicle in vehicles %}
+                <div class="list-group-item">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="fas fa-car fa-2x text-primary"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h5>
+                                    <p class="text-muted mb-0 small">
+                                        <strong>License:</strong> {{ vehicle.license_plate }} | 
+                                        <strong>VIN:</strong> {{ vehicle.vin|truncatechars:12 }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted d-block">Details</small>
+                            <p class="mb-0 small">
+                                <strong>Mileage:</strong> {{ vehicle.mileage|default:0|floatformat:0 }} km<br>
+                                <strong>Color:</strong> {{ vehicle.color|default:'N/A' }}
+                            </p>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            {% if vehicle.status == 'active' or not vehicle.status %}
+                                <span class="badge bg-success mb-2">
+                                    {{ vehicle.status|default:'Active'|title }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary mb-2">
+                                    {{ vehicle.status|title }}
+                                </span>
+                            {% endif %}
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'portal:vehicle-detail' vehicle.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye me-1"></i> View
+                                </a>
+                                <a href="{% url 'portal:book-appointment' %}?vehicle={{ vehicle.id }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-calendar me-1"></i> Book
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
-        {% endfor %}
     </div>
     {% else %}
     <div class="card">

@@ -34,6 +34,17 @@ class VehicleListView(LoginRequiredMixin, ListView):
     context_object_name = 'vehicles'
     paginate_by = 20
     
+    def get_paginate_by(self, queryset):
+        """Allow dynamic pagination"""
+        per_page = self.request.GET.get('per_page', self.paginate_by)
+        try:
+            per_page = int(per_page)
+            if per_page in [10, 20, 50, 100]:
+                return per_page
+        except (ValueError, TypeError):
+            pass
+        return self.paginate_by
+    
     def get_queryset(self):
         queryset = Vehicle.objects.select_related('owner', 'owner__user').prefetch_related(
             'work_orders', 'mileage_history', 'documents', 'photos'
@@ -127,7 +138,8 @@ class VehicleDetailView(LoginRequiredMixin, DetailView):
     def get_object(self):
         return get_object_or_404(
             Vehicle.objects.select_related('owner', 'owner__user').prefetch_related(
-                'work_orders__technician',
+                'work_orders__primary_technician',
+                'work_orders__assigned_technicians',
                 'mileage_history',
                 'documents',
                 'photos'
@@ -239,7 +251,8 @@ class VehicleServiceHistoryView(LoginRequiredMixin, DetailView):
     def get_object(self):
         return get_object_or_404(
             Vehicle.objects.select_related('owner', 'owner__user').prefetch_related(
-                'work_orders__technician',
+                'work_orders__primary_technician',
+                'work_orders__assigned_technicians',
                 'mileage_history'
             ),
             pk=self.kwargs['pk']

@@ -1,4 +1,4 @@
-{% extends "base_admin.html" %}
+{% extends "base.html" %}
 {% load static %}
 
 {% block title %}{{ template.name }} - Inspection Template{% endblock %}
@@ -6,14 +6,14 @@
 {% block extra_css %}
 <style>
     .template-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, black) 100%);
         color: white;
         padding: 2rem;
         border-radius: 10px;
         margin-bottom: 2rem;
     }
     .category-card {
-        border-left: 4px solid #667eea;
+        border-left: 4px solid var(--primary-color);
         transition: all 0.3s ease;
     }
     .category-card:hover {
@@ -148,14 +148,33 @@
                         {% for category in template.categories.all %}
                         <div class="category-card card mb-3">
                             <div class="card-header bg-light">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-folder-open me-2 text-primary"></i>
-                                    {{ category.name }}
-                                    <span class="badge bg-primary ms-2">{{ category.items.count }} items</span>
-                                </h6>
-                                {% if category.description %}
-                                <small class="text-muted d-block mt-1">{{ category.description }}</small>
-                                {% endif %}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-folder-open me-2 text-primary"></i>
+                                            {{ category.name }}
+                                            <span class="badge bg-primary ms-2">{{ category.items.count }} items</span>
+                                        </h6>
+                                        {% if category.description %}
+                                        <small class="text-muted d-block mt-1">{{ category.description }}</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'inspections:item-create' category.id %}" class="btn btn-sm btn-outline-primary" title="Add Item">
+                                            <i class="fas fa-plus"></i>
+                                        </a>
+                                        <a href="{% url 'inspections:category-edit' category.id %}" class="btn btn-sm btn-outline-secondary" title="Edit Category">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form method="post" action="{% url 'inspections:category-delete' category.id %}" style="display: inline;" 
+                                              onsubmit="return confirm('Delete this category and all its items?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Category">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                             <div class="card-body">
                                 {% if category.items.exists %}
@@ -163,10 +182,15 @@
                                     {% for item in category.items.all %}
                                     <div class="list-group-item">
                                         <div class="d-flex justify-content-between align-items-start">
-                                            <div>
+                                            <div class="flex-grow-1">
                                                 <strong>{{ item.name }}</strong>
                                                 {% if item.description %}
                                                 <small class="text-muted d-block">{{ item.description }}</small>
+                                                {% endif %}
+                                                {% if item.item_type == 'measurement' and item.measurement_unit %}
+                                                <small class="text-muted">
+                                                    <i class="fas fa-ruler me-1"></i>Unit: {{ item.measurement_unit }}
+                                                </small>
                                                 {% endif %}
                                             </div>
                                             <div class="text-end">
@@ -174,28 +198,55 @@
                                                 {% if item.is_required %}
                                                 <span class="item-badge badge bg-danger">Required</span>
                                                 {% endif %}
+                                                {% if item.is_critical %}
+                                                <span class="item-badge badge bg-warning">Critical</span>
+                                                {% endif %}
+                                                <div class="btn-group btn-group-sm mt-1">
+                                                    <a href="{% url 'inspections:item-edit' item.id %}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <form method="post" action="{% url 'inspections:item-delete' item.id %}" style="display: inline;" 
+                                                          onsubmit="return confirm('Delete this item?');">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
                                             </div>
                                         </div>
-                                        {% if item.item_type == 'measurement' and item.measurement_unit %}
-                                        <small class="text-muted">
-                                            <i class="fas fa-ruler me-1"></i>Unit: {{ item.measurement_unit }}
-                                        </small>
-                                        {% endif %}
                                     </div>
                                     {% endfor %}
                                 </div>
                                 {% else %}
-                                <p class="text-muted mb-0">
-                                    <i class="fas fa-info-circle me-2"></i>No items in this category
-                                </p>
+                                <div class="text-center py-3">
+                                    <p class="text-muted mb-2">
+                                        <i class="fas fa-info-circle me-2"></i>No items in this category yet
+                                    </p>
+                                    <a href="{% url 'inspections:item-create' category.id %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-plus me-1"></i>Add First Item
+                                    </a>
+                                </div>
                                 {% endif %}
                             </div>
                         </div>
                         {% endfor %}
+                        
+                        <!-- Add Another Category Button -->
+                        <div class="text-center mt-3">
+                            <a href="{% url 'inspections:category-create' template.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-plus me-2"></i>Add Another Category
+                            </a>
+                        </div>
                     {% else %}
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle me-2"></i>
-                        No categories have been added to this template yet.
+                        <strong>No categories have been added to this template yet.</strong>
+                        <hr>
+                        <p class="mb-3">Start building your inspection checklist by adding categories and items.</p>
+                        <a href="{% url 'inspections:category-create' template.id %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Add First Category
+                        </a>
                     </div>
                     {% endif %}
                 </div>

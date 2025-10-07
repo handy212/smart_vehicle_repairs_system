@@ -1,12 +1,13 @@
-{% extends "base.html" %}
+{% extends "portal/base_customer.html" %}
 {% load static %}
 
 {% block title %}My Appointments{% endblock %}
 
 {% block extra_css %}
+{{ block.super }}
 <style>
     .appointments-header {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
         color: white;
         padding: 2rem 0;
         margin-bottom: 2rem;
@@ -15,13 +16,13 @@
         color: #6c757d;
     }
     .filter-tabs .nav-link.active {
-        color: #667eea;
-        border-bottom: 3px solid #667eea;
+        color: var(--primary-color);
+        border-bottom: 3px solid var(--primary-color);
     }
 </style>
 {% endblock %}
 
-{% block content %}
+{% block portal_content %}
 <div class="appointments-header">
     <div class="container">
         <h1>

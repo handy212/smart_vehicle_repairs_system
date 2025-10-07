@@ -69,6 +69,7 @@ urlpatterns = [
     path('customer/register/', customer_auth_views.customer_register, name='customer_register'),
     path('customer/logout/', customer_auth_views.customer_logout, name='customer_logout'),
     path('customer/forgot-password/', customer_auth_views.customer_forgot_password, name='customer_forgot_password'),
+    path('customer/reset-password/<uidb64>/<token>/', customer_auth_views.customer_reset_password_confirm, name='customer_reset_password_confirm'),
     
     # API Authentication
     path('api/auth/', include('apps.accounts.urls')),

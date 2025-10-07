@@ -9,6 +9,9 @@ from django.db.models import Q, Sum, Count
 from django.utils import timezone
 from datetime import datetime, timedelta
 from functools import wraps
+import logging
+
+logger = logging.getLogger(__name__)
 
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -16,20 +19,29 @@ from apps.appointments.models import Appointment
 from apps.workorders.models import WorkOrder
 from apps.billing.models import Invoice, Payment
 from apps.inspections.models import VehicleInspection
+from apps.accounts.models import User
+from apps.notifications_app.models import Notification
 
 
 def customer_login_required(view_func):
     """
-    Custom decorator for customer portal authentication
-    Redirects to customer login instead of staff login
+    Customer portal authentication using role-based permissions
+    Checks user.role field which is managed via admin panel
     """
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
+        # Check if user is authenticated
         if not request.user.is_authenticated:
             return redirect('customer_login')
         
-        if not hasattr(request.user, 'customer_profile'):
+        # Check if user has customer role (managed in admin panel)
+        if request.user.role != 'customer':
             messages.error(request, 'Access denied. This portal is for customers only.')
+            return redirect('customer_login')
+        
+        # Verify customer profile exists (additional safety check)
+        if not hasattr(request.user, 'customer_profile'):
+            messages.error(request, 'Customer profile not found. Please contact support.')
             return redirect('customer_login')
             
         return view_func(request, *args, **kwargs)
@@ -87,13 +99,9 @@ def portal_home(request):
     return render(request, 'portal/home.html', context)
 
 
-@login_required
+@customer_login_required
 def my_vehicles(request):
     """View all customer vehicles"""
-    if not hasattr(request.user, 'customer_profile'):
-        messages.error(request, 'Access denied. This portal is for customers only.')
-        return redirect('home')
-    
     customer = request.user.customer_profile
     
     vehicles = Vehicle.objects.filter(owner=customer).order_by('-created_at')
@@ -113,13 +121,9 @@ def my_vehicles(request):
     return render(request, 'portal/my_vehicles.html', context)
 
 
-@login_required
+@customer_login_required
 def my_appointments(request):
     """View all customer appointments"""
-    if not hasattr(request.user, 'customer_profile'):
-        messages.error(request, 'Access denied. This portal is for customers only.')
-        return redirect('home')
-    
     customer = request.user.customer_profile
     
     # Filter by status
@@ -147,13 +151,9 @@ def my_appointments(request):
     return render(request, 'portal/my_appointments.html', context)
 
 
-@login_required
+@customer_login_required
 def my_invoices(request):
     """View all customer invoices"""
-    if not hasattr(request.user, 'customer_profile'):
-        messages.error(request, 'Access denied. This portal is for customers only.')
-        return redirect('home')
-    
     customer = request.user.customer_profile
     
     # Filter by status
@@ -185,13 +185,9 @@ def my_invoices(request):
     return render(request, 'portal/my_invoices.html', context)
 
 
-@login_required
+@customer_login_required
 def my_history(request):
     """View complete service history"""
-    if not hasattr(request.user, 'customer_profile'):
-        messages.error(request, 'Access denied. This portal is for customers only.')
-        return redirect('home')
-    
     customer = request.user.customer_profile
     
     # Get all work orders for customer's vehicles
@@ -221,37 +217,119 @@ def my_history(request):
     return render(request, 'portal/my_history.html', context)
 
 
-@login_required
+@customer_login_required
 def book_appointment(request):
     """Self-service appointment booking"""
-    if not hasattr(request.user, 'customer_profile'):
-        messages.error(request, 'Access denied. This portal is for customers only.')
-        return redirect('home')
-    
     customer = request.user.customer_profile
     
     vehicles = Vehicle.objects.filter(owner=customer)
     
     if request.method == 'POST':
-        # This is a simplified version - you'd integrate with the appointment creation endpoint
-        messages.success(request, 'Appointment booking request submitted! We will confirm shortly.')
-        return redirect('portal:my-appointments')
+        try:
+            # Get form data
+            vehicle_id = request.POST.get('vehicle')
+            service_type = request.POST.get('service_type')
+            appointment_date = request.POST.get('appointment_date')
+            appointment_time = request.POST.get('appointment_time')
+            notes = request.POST.get('notes', '')
+            
+            # Validate required fields
+            if not all([vehicle_id, service_type, appointment_date, appointment_time]):
+                messages.error(request, 'Please fill in all required fields.')
+                return redirect('portal:book-appointment')
+            
+            # Get the vehicle and verify ownership
+            vehicle = Vehicle.objects.get(id=vehicle_id, owner=customer)
+            
+            # Create the appointment
+            appointment = Appointment.objects.create(
+                customer=customer,
+                vehicle=vehicle,
+                service_type=service_type,
+                appointment_date=appointment_date,
+                appointment_time=appointment_time,
+                customer_concerns=notes or 'No specific concerns mentioned',
+                special_instructions=notes,
+                status='pending',
+                priority='normal',
+                estimated_duration=60  # Default 1 hour
+            )
+            
+            # Send notifications to staff members about new appointment
+            try:
+                # Get all staff members who should be notified (managers, receptionists, admins)
+                staff_to_notify = User.objects.filter(
+                    role__in=['admin', 'manager', 'receptionist'],
+                    is_active=True
+                )
+                
+                # Create notification message
+                notification_message = (
+                    f'New appointment booking from {customer.user.get_full_name()}. '
+                    f'Vehicle: {vehicle.year} {vehicle.make} {vehicle.model} ({vehicle.license_plate}). '
+                    f'Service: {appointment.get_service_type_display()}. '
+                    f'Date: {appointment_date} at {appointment_time}.'
+                )
+                
+                # Create notifications for each staff member
+                for staff_member in staff_to_notify:
+                    Notification.objects.create(
+                        recipient=staff_member,
+                        notification_type='appointment',
+                        channel='in_app',  # In-app notification
+                        priority='high',
+                        title=f'New Appointment: {appointment.appointment_number}',
+                        message=notification_message,
+                        data={
+                            'appointment_id': appointment.id,
+                            'appointment_number': appointment.appointment_number,
+                            'customer_name': customer.user.get_full_name(),
+                            'customer_email': customer.user.email,
+                            'customer_phone': customer.phone,
+                            'vehicle': f'{vehicle.year} {vehicle.make} {vehicle.model}',
+                            'license_plate': vehicle.license_plate,
+                            'service_type': service_type,
+                            'appointment_date': appointment_date,
+                            'appointment_time': appointment_time,
+                            'notes': notes
+                        },
+                        related_object_type='appointment',
+                        related_object_id=appointment.id
+                    )
+                
+                logger.info(f'Sent new appointment notifications to {staff_to_notify.count()} staff members')
+            except Exception as e:
+                logger.error(f'Failed to send appointment notifications: {str(e)}')
+                # Don't fail the appointment creation if notifications fail
+            
+            messages.success(
+                request, 
+                f'Appointment #{appointment.appointment_number} booked successfully! '
+                f'We will confirm your appointment for {appointment_date} at {appointment_time}.'
+            )
+            return redirect('portal:my-appointments')
+            
+        except Vehicle.DoesNotExist:
+            messages.error(request, 'Invalid vehicle selection.')
+            return redirect('portal:book-appointment')
+        except Exception as e:
+            messages.error(request, f'Error booking appointment: {str(e)}')
+            return redirect('portal:book-appointment')
     
+    # Prepare context for GET request
+    from datetime import date
     context = {
         'customer': customer,
         'vehicles': vehicles,
+        'today': date.today().isoformat(),
     }
     
     return render(request, 'portal/book_appointment.html', context)
 
 
-@login_required
+@customer_login_required
 def make_payment(request, invoice_id):
     """Make payment for invoice"""
-    if not hasattr(request.user, 'customer_profile'):
-        messages.error(request, 'Access denied. This portal is for customers only.')
-        return redirect('home')
-    
     customer = request.user.customer_profile
     
     invoice = get_object_or_404(Invoice, id=invoice_id, customer=customer)
@@ -267,3 +345,53 @@ def make_payment(request, invoice_id):
     }
     
     return render(request, 'portal/payment.html', context)
+
+
+@customer_login_required
+def vehicle_detail(request, vehicle_id):
+    """View vehicle details in customer portal"""
+    customer = request.user.customer_profile
+    
+    # Ensure customer can only view their own vehicles
+    vehicle = get_object_or_404(Vehicle, id=vehicle_id, owner=customer)
+    
+    # Get service history for this vehicle
+    work_orders = WorkOrder.objects.filter(vehicle=vehicle).order_by('-created_at')[:10]
+    inspections = VehicleInspection.objects.filter(vehicle=vehicle).order_by('-inspection_date')[:10]
+    appointments = Appointment.objects.filter(
+        vehicle=vehicle,
+        customer=customer
+    ).order_by('-appointment_date')[:5]
+    
+    context = {
+        'customer': customer,
+        'vehicle': vehicle,
+        'work_orders': work_orders,
+        'inspections': inspections,
+        'appointments': appointments,
+    }
+    
+    return render(request, 'portal/vehicle_detail.html', context)
+
+
+@customer_login_required
+def inspection_detail(request, inspection_id):
+    """View inspection details in customer portal"""
+    customer = request.user.customer_profile
+    
+    # Get customer's vehicles
+    customer_vehicles = Vehicle.objects.filter(owner=customer)
+    
+    # Ensure customer can only view inspections for their own vehicles
+    inspection = get_object_or_404(
+        VehicleInspection, 
+        id=inspection_id, 
+        vehicle__in=customer_vehicles
+    )
+    
+    context = {
+        'customer': customer,
+        'inspection': inspection,
+    }
+    
+    return render(request, 'portal/inspection_detail.html', context)

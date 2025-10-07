@@ -1,12 +1,13 @@
-{% extends "base.html" %}
+{% extends "portal/base_customer.html" %}
 {% load static %}
 
 {% block title %}Make Payment - Invoice #{{ invoice.invoice_number }}{% endblock %}
 
 {% block extra_css %}
+{{ block.super }}
 <style>
     .payment-header {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        background: linear-gradient(135deg, var(--success-color) 0%, color-mix(in srgb, var(--success-color) 70%, white) 100%);
         color: white;
         padding: 2rem 0;
         margin-bottom: 2rem;
@@ -38,7 +39,7 @@
 </style>
 {% endblock %}
 
-{% block content %}
+{% block portal_content %}
 <div class="payment-header">
     <div class="container">
         <h1>

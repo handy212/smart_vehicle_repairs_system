@@ -7,8 +7,8 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db.models import Q, Count, Avg
 from django.utils import timezone
-from .models import VehicleInspection, InspectionTemplate, InspectionItem, InspectionResult
-from .forms import InspectionForm
+from .models import VehicleInspection, InspectionTemplate, InspectionItem, InspectionResult, InspectionCategory
+from .forms import InspectionForm, InspectionCategoryForm, InspectionItemForm
 from apps.vehicles.models import Vehicle
 from apps.accounts.models import User
 
@@ -64,6 +64,9 @@ def inspection_list(request):
 @login_required
 def inspection_create(request):
     """Create a new inspection"""
+    from django.utils import timezone
+    from apps.customers.models import Customer
+    
     if request.method == 'POST':
         form = InspectionForm(request.POST)
         
@@ -71,26 +74,41 @@ def inspection_create(request):
             try:
                 # Create inspection with form data
                 inspection = form.save(commit=False)
+                
+                # Process vehicle damage data
+                vehicle_damage_json = request.POST.get('vehicle_damage', '')
+                if vehicle_damage_json:
+                    try:
+                        import json
+                        inspection.vehicle_damage = json.loads(vehicle_damage_json)
+                    except json.JSONDecodeError:
+                        inspection.vehicle_damage = []
+                
                 inspection.save()
                 
                 # Create inspection results for each item in the template
                 template = inspection.template
-                items = template.items.all()
                 
-                for item in items:
-                    item_key = f'item_{item.id}'
-                    result = request.POST.get(item_key, 'pass')
-                    notes = request.POST.get(f'notes_{item.id}', '')
-                    
-                    InspectionResult.objects.create(
-                        inspection=inspection,
-                        inspection_item=item,
-                        result=result,
-                        notes=notes
-                    )
+                # Items are accessed through categories
+                categories = template.categories.all()
+                for category in categories:
+                    for item in category.items.all():
+                        item_key = f'item_{item.id}'
+                        result = request.POST.get(item_key, 'pass')
+                        notes = request.POST.get(f'notes_{item.id}', '')
+                        
+                        InspectionResult.objects.create(
+                            inspection=inspection,
+                            inspection_item=item,
+                            result=result,
+                            notes=notes
+                        )
                 
-                # Update inspection status
-                inspection.status = 'completed'
+                # Update inspection status based on whether items were completed
+                if categories.exists():
+                    inspection.status = 'completed'
+                else:
+                    inspection.status = 'draft'
                 inspection.save()
                 
                 messages.success(request, 'Inspection created successfully!')
@@ -101,18 +119,24 @@ def inspection_create(request):
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
-        # GET request - create empty form
-        form = InspectionForm(initial={'performed_by': request.user})
+        # GET request - create empty form with auto-filled date
+        initial_data = {
+            'performed_by': request.user,
+            'inspection_date': timezone.now()  # Auto-fill current date/time
+        }
+        form = InspectionForm(initial=initial_data)
     
-    # Get templates for dynamic loading of inspection items
-    templates = InspectionTemplate.objects.filter(is_active=True)
+    # Get templates and customers for the form
+    templates = InspectionTemplate.objects.filter(is_active=True).prefetch_related('categories__items')
+    customers = Customer.objects.select_related('user').filter(user__is_active=True).order_by('user__first_name')
     
     context = {
         'form': form,
         'templates': templates,
+        'customers': customers,
     }
     
-    return render(request, 'inspections/inspection_form.html', context)
+    return render(request, 'inspections/inspection_form_new.html', context)
 
 
 @login_required
@@ -129,13 +153,17 @@ def inspection_detail(request, pk):
     results = inspection.results.all()
     pass_count = results.filter(result='pass').count()
     fail_count = results.filter(result='fail').count()
-    warning_count = results.filter(result='warning').count()
+    advisory_count = results.filter(result='advisory').count()
+    
+    # Create a dictionary mapping item IDs to results for easy template access
+    results_by_item = {result.inspection_item_id: result for result in results}
     
     context = {
         'inspection': inspection,
         'pass_count': pass_count,
         'fail_count': fail_count,
-        'warning_count': warning_count,
+        'advisory_count': advisory_count,
+        'results_by_item': results_by_item,
     }
     
     return render(request, 'inspections/inspection_detail.html', context)
@@ -147,29 +175,40 @@ def inspection_edit(request, pk):
     inspection = get_object_or_404(VehicleInspection, pk=pk)
     
     if request.method == 'POST':
-        try:
-            inspection.notes = request.POST.get('notes', '')
-            inspection.customer_signature = request.POST.get('customer_signature', '')
-            inspection.technician_signature = request.POST.get('technician_signature', '')
-            inspection.save()
-            
-            # Update results
-            for result in inspection.results.all():
-                result_value = request.POST.get(f'item_{result.inspection_item_id}')
-                notes_value = request.POST.get(f'notes_{result.inspection_item_id}', '')
+        form = InspectionForm(request.POST, instance=inspection)
+        
+        if form.is_valid():
+            try:
+                # Save form data
+                inspection = form.save()
                 
-                if result_value:
-                    result.result = result_value
-                    result.notes = notes_value
-                    result.save()
-            
-            messages.success(request, 'Inspection updated successfully!')
-            return redirect('inspections:inspection-detail', pk=inspection.id)
-            
-        except Exception as e:
-            messages.error(request, f'Error updating inspection: {str(e)}')
+                # Update results
+                for result in inspection.results.all():
+                    result_value = request.POST.get(f'item_{result.inspection_item_id}')
+                    notes_value = request.POST.get(f'notes_{result.inspection_item_id}', '')
+                    
+                    if result_value:
+                        result.result = result_value
+                        result.notes = notes_value
+                        result.save()
+                
+                messages.success(request, 'Inspection updated successfully!')
+                return redirect('inspections:inspection-detail', pk=inspection.id)
+                
+            except Exception as e:
+                messages.error(request, f'Error updating inspection: {str(e)}')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        # GET request - populate form with existing data
+        form = InspectionForm(instance=inspection)
+    
+    # Get templates for dynamic loading of inspection items
+    templates = InspectionTemplate.objects.filter(is_active=True)
     
     context = {
+        'form': form,
+        'templates': templates,
         'inspection': inspection,
         'is_edit': True,
     }
@@ -195,7 +234,7 @@ def inspection_print(request, pk):
     """Print-friendly inspection view"""
     inspection = get_object_or_404(
         VehicleInspection.objects.select_related(
-            'vehicle', 'vehicle__owner', 'technician', 'template'
+            'vehicle', 'vehicle__owner', 'performed_by', 'template'
         ).prefetch_related('results', 'results__inspection_item'),
         pk=pk
     )
@@ -206,11 +245,17 @@ def inspection_print(request, pk):
     fail_count = results.filter(result='fail').count()
     warning_count = results.filter(result='warning').count()
     
+    # Create results_by_item dictionary for easy lookup
+    results_by_item = {}
+    for result in results:
+        results_by_item[result.inspection_item_id] = result
+    
     context = {
         'inspection': inspection,
         'pass_count': pass_count,
         'fail_count': fail_count,
         'warning_count': warning_count,
+        'results_by_item': results_by_item,
     }
     
     return render(request, 'inspections/inspection_print.html', context)
@@ -225,7 +270,7 @@ def inspection_pdf(request, pk):
         
         inspection = get_object_or_404(
             VehicleInspection.objects.select_related(
-                'vehicle', 'vehicle__owner', 'technician', 'template'
+                'vehicle', 'vehicle__owner', 'performed_by', 'template'
             ).prefetch_related('results', 'results__inspection_item'),
             pk=pk
         )
@@ -236,11 +281,17 @@ def inspection_pdf(request, pk):
         fail_count = results.filter(result='fail').count()
         warning_count = results.filter(result='warning').count()
         
+        # Create results_by_item dictionary for easy lookup
+        results_by_item = {}
+        for result in results:
+            results_by_item[result.inspection_item_id] = result
+        
         context = {
             'inspection': inspection,
             'pass_count': pass_count,
             'fail_count': fail_count,
             'warning_count': warning_count,
+            'results_by_item': results_by_item,
         }
         
         # Render template to HTML
@@ -305,6 +356,11 @@ def template_edit(request, pk):
         template.description = request.POST.get('description', template.description)
         template.is_active = request.POST.get('is_active') == 'on'
         template.is_default = request.POST.get('is_default') == 'on'
+        template.requires_odometer = request.POST.get('requires_odometer') == 'on'
+        template.requires_technician_signature = request.POST.get('requires_technician_signature') == 'on'
+        template.requires_customer_signature = request.POST.get('requires_customer_signature') == 'on'
+        template.allows_photos = request.POST.get('allows_photos') == 'on'
+        template.allows_video = request.POST.get('allows_video') == 'on'
         template.save()
         
         messages.success(request, 'Template updated successfully!')
@@ -329,12 +385,200 @@ def template_create(request):
                 description=request.POST.get('description', ''),
                 is_active=request.POST.get('is_active') == 'on',
                 is_default=request.POST.get('is_default') == 'on',
+                created_by=request.user,
+                requires_odometer=request.POST.get('requires_odometer') == 'on',
+                requires_technician_signature=request.POST.get('requires_technician_signature') == 'on',
+                requires_customer_signature=request.POST.get('requires_customer_signature') == 'on',
+                allows_photos=request.POST.get('allows_photos') == 'on',
+                allows_video=request.POST.get('allows_video') == 'on',
             )
             
-            messages.success(request, 'Template created successfully!')
+            messages.success(request, 'Template created successfully! Now add categories and items to your template.')
             return redirect('inspections:template-detail', pk=template.id)
             
         except Exception as e:
             messages.error(request, f'Error creating template: {str(e)}')
     
-    return render(request, 'inspections/template_form.html', {})
+    context = {
+        'is_edit': False,
+    }
+    
+    return render(request, 'inspections/template_form.html', context)
+
+
+@login_required
+def category_create(request, template_pk):
+    """Add a new category to a template"""
+    template = get_object_or_404(InspectionTemplate, pk=template_pk)
+    
+    if request.method == 'POST':
+        form = InspectionCategoryForm(request.POST)
+        if form.is_valid():
+            category = form.save(commit=False)
+            category.template = template
+            category.save()
+            messages.success(request, f'Category "{category.name}" added successfully!')
+            return redirect('inspections:template-detail', pk=template.id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = InspectionCategoryForm()
+    
+    context = {
+        'form': form,
+        'template': template,
+        'is_edit': False,
+    }
+    
+    return render(request, 'inspections/category_form.html', context)
+
+
+@login_required
+def category_edit(request, pk):
+    """Edit an existing category"""
+    category = get_object_or_404(InspectionCategory, pk=pk)
+    template = category.template
+    
+    if request.method == 'POST':
+        form = InspectionCategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Category "{category.name}" updated successfully!')
+            return redirect('inspections:template-detail', pk=template.id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = InspectionCategoryForm(instance=category)
+    
+    context = {
+        'form': form,
+        'template': template,
+        'category': category,
+        'is_edit': True,
+    }
+    
+    return render(request, 'inspections/category_form.html', context)
+
+
+@login_required
+def category_delete(request, pk):
+    """Delete a category"""
+    category = get_object_or_404(InspectionCategory, pk=pk)
+    template = category.template
+    
+    if request.method == 'POST':
+        category_name = category.name
+        category.delete()
+        messages.success(request, f'Category "{category_name}" deleted successfully!')
+        return redirect('inspections:template-detail', pk=template.id)
+    
+    return redirect('inspections:template-detail', pk=template.id)
+
+
+@login_required
+def item_create(request, category_pk):
+    """Add a new item to a category"""
+    category = get_object_or_404(InspectionCategory, pk=category_pk)
+    template = category.template
+    
+    if request.method == 'POST':
+        form = InspectionItemForm(request.POST)
+        if form.is_valid():
+            item = form.save(commit=False)
+            item.category = category
+            item.save()
+            messages.success(request, f'Item "{item.name}" added successfully!')
+            return redirect('inspections:template-detail', pk=template.id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = InspectionItemForm()
+    
+    context = {
+        'form': form,
+        'category': category,
+        'template': template,
+        'is_edit': False,
+    }
+    
+    return render(request, 'inspections/item_form.html', context)
+
+
+@login_required
+def item_edit(request, pk):
+    """Edit an existing item"""
+    item = get_object_or_404(InspectionItem, pk=pk)
+    category = item.category
+    template = category.template
+    
+    if request.method == 'POST':
+        form = InspectionItemForm(request.POST, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Item "{item.name}" updated successfully!')
+            return redirect('inspections:template-detail', pk=template.id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = InspectionItemForm(instance=item)
+    
+    context = {
+        'form': form,
+        'item': item,
+        'category': category,
+        'template': template,
+        'is_edit': True,
+    }
+    
+    return render(request, 'inspections/item_form.html', context)
+
+
+@login_required
+def item_delete(request, pk):
+    """Delete an item"""
+    item = get_object_or_404(InspectionItem, pk=pk)
+    template = item.category.template
+    
+    if request.method == 'POST':
+        item_name = item.name
+        item.delete()
+        messages.success(request, f'Item "{item_name}" deleted successfully!')
+        return redirect('inspections:template-detail', pk=template.id)
+    
+    return redirect('inspections:template-detail', pk=template.id)
+
+
+@login_required
+def template_checklist_api(request, pk):
+    """API endpoint to get template checklist items as JSON"""
+    # Check authentication for AJAX
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    template = get_object_or_404(InspectionTemplate, pk=pk)
+    
+    categories_data = []
+    for category in template.categories.all().order_by('order'):
+        items_data = []
+        for item in category.items.all().order_by('order'):
+            items_data.append({
+                'id': item.id,
+                'name': item.name,
+                'description': item.description,
+                'item_type': item.item_type,
+                'measurement_unit': item.measurement_unit,
+                'is_critical': item.is_critical,
+            })
+        
+        categories_data.append({
+            'id': category.id,
+            'name': category.name,
+            'description': category.description,
+            'items': items_data
+        })
+    
+    return JsonResponse({
+        'template_id': template.id,
+        'template_name': template.name,
+        'categories': categories_data
+    })
