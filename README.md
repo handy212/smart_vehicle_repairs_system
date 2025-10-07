@@ -70,7 +70,7 @@ A comprehensive Django-based vehicle repair and workshop management system with 
 
 1. **Clone the repository** (if from git)
 ```bash
-cd /home/handy/smart_vehicle_repairs_system
+cd /path/smart_vehicle_repairs_system
 ```
 
 2. **Create and activate virtual environment**
@@ -184,13 +184,6 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_HOST_USER=your-email@gmail.com
 EMAIL_HOST_PASSWORD=your-app-password
-```
-
-### CarAPI Integration
-Sign up at https://carapi.app/ and add credentials to `.env`:
-```
-CARAPI_KEY=your-api-key
-CARAPI_SECRET=your-api-secret
 ```
 
 ## 🧪 Running Tests
