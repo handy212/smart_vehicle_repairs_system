@@ -18,6 +18,12 @@ urlpatterns = [
     path('parts/<int:pk>/delete/confirm/', frontend_views.part_delete_confirm_view, name='part_delete_confirm'),
     path('parts/<int:pk>/adjust-stock/', frontend_views.adjust_stock, name='adjust_stock'),
     
+    # AJAX API endpoints for frontend
+    path('search/', frontend_views.inventory_search_api, name='inventory_search_api'),
+    path('suppliers/<int:pk>/info/', frontend_views.supplier_info_api, name='supplier_info_api'),
+    path('parts/<int:pk>/info/', frontend_views.part_info_api, name='part_info_api'),
+    path('parts/low-stock/', frontend_views.low_stock_parts_api, name='low_stock_parts_api'),
+    
     # Suppliers (Full CRUD)
     path('suppliers/', frontend_views.supplier_list_view, name='supplier_list'),
     path('suppliers/create/', frontend_views.supplier_create_view, name='supplier_create'),

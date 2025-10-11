@@ -17,7 +17,7 @@ from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.appointments.models import Appointment
 from apps.workorders.models import WorkOrder
-from apps.billing.models import Invoice, Payment
+from apps.billing.models import Invoice, Payment, Estimate
 from apps.inspections.models import VehicleInspection
 from apps.accounts.models import User
 from apps.notifications_app.models import Notification
@@ -56,15 +56,20 @@ def portal_home(request):
     
     # Get customer statistics
     total_vehicles = Vehicle.objects.filter(owner=customer).count()
-    upcoming_appointments = Appointment.objects.filter(
+    upcoming_appointments_count = Appointment.objects.filter(
         customer=customer,
         appointment_date__gte=timezone.now().date(),
         status__in=['pending', 'confirmed']
     ).count()
     
-    pending_invoices = Invoice.objects.filter(
+    pending_invoices_count = Invoice.objects.filter(
         customer=customer,
         status__in=['pending', 'sent']
+    ).count()
+    
+    pending_estimates_count = Estimate.objects.filter(
+        customer=customer,
+        status='sent'
     ).count()
     
     total_spent = Payment.objects.filter(
@@ -77,9 +82,11 @@ def portal_home(request):
         customer=customer
     ).order_by('-appointment_date')[:3]
     
-    # Recent invoices
+    # Recent invoices (exclude drafts and void)
     recent_invoices = Invoice.objects.filter(
         customer=customer
+    ).exclude(
+        status__in=['draft', 'void']
     ).order_by('-invoice_date')[:3]
     
     # Active vehicles
@@ -88,8 +95,9 @@ def portal_home(request):
     context = {
         'customer': customer,
         'total_vehicles': total_vehicles,
-        'upcoming_appointments': upcoming_appointments,
-        'pending_invoices': pending_invoices,
+        'upcoming_appointments_count': upcoming_appointments_count,
+        'pending_invoices_count': pending_invoices_count,
+        'pending_estimates_count': pending_estimates_count,
         'total_spent': total_spent,
         'recent_appointments': recent_appointments,
         'recent_invoices': recent_invoices,
@@ -156,9 +164,13 @@ def my_invoices(request):
     """View all customer invoices"""
     customer = request.user.customer_profile
     
-    # Filter by status
+    # Filter by status - exclude draft and void invoices (customers should only see sent/active invoices)
     status_filter = request.GET.get('status', 'all')
-    invoices = Invoice.objects.filter(customer=customer)
+    invoices = Invoice.objects.filter(
+        customer=customer
+    ).exclude(
+        status__in=['draft', 'void']  # Hide draft and void invoices from customers
+    )
     
     if status_filter != 'all':
         invoices = invoices.filter(status=status_filter)
@@ -332,7 +344,17 @@ def make_payment(request, invoice_id):
     """Make payment for invoice"""
     customer = request.user.customer_profile
     
-    invoice = get_object_or_404(Invoice, id=invoice_id, customer=customer)
+    # Get invoice and ensure it's not draft or void
+    invoice = get_object_or_404(
+        Invoice, 
+        id=invoice_id, 
+        customer=customer
+    )
+    
+    # Prevent payment on draft or void invoices
+    if invoice.status in ['draft', 'void']:
+        messages.error(request, 'This invoice is not available for payment.')
+        return redirect('portal:my-invoices')
     
     if request.method == 'POST':
         # This would integrate with payment gateway (Hubtel, Stripe, etc.)
@@ -395,3 +417,98 @@ def inspection_detail(request, inspection_id):
     }
     
     return render(request, 'portal/inspection_detail.html', context)
+
+
+@customer_login_required
+def my_estimates(request):
+    """View all pending estimates for approval"""
+    customer = request.user.customer_profile
+    
+    # Get all estimates for this customer
+    estimates = Estimate.objects.filter(
+        customer=customer
+    ).select_related('vehicle', 'work_order').order_by('-created_at')
+    
+    # Filter by status if provided
+    status_filter = request.GET.get('status')
+    if status_filter:
+        estimates = estimates.filter(status=status_filter)
+    
+    context = {
+        'customer': customer,
+        'estimates': estimates,
+        'status_filter': status_filter,
+    }
+    
+    return render(request, 'portal/my_estimates.html', context)
+
+
+@customer_login_required
+def estimate_detail(request, estimate_id):
+    """View detailed estimate and approve/decline"""
+    from django.http import JsonResponse
+    from apps.workorders.models import WorkOrderNote
+    
+    customer = request.user.customer_profile
+    
+    # Ensure customer can only view their own estimates
+    estimate = get_object_or_404(
+        Estimate, 
+        id=estimate_id, 
+        customer=customer
+    )
+    
+    # Handle approval/decline
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'approve':
+            estimate.status = 'approved'
+            estimate.approved_date = timezone.now()
+            estimate.approved_by = request.user
+            estimate.save()
+            
+            # Update work order status if linked
+            if estimate.work_order:
+                estimate.work_order.status = 'approved'
+                estimate.work_order.save()
+                
+                # Create activity note
+                WorkOrderNote.objects.create(
+                    work_order=estimate.work_order,
+                    note_type='status',
+                    note=f'Estimate #{estimate.estimate_number} approved by customer',
+                    created_by=request.user
+                )
+            
+            messages.success(request, 'Estimate approved! Work will begin shortly.')
+            return redirect('portal:my-estimates')
+            
+        elif action == 'decline':
+            decline_reason = request.POST.get('decline_reason', '')
+            estimate.status = 'declined'
+            estimate.declined_date = timezone.now()
+            estimate.save()
+            
+            # Update work order status if linked
+            if estimate.work_order:
+                estimate.work_order.status = 'cancelled'
+                estimate.work_order.save()
+                
+                # Create activity note
+                WorkOrderNote.objects.create(
+                    work_order=estimate.work_order,
+                    note_type='status',
+                    note=f'Estimate #{estimate.estimate_number} declined by customer. Reason: {decline_reason}',
+                    created_by=request.user
+                )
+            
+            messages.info(request, 'Estimate declined.')
+            return redirect('portal:my-estimates')
+    
+    context = {
+        'customer': customer,
+        'estimate': estimate,
+    }
+    
+    return render(request, 'portal/estimate_detail.html', context)

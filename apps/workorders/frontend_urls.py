@@ -20,8 +20,19 @@ urlpatterns = [
     
     # Task management
     path('<int:pk>/add-task/', frontend_views.add_task, name='add-task'),
+    path('<int:pk>/tasks/<int:task_id>/get/', frontend_views.get_task, name='get-task'),
+    path('<int:pk>/tasks/<int:task_id>/update/', frontend_views.update_task, name='update-task'),
     path('<int:pk>/tasks/<int:task_id>/update-status/', frontend_views.update_task_status, name='update-task-status'),
     path('<int:pk>/tasks/<int:task_id>/delete/', frontend_views.delete_task, name='delete-task'),
+    
+    # Diagnosis & Parts Management
+    path('<int:pk>/update-diagnosis/', frontend_views.update_diagnosis, name='update-diagnosis'),
+    path('<int:pk>/add-part/', frontend_views.add_part, name='add-part'),
+    path('<int:pk>/get-part/<int:part_id>/', frontend_views.workorder_get_part, name='get-part'),
+    path('<int:pk>/update-part/<int:part_id>/', frontend_views.workorder_update_part, name='update-part'),
+    path('<int:pk>/delete-part/<int:part_id>/', frontend_views.delete_part, name='delete-part'),
+    path('<int:pk>/update-part-status/<int:part_id>/', frontend_views.update_part_status, name='update-part-status'),
+    path('<int:pk>/request-approval/', frontend_views.request_approval, name='request-approval'),
     
     # Export
     path('export/', frontend_views.workorder_export_view, name='export'),

@@ -26,4 +26,5 @@ urlpatterns = [
     path('api/time-slots/', frontend_views.get_available_time_slots, name='available-time-slots'),
     path('api/customers/', frontend_views.get_customers_ajax, name='customers-ajax'),
     path('api/customer-vehicles/', frontend_views.get_customer_vehicles, name='customer-vehicles'),
+    path('create/api/', frontend_views.create_appointment_api, name='create-appointment-api'),
 ]

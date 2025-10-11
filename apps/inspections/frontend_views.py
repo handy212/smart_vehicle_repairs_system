@@ -62,6 +62,27 @@ def inspection_list(request):
 
 
 @login_required
+def inspection_start(request):
+    """Start an inspection from a work order"""
+    workorder_id = request.GET.get('workorder')
+    
+    if not workorder_id:
+        messages.error(request, 'No work order specified.')
+        return redirect('inspections:inspection-list')
+    
+    try:
+        from apps.workorders.models import WorkOrder
+        workorder = get_object_or_404(WorkOrder, pk=workorder_id)
+        
+        # Redirect to create inspection with pre-filled customer and vehicle
+        return redirect(f"/inspections/create/?customer={workorder.customer.id}&vehicle={workorder.vehicle.id}&workorder={workorder_id}")
+    
+    except Exception as e:
+        messages.error(request, f'Error starting inspection: {str(e)}')
+        return redirect('workorders:detail', pk=workorder_id)
+
+
+@login_required
 def inspection_create(request):
     """Create a new inspection"""
     from django.utils import timezone
@@ -111,6 +132,20 @@ def inspection_create(request):
                     inspection.status = 'draft'
                 inspection.save()
                 
+                # If this inspection is linked to a work order, update the work order
+                workorder_id = request.POST.get('workorder_id')
+                if workorder_id:
+                    try:
+                        from apps.workorders.models import WorkOrder
+                        workorder = WorkOrder.objects.get(pk=workorder_id)
+                        workorder.inspection_completed = True
+                        workorder.status = 'intake'  # Move to intake after inspection
+                        workorder.save()
+                        messages.success(request, f'Inspection created successfully! Work Order {workorder.work_order_number} updated to Intake.')
+                        return redirect('workorders:detail', pk=workorder.id)
+                    except WorkOrder.DoesNotExist:
+                        pass
+                
                 messages.success(request, 'Inspection created successfully!')
                 return redirect('inspections:inspection-detail', pk=inspection.id)
                 
@@ -124,16 +159,47 @@ def inspection_create(request):
             'performed_by': request.user,
             'inspection_date': timezone.now()  # Auto-fill current date/time
         }
+        
+        # Pre-fill customer if provided in query parameters
+        customer_id = request.GET.get('customer')
+        if customer_id:
+            try:
+                customer = Customer.objects.get(pk=customer_id)
+                initial_data['customer'] = customer
+            except Customer.DoesNotExist:
+                pass
+        
+        # Pre-fill vehicle if provided in query parameters
+        vehicle_id = request.GET.get('vehicle')
+        if vehicle_id:
+            try:
+                vehicle = Vehicle.objects.get(pk=vehicle_id)
+                initial_data['vehicle'] = vehicle
+            except Vehicle.DoesNotExist:
+                pass
+        
         form = InspectionForm(initial=initial_data)
     
     # Get templates and customers for the form
     templates = InspectionTemplate.objects.filter(is_active=True).prefetch_related('categories__items')
     customers = Customer.objects.select_related('user').filter(user__is_active=True).order_by('user__first_name')
     
+    # Get work order ID if provided (to link back after inspection)
+    workorder_id = request.GET.get('workorder')
+    workorder = None
+    if workorder_id:
+        try:
+            from apps.workorders.models import WorkOrder
+            workorder = WorkOrder.objects.select_related('customer__user', 'vehicle').get(pk=workorder_id)
+        except:
+            pass
+    
     context = {
         'form': form,
         'templates': templates,
         'customers': customers,
+        'workorder_id': workorder_id,
+        'workorder': workorder,
     }
     
     return render(request, 'inspections/inspection_form_new.html', context)
@@ -258,7 +324,7 @@ def inspection_print(request, pk):
         'results_by_item': results_by_item,
     }
     
-    return render(request, 'inspections/inspection_print.html', context)
+    return render(request, 'inspections/inspection_print_clean.html', context)
 
 
 @login_required
@@ -295,7 +361,7 @@ def inspection_pdf(request, pk):
         }
         
         # Render template to HTML
-        html_string = render_to_string('inspections/inspection_print.html', context)
+        html_string = render_to_string('inspections/inspection_print_clean.html', context)
         
         # Generate PDF
         pdf = HTML(string=html_string).write_pdf()
@@ -580,5 +646,63 @@ def template_checklist_api(request, pk):
     return JsonResponse({
         'template_id': template.id,
         'template_name': template.name,
+        'categories': categories_data
+    })
+
+
+@login_required
+def templates_list_api(request):
+    """API endpoint to get list of active templates"""
+    templates = InspectionTemplate.objects.filter(is_active=True).annotate(
+        category_count=Count('categories', distinct=True),
+        item_count=Count('categories__items', distinct=True)
+    )
+    
+    templates_data = []
+    for template in templates:
+        templates_data.append({
+            'id': template.id,
+            'name': template.name,
+            'description': template.description,
+            'category_count': template.category_count,
+            'item_count': template.item_count,
+            'is_default': template.is_default
+        })
+    
+    return JsonResponse({'templates': templates_data})
+
+
+@login_required
+def template_details_api(request, pk):
+    """API endpoint to get full template details with categories and items"""
+    template = get_object_or_404(
+        InspectionTemplate.objects.prefetch_related('categories__items'),
+        pk=pk,
+        is_active=True
+    )
+    
+    categories_data = []
+    for category in template.categories.all().order_by('order'):
+        items_data = []
+        for item in category.items.all().order_by('order'):
+            items_data.append({
+                'id': item.id,
+                'name': item.name,
+                'description': item.description,
+                'item_type': item.item_type,
+                'is_critical': item.is_critical,
+            })
+        
+        categories_data.append({
+            'id': category.id,
+            'name': category.name,
+            'description': category.description,
+            'items': items_data
+        })
+    
+    return JsonResponse({
+        'id': template.id,
+        'name': template.name,
+        'description': template.description,
         'categories': categories_data
     })

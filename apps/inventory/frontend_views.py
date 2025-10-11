@@ -1354,3 +1354,113 @@ def category_delete_view(request, pk):
     category.delete()
     messages.success(request, f'Category "{category_name}" has been deleted successfully.')
     return redirect('inventory:category_list')
+
+
+# AJAX API Views for Purchase Order Creation
+from django.http import JsonResponse
+
+def supplier_info_api(request, pk):
+    """Return supplier info as JSON for AJAX calls"""
+    try:
+        supplier = get_object_or_404(Supplier, pk=pk)
+        data = {
+            'id': supplier.id,
+            'name': supplier.name,
+            'supplier_code': supplier.supplier_code,
+            'contact_person': supplier.contact_person,
+            'email': supplier.email,
+            'phone': supplier.phone,
+            'address': supplier.address,
+            'rating': None  # Add rating field if it exists in your model
+        }
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=404)
+
+
+def part_info_api(request, pk):
+    """Return part info as JSON for AJAX calls"""
+    try:
+        part = get_object_or_404(Part, pk=pk)
+        data = {
+            'id': part.id,
+            'name': part.name,
+            'part_number': part.part_number,
+            'quantity_in_stock': part.quantity_in_stock,
+            'cost_price': float(part.cost_price) if part.cost_price else 0,
+            'reorder_point': part.reorder_point,
+            'reorder_quantity': part.reorder_quantity,
+        }
+        return JsonResponse(data)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=404)
+
+
+def low_stock_parts_api(request):
+    """Return low stock parts as JSON for AJAX calls"""
+    try:
+        supplier_id = request.GET.get('supplier')
+        
+        # Base query for low stock parts
+        queryset = Part.objects.filter(
+            is_active=True,
+            quantity_in_stock__lte=F('reorder_point')
+        )
+        
+        # Filter by supplier if provided
+        if supplier_id:
+            queryset = queryset.filter(
+                suppliers__id=supplier_id
+            ).distinct()
+        
+        parts_data = []
+        for part in queryset:
+            parts_data.append({
+                'id': part.id,
+                'name': part.name,
+                'part_number': part.part_number,
+                'quantity_in_stock': part.quantity_in_stock,
+                'reorder_point': part.reorder_point,
+                'reorder_quantity': part.reorder_quantity,
+                'cost_price': float(part.cost_price) if part.cost_price else 0,
+            })
+        
+        return JsonResponse({'parts': parts_data})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def inventory_search_api(request):
+    """Search inventory parts and return as JSON for AJAX calls"""
+    try:
+        query = request.GET.get('q', '').strip()
+        
+        if not query:
+            return JsonResponse({'results': []})
+        
+        # Search parts by name, part number, manufacturer, or description
+        parts = Part.objects.filter(
+            Q(name__icontains=query) |
+            Q(part_number__icontains=query) |
+            Q(manufacturer__icontains=query) |
+            Q(description__icontains=query),
+            is_active=True
+        )[:20]  # Limit to 20 results
+        
+        results = []
+        for part in parts:
+            results.append({
+                'id': part.id,
+                'name': part.name,
+                'part_number': part.part_number,
+                'manufacturer': part.manufacturer or 'N/A',
+                'quantity': part.quantity_in_stock,
+                'cost': float(part.cost_price) if part.cost_price else 0.0,
+                'selling_price': float(part.selling_price) if part.selling_price else 0.0,
+                'description': part.description or '',
+            })
+        
+        return JsonResponse({'results': results})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

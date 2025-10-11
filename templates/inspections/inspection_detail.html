@@ -32,44 +32,89 @@
     .result-item {
         display: flex;
         align-items: center;
-        padding: 0.5rem 0.75rem;
+        justify-content: space-between;
+        padding: 0.5rem 0;
         border-bottom: 1px solid #f0f0f0;
         transition: background 0.2s;
+        min-height: 45px;
     }
     .result-item:last-child {
         border-bottom: none;
     }
     .result-item:hover {
         background: #f8f9fa;
+        border-radius: 0.25rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
     }
     .result-pass {
         border-left: 3px solid #10b981;
         background: #f0fdf4;
+        padding-left: 0.75rem;
+        margin-left: -0.25rem;
     }
     .result-fail {
         border-left: 3px solid #ef4444;
         background: #fef2f2;
+        padding-left: 0.75rem;
+        margin-left: -0.25rem;
     }
     .result-warning {
         border-left: 3px solid #f59e0b;
         background: #fffbeb;
+        padding-left: 0.75rem;
+        margin-left: -0.25rem;
     }
     .result-name {
         flex: 1;
         font-size: 0.9rem;
         font-weight: 500;
+        line-height: 1.4;
+        color: #333;
+    }
+    .result-name strong {
+        font-weight: 600;
+    }
+    .result-name small {
+        display: block;
+        margin-top: 0.15rem;
+        font-size: 0.8rem;
+        color: #6c757d;
+        line-height: 1.3;
     }
     .result-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
+        font-size: 0.813rem;
+        padding: 0.3rem 0.75rem;
+        font-weight: 500;
+    }
+    .categories-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    @media (max-width: 768px) {
+        .categories-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    .category-section {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 1rem 1.25rem;
+        margin-bottom: 0;
+        height: 100%;
     }
     .category-header {
-        background: #f8f9fa;
-        padding: 0.75rem 1rem;
-        border-left: 4px solid var(--bs-primary);
-        margin-bottom: 0.5rem;
+        background: transparent;
+        padding: 0 0 0.5rem 0;
+        border-bottom: 2px solid var(--bs-primary);
+        margin-bottom: 0.75rem;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 1rem;
     }
     .summary-stats {
         display: flex;
@@ -201,6 +246,16 @@
                         <div class="info-label">Template</div>
                         <div class="info-value">{{ inspection.template.name }}</div>
                     </div>
+                    {% if inspection.work_order %}
+                    <div class="info-item">
+                        <div class="info-label">Work Order</div>
+                        <div class="info-value">
+                            <a href="{% url 'workorders:workorder-detail' inspection.work_order.id %}" class="text-decoration-none">
+                                #{{ inspection.work_order.work_order_number }}
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="row g-0">
                         <div class="col-md-4">
                             <div class="info-item">
@@ -211,7 +266,7 @@
                         <div class="col-md-4">
                             <div class="info-item">
                                 <div class="info-label">Technician</div>
-                                <div class="info-value">{{ inspection.technician.get_full_name }}</div>
+                                <div class="info-value">{{ inspection.performed_by.get_full_name }}</div>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -253,25 +308,26 @@
                     </div>
                     
                     <!-- Results by Category -->
+                    <div class="categories-grid">
                     {% for category in inspection.template.categories.all %}
-                    <div class="category-header">
-                        <i class="fas fa-folder me-2"></i>{{ category.name }}
-                        <small class="text-muted ms-2">({{ category.items.count }} items)</small>
-                    </div>
-                    
-                    <div class="mb-4">
-                        {% for item in category.items.all %}
-                        {% with result=results_by_item|get_item:item.id|default:None %}
-                        <div class="result-item {% if result.result == 'pass' %}result-pass{% elif result.result == 'fail' %}result-fail{% elif result.result == 'advisory' %}result-warning{% endif %}">
-                            <div class="result-name">
-                                <strong>{{ item.name }}</strong>
-                                {% if item.is_critical %}
-                                <i class="fas fa-exclamation-triangle text-danger ms-1" title="Critical"></i>
-                                {% endif %}
-                                {% if result.notes %}
-                                <br><small class="text-muted">{{ result.notes }}</small>
-                                {% endif %}
+                        <div class="category-section">
+                            <div class="category-header">
+                                <i class="fas fa-folder me-2 text-primary"></i>{{ category.name }}
+                                <small class="text-muted ms-2">({{ category.items.count }} items)</small>
                             </div>
+                            
+                            {% for item in category.items.all %}
+                            {% with result=results_by_item|get_item:item.id|default:None %}
+                            <div class="result-item {% if result.result == 'pass' %}result-pass{% elif result.result == 'fail' %}result-fail{% elif result.result == 'advisory' %}result-warning{% endif %}">
+                                <div class="result-name">
+                                    <strong>{{ item.name }}</strong>
+                                    {% if item.is_critical %}
+                                    <i class="fas fa-exclamation-triangle text-danger ms-1" title="Critical"></i>
+                                    {% endif %}
+                                    {% if result.notes %}
+                                    <small>{{ result.notes }}</small>
+                                    {% endif %}
+                                </div>
                             
                             <div class="text-end">
                                 {% if result %}
@@ -301,11 +357,12 @@
                                 <img src="{{ result.photo.url }}" alt="Photo" style="width: 50px; height: 50px; object-fit: cover; border-radius: 0.25rem; border: 2px solid #e5e7eb;">
                             </div>
                             {% endif %}
+                            </div>
+                            {% endwith %}
+                            {% endfor %}
                         </div>
-                        {% endwith %}
-                        {% endfor %}
-                    </div>
                     {% endfor %}
+                    </div><!-- Close categories-grid -->
                 </div>
             </div>
 

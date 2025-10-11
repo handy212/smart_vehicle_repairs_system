@@ -478,3 +478,56 @@ def get_customers_ajax(request):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def create_appointment_api(request):
+    """API endpoint to create an appointment from work order creation"""
+    try:
+        data = json.loads(request.body)
+        
+        # Required fields
+        customer_id = data.get('customer_id')
+        vehicle_id = data.get('vehicle_id')
+        service_type = data.get('service_type')
+        appointment_date = data.get('appointment_date')
+        appointment_time = data.get('appointment_time')
+        
+        if not all([customer_id, vehicle_id, service_type, appointment_date, appointment_time]):
+            return JsonResponse({'error': 'Missing required fields'}, status=400)
+        
+        # Get customer and vehicle
+        customer = get_object_or_404(Customer, id=customer_id)
+        vehicle = get_object_or_404(Vehicle, id=vehicle_id)
+        
+        # Create appointment
+        appointment = Appointment.objects.create(
+            customer=customer,
+            vehicle=vehicle,
+            service_type=service_type,
+            appointment_date=appointment_date,
+            appointment_time=appointment_time,
+            priority=data.get('priority', 'normal'),
+            status='pending',
+            customer_concerns=data.get('service_description', ''),
+            special_instructions=data.get('special_instructions', ''),
+            created_by=request.user
+        )
+        
+        # Send confirmation if requested
+        if data.get('send_confirmation'):
+            # TODO: Implement notification sending
+            pass
+        
+        return JsonResponse({
+            'success': True,
+            'appointment_id': appointment.id,
+            'appointment_number': appointment.appointment_number,
+            'message': 'Appointment scheduled successfully'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

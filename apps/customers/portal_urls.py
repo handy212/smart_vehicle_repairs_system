@@ -15,6 +15,8 @@ urlpatterns = [
     path('my-appointments/', views.my_appointments, name='my-appointments'),
     path('my-invoices/', views.my_invoices, name='my-invoices'),
     path('my-history/', views.my_history, name='my-history'),
+    path('my-estimates/', views.my_estimates, name='my-estimates'),
+    path('estimate/<int:estimate_id>/', views.estimate_detail, name='estimate-detail'),
     path('book-appointment/', views.book_appointment, name='book-appointment'),
     path('payment/<int:invoice_id>/', views.make_payment, name='make-payment'),
     

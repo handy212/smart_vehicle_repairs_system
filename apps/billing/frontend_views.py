@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from django.urls import reverse
 from django.template.loader import render_to_string
+from django.views.decorators.http import require_http_methods
 from decimal import Decimal
 import json
 import csv
@@ -197,6 +198,49 @@ def invoice_detail(request, invoice_id):
 
 
 @login_required
+@require_http_methods(["POST"])
+def send_invoice_email(request, invoice_id):
+    """Send invoice to customer via email using the notification system"""
+    from apps.notifications_app.triggers import NotificationTriggers
+    
+    # Check permissions
+    if request.user.role not in ['admin', 'manager', 'receptionist']:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+    
+    try:
+        invoice = get_object_or_404(Invoice, id=invoice_id)
+        
+        # Validate customer has user account
+        if not invoice.customer.user:
+            return JsonResponse({
+                'success': False,
+                'error': 'Customer does not have a user account to receive emails'
+            })
+        
+        # Update invoice status if it's draft
+        if invoice.status == 'draft':
+            invoice.status = 'sent'
+            invoice.sent_at = timezone.now()
+            invoice.sent_by = request.user
+            invoice.save()
+        
+        # Use existing notification system to send invoice
+        notification_triggers = NotificationTriggers()
+        notification_triggers.invoice_sent(invoice)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Invoice sent successfully to {invoice.customer.user.email}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Failed to send invoice: {str(e)}'
+        })
+
+
+@login_required
 def invoice_create(request):
     """Create new invoice"""
     
@@ -362,11 +406,11 @@ def estimate_list(request):
         estimates = estimates.filter(customer_id=customer_filter)
     
     search_query = request.GET.get('search')
-    if search_query:
+    if search_query and search_query != 'None':
         estimates = estimates.filter(
             Q(estimate_number__icontains=search_query) |
-            Q(customer__first_name__icontains=search_query) |
-            Q(customer__last_name__icontains=search_query) |
+            Q(customer__user__first_name__icontains=search_query) |
+            Q(customer__user__last_name__icontains=search_query) |
             Q(title__icontains=search_query)
         )
     
@@ -497,6 +541,95 @@ def estimate_detail(request, estimate_id):
     }
     
     return render(request, 'billing/estimate_detail.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def convert_estimate_to_invoice(request, estimate_id):
+    """Convert an approved estimate to an invoice"""
+    
+    # Check permissions
+    if request.user.role not in ['admin', 'manager']:
+        messages.error(request, 'You do not have permission to convert estimates to invoices.')
+        return redirect('billing:estimate_detail', estimate_id=estimate_id)
+    
+    estimate = get_object_or_404(
+        Estimate.objects.select_related('customer', 'vehicle', 'work_order').prefetch_related('line_items'),
+        id=estimate_id
+    )
+    
+    # Validate estimate is approved
+    if estimate.status != 'approved':
+        messages.error(request, 'Only approved estimates can be converted to invoices.')
+        return redirect('billing:estimate_detail', estimate_id=estimate_id)
+    
+    # Check if already converted
+    if estimate.status == 'converted':
+        messages.warning(request, 'This estimate has already been converted to an invoice.')
+        existing_invoice = estimate.invoices.first()
+        if existing_invoice:
+            return redirect('billing:invoice_detail', invoice_id=existing_invoice.id)
+        return redirect('billing:estimate_detail', estimate_id=estimate_id)
+    
+    try:
+        from datetime import timedelta
+        
+        # Create invoice from estimate
+        invoice = Invoice.objects.create(
+            customer=estimate.customer,
+            vehicle=estimate.vehicle,
+            work_order=estimate.work_order,
+            estimate=estimate,
+            status='draft',
+            invoice_date=timezone.now().date(),
+            due_date=(timezone.now() + timedelta(days=30)).date(),
+            description=estimate.description,
+            notes=estimate.notes,
+            customer_notes=estimate.customer_notes,
+            labor_subtotal=estimate.labor_subtotal,
+            parts_subtotal=estimate.parts_subtotal,
+            sublet_subtotal=estimate.sublet_subtotal,
+            subtotal=estimate.subtotal,
+            discount_amount=estimate.discount_amount,
+            discount_percentage=estimate.discount_percentage,
+            discount_reason=estimate.discount_reason,
+            tax_amount=estimate.tax_amount,
+            shop_supplies_fee=estimate.shop_supplies_fee,
+            environmental_fee=estimate.environmental_fee,
+            total=estimate.total,
+            amount_due=estimate.total,
+            created_by=request.user,
+        )
+        
+        # Note: Invoices in this system don't have separate line items
+        # They pull data from the work order's tasks and parts
+        # The line item details from the estimate are preserved in the estimate itself
+        
+        # Update estimate status
+        estimate.status = 'converted'
+        estimate.converted_date = timezone.now()
+        estimate.save()
+        
+        # Update work order status if linked
+        if estimate.work_order:
+            estimate.work_order.status = 'in_progress'
+            estimate.work_order.save()
+            
+            # Create activity note
+            from apps.workorders.models import WorkOrderNote
+            WorkOrderNote.objects.create(
+                work_order=estimate.work_order,
+                note_type='status',
+                note=f'Estimate #{estimate.estimate_number} converted to Invoice #{invoice.invoice_number}',
+                created_by=request.user
+            )
+        
+        messages.success(request, f'Estimate successfully converted to Invoice #{invoice.invoice_number}')
+        return redirect('billing:invoice_detail', invoice_id=invoice.id)
+        
+    except Exception as e:
+        messages.error(request, f'Error converting estimate to invoice: {str(e)}')
+        return redirect('billing:estimate_detail', estimate_id=estimate_id)
 
 
 @login_required

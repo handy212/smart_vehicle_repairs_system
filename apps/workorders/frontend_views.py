@@ -7,6 +7,7 @@ from django.db.models import Q, Count, Sum, F, Max
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from decimal import Decimal
 import json
 import csv
 from datetime import datetime, timedelta
@@ -18,6 +19,7 @@ from .models import (
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.accounts.models import User
+from apps.billing.models import Estimate, EstimateLineItem
 
 
 @login_required
@@ -710,7 +712,7 @@ def update_task_status(request, pk, task_id):
 
 
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(["DELETE", "POST"])
 def delete_task(request, pk, task_id):
     """
     Delete a service task
@@ -731,5 +733,464 @@ def delete_task(request, pk, task_id):
             'message': f'Task "{task_description}" deleted successfully'
         })
         
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def get_task(request, pk, task_id):
+    """Get task details for editing"""
+    try:
+        workorder = get_object_or_404(WorkOrder, pk=pk)
+        task = get_object_or_404(ServiceTask, id=task_id, work_order=workorder)
+        
+        return JsonResponse({
+            'success': True,
+            'task': {
+                'id': task.id,
+                'task_type': task.task_type,
+                'description': task.description,
+                'detailed_notes': task.detailed_notes or '',
+                'assigned_to': task.assigned_to.id if task.assigned_to else None,
+                'estimated_hours': float(task.estimated_hours) if task.estimated_hours else 0,
+                'labor_rate': float(task.labor_rate) if task.labor_rate else 0,
+                'status': task.status,
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_task(request, pk, task_id):
+    """Update an existing service task"""
+    try:
+        workorder = get_object_or_404(WorkOrder, pk=pk)
+        task = get_object_or_404(ServiceTask, id=task_id, work_order=workorder)
+        
+        # Check permissions
+        if request.user.role not in ['admin', 'manager', 'technician']:
+            return JsonResponse({'success': False, 'error': 'Permission denied'})
+        
+        # Update task fields
+        task.task_type = request.POST.get('task_type')
+        task.description = request.POST.get('description')
+        task.detailed_notes = request.POST.get('detailed_notes', '')
+        
+        assigned_to_id = request.POST.get('assigned_to')
+        if assigned_to_id:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            task.assigned_to = User.objects.get(id=assigned_to_id)
+        else:
+            task.assigned_to = None
+        
+        estimated_hours = request.POST.get('estimated_hours')
+        if estimated_hours:
+            task.estimated_hours = Decimal(estimated_hours)
+        
+        labor_rate = request.POST.get('labor_rate')
+        if labor_rate:
+            task.labor_rate = Decimal(labor_rate)
+        
+        # Calculate labor cost
+        if task.estimated_hours and task.labor_rate:
+            task.labor_cost = task.estimated_hours * task.labor_rate
+        
+        task.save()
+        
+        # Create activity note
+        WorkOrderNote.objects.create(
+            work_order=workorder,
+            note_type='task',
+            note=f'Task updated: {task.description}',
+            created_by=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Task updated successfully'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_diagnosis(request, pk):
+    """
+    Update diagnosis notes and estimate for a work order
+    """
+    workorder = get_object_or_404(WorkOrder, pk=pk)
+    
+    # Check if user can perform diagnosis
+    if request.user.role not in ['admin', 'manager', 'technician']:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+    
+    try:
+        # Update diagnosis information
+        workorder.diagnosis_notes = request.POST.get('diagnosis_notes', '').strip()
+        workorder.diagnosis_by = request.user
+        workorder.diagnosis_completed_at = timezone.now()
+        
+        # Update labor estimates
+        estimated_labor_hours = request.POST.get('estimated_labor_hours')
+        if estimated_labor_hours:
+            workorder.estimated_labor_hours = Decimal(estimated_labor_hours)
+        
+        estimated_labor_cost = request.POST.get('estimated_labor_cost')
+        if estimated_labor_cost:
+            workorder.estimated_labor_cost = Decimal(estimated_labor_cost)
+        
+        workorder.save()
+        
+        # Create activity note
+        WorkOrderNote.objects.create(
+            work_order=workorder,
+            note_type='diagnosis',
+            note=f'Diagnosis completed: {workorder.diagnosis_notes[:100]}...',
+            created_by=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Diagnosis updated successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def add_part(request, pk):
+    """
+    Add a part to the work order estimate
+    """
+    workorder = get_object_or_404(WorkOrder, pk=pk)
+    
+    # Check permissions
+    if request.user.role not in ['admin', 'manager', 'technician']:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+    
+    try:
+        # Get form data
+        part_number = request.POST.get('part_number', '').strip()
+        part_name = request.POST.get('part_name', '').strip()
+        description = request.POST.get('description', '').strip()
+        quantity = Decimal(request.POST.get('quantity', '1'))
+        unit_cost = Decimal(request.POST.get('unit_cost', '0'))
+        markup_percentage = Decimal(request.POST.get('markup_percentage', '0'))
+        task_id = request.POST.get('task_id', '').strip()
+        
+        # Validate required fields
+        if not part_number or not part_name:
+            return JsonResponse({'success': False, 'error': 'Part number and name are required'})
+        
+        # Get task if provided
+        task = None
+        if task_id:
+            try:
+                task = ServiceTask.objects.get(id=task_id, work_order=workorder)
+            except ServiceTask.DoesNotExist:
+                pass
+        
+        # Calculate costs
+        total_cost = quantity * unit_cost
+        selling_price = total_cost * (Decimal('1') + markup_percentage / Decimal('100'))
+        
+        # Create the part
+        part = WorkOrderPart.objects.create(
+            work_order=workorder,
+            task=task,
+            part_number=part_number,
+            part_name=part_name,
+            description=description,
+            quantity=quantity,
+            unit_cost=unit_cost,
+            total_cost=total_cost,
+            markup_percentage=markup_percentage,
+            selling_price=selling_price,
+            status='pending'
+        )
+        
+        # Update work order estimated parts cost
+        total = workorder.parts.aggregate(total=Sum('selling_price'))['total']
+        workorder.estimated_parts_cost = Decimal(str(total)) if total is not None else Decimal('0')
+        workorder.save()
+        
+        # Create activity note
+        WorkOrderNote.objects.create(
+            work_order=workorder,
+            note_type='parts',
+            note=f'Added part: {part_name} (Qty: {quantity})',
+            created_by=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Part "{part_name}" added successfully',
+            'part_id': part.id
+        })
+        
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': 'Invalid number format'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def delete_part(request, pk, part_id):
+    """
+    Delete a part from the work order
+    """
+    workorder = get_object_or_404(WorkOrder, pk=pk)
+    part = get_object_or_404(WorkOrderPart, id=part_id, work_order=workorder)
+    
+    # Check permissions
+    if request.user.role not in ['admin', 'manager', 'technician']:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+    
+    try:
+        part_name = part.part_name
+        part.delete()
+        
+        # Update work order estimated parts cost
+        total = workorder.parts.aggregate(total=Sum('selling_price'))['total']
+        workorder.estimated_parts_cost = Decimal(str(total)) if total is not None else Decimal('0')
+        workorder.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Part "{part_name}" deleted successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_part_status(request, pk, part_id):
+    """
+    Update the status of a part (pending, ordered, received, installed)
+    """
+    workorder = get_object_or_404(WorkOrder, pk=pk)
+    part = get_object_or_404(WorkOrderPart, id=part_id, work_order=workorder)
+    
+    # Check permissions
+    if request.user.role not in ['admin', 'manager', 'technician']:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+    
+    try:
+        data = json.loads(request.body)
+        new_status = data.get('status')
+        
+        if new_status not in ['pending', 'ordered', 'received', 'installed', 'returned']:
+            return JsonResponse({'success': False, 'error': 'Invalid status'})
+        
+        # Update status and tracking fields
+        part.status = new_status
+        
+        if new_status == 'ordered' and not part.ordered_at:
+            part.ordered_at = timezone.now()
+        elif new_status == 'received' and not part.received_at:
+            part.received_at = timezone.now()
+        elif new_status == 'installed':
+            part.installed_at = timezone.now()
+            part.installed_by = request.user
+        
+        part.save()
+        
+        # Create activity note
+        WorkOrderNote.objects.create(
+            work_order=workorder,
+            note_type='parts',
+            note=f'Part "{part.part_name}" status changed to {part.get_status_display()}',
+            created_by=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Part status updated to {part.get_status_display()}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def request_approval(request, pk):
+    """
+    Submit estimate for customer approval
+    """
+    workorder = get_object_or_404(WorkOrder, pk=pk)
+    
+    # Check permissions
+    if request.user.role not in ['admin', 'manager', 'technician']:
+        return JsonResponse({'success': False, 'error': 'Permission denied'})
+    
+    try:
+        # Validate that diagnosis is complete
+        if not workorder.diagnosis_notes:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Please complete the diagnosis notes before requesting approval'
+            })
+        
+        # Check if estimate already exists
+        if hasattr(workorder, 'estimate') and workorder.estimate:
+            # Update existing estimate status
+            estimate = workorder.estimate
+            estimate.status = 'sent'
+            estimate.save()
+        else:
+            # Create an Estimate record from the work order
+            from datetime import timedelta
+            
+            estimate = Estimate.objects.create(
+                customer=workorder.customer,
+                vehicle=workorder.vehicle,
+                work_order=workorder,
+                status='sent',
+                estimate_date=timezone.now().date(),
+                valid_until=(timezone.now() + timedelta(days=30)).date(),
+                title=f"Estimate for {workorder.vehicle.year} {workorder.vehicle.make} {workorder.vehicle.model}",
+                description=workorder.diagnosis_notes or workorder.problem_description,
+                labor_subtotal=workorder.estimated_labor_cost or Decimal('0'),
+                parts_subtotal=workorder.estimated_parts_cost or Decimal('0'),
+                subtotal=workorder.estimated_total or Decimal('0'),
+                total=workorder.estimated_total or Decimal('0'),
+                created_by=request.user,
+                sent_by=request.user,
+            )
+            
+            # Create line items for labor (tasks)
+            for task in workorder.tasks.all():
+                EstimateLineItem.objects.create(
+                    estimate=estimate,
+                    item_type='labor',
+                    description=f"{task.get_task_type_display()} - {task.description}",
+                    quantity=task.estimated_hours or Decimal('1'),
+                    unit_price=task.labor_rate or Decimal('0'),
+                    total=(task.estimated_hours or Decimal('1')) * (task.labor_rate or Decimal('0')),
+                )
+            
+            # Create line items for parts
+            for part in workorder.parts.all():
+                EstimateLineItem.objects.create(
+                    estimate=estimate,
+                    item_type='part',
+                    description=f"{part.part_name} ({part.part_number})",
+                    quantity=part.quantity,
+                    unit_price=part.unit_cost,
+                    total=part.selling_price,
+                )
+        
+        # Update work order status
+        workorder.status = 'awaiting_approval'
+        workorder.requires_approval = True
+        workorder.save()
+        
+        # Create activity note
+        WorkOrderNote.objects.create(
+            work_order=workorder,
+            note_type='status',
+            note=f'Estimate #{estimate.estimate_number} submitted for customer approval. Total: ${workorder.estimated_total}',
+            created_by=request.user
+        )
+        
+        # TODO: Send notification to customer
+        # notification_triggers.send_estimate_for_approval(workorder)
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Estimate #{estimate.estimate_number} submitted for customer approval'
+        })
+        
+    except Exception as e:
+        import traceback
+        return JsonResponse({'success': False, 'error': f'{str(e)}\n{traceback.format_exc()}'})
+
+
+@login_required
+def workorder_get_part(request, pk, part_id):
+    """Get part details for editing"""
+    try:
+        workorder = get_object_or_404(WorkOrder, pk=pk)
+        part = get_object_or_404(WorkOrderPart, pk=part_id, work_order=workorder)
+        
+        return JsonResponse({
+            'success': True,
+            'part': {
+                'id': part.id,
+                'part_number': part.part_number,
+                'part_name': part.part_name,
+                'description': part.description or '',
+                'quantity': part.quantity,
+                'unit_cost': float(part.unit_cost),
+                'markup_percentage': part.markup_percentage or 30,
+                'total_cost': float(part.total_cost),
+                'status': part.status,
+                'task_id': part.task.id if part.task else None,
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def workorder_update_part(request, pk, part_id):
+    """Update an existing part in the work order"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    
+    try:
+        workorder = get_object_or_404(WorkOrder, pk=pk)
+        part = get_object_or_404(WorkOrderPart, pk=part_id, work_order=workorder)
+        
+        # Update part fields
+        part.part_number = request.POST.get('part_number')
+        part.part_name = request.POST.get('part_name')
+        part.description = request.POST.get('description', '')
+        part.quantity = Decimal(request.POST.get('quantity', '1'))
+        part.unit_cost = Decimal(request.POST.get('unit_cost', '0'))
+        part.markup_percentage = Decimal(request.POST.get('markup_percentage', '30'))
+        
+        # Handle task assignment
+        task_id = request.POST.get('task_id', '').strip()
+        if task_id:
+            try:
+                part.task = ServiceTask.objects.get(id=task_id, work_order=workorder)
+            except ServiceTask.DoesNotExist:
+                part.task = None
+        else:
+            part.task = None
+        
+        # Calculate total cost and selling price
+        part.total_cost = part.unit_cost * part.quantity
+        part.selling_price = part.total_cost * (Decimal('1') + part.markup_percentage / Decimal('100'))
+        part.save()
+        
+        # Update work order estimated parts cost
+        total = workorder.parts.aggregate(total=Sum('selling_price'))['total']
+        workorder.estimated_parts_cost = Decimal(str(total)) if total is not None else Decimal('0')
+        workorder.save()
+        
+        # Create activity note
+        WorkOrderNote.objects.create(
+            work_order=workorder,
+            note_type='part',
+            note=f'Part updated: {part.part_name} (Qty: {part.quantity})',
+            created_by=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Part updated successfully'
+        })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

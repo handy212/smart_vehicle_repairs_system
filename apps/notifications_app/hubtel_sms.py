@@ -1,10 +1,11 @@
 """
 Hubtel SMS Integration for Ghana
 Sends SMS notifications via Hubtel SMS Gateway
+Uses Hubtel SMSC API: https://smsc.hubtel.com/v1/messages/send
 """
 import logging
+import requests
 from django.conf import settings
-from pyhubtel_sms import SMS
 
 logger = logging.getLogger(__name__)
 
@@ -13,31 +14,7 @@ HUBTEL_CLIENT_ID = getattr(settings, 'HUBTEL_CLIENT_ID', '')
 HUBTEL_CLIENT_SECRET = getattr(settings, 'HUBTEL_CLIENT_SECRET', '')
 HUBTEL_FROM = getattr(settings, 'HUBTEL_FROM', 'Vehicle Repairs')
 HUBTEL_ENABLED = getattr(settings, 'HUBTEL_SMS_ENABLED', False)
-
-
-def initialize_hubtel():
-    """
-    Initialize Hubtel SMS client
-    Returns SMS client instance or None if not configured
-    """
-    if not HUBTEL_ENABLED:
-        logger.info("Hubtel SMS is disabled")
-        return None
-    
-    if not HUBTEL_CLIENT_ID or not HUBTEL_CLIENT_SECRET:
-        logger.warning("Hubtel SMS credentials not configured")
-        return None
-    
-    try:
-        client = SMS(
-            client_id=HUBTEL_CLIENT_ID,
-            client_secret=HUBTEL_CLIENT_SECRET
-        )
-        logger.info("Hubtel SMS client initialized successfully")
-        return client
-    except Exception as e:
-        logger.error(f"Failed to initialize Hubtel SMS client: {e}")
-        return None
+HUBTEL_API_URL = 'https://smsc.hubtel.com/v1/messages/send'
 
 
 def is_hubtel_available():
@@ -118,7 +95,7 @@ def validate_phone_number(phone_number):
 
 def send_sms(phone_number, message, sender=None):
     """
-    Send SMS via Hubtel
+    Send SMS via Hubtel SMSC API
     
     Args:
         phone_number (str): Recipient phone number
@@ -131,9 +108,9 @@ def send_sms(phone_number, message, sender=None):
     Response dict on success:
         {
             'message_id': 'xxx',
-            'status': 'sent',
-            'network': 'MTN',
-            'rate': 0.05
+            'status': 0,
+            'rate': 0.03,
+            'phone': '233244123456'
         }
     """
     if not is_hubtel_available():
@@ -153,37 +130,46 @@ def send_sms(phone_number, message, sender=None):
         logger.warning(f"Message too long ({len(message)} chars), truncating to 1000")
         message = message[:997] + "..."
     
-    # Initialize client
-    client = initialize_hubtel()
-    if not client:
-        return False, "Failed to initialize Hubtel SMS client"
-    
     # Use provided sender or default
     from_sender = sender or HUBTEL_FROM
     
     try:
-        # Send SMS
-        response = client.send_message(
-            recipient=formatted_phone,
-            message=message,
-            sender=from_sender
+        # Send SMS using Hubtel SMSC API (Quick Send - GET method)
+        response = requests.get(
+            HUBTEL_API_URL,
+            params={
+                'clientid': HUBTEL_CLIENT_ID,
+                'clientsecret': HUBTEL_CLIENT_SECRET,
+                'from': from_sender,
+                'to': formatted_phone,
+                'content': message
+            },
+            timeout=30
         )
         
-        # Check response
-        if response and response.get('status') in ['sent', 'success', 'queued']:
-            logger.info(f"SMS sent successfully to {formatted_phone}: {response.get('message_id')}")
+        # Parse response
+        response.raise_for_status()
+        data = response.json()
+        
+        # Check status (0 = sent successfully)
+        if data.get('status') == 0:
+            logger.info(f"SMS sent successfully to {formatted_phone}: {data.get('messageId')}")
             return True, {
-                'message_id': response.get('message_id'),
-                'status': response.get('status'),
-                'network': response.get('network'),
-                'rate': response.get('rate'),
+                'message_id': data.get('messageId'),
+                'status': data.get('status'),
+                'status_description': data.get('statusDescription'),
+                'rate': data.get('rate'),
+                'network_id': data.get('networkId'),
                 'phone': formatted_phone
             }
         else:
-            error_msg = response.get('message', 'Unknown error')
+            error_msg = data.get('statusDescription', f"Error status: {data.get('status')}")
             logger.error(f"Failed to send SMS to {formatted_phone}: {error_msg}")
             return False, f"Hubtel error: {error_msg}"
             
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request error sending SMS via Hubtel to {formatted_phone}: {e}")
+        return False, f"Hubtel request error: {str(e)}"
     except Exception as e:
         logger.error(f"Exception sending SMS via Hubtel to {formatted_phone}: {e}")
         return False, f"Hubtel error: {str(e)}"
@@ -228,6 +214,7 @@ def send_bulk_sms(phone_numbers, message, sender=None):
 def check_sms_balance():
     """
     Check Hubtel SMS account balance
+    Note: This requires a separate API endpoint that may not be available
     
     Returns:
         tuple: (success: bool, balance: float/str)
@@ -235,17 +222,10 @@ def check_sms_balance():
     if not is_hubtel_available():
         return False, "Hubtel not configured"
     
-    client = initialize_hubtel()
-    if not client:
-        return False, "Failed to initialize client"
-    
-    try:
-        balance = client.get_balance()
-        logger.info(f"Hubtel SMS balance: {balance}")
-        return True, balance
-    except Exception as e:
-        logger.error(f"Failed to check Hubtel balance: {e}")
-        return False, str(e)
+    # Hubtel SMSC API doesn't provide a balance check endpoint
+    # This would need to be implemented if Hubtel provides such an endpoint
+    logger.warning("Balance check not implemented for Hubtel SMSC API")
+    return False, "Balance check not available"
 
 
 # Example usage and testing

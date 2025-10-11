@@ -1162,7 +1162,7 @@ def test_email(request):
             
             log_audit(request.user, 'test_email', 'EmailConfiguration', '', to_email, request=request)
             
-            return JsonResponse({'success': True})
+            return JsonResponse({'success': True, 'email': to_email})
             
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
@@ -1173,49 +1173,48 @@ def test_email(request):
 @login_required
 @user_passes_test(is_admin)
 def test_sms(request):
-    """Send a test SMS to verify Hubtel configuration"""
+    """Send a test SMS to verify Hubtel configuration using the existing notification system"""
     if request.method == 'POST':
         try:
-            import requests
-            
             data = json.loads(request.body)
             phone_number = data.get('phone', '')
             
             if not phone_number:
                 return JsonResponse({'success': False, 'error': 'Phone number is required'})
             
-            # Get SMS settings
+            # Check if SMS is enabled in database (UI toggle)
             sms_enabled = SystemSettings.get_setting('sms_enabled', 'false') == 'true'
             if not sms_enabled:
-                return JsonResponse({'success': False, 'error': 'SMS is disabled in settings'})
+                return JsonResponse({'success': False, 'error': 'SMS is disabled in settings. Enable it first.'})
             
-            client_id = SystemSettings.get_setting('hubtel_client_id', '')
-            client_secret = SystemSettings.get_setting('hubtel_client_secret', '')
-            sender_id = SystemSettings.get_setting('hubtel_sender_id', '')
-            api_url = SystemSettings.get_setting('hubtel_api_url', 'https://api.hubtel.com/v1/messages/send')
+            # Use the existing Hubtel SMS system from notifications app
+            from apps.notifications_app.hubtel_sms import is_hubtel_available, send_sms, validate_phone_number
             
-            if not all([client_id, client_secret, sender_id]):
-                return JsonResponse({'success': False, 'error': 'Hubtel credentials not configured'})
-            
-            # Send test SMS via Hubtel
-            response = requests.post(
-                api_url,
-                auth=(client_id, client_secret),
-                json={
-                    'From': sender_id,
-                    'To': phone_number,
-                    'Content': 'Test message from Smart Vehicle Repairs System. Your SMS configuration is working!'
-                }
-            )
-            
-            if response.status_code == 200 or response.status_code == 201:
-                log_audit(request.user, 'test_sms', 'SMSConfiguration', '', phone_number, request=request)
-                return JsonResponse({'success': True})
-            else:
+            # Check if Hubtel is available
+            if not is_hubtel_available():
                 return JsonResponse({
                     'success': False, 
-                    'error': f'Hubtel API error: {response.status_code} - {response.text}'
+                    'error': 'Hubtel SMS not configured. Set HUBTEL_SMS_ENABLED=True and add credentials in .env file'
                 })
+            
+            # Validate phone number
+            is_valid, formatted_phone, error = validate_phone_number(phone_number)
+            if not is_valid:
+                return JsonResponse({'success': False, 'error': f'Invalid phone number: {error}'})
+            
+            # Send test SMS using the existing notification system
+            message = 'Test message from Smart Vehicle Repairs System. Your SMS configuration is working!'
+            success, response = send_sms(formatted_phone, message)
+            
+            if success:
+                log_audit(request.user, 'test_sms', 'SMSConfiguration', '', formatted_phone, request=request)
+                return JsonResponse({
+                    'success': True,
+                    'message_id': response.get('message_id') if isinstance(response, dict) else None,
+                    'phone': formatted_phone
+                })
+            else:
+                return JsonResponse({'success': False, 'error': str(response)})
             
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})

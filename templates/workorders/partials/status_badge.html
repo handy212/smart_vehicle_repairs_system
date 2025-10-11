@@ -5,6 +5,10 @@ Usage: {% include 'workorders/partials/status_badge.html' with status=workorder.
 
 {% if status == 'draft' %}
     <span class="badge bg-secondary status-badge">Draft</span>
+{% elif status == 'inspection' %}
+    <span class="badge bg-primary status-badge">
+        <i class="fas fa-search me-1"></i>Initial Inspection
+    </span>
 {% elif status == 'intake' %}
     <span class="badge bg-info status-badge">Intake</span>
 {% elif status == 'diagnosis' %}

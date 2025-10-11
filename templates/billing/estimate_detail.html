@@ -132,6 +132,7 @@
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container-fluid py-4">
     <!-- Estimate Header -->
     <div class="estimate-header">
@@ -341,6 +342,12 @@
                     </h6>
                     
                     <div class="d-grid gap-2">
+                        {% if estimate.status == 'approved' %}
+                        <button class="btn btn-success" onclick="convertToInvoice()">
+                            <i class="fas fa-file-invoice me-2"></i>Convert to Invoice
+                        </button>
+                        {% endif %}
+                        
                         <button class="btn btn-primary" onclick="emailEstimate()">
                             <i class="fas fa-envelope me-2"></i>Email to Customer
                         </button>
@@ -359,11 +366,19 @@
                                         <i class="fas fa-copy me-2"></i>Duplicate Estimate
                                     </a>
                                 </li>
+                                {% if estimate.status == 'approved' %}
                                 <li>
                                     <a class="dropdown-item" href="#" onclick="convertToInvoice()">
                                         <i class="fas fa-file-invoice me-2"></i>Convert to Invoice
                                     </a>
                                 </li>
+                                {% elif estimate.status == 'converted' %}
+                                <li>
+                                    <a class="dropdown-item disabled" href="#">
+                                        <i class="fas fa-check-circle me-2 text-success"></i>Already Converted
+                                    </a>
+                                </li>
+                                {% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="{% url 'billing:estimate_create' %}">
@@ -573,9 +588,24 @@ function duplicateEstimate() {
 }
 
 function convertToInvoice() {
-    if (confirm('Convert this estimate to an invoice?')) {
-        // Implementation for converting to invoice
-        window.location.href = `/billing/estimates/{{ estimate.id }}/convert-to-invoice/`;
+    if (confirm('Convert this estimate to an invoice? This will mark the estimate as converted and create a new invoice.')) {
+        // Create a form and submit it as POST
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/billing/estimates/{{ estimate.id }}/convert-to-invoice/`;
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 

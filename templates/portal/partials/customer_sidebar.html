@@ -36,6 +36,17 @@
                 </a>
             </li>
             
+            <!-- My Estimates -->
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'my-estimates' %}active{% endif %}" href="{% url 'portal:my-estimates' %}">
+                    <i class="fas fa-file-invoice"></i>
+                    Pending Estimates
+                    {% if pending_estimates_count > 0 %}
+                    <span class="badge bg-warning text-dark ms-2">{{ pending_estimates_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            
             <!-- My Invoices -->
             <li class="nav-item">
                 <a class="nav-link {% if request.resolver_match.url_name == 'my-invoices' %}active{% endif %}" href="{% url 'portal:my-invoices' %}">

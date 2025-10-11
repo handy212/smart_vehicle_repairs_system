@@ -308,7 +308,15 @@ function updateNotificationBell(playSound = false) {
             // Update last count
             lastNotificationCount = currentCount;
         })
-        .catch(error => console.error('Error fetching notifications:', error));
+        .catch(error => {
+            // Silently fail if notifications endpoint is not available
+            // This prevents console spam when the endpoint is not configured
+            if (lastNotificationCount === -1) {
+                // Only log on first failure
+                console.warn('Notifications endpoint not available. Real-time notifications disabled.');
+                lastNotificationCount = 0; // Prevent further logging
+            }
+        });
 }
 
 // Test function for debugging (available in console)

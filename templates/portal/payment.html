@@ -127,145 +127,78 @@
             <div class="card">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0">
-                        <i class="fas fa-wallet me-2"></i>Select Payment Method
+                        <i class="fas fa-wallet me-2"></i>Complete Your Payment
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" id="paymentForm">
-                        {% csrf_token %}
-                        
-                        <div class="row g-3 mb-4">
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Payment via Paystack</strong><br>
+                        Click "Pay Now" to securely pay with Mobile Money, Card, or Bank Transfer via Paystack.
+                    </div>
+                    
+                    <div class="payment-methods-info mb-4">
+                        <h6 class="mb-3">Accepted Payment Methods:</h6>
+                        <div class="row g-3">
                             <!-- Mobile Money (Ghana) -->
                             <div class="col-md-6">
-                                <label class="payment-method p-4 rounded">
-                                    <input type="radio" name="payment_method" value="mobile_money" required>
+                                <div class="payment-method p-3 rounded">
                                     <div class="text-center">
-                                        <i class="fas fa-mobile-alt fa-3x text-primary mb-3"></i>
+                                        <i class="fas fa-mobile-alt fa-2x text-primary mb-2"></i>
                                         <h6 class="mb-1">Mobile Money</h6>
                                         <small class="text-muted">MTN, Vodafone, AirtelTigo</small>
                                     </div>
-                                </label>
+                                </div>
                             </div>
                             
                             <!-- Credit/Debit Card -->
                             <div class="col-md-6">
-                                <label class="payment-method p-4 rounded">
-                                    <input type="radio" name="payment_method" value="card">
+                                <div class="payment-method p-3 rounded">
                                     <div class="text-center">
-                                        <i class="fas fa-credit-card fa-3x text-success mb-3"></i>
+                                        <i class="fas fa-credit-card fa-2x text-success mb-2"></i>
                                         <h6 class="mb-1">Credit/Debit Card</h6>
-                                        <small class="text-muted">Visa, Mastercard</small>
+                                        <small class="text-muted">Visa, Mastercard, Verve</small>
                                     </div>
-                                </label>
+                                </div>
                             </div>
                             
                             <!-- Bank Transfer -->
                             <div class="col-md-6">
-                                <label class="payment-method p-4 rounded">
-                                    <input type="radio" name="payment_method" value="bank_transfer">
+                                <div class="payment-method p-3 rounded">
                                     <div class="text-center">
-                                        <i class="fas fa-university fa-3x text-info mb-3"></i>
-                                        <h6 class="mb-1">Bank Transfer</h6>
-                                        <small class="text-muted">Direct bank transfer</small>
+                                        <i class="fas fa-university fa-2x text-info mb-2"></i>
+                                        <h6 class="mb-1">Bank Account</h6>
+                                        <small class="text-muted">Direct bank payment</small>
                                     </div>
-                                </label>
+                                </div>
                             </div>
                             
-                            <!-- Cash -->
+                            <!-- USSD -->
                             <div class="col-md-6">
-                                <label class="payment-method p-4 rounded">
-                                    <input type="radio" name="payment_method" value="cash">
+                                <div class="payment-method p-3 rounded">
                                     <div class="text-center">
-                                        <i class="fas fa-money-bill-wave fa-3x text-warning mb-3"></i>
-                                        <h6 class="mb-1">Cash Payment</h6>
-                                        <small class="text-muted">Pay at our office</small>
+                                        <i class="fas fa-hashtag fa-2x text-warning mb-2"></i>
+                                        <h6 class="mb-1">USSD</h6>
+                                        <small class="text-muted">Pay via USSD code</small>
                                     </div>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <!-- Mobile Money Details (Hidden by default) -->
-                        <div id="mobileMoneyDetails" class="mb-4" style="display: none;">
-                            <h6 class="mb-3">Mobile Money Details</h6>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="mobile_network" class="form-label">Network</label>
-                                    <select class="form-select" id="mobile_network" name="mobile_network">
-                                        <option value="">Select Network</option>
-                                        <option value="mtn">MTN Mobile Money</option>
-                                        <option value="vodafone">Vodafone Cash</option>
-                                        <option value="airteltigo">AirtelTigo Money</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="mobile_number" class="form-label">Mobile Number</label>
-                                    <input type="tel" class="form-control" id="mobile_number" name="mobile_number" placeholder="0XX XXX XXXX">
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Card Details (Hidden by default) -->
-                        <div id="cardDetails" class="mb-4" style="display: none;">
-                            <h6 class="mb-3">Card Details</h6>
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <label for="card_number" class="form-label">Card Number</label>
-                                    <input type="text" class="form-control" id="card_number" name="card_number" placeholder="1234 5678 9012 3456" maxlength="19">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="card_expiry" class="form-label">Expiry Date</label>
-                                    <input type="text" class="form-control" id="card_expiry" name="card_expiry" placeholder="MM/YY" maxlength="5">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="card_cvv" class="form-label">CVV</label>
-                                    <input type="text" class="form-control" id="card_cvv" name="card_cvv" placeholder="123" maxlength="4">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Bank Transfer Details (Hidden by default) -->
-                        <div id="bankTransferDetails" class="mb-4" style="display: none;">
-                            <div class="alert alert-info">
-                                <h6 class="alert-heading">Bank Transfer Instructions</h6>
-                                <p class="mb-2">Please transfer to:</p>
-                                <p class="mb-0">
-                                    <strong>Bank:</strong> Ghana Commercial Bank<br>
-                                    <strong>Account Name:</strong> Smart Vehicle Repairs<br>
-                                    <strong>Account Number:</strong> 1234567890<br>
-                                    <strong>Reference:</strong> {{ invoice.invoice_number }}
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <!-- Cash Payment Details (Hidden by default) -->
-                        <div id="cashDetails" class="mb-4" style="display: none;">
-                            <div class="alert alert-warning">
-                                <h6 class="alert-heading">Cash Payment Instructions</h6>
-                                <p class="mb-0">
-                                    Please visit our office to make cash payment. Our business hours are:<br>
-                                    <strong>Monday - Friday:</strong> 8:00 AM - 6:00 PM<br>
-                                    <strong>Saturday:</strong> 9:00 AM - 3:00 PM
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <!-- Terms and Conditions -->
-                        <div class="form-check mb-4">
-                            <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
-                            <label class="form-check-label" for="terms">
-                                I agree to the <a href="#" target="_blank">terms and conditions</a> and <a href="#" target="_blank">privacy policy</a>
-                            </label>
-                        </div>
-                        
-                        <div class="d-flex gap-2 justify-content-end">
-                            <a href="{% url 'portal:my-invoices' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Back to Invoices
-                            </a>
-                            <button type="submit" class="btn btn-success btn-lg">
-                                <i class="fas fa-lock me-2"></i>Proceed to Payment
-                            </button>
-                        </div>
-                    </form>
+                    </div>
+                    
+                    <div class="d-grid gap-3">
+                        <a href="{% url 'billing:paystack-payment-initiate' invoice.id %}" class="btn btn-success btn-lg">
+                            <i class="fas fa-lock me-2"></i>Pay GH₵ {{ invoice.balance|floatformat:2 }} Now
+                        </a>
+                        <a href="{% url 'portal:my-invoices' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Invoices
+                        </a>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-4 small">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Note:</strong> You will be redirected to Paystack's secure payment page to complete your transaction.
+                    </div>
                 </div>
             </div>
         </div>

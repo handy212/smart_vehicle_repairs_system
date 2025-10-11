@@ -47,12 +47,24 @@
     .form-step.active {
         display: block;
     }
+    .categories-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    @media (max-width: 768px) {
+        .categories-grid {
+            grid-template-columns: 1fr;
+        }
+    }
     .category-section {
         background: #fff;
         border: 1px solid #dee2e6;
         border-radius: 0.5rem;
-        padding: 1rem;
-        margin-bottom: 1.5rem;
+        padding: 1rem 1.25rem;
+        margin-bottom: 0;
+        height: 100%;
     }
     .category-section h5 {
         font-size: 1rem;
@@ -61,17 +73,34 @@
         padding-bottom: 0.5rem;
         border-bottom: 2px solid var(--bs-primary);
     }
+    .category-section h5 small {
+        font-weight: 400;
+        font-size: 0.875rem;
+    }
+    .category-section > p {
+        margin-bottom: 0.75rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
     .inspection-item {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         padding: 0.5rem 0;
         border-bottom: 1px solid #f0f0f0;
+        margin-bottom: 0;
+        min-height: 45px;
     }
     .inspection-item:last-child {
         border-bottom: none;
     }
     .inspection-item:hover {
         background: #f8f9fa;
+        border-radius: 0.25rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
     }
     .critical-item {
         background: #fff5f5;
@@ -80,22 +109,38 @@
         flex: 1;
         font-size: 0.9rem;
         padding-right: 1rem;
+        line-height: 1.4;
+        font-weight: 500;
+        color: #333;
     }
     .item-name strong {
         color: #333;
+        font-weight: 600;
+    }
+    .item-name small {
+        line-height: 1.3;
+        display: block;
+        margin-top: 0.15rem;
+        font-size: 0.8rem;
+        color: #6c757d;
+        font-weight: 400;
     }
     .pass-fail-toggle {
         display: flex;
-        gap: 0.25rem;
+        gap: 0.375rem;
         margin-left: auto;
+        flex-shrink: 0;
     }
     .pass-fail-toggle .btn {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.75rem;
-        border-width: 1px;
+        font-size: 0.813rem;
+        padding: 0.375rem 0.875rem;
+        border-width: 1.5px;
+        min-width: 70px;
+        font-weight: 500;
     }
     .pass-fail-toggle .btn i {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
+        margin-right: 0.25rem;
     }
     .pass-fail-toggle .btn-pass {
         border-color: #198754;
@@ -131,9 +176,11 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        font-size: 0.95rem;
+        font-weight: 500;
     }
     .summary-badge {
-        padding: 0.25rem 0.75rem;
+        padding: 0.3rem 0.75rem;
         border-radius: 1rem;
         font-size: 0.85rem;
         font-weight: 600;
@@ -206,6 +253,42 @@
     <form method="post" enctype="multipart/form-data" id="inspectionForm">
         {% csrf_token %}
         
+        <!-- Hidden field for work order linking -->
+        {% if workorder_id %}
+        <input type="hidden" name="workorder_id" value="{{ workorder_id }}">
+        {% endif %}
+        
+        {% if workorder %}
+        <!-- Work Order Info Display (Auto-filled from Work Order) -->
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-link me-2"></i>Inspection for Work Order: {{ workorder.work_order_number }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-user me-2"></i>Customer Information</h6>
+                        <p class="mb-1"><strong>{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</strong></p>
+                        <p class="mb-1 text-muted">{{ workorder.customer.user.email }}</p>
+                        {% if workorder.customer.phone %}
+                        <p class="mb-0 text-muted">{{ workorder.customer.phone }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-car me-2"></i>Vehicle Information</h6>
+                        <p class="mb-1"><strong>{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</strong></p>
+                        <p class="mb-1 text-muted">License: {{ workorder.vehicle.license_plate }}</p>
+                        {% if workorder.vehicle.vin %}
+                        <p class="mb-0 text-muted">VIN: {{ workorder.vehicle.vin }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Hidden fields for customer and vehicle -->
+        <input type="hidden" name="customer" value="{{ workorder.customer.id }}">
+        <input type="hidden" name="vehicle" value="{{ workorder.vehicle.id }}">
+        {% else %}
         <!-- Step 1: Customer & Vehicle Selection -->
         <div class="form-step active" id="step1">
             <div class="card">
@@ -242,12 +325,13 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Step 2: Inspection Details -->
-        <div class="form-step" id="step2">
+        <div class="form-step {% if workorder %}active{% endif %}" id="step2">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-clipboard me-2"></i>Step 2: Inspection Details</h5>
+                    <h5 class="mb-0"><i class="fas fa-clipboard me-2"></i>{% if workorder %}Step 1: Inspection Details{% else %}Step 2: Inspection Details{% endif %}</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -275,9 +359,15 @@
                     </div>
                 </div>
                 <div class="card-footer d-flex justify-content-between">
+                    {% if not workorder %}
                     <button type="button" class="btn btn-secondary" id="step2Back">
                         <i class="fas fa-arrow-left me-2"></i>Back
                     </button>
+                    {% else %}
+                    <a href="{% url 'workorders:detail' workorder.id %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Work Order
+                    </a>
+                    {% endif %}
                     <button type="button" class="btn btn-primary" id="step2Next">
                         Next: Start Checklist <i class="fas fa-arrow-right ms-2"></i>
                     </button>
@@ -289,14 +379,14 @@
         <div class="form-step" id="step3">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Step 3: Inspection Checklist</h5>
+                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>{% if workorder %}Step 2: Inspection Checklist{% else %}Step 3: Inspection Checklist{% endif %}</h5>
                     <small>Mark each item as Pass or Fail</small>
                 </div>
                 <div class="card-body p-3" style="max-height: 600px; overflow-y: auto;">
                     <div id="checklistContainer">
                         <div class="alert alert-info mb-0">
                             <i class="fas fa-info-circle me-2"></i>
-                            Select a template in Step 2 to load the inspection checklist items.
+                            Select a template in {% if workorder %}Step 1{% else %}Step 2{% endif %} to load the inspection checklist items.
                         </div>
                     </div>
                 </div>
@@ -317,8 +407,8 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    let currentStep = 1;
-    let selectedVehicleId = null;
+    let currentStep = {% if workorder %}2{% else %}1{% endif %};
+    let selectedVehicleId = {% if workorder %}{{ workorder.vehicle.id }}{% else %}null{% endif %};
     
     // Step Navigation
     function showStep(step) {
@@ -336,104 +426,122 @@ document.addEventListener('DOMContentLoaded', function() {
         currentStep = step;
     }
     
-    // Customer Selection
+    // Customer Selection (only if not from work order)
     const customerSelect = document.getElementById('id_customer');
-    customerSelect.addEventListener('change', function() {
-        const customerId = this.value;
-        if (customerId) {
-            fetch(`/customers/${customerId}/vehicles-api/`, {
-                credentials: 'same-origin',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+    if (customerSelect) {
+        customerSelect.addEventListener('change', function() {
+            const customerId = this.value;
+            if (customerId) {
+                fetch(`/customers/${customerId}/vehicles-api/`, {
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
-                    return response.json();
                 })
-                .then(data => {
-                    // Show customer info
-                    const customerInfo = document.getElementById('customerInfo');
-                    const customerDetails = document.getElementById('customerDetails');
-                    customerDetails.innerHTML = `
-                        <p class="mb-1"><strong>Name:</strong> ${data.customer.full_name}</p>
-                        <p class="mb-1"><strong>Email:</strong> ${data.customer.email}</p>
-                        <p class="mb-0"><strong>Phone:</strong> ${data.customer.phone || 'N/A'}</p>
-                    `;
-                    customerInfo.style.display = 'block';
-                    
-                    // Show vehicles
-                    const vehiclesList = document.getElementById('vehiclesList');
-                    vehiclesList.innerHTML = '';
-                    
-                    if (data.vehicles.length === 0) {
-                        vehiclesList.innerHTML = `
-                            <div class="col-12">
-                                <div class="alert alert-warning">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    No active vehicles found for this customer.
-                                </div>
-                            </div>
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Show customer info
+                        const customerInfo = document.getElementById('customerInfo');
+                        const customerDetails = document.getElementById('customerDetails');
+                        customerDetails.innerHTML = `
+                            <p class="mb-1"><strong>Name:</strong> ${data.customer.full_name}</p>
+                            <p class="mb-1"><strong>Email:</strong> ${data.customer.email}</p>
+                            <p class="mb-0"><strong>Phone:</strong> ${data.customer.phone || 'N/A'}</p>
                         `;
-                    } else {
-                        data.vehicles.forEach(vehicle => {
-                            const vehicleCard = `
-                                <div class="col-md-6">
-                                    <div class="vehicle-card" data-vehicle-id="${vehicle.id}">
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-car fa-2x text-primary me-3"></i>
-                                            <div>
-                                                <h6 class="mb-0">${vehicle.display_name}</h6>
-                                                <small class="text-muted">VIN: ${vehicle.vin || 'N/A'}</small><br>
-                                                <small class="text-muted">License: ${vehicle.license_plate || 'N/A'}</small>
-                                            </div>
-                                        </div>
+                        customerInfo.style.display = 'block';
+                        
+                        // Show vehicles
+                        const vehiclesList = document.getElementById('vehiclesList');
+                        vehiclesList.innerHTML = '';
+                        
+                        if (data.vehicles.length === 0) {
+                            vehiclesList.innerHTML = `
+                                <div class="col-12">
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        No active vehicles found for this customer.
                                     </div>
                                 </div>
                             `;
-                            vehiclesList.innerHTML += vehicleCard;
-                        });
-                        
-                        // Add click handlers to vehicle cards
-                        document.querySelectorAll('.vehicle-card').forEach(card => {
-                            card.addEventListener('click', function() {
-                                document.querySelectorAll('.vehicle-card').forEach(c => c.classList.remove('selected'));
-                                this.classList.add('selected');
-                                selectedVehicleId = this.dataset.vehicleId;
-                                document.getElementById('selectedVehicle').value = selectedVehicleId;
-                                document.getElementById('step1Next').disabled = false;
+                        } else {
+                            data.vehicles.forEach(vehicle => {
+                                const vehicleCard = `
+                                    <div class="col-md-6">
+                                        <div class="vehicle-card" data-vehicle-id="${vehicle.id}">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-car fa-2x text-primary me-3"></i>
+                                                <div>
+                                                    <h6 class="mb-0">${vehicle.display_name}</h6>
+                                                    <small class="text-muted">VIN: ${vehicle.vin || 'N/A'}</small><br>
+                                                    <small class="text-muted">License: ${vehicle.license_plate || 'N/A'}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                                vehiclesList.innerHTML += vehicleCard;
                             });
-                        });
-                    }
-                    
-                    document.getElementById('vehiclesContainer').style.display = 'block';
-                })
-                .catch(error => {
-                    console.error('Error loading vehicles:', error);
-                    alert('Error loading customer vehicles. Please try again.');
-                });
-        } else {
-            document.getElementById('customerInfo').style.display = 'none';
-            document.getElementById('vehiclesContainer').style.display = 'none';
-            document.getElementById('step1Next').disabled = true;
-        }
-    });
+                            
+                            // Add click handlers to vehicle cards
+                            document.querySelectorAll('.vehicle-card').forEach(card => {
+                                card.addEventListener('click', function() {
+                                    document.querySelectorAll('.vehicle-card').forEach(c => c.classList.remove('selected'));
+                                    this.classList.add('selected');
+                                    selectedVehicleId = this.dataset.vehicleId;
+                                    document.getElementById('selectedVehicle').value = selectedVehicleId;
+                                    document.getElementById('step1Next').disabled = false;
+                                });
+                            });
+                        }
+                        
+                        document.getElementById('vehiclesContainer').style.display = 'block';
+                    })
+                    .catch(error => {
+                        console.error('Error loading vehicles:', error);
+                        alert('Error loading customer vehicles. Please try again.');
+                    });
+            } else {
+                document.getElementById('customerInfo').style.display = 'none';
+                document.getElementById('vehiclesContainer').style.display = 'none';
+                document.getElementById('step1Next').disabled = true;
+            }
+        });
+    }
     
     // Step Navigation Buttons
-    document.getElementById('step1Next').addEventListener('click', () => showStep(2));
-    document.getElementById('step2Back').addEventListener('click', () => showStep(1));
-    document.getElementById('step2Next').addEventListener('click', () => {
-        const templateId = document.getElementById('id_template').value;
-        if (!templateId) {
-            alert('Please select an inspection template.');
-            return;
-        }
-        loadChecklist(templateId);
-        showStep(3);
-    });
-    document.getElementById('step3Back').addEventListener('click', () => showStep(2));
+    {% if not workorder %}
+    const step1Next = document.getElementById('step1Next');
+    const step2Back = document.getElementById('step2Back');
+    if (step1Next) {
+        step1Next.addEventListener('click', () => showStep(2));
+    }
+    if (step2Back) {
+        step2Back.addEventListener('click', () => showStep(1));
+    }
+    {% endif %}
+    
+    const step2Next = document.getElementById('step2Next');
+    if (step2Next) {
+        step2Next.addEventListener('click', () => {
+            const templateId = document.getElementById('id_template').value;
+            if (!templateId) {
+                alert('Please select an inspection template.');
+                return;
+            }
+            loadChecklist(templateId);
+            showStep(3);
+        });
+    }
+    
+    const step3Back = document.getElementById('step3Back');
+    if (step3Back) {
+        step3Back.addEventListener('click', () => showStep(2));
+    }
     
     // Load Checklist
     function loadChecklist(templateId) {
@@ -468,6 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <span class="summary-badge bg-secondary text-white ms-2">${totalItems} Total</span>
                         </div>
                     </div>
+                    <div class="categories-grid">
                 `;
                 
                 data.categories.forEach(category => {
@@ -505,6 +614,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     html += '</div>';
                 });
+                
+                html += '</div>'; // Close categories-grid
                 
                 container.innerHTML = html;
                 updateSummary();

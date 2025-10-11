@@ -212,26 +212,38 @@
             margin-top: 25px;
         }
         
-        .category {
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
             margin-bottom: 20px;
+        }
+        
+        .category {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 12px 15px;
             page-break-inside: avoid;
+            margin-bottom: 0;
         }
         
         .category-header {
-            background: #f8f9fa;
-            padding: 8px 12px;
+            background: transparent;
+            padding: 0 0 6px 0;
             font-size: 12px;
             font-weight: bold;
-            border-left: 4px solid #007bff;
+            border-bottom: 2px solid #007bff;
             margin-bottom: 10px;
         }
         
         .result-item {
-            padding: 8px 12px;
+            padding: 6px 0;
             border-bottom: 1px solid #e9ecef;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            min-height: 28px;
         }
         
         .result-item:last-child {
@@ -240,19 +252,30 @@
         
         .result-item.pass {
             background: #f8fff8;
+            border-left: 2px solid #28a745;
+            padding-left: 8px;
         }
         
         .result-item.fail {
             background: #fff8f8;
+            border-left: 2px solid #dc3545;
+            padding-left: 8px;
         }
         
         .result-item.advisory {
             background: #fffef8;
+            border-left: 2px solid #ffc107;
+            padding-left: 8px;
         }
         
         .result-name {
             flex: 1;
             font-size: 10px;
+            line-height: 1.3;
+        }
+        
+        .result-name strong {
+            font-weight: 600;
         }
         
         .result-status {
@@ -389,6 +412,12 @@
         <!-- Inspection Info -->
         <div class="info-box">
             <h3>Inspection Details</h3>
+            {% if inspection.work_order %}
+            <div class="info-item">
+                <label>Work Order</label>
+                <div class="value"><strong>#{{ inspection.work_order.work_order_number }}</strong></div>
+            </div>
+            {% endif %}
             <div class="info-item">
                 <label>Inspection Date</label>
                 <div class="value">{{ inspection.inspection_date|date:"F d, Y" }}</div>
@@ -470,49 +499,51 @@
     <div class="results-section">
         <h3 style="font-size: 14px; margin-bottom: 15px; color: #000;">Detailed Inspection Results</h3>
         
+        <div class="categories-grid">
         {% for category in inspection.template.categories.all %}
-        <div class="category">
-            <div class="category-header">
-                {{ category.name }} ({{ category.items.count }} items)
-            </div>
-            {% for item in category.items.all %}
-            {% with result=results_by_item|get_item:item.id|default:None %}
-            <div class="result-item {% if result.result == 'pass' %}pass{% elif result.result == 'fail' %}fail{% elif result.result == 'advisory' %}advisory{% endif %}">
-                <div class="result-name">
-                    {{ item.name }}
-                    {% if item.is_critical %}
-                    <span class="badge-critical">CRITICAL</span>
-                    {% endif %}
-                    {% if result and result.notes %}
-                    <div class="result-notes">{{ result.notes }}</div>
-                    {% endif %}
+            <div class="category">
+                <div class="category-header">
+                    {{ category.name }} <span style="color: #666; font-weight: normal;">({{ category.items.count }} items)</span>
                 </div>
-                <div class="result-status">
-                    {% if result %}
-                        {% if item.item_type == 'pass_fail' %}
-                            {% if result.result == 'pass' %}
-                            <span class="badge badge-pass">✓ Pass</span>
-                            {% elif result.result == 'fail' %}
-                            <span class="badge badge-fail">✗ Fail</span>
-                            {% else %}
-                            <span class="badge badge-advisory">⚠ Advisory</span>
-                            {% endif %}
-                        {% elif item.item_type == 'rating' %}
-                            {{ result.rating_value }}/5 ★
-                        {% elif item.item_type == 'measurement' %}
-                            {{ result.measurement_value }} {{ item.unit }}
-                        {% elif item.item_type == 'condition' %}
-                            {{ result.condition }}
+                {% for item in category.items.all %}
+                {% with result=results_by_item|get_item:item.id|default:None %}
+                <div class="result-item {% if result.result == 'pass' %}pass{% elif result.result == 'fail' %}fail{% elif result.result == 'advisory' %}advisory{% endif %}">
+                    <div class="result-name">
+                        <strong>{{ item.name }}</strong>
+                        {% if item.is_critical %}
+                        <span class="badge-critical">CRITICAL</span>
                         {% endif %}
-                    {% else %}
-                        <span style="color: #999;">Not Checked</span>
-                    {% endif %}
+                        {% if result and result.notes %}
+                        <div class="result-notes">{{ result.notes }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="result-status">
+                        {% if result %}
+                            {% if item.item_type == 'pass_fail' %}
+                                {% if result.result == 'pass' %}
+                                <span class="badge badge-pass">✓ Pass</span>
+                                {% elif result.result == 'fail' %}
+                                <span class="badge badge-fail">✗ Fail</span>
+                                {% else %}
+                                <span class="badge badge-advisory">⚠ Advisory</span>
+                                {% endif %}
+                            {% elif item.item_type == 'rating' %}
+                                {{ result.rating_value }}/5 ★
+                            {% elif item.item_type == 'measurement' %}
+                                {{ result.measurement_value }} {{ item.unit }}
+                            {% elif item.item_type == 'condition' %}
+                                {{ result.condition }}
+                            {% endif %}
+                        {% else %}
+                            <span style="color: #999;">Not Checked</span>
+                        {% endif %}
+                    </div>
                 </div>
+                {% endwith %}
+                {% endfor %}
             </div>
-            {% endwith %}
-            {% endfor %}
-        </div>
         {% endfor %}
+        </div><!-- Close categories-grid -->
     </div>
 
     <!-- Additional Notes -->

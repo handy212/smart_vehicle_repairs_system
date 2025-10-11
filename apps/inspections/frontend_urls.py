@@ -10,6 +10,9 @@ urlpatterns = [
     # Inspection List
     path('', frontend_views.inspection_list, name='inspection-list'),
     
+    # Start inspection from work order
+    path('start/', frontend_views.inspection_start, name='inspection-start'),
+    
     # Inspection CRUD
     path('create/', frontend_views.inspection_create, name='inspection-create'),
     path('<int:pk>/', frontend_views.inspection_detail, name='inspection-detail'),
@@ -38,4 +41,6 @@ urlpatterns = [
     
     # API Endpoints for AJAX
     path('templates/<int:pk>/checklist/', frontend_views.template_checklist_api, name='template-checklist-api'),
+    path('templates/api/', frontend_views.templates_list_api, name='templates-list-api'),
+    path('templates/<int:pk>/details/', frontend_views.template_details_api, name='template-details-api'),
 ]

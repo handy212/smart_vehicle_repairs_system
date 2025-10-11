@@ -15,6 +15,7 @@ class WorkOrder(models.Model):
     
     STATUS_CHOICES = [
         ('draft', 'Draft'),
+        ('inspection', 'Initial Inspection'),
         ('intake', 'Intake'),
         ('diagnosis', 'Diagnosis'),
         ('awaiting_approval', 'Awaiting Customer Approval'),

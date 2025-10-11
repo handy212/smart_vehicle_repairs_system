@@ -1,5 +1,4 @@
-{% ex{% block extra_css %}
-<style>se.html" %}
+{% extends "base.html" %}
 {% load static %}
 
 {% block page_title %}{{ page_title }}{% endblock %}
@@ -510,6 +509,7 @@
             </div>
             <div class="modal-body">
                 <form id="sendEmailForm">
+                    {% csrf_token %}
                     <div class="mb-3">
                         <label for="emailTo" class="form-label">To</label>
                         <input type="email" class="form-control" id="emailTo" 
@@ -626,15 +626,50 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('sendEmailBtn').addEventListener('click', function() {
         const form = document.getElementById('sendEmailForm');
         if (form.checkValidity()) {
-            // Implement email sending logic
-            console.log('Sending email...');
+            // Disable button to prevent double-click
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
             
-            // Show success message
-            const emailModal = bootstrap.Modal.getInstance(document.getElementById('sendEmailModal'));
-            emailModal.hide();
+            // Get form data
+            const formData = new FormData(form);
             
-            // You would typically make an AJAX call here
-            alert('Email sent successfully!');
+            // Get CSRF token
+            const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            // Send AJAX request
+            fetch(`/billing/invoices/{{ invoice.id }}/send-email/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken,
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Hide modal
+                    const emailModal = bootstrap.Modal.getInstance(document.getElementById('sendEmailModal'));
+                    emailModal.hide();
+                    
+                    // Show success message
+                    alert(data.message || 'Email sent successfully!');
+                    
+                    // Reload page to show updated status
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to send email'));
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send Email';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error sending email. Please try again.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Send Email';
+            });
         } else {
             form.reportValidity();
         }

@@ -630,12 +630,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Auto-generate PO number
-    generatePONumber();
+    // Auto-generate PO number happens on backend
+    // Note: PO number is automatically generated when the purchase order is saved
     
     // Set default order date to today
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('{{ form.order_date.id_for_label }}').value = today;
+    document.getElementById('order_date').value = today;
     
     // Add calculation event listeners
     document.getElementById('tax-rate').addEventListener('input', calculateTotals);
@@ -644,12 +644,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateItemsDisplay();
 });
 
-// Generate PO number
-function generatePONumber() {
-    const timestamp = Date.now().toString().slice(-8);
-    const poNumber = `PO-${timestamp}`;
-    document.getElementById('{{ form.po_number.id_for_label }}').value = poNumber;
-}
+// Note: PO number is auto-generated on the backend
 
 // Load supplier information
 function loadSupplierInfo(supplierId) {
@@ -693,13 +688,15 @@ function addOrderItem(partId = null) {
 
 // Load parts for selection
 function loadPartsForSelection() {
-    fetch('/inventory/parts/api/')
+    fetch('/api/inventory/parts/')
         .then(response => response.json())
         .then(data => {
             const tbody = document.getElementById('parts-tbody');
             tbody.innerHTML = '';
             
-            data.parts.forEach(part => {
+            // The API returns results in a 'results' array (DRF pagination)
+            const parts = data.results || data.parts || data;
+            parts.forEach(part => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>
@@ -903,14 +900,13 @@ function previewPO() {
 }
 
 function generatePOPreview() {
-    const supplier = document.getElementById('{{ form.supplier.id_for_label }}').selectedOptions[0]?.text || 'Not selected';
-    const poNumber = document.getElementById('{{ form.po_number.id_for_label }}').value;
-    const orderDate = document.getElementById('{{ form.order_date.id_for_label }}').value;
+    const supplier = document.getElementById('supplier').selectedOptions[0]?.text || 'Not selected';
+    const orderDate = document.getElementById('order_date').value;
     
     return `
         <div class="po-header-preview">
             <h3>PURCHASE ORDER</h3>
-            <p class="lead">${poNumber}</p>
+            <p class="lead">PO Number will be auto-generated</p>
         </div>
         <div class="row mb-4">
             <div class="col-md-6">
@@ -985,7 +981,7 @@ function clearForm() {
         orderItems.length = 0;
         updateItemsDisplay();
         calculateTotals();
-        generatePONumber();
+        // PO number will be auto-generated on backend
     }
 }
 

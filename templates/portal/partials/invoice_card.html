@@ -8,8 +8,22 @@
                         <i class="fas fa-file-invoice text-primary me-2"></i>
                         Invoice #{{ invoice.invoice_number }}
                     </h5>
-                    <span class="badge bg-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'pending' %}warning{% elif invoice.status == 'sent' %}info{% elif invoice.status == 'overdue' %}danger{% elif invoice.status == 'cancelled' %}secondary{% else %}warning{% endif %} px-3 py-2">
-                        {{ invoice.get_status_display }}
+                    <span class="badge bg-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'pending' or invoice.status == 'sent' or invoice.status == 'viewed' %}warning{% elif invoice.status == 'partial' %}info{% elif invoice.status == 'overdue' %}danger{% elif invoice.status == 'void' or invoice.status == 'cancelled' %}secondary{% else %}warning{% endif %} px-3 py-2">
+                        {% if invoice.status == 'sent' or invoice.status == 'viewed' %}
+                            Unpaid
+                        {% elif invoice.status == 'pending' %}
+                            Pending
+                        {% elif invoice.status == 'partial' %}
+                            Partially Paid
+                        {% elif invoice.status == 'paid' %}
+                            Paid
+                        {% elif invoice.status == 'overdue' %}
+                            Overdue
+                        {% elif invoice.status == 'void' %}
+                            Cancelled
+                        {% else %}
+                            {{ invoice.get_status_display }}
+                        {% endif %}
                     </span>
                 </div>
                 

@@ -9,10 +9,13 @@ router.register(r'estimate-items', views.EstimateLineItemViewSet, basename='esti
 router.register(r'invoices', views.InvoiceViewSet, basename='invoice')
 router.register(r'payments', views.PaymentViewSet, basename='payment')
 
+# Note: app_name removed - this file is used with namespace 'api_billing' in config/urls.py
+# Frontend billing URLs use namespace 'billing' in frontend_urls.py
+
 urlpatterns = [
     path('', include(router.urls)),
     
-    # Hubtel Payment Gateway endpoints
+    # Hubtel Payment Gateway endpoints (API)
     path('payments/hubtel/initiate/', hubtel_views.initiate_payment, name='hubtel-payment-initiate'),
     path('payments/hubtel/callback/', hubtel_views.payment_callback, name='hubtel-payment-callback'),
     path('payments/hubtel/verify/<str:transaction_id>/', hubtel_views.verify_payment_status, name='hubtel-payment-verify'),
