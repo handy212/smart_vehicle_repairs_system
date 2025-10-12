@@ -45,14 +45,14 @@ def initiate_paystack_payment(request, invoice_id):
         'invoice_id': invoice.id,
         'invoice_number': invoice.invoice_number,
         'customer_id': customer.id,
-        'customer_name': customer.get_full_name(),
+        'customer_name': customer.full_name,
         'vehicle': f"{invoice.vehicle.year} {invoice.vehicle.make} {invoice.vehicle.model}" if invoice.vehicle else None,
     }
     
     # Initialize payment
     success, response = initialize_payment(
         email=customer.email,
-        amount=invoice.balance,
+        amount=invoice.amount_due,
         reference=reference,
         callback_url=callback_url,
         metadata=metadata
@@ -117,19 +117,20 @@ def paystack_callback(request):
     
     payment = Payment.objects.create(
         invoice=invoice,
+        customer=invoice.customer,
         amount=amount_ghs,
         payment_method='paystack',
         transaction_id=reference,
         payment_date=data.get('paid_at'),
         notes=f"Paystack payment via {data.get('channel', 'online')}",
-        created_by=request.user
+        processed_by=request.user
     )
     
     # Update invoice status
     invoice.amount_paid += amount_ghs
-    invoice.balance = invoice.total - invoice.amount_paid
+    invoice.amount_due = invoice.total - invoice.amount_paid
     
-    if invoice.balance <= 0:
+    if invoice.amount_due <= 0:
         invoice.status = 'paid'
     elif invoice.amount_paid > 0:
         invoice.status = 'partial'

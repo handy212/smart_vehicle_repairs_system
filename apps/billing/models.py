@@ -584,6 +584,8 @@ class Payment(models.Model):
         ('vodafone_cash', 'Vodafone Cash'),
         ('airteltigo_money', 'AirtelTigo Money'),
         ('hubtel_card', 'Card Payment (Hubtel)'),
+        # Paystack (Ghana Payment Gateway)
+        ('paystack', 'Paystack'),
         ('other', 'Other'),
     ]
     
