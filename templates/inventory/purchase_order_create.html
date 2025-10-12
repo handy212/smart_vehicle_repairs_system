@@ -1,0 +1,1035 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Create Purchase Order - Inventory{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<style>
+    .form-section {
+        background: white;
+        border-radius: 0.5rem;
+        border: 1px solid var(--gray-200);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-header {
+        background: var(--gray-50);
+        border-bottom: 1px solid var(--gray-200);
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+    }
+    
+    .section-title {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+    
+    .section-body {
+        padding: 1.5rem;
+    }
+    
+    .items-table {
+        background: white;
+        border-radius: 0.5rem;
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+    }
+    
+    .items-table th {
+        background: var(--gray-50);
+        border-bottom: 2px solid var(--gray-200);
+        font-weight: 600;
+        color: var(--gray-700);
+        padding: 1rem 0.75rem;
+    }
+    
+    .items-table td {
+        padding: 0.75rem;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .item-row {
+        transition: all 0.2s ease;
+    }
+    
+    .item-row:hover {
+        background: var(--gray-50);
+    }
+    
+    .add-item-btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    
+    .add-item-btn:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+    }
+    
+    .remove-item-btn {
+        background: var(--danger);
+        color: white;
+        border: none;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+    }
+    
+    .remove-item-btn:hover {
+        background: var(--danger-dark);
+    }
+    
+    .total-section {
+        background: var(--gray-50);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        border: 1px solid var(--gray-200);
+    }
+    
+    .total-row {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--gray-300);
+    }
+    
+    .total-row:last-child {
+        border-bottom: none;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--success);
+    }
+    
+    .total-label {
+        font-weight: 600;
+        color: var(--gray-700);
+    }
+    
+    .total-value {
+        font-weight: 600;
+        font-family: 'Courier New', monospace;
+    }
+    
+    .supplier-info {
+        background: var(--gray-50);
+        border-radius: 0.375rem;
+        padding: 1rem;
+        border: 1px solid var(--gray-200);
+    }
+    
+    .supplier-rating {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-top: 0.5rem;
+    }
+    
+    .star {
+        color: #ffc107;
+        font-size: 1rem;
+    }
+    
+    .star.empty {
+        color: var(--gray-300);
+    }
+    
+    .form-help {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        margin-top: 0.25rem;
+    }
+    
+    .required-indicator {
+        color: var(--danger);
+        margin-left: 0.25rem;
+    }
+    
+    .po-preview {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .po-header-preview {
+        text-align: center;
+        border-bottom: 2px solid var(--primary);
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .template-selector {
+        background: #f8f9ff;
+        border: 2px dashed #6366f1;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .template-btn {
+        background: white;
+        border: 1px solid var(--gray-300);
+        border-radius: 0.375rem;
+        padding: 0.5rem 1rem;
+        margin: 0.25rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .template-btn:hover {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: white;
+    }
+    
+    .auto-fill-section {
+        background: #f0f9ff;
+        border: 1px solid #0ea5e9;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .calculation-helper {
+        position: sticky;
+        top: 20px;
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'inventory:purchase_order_list' %}">Purchase Orders</a></li>
+                    <li class="breadcrumb-item active">Create</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-0">Create Purchase Order</h1>
+            <p class="text-muted">Create a new purchase order for inventory procurement</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Orders
+            </a>
+        </div>
+    </div>
+
+    <form method="post" id="po-form">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Main Form -->
+            <div class="col-lg-8">
+                <!-- Quick Templates -->
+                <div class="template-selector">
+                    <h6 class="mb-2">
+                        <i class="fas fa-magic me-2"></i>Quick Start Templates
+                    </h6>
+                    <p class="text-muted small mb-3">Choose a template to auto-fill common purchase order scenarios</p>
+                    <div>
+                        <button type="button" class="template-btn" onclick="loadTemplate('restock')">
+                            <i class="fas fa-boxes me-1"></i> Restock Low Inventory
+                        </button>
+                        <button type="button" class="template-btn" onclick="loadTemplate('seasonal')">
+                            <i class="fas fa-calendar me-1"></i> Seasonal Order
+                        </button>
+                        <button type="button" class="template-btn" onclick="loadTemplate('emergency')">
+                            <i class="fas fa-exclamation me-1"></i> Emergency Order
+                        </button>
+                        <button type="button" class="template-btn" onclick="loadTemplate('bulk')">
+                            <i class="fas fa-warehouse me-1"></i> Bulk Purchase
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">Purchase Order Details</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="supplier" class="form-label">
+                                    Supplier <span class="required-indicator">*</span>
+                                </label>
+                                <select name="supplier" id="supplier" class="form-select" required>
+                                    <option value="">Select Supplier...</option>
+                                    {% for supplier in suppliers %}
+                                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label for="order_date" class="form-label">
+                                    Order Date <span class="required-indicator">*</span>
+                                </label>
+                                <input type="date" name="order_date" id="order_date" class="form-control" 
+                                       value="{% now 'Y-m-d' %}" required>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label for="expected_delivery_date" class="form-label">
+                                    Expected Delivery
+                                </label>
+                                <input type="date" name="expected_delivery_date" id="expected_delivery_date" class="form-control">
+                                <div class="form-help">When you expect to receive the order</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="shipping_cost" class="form-label">Shipping Cost</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" name="shipping_cost" id="shipping_cost" class="form-control" 
+                                           value="0" step="0.01" min="0">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="tax_amount" class="form-label">Tax Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" name="tax_amount" id="tax_amount" class="form-control" 
+                                           value="0" step="0.01" min="0">
+                                </div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <label for="notes" class="form-label">Notes</label>
+                                <textarea name="notes" id="notes" class="form-control" rows="2" 
+                                          placeholder="Special instructions or additional information"></textarea>
+                            </div>
+                            
+                            <div class="col-12">
+                                <label for="internal_notes" class="form-label">Internal Notes</label>
+                                <textarea name="internal_notes" id="internal_notes" class="form-control" rows="2" 
+                                          placeholder="Internal notes (not visible to supplier)"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Fill Low Stock -->
+                <div class="auto-fill-section" id="auto-fill-section" style="display: none;">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="mb-1">
+                                <i class="fas fa-lightbulb me-2"></i>Auto-Fill Low Stock Items
+                            </h6>
+                            <p class="text-muted small mb-0">
+                                Automatically add parts that are at or below their reorder point
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <button type="button" class="btn btn-info btn-sm" onclick="autoFillLowStock()">
+                                <i class="fas fa-plus me-1"></i> Add Low Stock Items
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm ms-2" onclick="toggleAutoFill()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Items -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="section-title">Order Items</h3>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleAutoFill()">
+                                    <i class="fas fa-magic me-1"></i> Auto-Fill
+                                </button>
+                                <button type="button" class="add-item-btn btn-sm" onclick="addOrderItem()">
+                                    <i class="fas fa-plus me-1"></i> Add Item
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section-body">
+                        <div class="table-responsive">
+                            <table class="table items-table" id="items-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 35%;">Part</th>
+                                        <th style="width: 15%;">Quantity</th>
+                                        <th style="width: 15%;">Unit Price</th>
+                                        <th style="width: 15%;">Total</th>
+                                        <th style="width: 10%;">Stock</th>
+                                        <th style="width: 10%;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="items-tbody">
+                                    <!-- Items will be added here dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="text-center py-4" id="no-items-message">
+                            <i class="fas fa-box-open fa-3x text-muted mb-2"></i>
+                            <p class="text-muted">No items added yet</p>
+                            <button type="button" class="add-item-btn" onclick="addOrderItem()">
+                                <i class="fas fa-plus me-1"></i> Add First Item
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Delivery Information -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">Delivery Information</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label for="{{ form.delivery_address.id_for_label }}" class="form-label">
+                                    Delivery Address
+                                </label>
+                                {{ form.delivery_address|add_class:"form-control" }}
+                                <div class="form-help">Where should this order be delivered?</div>
+                                {% if form.delivery_address.errors %}
+                                <div class="invalid-feedback d-block">{{ form.delivery_address.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.contact_person.id_for_label }}" class="form-label">
+                                    Contact Person
+                                </label>
+                                {{ form.contact_person|add_class:"form-control" }}
+                                {% if form.contact_person.errors %}
+                                <div class="invalid-feedback d-block">{{ form.contact_person.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.contact_phone.id_for_label }}" class="form-label">
+                                    Contact Phone
+                                </label>
+                                {{ form.contact_phone|add_class:"form-control" }}
+                                {% if form.contact_phone.errors %}
+                                <div class="invalid-feedback d-block">{{ form.contact_phone.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Supplier Information -->
+                <div id="supplier-info" style="display: none;">
+                    <div class="form-section">
+                        <div class="section-header">
+                            <h3 class="section-title">Supplier Information</h3>
+                        </div>
+                        <div class="section-body">
+                            <div class="supplier-info" id="supplier-details">
+                                <!-- Supplier details will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Totals -->
+                <div class="calculation-helper">
+                    <h5 class="mb-3">Order Summary</h5>
+                    <div class="total-section">
+                        <div class="total-row">
+                            <span class="total-label">Subtotal:</span>
+                            <span class="total-value" id="subtotal">$0.00</span>
+                        </div>
+                        <div class="total-row">
+                            <span class="total-label">Tax Rate:</span>
+                            <div class="input-group input-group-sm">
+                                <input type="number" class="form-control" id="tax-rate" 
+                                       value="0" min="0" max="100" step="0.01">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="total-row">
+                            <span class="total-label">Tax Amount:</span>
+                            <span class="total-value" id="tax-amount">$0.00</span>
+                        </div>
+                        <div class="total-row">
+                            <span class="total-label">Shipping:</span>
+                            <input type="number" class="form-control form-control-sm" id="shipping-cost" 
+                                   value="0" min="0" step="0.01">
+                        </div>
+                        <div class="total-row">
+                            <span class="total-label">Total Amount:</span>
+                            <span class="total-value text-success" id="total-amount">$0.00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Items: <span id="item-count">0</span>
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3 class="section-title">Quick Actions</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-primary" onclick="previewPO()">
+                                <i class="fas fa-eye me-2"></i>Preview Order
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="saveDraft()">
+                                <i class="fas fa-save me-2"></i>Save as Draft
+                            </button>
+                            <button type="button" class="btn btn-outline-info" onclick="duplicateFromExisting()">
+                                <i class="fas fa-copy me-2"></i>Copy from Existing
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" onclick="clearForm()">
+                                <i class="fas fa-trash me-2"></i>Clear Form
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-section">
+                    <div class="section-body">
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="action" value="create_draft" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-save me-2"></i>Save as Draft
+                            </button>
+                            <button type="submit" name="action" value="create_pending" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane me-2"></i>Create & Submit for Approval
+                            </button>
+                            <button type="submit" name="action" value="create_approved" class="btn btn-success btn-lg">
+                                <i class="fas fa-check me-2"></i>Create & Approve
+                            </button>
+                            <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Item Selection Modal -->
+<div class="modal fade" id="itemSelectionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Order Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="part-search" class="form-label">Search Parts</label>
+                    <input type="text" class="form-control" id="part-search" 
+                           placeholder="Search by name, part number, or brand...">
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover" id="parts-table">
+                        <thead>
+                            <tr>
+                                <th>Part</th>
+                                <th>Stock</th>
+                                <th>Unit Price</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="parts-tbody">
+                            <!-- Parts will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PO Preview Modal -->
+<div class="modal fade" id="poPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Purchase Order Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="po-preview" id="po-preview-content">
+                    <!-- Preview content will be generated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="printPreview()">
+                    <i class="fas fa-print me-1"></i> Print Preview
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+let itemCounter = 0;
+const orderItems = [];
+
+// Initialize form
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Select2
+    $('#id_supplier').select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Select a supplier...',
+        allowClear: true
+    });
+    
+    // Load supplier info when supplier changes
+    $('#id_supplier').on('change', function() {
+        const supplierId = this.value;
+        if (supplierId) {
+            loadSupplierInfo(supplierId);
+        } else {
+            document.getElementById('supplier-info').style.display = 'none';
+        }
+    });
+    
+    // Auto-generate PO number happens on backend
+    // Note: PO number is automatically generated when the purchase order is saved
+    
+    // Set default order date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('order_date').value = today;
+    
+    // Add calculation event listeners
+    document.getElementById('tax-rate').addEventListener('input', calculateTotals);
+    document.getElementById('shipping-cost').addEventListener('input', calculateTotals);
+    
+    updateItemsDisplay();
+});
+
+// Note: PO number is auto-generated on the backend
+
+// Load supplier information
+function loadSupplierInfo(supplierId) {
+    fetch(`/inventory/suppliers/${supplierId}/info/`)
+        .then(response => response.json())
+        .then(data => {
+            const supplierDetails = document.getElementById('supplier-details');
+            supplierDetails.innerHTML = `
+                <h6 class="fw-bold mb-2">${data.name}</h6>
+                <p class="text-muted small mb-2">${data.supplier_code}</p>
+                ${data.contact_person ? `<p class="small mb-1"><i class="fas fa-user me-2"></i>${data.contact_person}</p>` : ''}
+                ${data.email ? `<p class="small mb-1"><i class="fas fa-envelope me-2"></i>${data.email}</p>` : ''}
+                ${data.phone ? `<p class="small mb-1"><i class="fas fa-phone me-2"></i>${data.phone}</p>` : ''}
+                ${data.address ? `<p class="small mb-0"><i class="fas fa-map-marker-alt me-2"></i>${data.address}</p>` : ''}
+                ${data.rating ? `
+                    <div class="supplier-rating">
+                        ${Array.from({length: 5}, (_, i) => 
+                            `<i class="fas fa-star star ${i >= data.rating ? 'empty' : ''}"></i>`
+                        ).join('')}
+                        <span class="ms-2 small">(${data.rating}/5)</span>
+                    </div>
+                ` : ''}
+            `;
+            document.getElementById('supplier-info').style.display = 'block';
+        })
+        .catch(error => console.error('Error loading supplier info:', error));
+}
+
+// Add order item
+function addOrderItem(partId = null) {
+    if (partId) {
+        // Add specific part
+        addItemToPO(partId);
+    } else {
+        // Show part selection modal
+        loadPartsForSelection();
+        const modal = new bootstrap.Modal(document.getElementById('itemSelectionModal'));
+        modal.show();
+    }
+}
+
+// Load parts for selection
+function loadPartsForSelection() {
+    fetch('/api/inventory/parts/')
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('parts-tbody');
+            tbody.innerHTML = '';
+            
+            // The API returns results in a 'results' array (DRF pagination)
+            const parts = data.results || data.parts || data;
+            parts.forEach(part => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <div>
+                            <strong>${part.name}</strong><br>
+                            <small class="text-muted">${part.part_number}</small>
+                            ${part.brand ? `<br><small class="text-muted">${part.brand}</small>` : ''}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge ${part.quantity_in_stock <= part.reorder_point ? 'bg-danger' : 'bg-success'}">
+                            ${part.quantity_in_stock}
+                        </span>
+                        ${part.quantity_in_stock <= part.reorder_point ? '<br><small class="text-danger">Low Stock</small>' : ''}
+                    </td>
+                    <td>$${parseFloat(part.cost_price || 0).toFixed(2)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="addItemToPO(${part.id})">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        })
+        .catch(error => console.error('Error loading parts:', error));
+}
+
+// Add item to PO
+function addItemToPO(partId) {
+    fetch(`/inventory/parts/${partId}/`)
+        .then(response => response.json())
+        .then(part => {
+            const item = {
+                id: ++itemCounter,
+                part_id: part.id,
+                part_name: part.name,
+                part_number: part.part_number,
+                quantity: part.reorder_quantity || 1,
+                unit_price: part.cost_price || 0,
+                current_stock: part.quantity_in_stock,
+                reorder_point: part.reorder_point
+            };
+            
+            orderItems.push(item);
+            updateItemsDisplay();
+            calculateTotals();
+            
+            // Close modal if open
+            const modal = bootstrap.Modal.getInstance(document.getElementById('itemSelectionModal'));
+            if (modal) modal.hide();
+        })
+        .catch(error => console.error('Error adding item:', error));
+}
+
+// Update items display
+function updateItemsDisplay() {
+    const tbody = document.getElementById('items-tbody');
+    const noItemsMessage = document.getElementById('no-items-message');
+    
+    if (orderItems.length === 0) {
+        tbody.innerHTML = '';
+        noItemsMessage.style.display = 'block';
+        return;
+    }
+    
+    noItemsMessage.style.display = 'none';
+    
+    tbody.innerHTML = orderItems.map(item => `
+        <tr class="item-row">
+            <td>
+                <div>
+                    <strong>${item.part_name}</strong><br>
+                    <small class="text-muted">${item.part_number}</small>
+                </div>
+            </td>
+            <td>
+                <input type="number" class="form-control form-control-sm" 
+                       value="${item.quantity}" min="1" 
+                       onchange="updateItemQuantity(${item.id}, this.value)">
+            </td>
+            <td>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" 
+                           value="${item.unit_price}" min="0" step="0.01"
+                           onchange="updateItemPrice(${item.id}, this.value)">
+                </div>
+            </td>
+            <td>
+                <strong>$${(item.quantity * item.unit_price).toFixed(2)}</strong>
+            </td>
+            <td>
+                <span class="badge ${item.current_stock <= item.reorder_point ? 'bg-danger' : 'bg-success'}">
+                    ${item.current_stock}
+                </span>
+            </td>
+            <td>
+                <button class="remove-item-btn" onclick="removeItem(${item.id})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Update item quantity
+function updateItemQuantity(itemId, quantity) {
+    const item = orderItems.find(i => i.id === itemId);
+    if (item) {
+        item.quantity = parseFloat(quantity) || 1;
+        updateItemsDisplay();
+        calculateTotals();
+    }
+}
+
+// Update item price
+function updateItemPrice(itemId, price) {
+    const item = orderItems.find(i => i.id === itemId);
+    if (item) {
+        item.unit_price = parseFloat(price) || 0;
+        updateItemsDisplay();
+        calculateTotals();
+    }
+}
+
+// Remove item
+function removeItem(itemId) {
+    const index = orderItems.findIndex(i => i.id === itemId);
+    if (index > -1) {
+        orderItems.splice(index, 1);
+        updateItemsDisplay();
+        calculateTotals();
+    }
+}
+
+// Calculate totals
+function calculateTotals() {
+    const subtotal = orderItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    const taxRate = parseFloat(document.getElementById('tax-rate').value) || 0;
+    const taxAmount = subtotal * (taxRate / 100);
+    const shipping = parseFloat(document.getElementById('shipping-cost').value) || 0;
+    const total = subtotal + taxAmount + shipping;
+    
+    document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+    document.getElementById('tax-amount').textContent = `$${taxAmount.toFixed(2)}`;
+    document.getElementById('total-amount').textContent = `$${total.toFixed(2)}`;
+    document.getElementById('item-count').textContent = orderItems.length;
+}
+
+// Template functions
+function loadTemplate(templateType) {
+    // This would load predefined templates
+    console.log(`Loading ${templateType} template...`);
+    // Implementation would depend on backend API
+}
+
+// Auto-fill functions
+function toggleAutoFill() {
+    const section = document.getElementById('auto-fill-section');
+    section.style.display = section.style.display === 'none' ? 'block' : 'none';
+}
+
+function autoFillLowStock() {
+    const supplierId = document.getElementById('supplier').value;
+    if (!supplierId) {
+        alert('Please select a supplier first');
+        return;
+    }
+    
+    fetch(`/inventory/parts/low-stock/?supplier=${supplierId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.parts && data.parts.length > 0) {
+                data.parts.forEach(part => {
+                    // Check if item already exists
+                    const existingItem = orderItems.find(item => item.part_id === part.id);
+                    if (!existingItem) {
+                        addItemToPO(part.id);
+                    }
+                });
+                toggleAutoFill();
+            } else {
+                alert('No low stock items found for this supplier');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading low stock items:', error);
+            alert('Error loading low stock items');
+        });
+}
+
+// Preview functions
+function previewPO() {
+    // Generate preview content
+    const previewContent = generatePOPreview();
+    document.getElementById('po-preview-content').innerHTML = previewContent;
+    
+    const modal = new bootstrap.Modal(document.getElementById('poPreviewModal'));
+    modal.show();
+}
+
+function generatePOPreview() {
+    const supplier = document.getElementById('supplier').selectedOptions[0]?.text || 'Not selected';
+    const orderDate = document.getElementById('order_date').value;
+    
+    return `
+        <div class="po-header-preview">
+            <h3>PURCHASE ORDER</h3>
+            <p class="lead">PO Number will be auto-generated</p>
+        </div>
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h6>Supplier:</h6>
+                <p>${supplier}</p>
+            </div>
+            <div class="col-md-6">
+                <h6>Order Date:</h6>
+                <p>${orderDate}</p>
+            </div>
+        </div>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Part</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${orderItems.map(item => `
+                    <tr>
+                        <td>${item.part_name}<br><small>${item.part_number}</small></td>
+                        <td>${item.quantity}</td>
+                        <td>$${item.unit_price.toFixed(2)}</td>
+                        <td>$${(item.quantity * item.unit_price).toFixed(2)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        <div class="text-end">
+            <h5>Total: <span id="preview-total">$${orderItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0).toFixed(2)}</span></h5>
+        </div>
+    `;
+}
+
+function printPreview() {
+    const printContent = document.getElementById('po-preview-content').innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Purchase Order Preview</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #ddd; padding: 8px; }
+                    th { background-color: #f5f5f5; }
+                </style>
+            </head>
+            <body>${printContent}</body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+// Utility functions
+function saveDraft() {
+    document.querySelector('button[name="action"][value="create_draft"]').click();
+}
+
+function duplicateFromExisting() {
+    // This would open a modal to select an existing PO to duplicate
+    alert('This feature would allow you to duplicate an existing purchase order.');
+}
+
+function clearForm() {
+    if (confirm('Clear all form data? This cannot be undone.')) {
+        document.getElementById('po-form').reset();
+        orderItems.length = 0;
+        updateItemsDisplay();
+        calculateTotals();
+        // PO number will be auto-generated on backend
+    }
+}
+
+// Form submission
+document.getElementById('po-form').addEventListener('submit', function(e) {
+    if (orderItems.length === 0) {
+        e.preventDefault();
+        alert('Please add at least one item to the purchase order.');
+        return;
+    }
+    
+    // Add order items as hidden fields
+    const hiddenContainer = document.createElement('div');
+    orderItems.forEach((item, index) => {
+        // part_id[]
+        let input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'part_id[]';
+        input.value = item.part_id;
+        hiddenContainer.appendChild(input);
+        
+        // quantity[]
+        input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'quantity[]';
+        input.value = item.quantity;
+        hiddenContainer.appendChild(input);
+        
+        // unit_cost[]
+        input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'unit_cost[]';
+        input.value = item.unit_price;
+        hiddenContainer.appendChild(input);
+    });
+    
+    this.appendChild(hiddenContainer);
+});
+
+// Part search functionality
+document.getElementById('part-search').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#parts-tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

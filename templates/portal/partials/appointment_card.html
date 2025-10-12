@@ -1,0 +1,136 @@
+<!-- Appointment Card Component -->
+<div class="card appointment-card border-brand-left mb-3">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="appointment-date-badge gradient-primary text-center">
+                    <div class="month">{{ appointment.appointment_date|date:"M" }}</div>
+                    <div class="day">{{ appointment.appointment_date|date:"d" }}</div>
+                    <div class="year">{{ appointment.appointment_date|date:"Y" }}</div>
+                </div>
+            </div>
+            
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-1">
+                        <i class="fas fa-calendar-alt text-primary me-2"></i>
+                        {{ appointment.service_type|default:'Service Appointment' }}
+                    </h6>
+                    {% if appointment.status == 'confirmed' %}
+                        <span class="badge bg-success">
+                    {% elif appointment.status == 'pending' %}
+                        <span class="badge bg-warning">
+                    {% elif appointment.status == 'cancelled' %}
+                        <span class="badge bg-danger">
+                    {% elif appointment.status == 'completed' %}
+                        <span class="badge bg-info">
+                    {% else %}
+                        <span class="badge bg-secondary">
+                    {% endif %}
+                        {{ appointment.get_status_display }}
+                    </span>
+                </div>
+                
+                <div class="appointment-details">
+                    <p class="mb-1">
+                        <i class="fas fa-clock text-muted me-2"></i>
+                        <strong>{{ appointment.appointment_time|time:"g:i A" }}</strong>
+                    </p>
+                    
+                    {% if appointment.vehicle %}
+                    <p class="mb-1">
+                        <i class="fas fa-car text-muted me-2"></i>
+                        {{ appointment.vehicle.year }} {{ appointment.vehicle.make }} {{ appointment.vehicle.model }}
+                        <span class="text-muted">({{ appointment.vehicle.license_plate }})</span>
+                    </p>
+                    {% endif %}
+                    
+                    {% if appointment.service_bay %}
+                    <p class="mb-1">
+                        <i class="fas fa-map-marker-alt text-muted me-2"></i>
+                        Bay {{ appointment.service_bay.bay_number }}
+                    </p>
+                    {% endif %}
+                    
+                    {% if appointment.notes %}
+                    <p class="mb-0 small text-muted">
+                        <i class="fas fa-comment text-muted me-2"></i>
+                        {{ appointment.notes|truncatewords:15 }}
+                    </p>
+                    {% endif %}
+                </div>
+                
+                <div class="mt-3">
+                    <!-- Appointment details visible in card, no detail view needed for customer portal -->
+                    {% if appointment.status == 'pending' or appointment.status == 'confirmed' %}
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelAppointment({{ appointment.id }})">
+                        <i class="fas fa-times me-1"></i> Request Cancellation
+                    </button>
+                    {% endif %}
+                    
+                    {% if appointment.vehicle %}
+                    <a href="{% url 'portal:vehicle-detail' appointment.vehicle.id %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-car me-1"></i> View Vehicle
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.appointment-date-badge {
+    color: white;
+    border-radius: 10px;
+    padding: 10px 15px;
+    min-width: 80px;
+}
+.appointment-date-badge .month {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.appointment-date-badge .day {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+.appointment-date-badge .year {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+.appointment-card {
+    transition: box-shadow 0.2s;
+}
+.appointment-card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+}
+</style>
+
+<script>
+function cancelAppointment(appointmentId) {
+    if (confirm('Are you sure you want to cancel this appointment?')) {
+        // AJAX call to cancel appointment
+        fetch(`/appointments/${appointmentId}/cancel/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error cancelling appointment: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error cancelling appointment');
+        });
+    }
+}
+</script>

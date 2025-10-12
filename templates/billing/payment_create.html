@@ -1,0 +1,708 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+<style>
+    .invoice-card {
+        transition: transform 0.2s;
+    }
+    .invoice-card:hover {
+        transform: translateY(-2px);
+    }
+    .amount-due {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    .payment-method-icon {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+    .method-card {
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .method-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 0.5rem 1rem rgba(0, 123, 255, 0.15);
+    }
+    .method-card.selected {
+        border-color: #28a745;
+        background-color: #f8fff8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'billing:dashboard' %}">Billing</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'billing:payment_list' %}">Payments</a>
+                    </li>
+                    <li class="breadcrumb-item active">Record Payment</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-dollar-sign me-2"></i>{{ page_title }}
+            </h1>
+            <p class="text-muted">Record a payment received from customer</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'billing:payment_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Payments
+            </a>
+        </div>
+    </div>
+
+    <!-- Payment Wizard Header -->
+    <div class="page-header-primary rounded p-4 mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">Payment Recording Wizard</h2>
+                <p class="mb-0 opacity-75">
+                    Follow the steps below to record a customer payment
+                </p>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="payment-steps">
+                    <div class="step active" data-step="1">
+                        <i class="fas fa-file-invoice"></i> Invoice
+                    </div>
+                    <div class="step" data-step="2">
+                        <i class="fas fa-credit-card"></i> Method
+                    </div>
+                    <div class="step" data-step="3">
+                        <i class="fas fa-check"></i> Confirm
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="paymentWizardForm">
+        {% csrf_token %}
+        
+        <!-- Step 1: Invoice Selection -->
+        <div class="wizard-step" id="step-1">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-file-invoice me-2"></i>Step 1: Select Invoice
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if invoices %}
+                            <div class="mb-3">
+                                <label for="invoice_search" class="form-label">Search Invoices</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="invoice_search" 
+                                           placeholder="Search by invoice number, customer name...">
+                                </div>
+                            </div>
+
+                            <div class="invoice-list" id="invoiceList">
+                                {% for invoice in invoices %}
+                                <div class="invoice-card card border-success-left mb-3" data-invoice-id="{{ invoice.id }}"
+                                     data-search="{{ invoice.invoice_number }} {{ invoice.customer.get_full_name }} {{ invoice.vehicle.make }} {{ invoice.vehicle.model }}">
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-1">
+                                                <div class="form-check">
+                                                    <input class="form-check-input invoice-radio" type="radio" 
+                                                           name="invoice_id" value="{{ invoice.id }}" 
+                                                           id="invoice_{{ invoice.id }}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-7">
+                                                <h6 class="card-title mb-1">
+                                                    <label for="invoice_{{ invoice.id }}" class="form-label mb-0">
+                                                        {{ invoice.invoice_number }}
+                                                    </label>
+                                                </h6>
+                                                <p class="card-text mb-1">
+                                                    <strong>{{ invoice.customer.get_full_name }}</strong>
+                                                </p>
+                                                <small class="text-muted">
+                                                    {{ invoice.vehicle.year }} {{ invoice.vehicle.make }} {{ invoice.vehicle.model }}
+                                                    • Due: {{ invoice.due_date|date:"M d, Y" }}
+                                                    {% if invoice.is_overdue %}
+                                                    <span class="badge bg-danger ms-2">
+                                                        {{ invoice.days_overdue }} days overdue
+                                                    </span>
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                            <div class="col-md-2 text-center">
+                                                <div class="invoice-total">
+                                                    <small class="text-muted">Total</small>
+                                                    <div class="fw-bold">${{ invoice.total|floatformat:2 }}</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2 text-end">
+                                                <div class="amount-due {% if invoice.amount_due > 0 %}text-danger{% else %}text-success{% endif %}">
+                                                    ${{ invoice.amount_due|floatformat:2 }}
+                                                </div>
+                                                <small class="text-muted">Balance</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-file-invoice fa-4x text-muted mb-3"></i>
+                                <h5 class="text-muted">No Outstanding Invoices</h5>
+                                <p class="text-muted">All invoices are paid in full.</p>
+                                <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-eye me-2"></i>View All Invoices
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selected Invoice Preview -->
+                <div class="col-md-4">
+                    <div class="card" id="selectedInvoiceCard" style="display: none;">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle me-2"></i>Selected Invoice
+                            </h5>
+                        </div>
+                        <div class="card-body" id="selectedInvoiceContent">
+                            <!-- Content will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-bar me-2"></i>Outstanding Summary
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Total Invoices:</span>
+                                <span class="fw-bold">{{ invoices.count }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Total Outstanding:</span>
+                                <span class="fw-bold text-danger">
+                                    ${% for invoice in invoices %}{{ invoice.amount_due|add:0 }}{% endfor %}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Overdue Invoices:</span>
+                                <span class="fw-bold text-warning">
+                                    {% for invoice in invoices %}{% if invoice.is_overdue %}{{ forloop.counter }}{% endif %}{% endfor %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-end mt-4">
+                <button type="button" class="btn btn-primary btn-lg" id="step1Next" disabled>
+                    <i class="fas fa-arrow-right me-2"></i>Next: Payment Method
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: Payment Method Selection -->
+        <div class="wizard-step d-none" id="step-2">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-credit-card me-2"></i>Step 2: Payment Method & Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Payment Amount -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="payment_amount" class="form-label">Payment Amount</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="payment_amount" name="amount" 
+                                       step="0.01" min="0.01" required>
+                                <button class="btn btn-outline-secondary" type="button" id="fullAmountBtn">
+                                    Full Amount
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="payment_date" class="form-label">Payment Date</label>
+                            <input type="datetime-local" class="form-control form-control-lg" 
+                                   id="payment_date" name="payment_date" 
+                                   value="{% now 'Y-m-d\TH:i' %}" required>
+                        </div>
+                    </div>
+
+                    <!-- Payment Method Cards -->
+                    <h6 class="mb-3">Select Payment Method</h6>
+                    <div class="row">
+                        <!-- Cash -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card method-card h-100" data-method="cash">
+                                <div class="card-body text-center">
+                                    <div class="payment-method-icon text-success">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                    </div>
+                                    <h6>Cash</h6>
+                                    <small class="text-muted">Physical cash payment</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Check -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card method-card h-100" data-method="check">
+                                <div class="card-body text-center">
+                                    <div class="payment-method-icon text-primary">
+                                        <i class="fas fa-money-check"></i>
+                                    </div>
+                                    <h6>Check</h6>
+                                    <small class="text-muted">Bank check payment</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card method-card h-100" data-method="credit_card">
+                                <div class="card-body text-center">
+                                    <div class="payment-method-icon text-info">
+                                        <i class="fas fa-credit-card"></i>
+                                    </div>
+                                    <h6>Card</h6>
+                                    <small class="text-muted">Credit/Debit card</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mobile Money -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card method-card h-100" data-method="mtn_momo">
+                                <div class="card-body text-center">
+                                    <div class="payment-method-icon text-warning">
+                                        <i class="fas fa-mobile-alt"></i>
+                                    </div>
+                                    <h6>Mobile Money</h6>
+                                    <small class="text-muted">MTN, Vodafone, AirtelTigo</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Method-specific fields will be inserted here -->
+                    <div id="methodSpecificFields" class="mt-4"></div>
+
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label for="payment_notes" class="form-label">Payment Notes</label>
+                        <textarea class="form-control" id="payment_notes" name="notes" rows="3"
+                                  placeholder="Optional notes about this payment..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between mt-4">
+                <button type="button" class="btn btn-outline-secondary btn-lg" id="step2Back">
+                    <i class="fas fa-arrow-left me-2"></i>Back: Select Invoice
+                </button>
+                <button type="button" class="btn btn-primary btn-lg" id="step2Next" disabled>
+                    <i class="fas fa-arrow-right me-2"></i>Next: Confirm Payment
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Confirmation -->
+        <div class="wizard-step d-none" id="step-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-check me-2"></i>Step 3: Confirm Payment
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div id="paymentSummary">
+                                <!-- Payment summary will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h3 class="text-success mb-0" id="finalAmount">$0.00</h3>
+                                    <p class="text-muted mb-0">Payment Amount</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between mt-4">
+                <button type="button" class="btn btn-outline-secondary btn-lg" id="step3Back">
+                    <i class="fas fa-arrow-left me-2"></i>Back: Payment Method
+                </button>
+                <div>
+                    <button type="submit" class="btn btn-success btn-lg me-2" name="action" value="save">
+                        <i class="fas fa-save me-2"></i>Record Payment
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-lg" name="action" value="save_and_notify">
+                        <i class="fas fa-envelope me-2"></i>Record & Email Receipt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let selectedInvoice = null;
+    let selectedMethod = null;
+    
+    // Invoice search functionality
+    document.getElementById('invoice_search').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const invoiceCards = document.querySelectorAll('.invoice-card');
+        
+        invoiceCards.forEach(card => {
+            const searchData = card.getAttribute('data-search').toLowerCase();
+            if (searchData.includes(searchTerm)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+
+    // Invoice selection
+    document.querySelectorAll('.invoice-radio').forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.checked) {
+                selectedInvoice = this.value;
+                showSelectedInvoice(this);
+                document.getElementById('step1Next').disabled = false;
+            }
+        });
+    });
+
+    // Auto-select invoice if only one is available (e.g., from URL parameter)
+    const invoiceRadios = document.querySelectorAll('.invoice-radio');
+    if (invoiceRadios.length === 1) {
+        invoiceRadios[0].checked = true;
+        selectedInvoice = invoiceRadios[0].value;
+        showSelectedInvoice(invoiceRadios[0]);
+        document.getElementById('step1Next').disabled = false;
+    }
+
+    // Payment method selection
+    document.querySelectorAll('.method-card').forEach(card => {
+        card.addEventListener('click', function() {
+            // Remove selected class from all cards
+            document.querySelectorAll('.method-card').forEach(c => c.classList.remove('selected'));
+            
+            // Add selected class to clicked card
+            this.classList.add('selected');
+            
+            selectedMethod = this.getAttribute('data-method');
+            showMethodFields(selectedMethod);
+            document.getElementById('step2Next').disabled = false;
+        });
+    });
+
+    // Step navigation
+    document.getElementById('step1Next').addEventListener('click', () => showStep(2));
+    document.getElementById('step2Back').addEventListener('click', () => showStep(1));
+    document.getElementById('step2Next').addEventListener('click', () => {
+        updatePaymentSummary();
+        showStep(3);
+    });
+    document.getElementById('step3Back').addEventListener('click', () => showStep(2));
+
+    // Full amount button
+    document.getElementById('fullAmountBtn').addEventListener('click', function() {
+        if (selectedInvoice) {
+            const invoiceCard = document.querySelector(`[data-invoice-id="${selectedInvoice}"]`);
+            if (invoiceCard) {
+                const amountDue = invoiceCard.querySelector('.amount-due').textContent.replace('$', '').replace(',', '');
+                document.getElementById('payment_amount').value = parseFloat(amountDue).toFixed(2);
+            }
+        }
+    });
+
+    function showSelectedInvoice(radioElement) {
+        const invoiceCard = radioElement.closest('.invoice-card');
+        const invoiceNumber = invoiceCard.querySelector('.card-title label').textContent.trim();
+        const customerName = invoiceCard.querySelector('.card-text strong').textContent;
+        const vehicleInfo = invoiceCard.querySelector('.text-muted').textContent.split('•')[0].trim();
+        const totalAmount = invoiceCard.querySelector('.invoice-total .fw-bold').textContent;
+        const amountDue = invoiceCard.querySelector('.amount-due').textContent;
+
+        const content = `
+            <h6>${invoiceNumber}</h6>
+            <p class="mb-2"><strong>${customerName}</strong></p>
+            <p class="mb-2">${vehicleInfo}</p>
+            <hr>
+            <div class="d-flex justify-content-between mb-1">
+                <span>Invoice Total:</span>
+                <span class="fw-bold">${totalAmount}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>Amount Due:</span>
+                <span class="fw-bold text-danger">${amountDue}</span>
+            </div>
+        `;
+
+        document.getElementById('selectedInvoiceContent').innerHTML = content;
+        document.getElementById('selectedInvoiceCard').style.display = 'block';
+        
+        // Set payment amount to amount due
+        const amountValue = amountDue.replace('$', '').replace(',', '');
+        document.getElementById('payment_amount').value = parseFloat(amountValue).toFixed(2);
+    }
+
+    function showMethodFields(method) {
+        const fieldsContainer = document.getElementById('methodSpecificFields');
+        let fieldsHTML = '';
+
+        // Add hidden input for payment method
+        fieldsHTML += `<input type="hidden" name="payment_method" value="${method}">`;
+
+        switch(method) {
+            case 'check':
+                fieldsHTML += `
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>Check Details</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Check Number</label>
+                                        <input type="text" class="form-control" name="reference_number" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Bank Name</label>
+                                        <input type="text" class="form-control" name="bank_name">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'credit_card':
+                fieldsHTML += `
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>Card Details</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Last 4 Digits</label>
+                                        <input type="text" class="form-control" name="card_last_four" maxlength="4">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Card Type</label>
+                                        <select class="form-select" name="card_type">
+                                            <option value="">Select...</option>
+                                            <option value="Visa">Visa</option>
+                                            <option value="MasterCard">MasterCard</option>
+                                            <option value="American Express">American Express</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Transaction ID</label>
+                                        <input type="text" class="form-control" name="transaction_id">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'mtn_momo':
+                fieldsHTML += `
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>Mobile Money Details</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Phone Number</label>
+                                        <input type="tel" class="form-control" name="phone_number" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Network</label>
+                                        <select class="form-select" name="network_provider" required>
+                                            <option value="">Select...</option>
+                                            <option value="MTN">MTN</option>
+                                            <option value="Vodafone">Vodafone</option>
+                                            <option value="AirtelTigo">AirtelTigo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label">Transaction ID</label>
+                                        <input type="text" class="form-control" name="transaction_id" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                break;
+        }
+
+        fieldsContainer.innerHTML = fieldsHTML;
+    }
+
+    function showStep(stepNumber) {
+        // Hide all steps
+        document.querySelectorAll('.wizard-step').forEach(step => {
+            step.classList.add('d-none');
+        });
+
+        // Show selected step
+        document.getElementById(`step-${stepNumber}`).classList.remove('d-none');
+
+        // Update step indicators
+        document.querySelectorAll('.step').forEach((step, index) => {
+            if (index + 1 <= stepNumber) {
+                step.classList.add('active');
+            } else {
+                step.classList.remove('active');
+            }
+        });
+    }
+
+    function updatePaymentSummary() {
+        const amount = document.getElementById('payment_amount').value;
+        const paymentDate = document.getElementById('payment_date').value;
+        const notes = document.getElementById('payment_notes').value;
+        
+        // Get selected invoice info
+        const invoiceCard = document.querySelector(`[data-invoice-id="${selectedInvoice}"]`);
+        
+        // Check if invoice card exists
+        if (!invoiceCard) {
+            console.error('Invoice card not found for invoice ID:', selectedInvoice);
+            return;
+        }
+        
+        const invoiceNumber = invoiceCard.querySelector('.card-title label').textContent.trim();
+        const customerName = invoiceCard.querySelector('.card-text strong').textContent;
+        
+        // Get payment method name
+        const methodNames = {
+            'cash': 'Cash',
+            'check': 'Check',
+            'credit_card': 'Credit Card',
+            'mtn_momo': 'Mobile Money'
+        };
+        
+        const summaryHTML = `
+            <div class="table-responsive">
+                <table class="table table-borderless">
+                    <tr>
+                        <td><strong>Invoice:</strong></td>
+                        <td>${invoiceNumber}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Customer:</strong></td>
+                        <td>${customerName}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Payment Method:</strong></td>
+                        <td>${methodNames[selectedMethod] || selectedMethod}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Payment Date:</strong></td>
+                        <td>${new Date(paymentDate).toLocaleString()}</td>
+                    </tr>
+                    ${notes ? `<tr><td><strong>Notes:</strong></td><td>${notes}</td></tr>` : ''}
+                </table>
+            </div>
+        `;
+        
+        document.getElementById('paymentSummary').innerHTML = summaryHTML;
+        document.getElementById('finalAmount').textContent = `$${parseFloat(amount).toFixed(2)}`;
+    }
+});
+</script>
+
+<style>
+    .payment-steps {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .step {
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 0.375rem;
+        opacity: 0.6;
+        transition: all 0.3s;
+    }
+
+    .step.active {
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .step i {
+        margin-right: 0.5rem;
+    }
+
+    .wizard-step {
+        min-height: 400px;
+    }
+
+    .invoice-card:hover {
+        cursor: pointer;
+    }
+
+    .form-check-input:checked ~ .card {
+        border-color: #28a745;
+        background-color: #f8fff8;
+    }
+</style>
+{% endblock %}

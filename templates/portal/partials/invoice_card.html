@@ -1,0 +1,108 @@
+<!-- Invoice Card Component -->
+<div class="card invoice-card mb-3">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-invoice text-primary me-2"></i>
+                        Invoice #{{ invoice.invoice_number }}
+                    </h5>
+                    <span class="badge bg-{% if invoice.status == 'paid' %}success{% elif invoice.status == 'pending' or invoice.status == 'sent' or invoice.status == 'viewed' %}warning{% elif invoice.status == 'partial' %}info{% elif invoice.status == 'overdue' %}danger{% elif invoice.status == 'void' or invoice.status == 'cancelled' %}secondary{% else %}warning{% endif %} px-3 py-2">
+                        {% if invoice.status == 'sent' or invoice.status == 'viewed' %}
+                            Unpaid
+                        {% elif invoice.status == 'pending' %}
+                            Pending
+                        {% elif invoice.status == 'partial' %}
+                            Partially Paid
+                        {% elif invoice.status == 'paid' %}
+                            Paid
+                        {% elif invoice.status == 'overdue' %}
+                            Overdue
+                        {% elif invoice.status == 'void' %}
+                            Cancelled
+                        {% else %}
+                            {{ invoice.get_status_display }}
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="invoice-details mt-3">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Issue Date</small>
+                            <strong>{{ invoice.invoice_date|date:"M d, Y" }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Due Date</small>
+                            <strong>{{ invoice.due_date|date:"M d, Y" }}</strong>
+                        </div>
+                        {% if invoice.work_order %}
+                        <div class="col-12">
+                            <small class="text-muted d-block">Related Work Order</small>
+                            <strong>WO #{{ invoice.work_order.work_order_number }}</strong>
+                        </div>
+                        {% endif %}
+                        {% if invoice.vehicle %}
+                        <div class="col-12">
+                            <small class="text-muted d-block">Vehicle</small>
+                            <strong>{{ invoice.vehicle.year }} {{ invoice.vehicle.make }} {{ invoice.vehicle.model }}</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="invoice-amount-card bg-light p-3 rounded h-100 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="text-center">
+                            <small class="text-muted d-block mb-1">Total Amount</small>
+                            <h4 class="mb-0 text-primary fw-bold">
+                                GH₵ {{ invoice.total|floatformat:2 }}
+                            </h4>
+                    </div>
+                    
+                    {% if invoice.amount_paid > 0 %}
+                    <div class="mt-2">
+                        <small class="text-muted d-block">Paid</small>
+                        <strong class="text-success">GH₵ {{ invoice.amount_paid|floatformat:2 }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    {% if invoice.balance > 0 %}
+                    <div class="mt-1">
+                        <small class="text-muted d-block">Balance</small>
+                        <strong class="text-danger">GH₵ {{ invoice.balance|floatformat:2 }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <hr>
+        
+        <div class="d-flex gap-2 justify-content-end">
+            <!-- Invoice details visible in card -->
+            
+            {% if invoice.status != 'paid' and invoice.status != 'cancelled' %}
+            <a href="{% url 'portal:make-payment' invoice.id %}" class="btn btn-sm btn-success">
+                <i class="fas fa-credit-card me-1"></i> Pay Now
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.invoice-card {
+    border-left: 4px solid #667eea;
+    transition: box-shadow 0.2s;
+}
+.invoice-card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+}
+.invoice-amount-card {
+    border: 2px dashed #dee2e6;
+}
+</style>

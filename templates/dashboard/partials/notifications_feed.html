@@ -1,0 +1,125 @@
+{% comment %}
+Notifications feed component
+Requires: recent_notifications queryset
+{% endcomment %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-bell text-primary me-2"></i>
+                Recent Notifications
+            </h5>
+            <a href="{% url 'notifications:notification-center' %}" class="btn btn-sm btn-outline-primary">
+                View All
+            </a>
+        </div>
+    </div>
+    <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+        {% if recent_notifications %}
+        <div class="list-group list-group-flush">
+            {% for notification in recent_notifications %}
+            <a href="{{ notification.link_url|default:'#' }}" 
+               class="list-group-item list-group-item-action {% if not notification.is_read %}bg-light{% endif %}"
+               data-notification-id="{{ notification.id }}">
+                <div class="d-flex w-100 justify-content-between">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-start">
+                            {% if notification.priority == 'urgent' %}
+                            <i class="fas fa-exclamation-circle text-danger me-2 mt-1"></i>
+                            {% elif notification.priority == 'high' %}
+                            <i class="fas fa-exclamation text-warning me-2 mt-1"></i>
+                            {% elif notification.notification_type == 'appointment' %}
+                            <i class="fas fa-calendar text-info me-2 mt-1"></i>
+                            {% elif notification.notification_type == 'payment' %}
+                            <i class="fas fa-dollar-sign text-success me-2 mt-1"></i>
+                            {% elif notification.notification_type == 'workorder' %}
+                            <i class="fas fa-wrench text-warning me-2 mt-1"></i>
+                            {% else %}
+                            <i class="fas fa-info-circle text-primary me-2 mt-1"></i>
+                            {% endif %}
+                            
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 {% if not notification.is_read %}fw-bold{% endif %}">
+                                    {{ notification.title }}
+                                </h6>
+                                <p class="mb-1 small text-muted">
+                                    {{ notification.message|truncatewords:15 }}
+                                </p>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ notification.created_at|timesince }} ago
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% if not notification.is_read %}
+                    <div class="ms-2">
+                        <span class="badge bg-primary rounded-pill">New</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <p class="text-muted mb-0">No recent notifications</p>
+        </div>
+        {% endif %}
+    </div>
+    {% if recent_notifications %}
+    <div class="card-footer bg-white border-0 text-center">
+        <button class="btn btn-sm btn-link text-decoration-none" id="markAllRead">
+            <i class="fas fa-check-double me-1"></i>
+            Mark all as read
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Mark notification as read when clicked
+document.querySelectorAll('[data-notification-id]').forEach(item => {
+    item.addEventListener('click', function(e) {
+        const notificationId = this.dataset.notificationId;
+        fetch(`/api/notifications/notifications/${notificationId}/mark_read/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        });
+    });
+});
+
+// Mark all as read
+document.getElementById('markAllRead')?.addEventListener('click', function() {
+    fetch('/api/notifications/notifications/mark_all_read/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    }).then(() => {
+        location.reload();
+    });
+});
+
+// Helper function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>

@@ -1,0 +1,444 @@
+{% load static %}
+
+<!-- Payment Form Component -->
+<div class="payment-form-container">
+    <form id="paymentForm" method="post" action="{% url 'billing:payment_create' %}">
+        {% csrf_token %}
+        
+        <!-- Invoice Selection (if not pre-selected) -->
+        {% if not invoice %}
+        <div class="mb-4">
+            <label for="invoice_id" class="form-label">Invoice</label>
+            <select class="form-select" id="invoice_id" name="invoice_id" required>
+                <option value="">Select an invoice...</option>
+                {% for inv in invoices %}
+                <option value="{{ inv.id }}" data-balance="{{ inv.amount_due }}">
+                    {{ inv.invoice_number }} - {{ inv.customer.get_full_name }} (Balance: ${{ inv.amount_due|floatformat:2 }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% else %}
+        <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+        
+        <!-- Invoice Info Display -->
+        <div class="invoice-info mb-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="card-title">{{ invoice.invoice_number }}</h6>
+                            <p class="card-text">
+                                <strong>Customer:</strong> {{ invoice.customer.get_full_name }}<br>
+                                <strong>Invoice Total:</strong> ${{ invoice.total|floatformat:2 }}<br>
+                                <strong>Amount Paid:</strong> ${{ invoice.amount_paid|floatformat:2 }}
+                            </p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <div class="balance-due">
+                                <h5 class="text-danger">Balance Due: ${{ invoice.amount_due|floatformat:2 }}</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Payment Details -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="payment_amount" class="form-label">Payment Amount</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" id="payment_amount" name="amount" 
+                               step="0.01" min="0.01" required
+                               {% if invoice %}value="{{ invoice.amount_due }}"{% endif %}>
+                        <button class="btn btn-outline-secondary" type="button" id="fullAmountBtn">
+                            Full Amount
+                        </button>
+                    </div>
+                    <div class="form-text">Enter the amount being paid</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="payment_date" class="form-label">Payment Date</label>
+                    <input type="datetime-local" class="form-control" id="payment_date" name="payment_date" 
+                           value="{% now 'Y-m-d\TH:i' %}" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Method -->
+        <div class="mb-4">
+            <label for="payment_method" class="form-label">Payment Method</label>
+            <select class="form-select" id="payment_method" name="payment_method" required>
+                <option value="">Select payment method...</option>
+                <optgroup label="Cash & Check">
+                    <option value="cash">Cash</option>
+                    <option value="check">Check</option>
+                </optgroup>
+                <optgroup label="Cards">
+                    <option value="credit_card">Credit Card</option>
+                    <option value="debit_card">Debit Card</option>
+                </optgroup>
+                <optgroup label="Bank Transfers">
+                    <option value="ach">ACH/Bank Transfer</option>
+                    <option value="wire">Wire Transfer</option>
+                </optgroup>
+                <optgroup label="Digital Payments">
+                    <option value="paypal">PayPal</option>
+                    <option value="venmo">Venmo</option>
+                    <option value="zelle">Zelle</option>
+                </optgroup>
+                <optgroup label="Ghana Mobile Money">
+                    <option value="mtn_momo">MTN Mobile Money</option>
+                    <option value="vodafone_cash">Vodafone Cash</option>
+                    <option value="airteltigo_money">AirtelTigo Money</option>
+                    <option value="hubtel_card">Card Payment (Hubtel)</option>
+                </optgroup>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <!-- Payment Method Specific Fields -->
+        <div id="payment-method-fields">
+            <!-- Check Details -->
+            <div id="check-fields" class="payment-method-section d-none">
+                <h6 class="mb-3">Check Details</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="check_number" class="form-label">Check Number</label>
+                            <input type="text" class="form-control" id="check_number" name="reference_number"
+                                   placeholder="Enter check number">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="bank_name" class="form-label">Bank Name</label>
+                            <input type="text" class="form-control" id="bank_name" name="bank_name"
+                                   placeholder="Bank name (optional)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Details -->
+            <div id="card-fields" class="payment-method-section d-none">
+                <h6 class="mb-3">Card Details</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="card_last_four" class="form-label">Last 4 Digits</label>
+                            <input type="text" class="form-control" id="card_last_four" name="card_last_four"
+                                   placeholder="xxxx" maxlength="4" pattern="[0-9]{4}">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="card_type" class="form-label">Card Type</label>
+                            <select class="form-select" id="card_type" name="card_type">
+                                <option value="">Select card type...</option>
+                                <option value="Visa">Visa</option>
+                                <option value="MasterCard">MasterCard</option>
+                                <option value="American Express">American Express</option>
+                                <option value="Discover">Discover</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="transaction_id" class="form-label">Transaction ID</label>
+                    <input type="text" class="form-control" id="transaction_id" name="transaction_id"
+                           placeholder="Card transaction ID (optional)">
+                </div>
+            </div>
+
+            <!-- Mobile Money Details -->
+            <div id="mobile-money-fields" class="payment-method-section d-none">
+                <h6 class="mb-3">Mobile Money Details</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="phone_number" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phone_number" name="phone_number"
+                                   placeholder="0XX XXX XXXX">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="network_provider" class="form-label">Network Provider</label>
+                            <input type="text" class="form-control" id="network_provider" name="network_provider"
+                                   placeholder="MTN, Vodafone, AirtelTigo">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="momo_transaction_id" class="form-label">Transaction ID</label>
+                    <input type="text" class="form-control" id="momo_transaction_id" name="transaction_id"
+                           placeholder="Mobile money transaction ID">
+                </div>
+            </div>
+
+            <!-- Bank Transfer Details -->
+            <div id="bank-transfer-fields" class="payment-method-section d-none">
+                <h6 class="mb-3">Bank Transfer Details</h6>
+                <div class="mb-3">
+                    <label for="bank_reference" class="form-label">Reference Number</label>
+                    <input type="text" class="form-control" id="bank_reference" name="reference_number"
+                           placeholder="Bank reference or confirmation number">
+                </div>
+            </div>
+
+            <!-- Digital Payment Details -->
+            <div id="digital-payment-fields" class="payment-method-section d-none">
+                <h6 class="mb-3">Digital Payment Details</h6>
+                <div class="mb-3">
+                    <label for="digital_reference" class="form-label">Transaction ID</label>
+                    <input type="text" class="form-control" id="digital_reference" name="reference_number"
+                           placeholder="PayPal, Venmo, or Zelle transaction ID">
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Notes -->
+        <div class="mb-4">
+            <label for="payment_notes" class="form-label">Notes</label>
+            <textarea class="form-control" id="payment_notes" name="notes" rows="3"
+                      placeholder="Additional notes about this payment (optional)"></textarea>
+        </div>
+
+        <!-- Payment Status -->
+        <div class="mb-4">
+            <label for="payment_status" class="form-label">Payment Status</label>
+            <select class="form-select" id="payment_status" name="status">
+                <option value="completed" selected>Completed</option>
+                <option value="pending">Pending</option>
+            </select>
+            <div class="form-text">Mark as pending if payment verification is needed</div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="d-flex justify-content-between">
+            <a href="{% if invoice %}{% url 'billing:invoice_detail' invoice.id %}{% else %}{% url 'billing:payment_list' %}{% endif %}" 
+               class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Cancel
+            </a>
+            <div>
+                <button type="submit" class="btn btn-success" name="action" value="save">
+                    <i class="fas fa-save me-2"></i>Record Payment
+                </button>
+                {% if invoice and invoice.customer.email %}
+                <button type="submit" class="btn btn-primary" name="action" value="save_and_notify">
+                    <i class="fas fa-envelope me-2"></i>Record & Email Receipt
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Hubtel Mobile Money Integration -->
+{% if 'mtn_momo' in method_choices or 'vodafone_cash' in method_choices or 'airteltigo_money' in method_choices or 'hubtel_card' in method_choices %}
+<div class="mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-mobile-alt me-2"></i>Ghana Mobile Money Integration
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">
+                For mobile money payments, you can either record manually or use our integrated payment gateway.
+            </p>
+            <button type="button" class="btn btn-outline-primary" id="hubtelPaymentBtn">
+                <i class="fas fa-credit-card me-2"></i>Process with Hubtel Gateway
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const paymentMethodSelect = document.getElementById('payment_method');
+    const paymentAmountInput = document.getElementById('payment_amount');
+    const fullAmountBtn = document.getElementById('fullAmountBtn');
+    const invoiceSelect = document.getElementById('invoice_id');
+
+    // Payment method change handler
+    paymentMethodSelect.addEventListener('change', function() {
+        showPaymentMethodFields(this.value);
+    });
+
+    // Full amount button handler
+    if (fullAmountBtn) {
+        fullAmountBtn.addEventListener('click', function() {
+            let balance = 0;
+            
+            if (invoiceSelect) {
+                const selectedOption = invoiceSelect.selectedOptions[0];
+                if (selectedOption) {
+                    balance = parseFloat(selectedOption.getAttribute('data-balance')) || 0;
+                }
+            } else {
+                // Pre-selected invoice
+                const balanceElement = document.querySelector('.balance-due h5');
+                if (balanceElement) {
+                    const balanceText = balanceElement.textContent;
+                    const match = balanceText.match(/\$([0-9,]+\.?[0-9]*)/);
+                    if (match) {
+                        balance = parseFloat(match[1].replace(',', ''));
+                    }
+                }
+            }
+            
+            paymentAmountInput.value = balance.toFixed(2);
+        });
+    }
+
+    // Invoice selection handler (for multi-invoice form)
+    if (invoiceSelect) {
+        invoiceSelect.addEventListener('change', function() {
+            const selectedOption = this.selectedOptions[0];
+            if (selectedOption) {
+                const balance = parseFloat(selectedOption.getAttribute('data-balance')) || 0;
+                paymentAmountInput.value = balance.toFixed(2);
+            }
+        });
+    }
+
+    // Form validation
+    document.getElementById('paymentForm').addEventListener('submit', function(e) {
+        const amount = parseFloat(paymentAmountInput.value);
+        const paymentMethod = paymentMethodSelect.value;
+        
+        if (amount <= 0) {
+            e.preventDefault();
+            alert('Payment amount must be greater than zero.');
+            return;
+        }
+        
+        if (!paymentMethod) {
+            e.preventDefault();
+            alert('Please select a payment method.');
+            return;
+        }
+        
+        // Additional validation based on payment method
+        if (paymentMethod === 'check') {
+            const checkNumber = document.getElementById('check_number').value;
+            if (!checkNumber.trim()) {
+                e.preventDefault();
+                alert('Please enter the check number.');
+                return;
+            }
+        }
+        
+        if (['mtn_momo', 'vodafone_cash', 'airteltigo_money'].includes(paymentMethod)) {
+            const phoneNumber = document.getElementById('phone_number').value;
+            if (!phoneNumber.trim()) {
+                e.preventDefault();
+                alert('Please enter the phone number for mobile money payment.');
+                return;
+            }
+        }
+    });
+
+    // Hubtel integration
+    const hubtelBtn = document.getElementById('hubtelPaymentBtn');
+    if (hubtelBtn) {
+        hubtelBtn.addEventListener('click', function() {
+            // This would integrate with Hubtel payment gateway
+            // For now, show a placeholder
+            alert('Hubtel payment gateway integration would be implemented here.');
+        });
+    }
+
+    function showPaymentMethodFields(method) {
+        // Hide all method-specific fields
+        document.querySelectorAll('.payment-method-section').forEach(section => {
+            section.classList.add('d-none');
+        });
+
+        // Show relevant fields based on method
+        switch(method) {
+            case 'check':
+                document.getElementById('check-fields').classList.remove('d-none');
+                break;
+            case 'credit_card':
+            case 'debit_card':
+            case 'hubtel_card':
+                document.getElementById('card-fields').classList.remove('d-none');
+                break;
+            case 'mtn_momo':
+            case 'vodafone_cash':
+            case 'airteltigo_money':
+                document.getElementById('mobile-money-fields').classList.remove('d-none');
+                break;
+            case 'ach':
+            case 'wire':
+                document.getElementById('bank-transfer-fields').classList.remove('d-none');
+                break;
+            case 'paypal':
+            case 'venmo':
+            case 'zelle':
+                document.getElementById('digital-payment-fields').classList.remove('d-none');
+                break;
+        }
+    }
+});
+</script>
+
+<style>
+    .payment-form-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+
+    .invoice-info .card {
+        border-left: 4px solid #007bff;
+    }
+
+    .balance-due h5 {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .payment-method-section {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 0.375rem;
+        border-left: 4px solid #6c757d;
+        margin-bottom: 1rem;
+    }
+
+    .payment-method-section h6 {
+        color: #495057;
+        font-weight: 600;
+    }
+
+    #payment_amount {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .btn-group .btn {
+        border-radius: 0;
+    }
+
+    .btn-group .btn:first-child {
+        border-top-left-radius: 0.375rem;
+        border-bottom-left-radius: 0.375rem;
+    }
+
+    .btn-group .btn:last-child {
+        border-top-right-radius: 0.375rem;
+        border-bottom-right-radius: 0.375rem;
+    }
+</style>

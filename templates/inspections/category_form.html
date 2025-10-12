@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} Category - {{ template.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="form-container">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>
+                    <i class="fas fa-folder me-2 text-primary"></i>
+                    {% if is_edit %}Edit{% else %}Add{% endif %} Category
+                </h2>
+                <p class="text-muted mb-0">Template: <strong>{{ template.name }}</strong></p>
+            </div>
+            <a href="{% url 'inspections:template-detail' template.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back
+            </a>
+        </div>
+
+        <!-- Form -->
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {{ form.name|as_crispy_field }}
+                    {{ form.description|as_crispy_field }}
+                    {{ form.order|as_crispy_field }}
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'inspections:template-detail' template.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            {% if is_edit %}Update Category{% else %}Add Category{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        {% if is_edit %}
+        <div class="alert alert-info mt-3">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Note:</strong> This category has {{ category.items.count }} item(s). 
+            Deleting this category will also delete all its items.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

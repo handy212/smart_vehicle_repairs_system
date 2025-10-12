@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reports & Analytics - Smart Vehicle Repairs{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-card {
+        transition: transform 0.2s;
+        cursor: pointer;
+    }
+    .report-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    .report-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2><i class="fas fa-chart-line me-2"></i>Reports & Analytics</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Reports</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#savedReportsModal">
+                <i class="fas fa-bookmark me-2"></i>Saved Reports
+            </button>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    {% include 'reporting/partials/kpi_cards.html' %}
+
+    <!-- Report Categories -->
+    <div class="row g-4 mb-5">
+        <!-- Financial Reports -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card report-card h-100" onclick="location.href='{% url 'reporting:financial-report' %}'">
+                <div class="card-body text-center">
+                    <div class="report-icon text-success mb-3">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <h5 class="card-title">Financial Reports</h5>
+                    <p class="text-muted">Revenue, profits, expenses, and payment analytics</p>
+                    <ul class="list-unstyled text-start small">
+                        <li><i class="fas fa-check text-success me-2"></i>Revenue Analysis</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Profit Margins</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Payment Trends</li>
+                        <li><i class="fas fa-check text-success me-2"></i>Expense Tracking</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-light text-center">
+                    <small class="text-muted">Last updated: Today</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Operational Reports -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card report-card h-100" onclick="location.href='{% url 'reporting:operational-report' %}'">
+                <div class="card-body text-center">
+                    <div class="report-icon text-primary mb-3">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <h5 class="card-title">Operational Reports</h5>
+                    <p class="text-muted">Work orders, appointments, and efficiency metrics</p>
+                    <ul class="list-unstyled text-start small">
+                        <li><i class="fas fa-check text-primary me-2"></i>Work Order Status</li>
+                        <li><i class="fas fa-check text-primary me-2"></i>Appointment Analytics</li>
+                        <li><i class="fas fa-check text-primary me-2"></i>Technician Performance</li>
+                        <li><i class="fas fa-check text-primary me-2"></i>Service Bay Utilization</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-light text-center">
+                    <small class="text-muted">Real-time data</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Reports -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card report-card h-100" onclick="location.href='{% url 'reporting:inventory-report' %}'">
+                <div class="card-body text-center">
+                    <div class="report-icon text-warning mb-3">
+                        <i class="fas fa-boxes"></i>
+                    </div>
+                    <h5 class="card-title">Inventory Reports</h5>
+                    <p class="text-muted">Stock levels, usage, and reorder analysis</p>
+                    <ul class="list-unstyled text-start small">
+                        <li><i class="fas fa-check text-warning me-2"></i>Stock Levels</li>
+                        <li><i class="fas fa-check text-warning me-2"></i>Parts Usage</li>
+                        <li><i class="fas fa-check text-warning me-2"></i>Reorder Alerts</li>
+                        <li><i class="fas fa-check text-warning me-2"></i>Supplier Performance</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-light text-center">
+                    <small class="text-muted">Updated hourly</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Reports -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card report-card h-100" onclick="location.href='{% url 'reporting:customer-report' %}'">
+                <div class="card-body text-center">
+                    <div class="report-icon text-info mb-3">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h5 class="card-title">Customer Reports</h5>
+                    <p class="text-muted">Customer behavior and retention analytics</p>
+                    <ul class="list-unstyled text-start small">
+                        <li><i class="fas fa-check text-info me-2"></i>Customer Growth</li>
+                        <li><i class="fas fa-check text-info me-2"></i>Retention Rate</li>
+                        <li><i class="fas fa-check text-info me-2"></i>Top Customers</li>
+                        <li><i class="fas fa-check text-info me-2"></i>Service Frequency</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-light text-center">
+                    <small class="text-muted">Updated daily</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Reports -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card report-card h-100" onclick="location.href='{% url 'reporting:vehicle-report' %}'">
+                <div class="card-body text-center">
+                    <div class="report-icon text-danger mb-3">
+                        <i class="fas fa-car"></i>
+                    </div>
+                    <h5 class="card-title">Vehicle Reports</h5>
+                    <p class="text-muted">Fleet analysis and vehicle service patterns</p>
+                    <ul class="list-unstyled text-start small">
+                        <li><i class="fas fa-check text-danger me-2"></i>Service History</li>
+                        <li><i class="fas fa-check text-danger me-2"></i>Make/Model Trends</li>
+                        <li><i class="fas fa-check text-danger me-2"></i>Common Issues</li>
+                        <li><i class="fas fa-check text-danger me-2"></i>Warranty Status</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-light text-center">
+                    <small class="text-muted">Updated daily</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Report Builder -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card report-card h-100 border-primary" onclick="location.href='{% url 'reporting:custom-report' %}'">
+                <div class="card-body text-center">
+                    <div class="report-icon text-secondary mb-3">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    <h5 class="card-title">Custom Report Builder</h5>
+                    <p class="text-muted">Create your own custom reports with filters</p>
+                    <ul class="list-unstyled text-start small">
+                        <li><i class="fas fa-check text-secondary me-2"></i>Flexible Filters</li>
+                        <li><i class="fas fa-check text-secondary me-2"></i>Multiple Data Sources</li>
+                        <li><i class="fas fa-check text-secondary me-2"></i>Save & Schedule</li>
+                        <li><i class="fas fa-check text-secondary me-2"></i>Export Options</li>
+                    </ul>
+                </div>
+                <div class="card-footer bg-primary bg-opacity-10 text-center">
+                    <small class="text-primary fw-bold">Build Your Own</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scheduled Reports -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Scheduled Reports</h5>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#scheduleReportModal">
+                <i class="fas fa-plus me-1"></i>Schedule Report
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Report Name</th>
+                            <th>Type</th>
+                            <th>Frequency</th>
+                            <th>Recipients</th>
+                            <th>Next Run</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for schedule in scheduled_reports %}
+                        <tr>
+                            <td><strong>{{ schedule.name }}</strong></td>
+                            <td><span class="badge bg-secondary">{{ schedule.get_report_type_display }}</span></td>
+                            <td>{{ schedule.get_frequency_display }}</td>
+                            <td>{{ schedule.email_recipients|truncatewords:3 }}</td>
+                            <td>{{ schedule.next_run_date|date:"M d, Y H:i" }}</td>
+                            <td>
+                                {% if schedule.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="editSchedule({{ schedule.id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteSchedule({{ schedule.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No scheduled reports yet</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Saved Reports Modal -->
+<div class="modal fade" id="savedReportsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Saved Reports</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="list-group">
+                    {% for report in saved_reports %}
+                    <a href="{% url 'reporting:report-viewer' report.id %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ report.name }}</h6>
+                            <small>{{ report.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        <p class="mb-1 small text-muted">{{ report.description|truncatewords:15 }}</p>
+                        <small class="badge bg-info">{{ report.get_report_type_display }}</small>
+                    </a>
+                    {% empty %}
+                    <p class="text-center text-muted py-4">No saved reports yet</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function editSchedule(id) {
+    window.location.href = `/reporting/schedules/${id}/edit/`;
+}
+
+function deleteSchedule(id) {
+    if (confirm('Are you sure you want to delete this scheduled report?')) {
+        // AJAX delete
+        fetch(`/reporting/schedules/${id}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        }).then(() => location.reload());
+    }
+}
+</script>
+{% endblock %}

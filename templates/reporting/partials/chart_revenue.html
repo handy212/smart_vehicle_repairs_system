@@ -1,0 +1,67 @@
+<canvas id="revenueChart" height="80"></canvas>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    
+    // Sample data - replace with actual data from backend
+    const chartData = {
+        labels: {{ revenue_labels|safe|default:"[]" }},
+        datasets: [{
+            label: 'Revenue',
+            data: {{ revenue_data|safe|default:"[]" }},
+            borderColor: 'rgba(79, 70, 229, 1)',
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            fill: true,
+            tension: 0.4
+        }, {
+            label: 'Profit',
+            data: {{ profit_data|safe|default:"[]" }},
+            borderColor: 'rgba(16, 185, 129, 1)',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true,
+            tension: 0.4
+        }]
+    };
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += '$' + context.parsed.y.toFixed(2);
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>

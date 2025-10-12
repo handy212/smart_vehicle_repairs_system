@@ -1,0 +1,663 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
+    
+    <!-- Favicon -->
+    {% if FAVICON_PATH %}
+    <link rel="icon" type="image/x-icon" href="{{ MEDIA_URL }}{{ FAVICON_PATH }}">
+    {% else %}
+    <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
+    {% endif %}
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome 6 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Vehicle Repairs">
+    <link rel="apple-touch-icon" href="{% static 'icons/icon-192x192.png' %}">
+    
+    <!-- Custom CSS -->
+    <link href="{% static 'css/custom.css' %}" rel="stylesheet">
+    <link href="{% static 'css/brand-colors.css' %}" rel="stylesheet">
+    
+    {% block extra_css %}{% endblock %}
+    
+    <style>
+        :root {
+            /* Dynamic Brand Colors from Admin Settings */
+            --primary: {{ PRIMARY_COLOR|default:'#4f46e5' }};
+            --secondary: {{ SECONDARY_COLOR|default:'#6b7280' }};
+            --success: {{ SUCCESS_COLOR|default:'#10b981' }};
+            --danger: {{ DANGER_COLOR|default:'#ef4444' }};
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            
+            /* Computed Colors */
+            --primary-dark: color-mix(in srgb, var(--primary) 85%, black);
+            --primary-light: color-mix(in srgb, var(--primary) 70%, white);
+            --primary-rgb: {{ PRIMARY_COLOR|default:'79, 70, 229' }};
+            
+            /* Gray Scale */
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            
+            /* Background Colors */
+            --bg-body: #f4f6f8;
+            --bg-card: #ffffff;
+            
+            /* Bootstrap Override */
+            --bs-primary: var(--primary);
+            --bs-primary-rgb: var(--primary-rgb);
+            --bs-secondary: var(--secondary);
+            --bs-success: var(--success);
+            --bs-danger: var(--danger);
+            --bs-warning: var(--warning);
+            --bs-info: var(--info);
+        }
+        
+        /* === CENTRALIZED UTILITY CLASSES === */
+        
+        /* Page Headers with Gradient (Used across all admin pages) */
+        .page-header-gradient,
+        .vehicle-header,
+        .booking-header,
+        .book-header,
+        .appointments-header,
+        .invoices-header,
+        .history-header,
+        .inspection-header,
+        .notification-header,
+        .customer-header,
+        .estimate-header,
+        .payment-header-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, black) 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        /* Success Gradient Headers */
+        .payment-header,
+        .payment-header-success {
+            background: linear-gradient(135deg, var(--success) 0%, color-mix(in srgb, var(--success) 85%, black) 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        /* Danger Gradient Headers */
+        .delete-header,
+        .danger-header {
+            background: linear-gradient(135deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 85%, black) 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        
+        /* Info Cards with Border Accent */
+        .info-card,
+        .stat-card {
+            border-left: 4px solid var(--primary);
+            transition: transform 0.2s;
+        }
+        
+        .info-card:hover,
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+        }
+        
+        /* Primary Text & Borders */
+        .text-primary-custom {
+            color: var(--primary) !important;
+        }
+        
+        .border-primary-custom {
+            border-color: var(--primary) !important;
+        }
+        
+        .border-left-primary {
+            border-left: 4px solid var(--primary);
+        }
+        
+        /* Background Utilities */
+        .bg-primary-custom {
+            background-color: var(--primary) !important;
+            color: white;
+        }
+        
+        .bg-primary-light {
+            background-color: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+        }
+        
+        /* Button Enhancements */
+        .btn-primary-custom {
+            background: var(--primary) !important;
+            border-color: var(--primary) !important;
+            color: white !important;
+        }
+        
+        .btn-primary-custom:hover {
+            background: var(--primary-dark) !important;
+            border-color: var(--primary-dark) !important;
+        }
+        
+        /* Stats Cards with Gradients */
+        .stats-card-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, var(--secondary)) 100%);
+            color: white;
+            border: none;
+            transition: transform 0.2s;
+        }
+        
+        .stats-card-success {
+            background: linear-gradient(135deg, var(--success) 0%, color-mix(in srgb, var(--success) 120%, white) 100%);
+            color: white;
+            border: none;
+        }
+        
+        .stats-card-danger {
+            background: linear-gradient(135deg, var(--danger) 0%, color-mix(in srgb, var(--danger) 70%, #e83e8c) 100%);
+            color: white;
+            border: none;
+        }
+        
+        .stats-card-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            color: white;
+            border: none;
+        }
+        
+        /* Filter Tabs */
+        .filter-tabs .nav-link {
+            color: var(--gray-600);
+        }
+        
+        .filter-tabs .nav-link.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+        }
+        
+        /* Time Slots & Selections */
+        .time-slot.selected,
+        .selected-item {
+            background: var(--primary) !important;
+            color: white !important;
+            border-color: var(--primary) !important;
+        }
+        
+        /* Payment Method Cards */
+        .payment-method-card.active {
+            border-color: var(--primary);
+            background-color: color-mix(in srgb, var(--primary) 5%, white);
+        }
+        
+        .payment-method-card:hover {
+            border-color: var(--primary);
+        }
+        
+        /* Quick Action Cards */
+        .quick-action-card {
+            background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, var(--secondary)) 100%);
+            color: white;
+            border: none;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        
+        .quick-action-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.2);
+        }
+        
+        /* Notification Badges */
+        .notification-badge.unread {
+            border-left-color: var(--primary);
+        }
+        
+        .notification-badge .badge-primary {
+            background-color: var(--primary);
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--gray-900);
+        }
+        
+        .navbar-brand {
+            font-weight: 600;
+            color: var(--primary) !important;
+        }
+        
+        .navbar-brand i {
+            font-size: 1.5rem;
+        }
+        
+        /* === BOOTSTRAP OVERRIDES === */
+        
+        .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .btn-primary:hover,
+        .btn-primary:focus,
+        .btn-primary:active {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+        }
+        
+        .btn-outline-primary {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .bg-primary {
+            background-color: var(--primary) !important;
+        }
+        
+        .text-primary {
+            color: var(--primary) !important;
+        }
+        
+        .border-primary {
+            border-color: var(--primary) !important;
+        }
+        
+        .badge.bg-primary {
+            background-color: var(--primary) !important;
+        }
+        
+        .alert-primary {
+            background-color: color-mix(in srgb, var(--primary) 10%, white);
+            border-color: color-mix(in srgb, var(--primary) 20%, white);
+            color: var(--primary-dark);
+        }
+        
+        .list-group-item.active {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .page-link:hover {
+            color: var(--primary);
+        }
+        
+        .page-item.active .page-link {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .form-range::-webkit-slider-thumb {
+            background-color: var(--primary);
+        }
+        
+        .form-range::-moz-range-thumb {
+            background-color: var(--primary);
+        }
+        
+        .progress-bar {
+            background-color: var(--primary);
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            bottom: 0;
+            z-index: 99;
+            min-height: calc(100vh - 56px);
+            background: white;
+            border-right: 1px solid var(--gray-200);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* Sidebar scrollbar styling */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar::-webkit-scrollbar-track {
+            background: var(--gray-100);
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--gray-400);
+            border-radius: 3px;
+        }
+        
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--gray-500);
+        }
+        
+        .sidebar .nav-link {
+            color: var(--gray-700);
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            margin: 0.25rem 0;
+            transition: all 0.2s;
+        }
+        
+        .sidebar .nav-link:hover {
+            background-color: var(--gray-100);
+            color: var(--primary);
+        }
+        
+        .sidebar .nav-link.active {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .sidebar .nav-link i {
+            width: 20px;
+            margin-right: 0.5rem;
+        }
+        
+        .sidebar .dropdown-menu {
+            background-color: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-left: 1rem;
+            margin-top: 0.25rem;
+        }
+        
+        .sidebar .dropdown-item {
+            color: var(--gray-600);
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .sidebar .dropdown-item:hover {
+            background-color: var(--gray-100);
+            color: var(--primary);
+        }
+        
+        .sidebar .dropdown-item i {
+            width: 16px;
+            font-size: 0.8rem;
+        }
+        
+        .main-content {
+            padding: 2rem;
+            margin-left: 0;
+        }
+        
+        /* Add left margin when sidebar is visible */
+        @media (min-width: 768px) {
+            .main-content.with-sidebar {
+                margin-left: 16.666667%; /* col-md-3 = 25%, col-lg-2 = 16.666667% */
+            }
+        }
+        
+        @media (min-width: 992px) {
+            .main-content.with-sidebar {
+                margin-left: 16.666667%; /* col-lg-2 */
+            }
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid var(--gray-200);
+            font-weight: 600;
+            padding: 1rem 1.25rem;
+        }
+        
+        .badge {
+            padding: 0.35em 0.65em;
+            font-weight: 500;
+        }
+        
+        .page-header {
+            margin-bottom: 2rem;
+        }
+        
+        .page-header h1 {
+            font-size: 1.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-header .breadcrumb {
+            background: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .alert {
+            border: none;
+            border-radius: 0.5rem;
+        }
+        
+        footer {
+            background-color: white;
+            border-top: 1px solid var(--gray-200);
+            padding: 1.5rem 0;
+            margin-top: 3rem;
+        }
+        
+        /* Notification Bell Animation */
+        @keyframes bell-shake {
+            0%, 100% { transform: rotate(0deg); }
+            10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
+            20%, 40%, 60%, 80% { transform: rotate(10deg); }
+        }
+        
+        .fa-shake {
+            animation: bell-shake 0.8s ease-in-out;
+        }
+        
+        /* Toast notification positioning */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+    {% load static %}
+    
+    <!-- Navigation -->
+    {% include 'partials/header.html' %}
+    
+    <!-- Main Container -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar (only for staff users) -->
+            {% if user.is_authenticated and user.is_staff %}
+                {% include 'partials/sidebar.html' %}
+            {% endif %}
+            
+            <!-- Main Content -->
+            <main class="{% if user.is_authenticated and user.is_staff %}col-md-9 col-lg-10 with-sidebar{% else %}col-12{% endif %} ms-sm-auto px-md-4 main-content">
+                <!-- Messages -->
+                {% include 'partials/messages.html' %}
+                
+                <!-- Page Header -->
+                {% block page_header %}{% endblock %}
+                
+                <!-- Content -->
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="text-center text-muted">
+        <div class="container">
+            <p class="mb-0">&copy; 2025 {{ COMPANY_NAME|default:SITE_NAME }}. All rights reserved.</p>
+            <p class="mb-0">
+                {% if COMPANY_EMAIL %}<a href="mailto:{{ COMPANY_EMAIL }}" class="text-decoration-none me-2">{{ COMPANY_EMAIL }}</a>{% endif %}
+                {% if COMPANY_PHONE %}<span class="me-2">•</span><a href="tel:{{ COMPANY_PHONE }}" class="text-decoration-none">{{ COMPANY_PHONE }}</a>{% endif %}
+            </p>
+            <p class="mb-0 mt-1">
+                <a href="/admin-panel/" class="text-decoration-none">Admin</a> •
+                <a href="/api/" class="text-decoration-none">API</a> •
+                <a href="/api/docs/" class="text-decoration-none">API Docs</a>
+            </p>
+        </div>
+    </footer>
+    
+    <!-- jQuery (for Bootstrap components) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    {% block extra_js %}{% endblock %}
+    
+    <script>
+        // Auto-dismiss alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+            alerts.forEach(function(alert) {
+                setTimeout(function() {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000);
+            });
+        });
+        
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful');
+                        
+                        // Check for updates
+                        if (registration.waiting) {
+                            showUpdateAvailable();
+                        }
+                        
+                        registration.addEventListener('updatefound', function() {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', function() {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    showUpdateAvailable();
+                                }
+                            });
+                        });
+                    })
+                    .catch(function(registrationError) {
+                        console.log('ServiceWorker registration failed: ', registrationError);
+                    });
+            });
+        }
+        
+        // Show update notification
+        function showUpdateAvailable() {
+            if (confirm('A new version is available. Would you like to update?')) {
+                window.location.reload();
+            }
+        }
+        
+        // Install prompt for PWA
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button or notification
+            showInstallPrompt();
+        });
+        
+        function showInstallPrompt() {
+            // Create install notification
+            const installNotification = document.createElement('div');
+            installNotification.className = 'alert alert-info alert-dismissible fade show position-fixed';
+            installNotification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 350px;';
+            installNotification.innerHTML = `
+                <i class="fas fa-mobile-alt me-2"></i>
+                <strong>Install App</strong><br>
+                <small>Add this app to your home screen for quick access!</small>
+                <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="installPWA()">Install</button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(installNotification);
+            
+            // Auto-dismiss after 10 seconds
+            setTimeout(() => {
+                if (installNotification.parentNode) {
+                    installNotification.remove();
+                }
+            }, 10000);
+        }
+        
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(function(choiceResult) {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    } else {
+                        console.log('User dismissed the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+        
+        // Mobile detection and redirect
+        function detectMobile() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const mobileKeywords = ['mobile', 'android', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
+            
+            return mobileKeywords.some(keyword => userAgent.includes(keyword));
+        }
+        
+        // Auto-redirect to mobile version on first visit
+        if (detectMobile() && !localStorage.getItem('mobile_redirect_shown') && !window.location.pathname.startsWith('/mobile/')) {
+            const showMobilePrompt = confirm('Would you like to use the mobile-optimized version?');
+            if (showMobilePrompt) {
+                window.location.href = '/mobile/dashboard/';
+            } else {
+                localStorage.setItem('mobile_redirect_shown', 'true');
+            }
+        }
+    </script>
+</body>
+</html>

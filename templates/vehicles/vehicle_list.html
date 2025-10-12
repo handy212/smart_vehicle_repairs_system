@@ -1,0 +1,730 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Vehicle Management - Smart Vehicle Repairs{% endblock %}
+
+{% block extra_css %}
+<style>
+    .vehicle-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .vehicle-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .vehicle-card .card-img-top {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+    }
+    
+    .vehicle-card .status-badge-overlay {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1;
+    }
+    
+    #cardView {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+        padding: 1rem;
+    }
+    
+    @media (min-width: 768px) {
+        #cardView {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (min-width: 992px) {
+        #cardView {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+    
+    @media (min-width: 1200px) {
+        #cardView {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+    
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+    }
+    
+    .filter-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .table-actions .btn {
+        margin-right: 0.25rem;
+    }
+    
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .mileage-display {
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Vehicle Management</h1>
+            <p class="mb-0 text-muted">Manage vehicle information and service history</p>
+        </div>
+        <div>
+            <a href="{% url 'vehicles:vehicle-create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add New Vehicle
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-4 col-md-4 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Total Vehicles</h6>
+                            <h2 class="mb-0">{{ total_vehicles|default:0 }}</h2>
+                        </div>
+                        <div class="fs-1 opacity-50">
+                            <i class="fas fa-car"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-4 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Active</h6>
+                            <h2 class="mb-0">{{ active_vehicles|default:0 }}</h2>
+                        </div>
+                        <div class="fs-1 opacity-50">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-4 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">In Service</h6>
+                            <h2 class="mb-0">{{ in_service_vehicles|default:0 }}</h2>
+                        </div>
+                        <div class="fs-1 opacity-50">
+                            <i class="fas fa-wrench"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-section">
+        <form method="get" id="filterForm">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Search</label>
+                    <input type="text" name="search" class="form-control" placeholder="VIN, license plate, make, model..." value="{{ search }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        {% for status_key, status_label in vehicle_statuses %}
+                        <option value="{{ status_key }}" {% if request.GET.status == status_key %}selected{% endif %}>{{ status_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Make</label>
+                    <select name="make" class="form-select">
+                        <option value="">All Makes</option>
+                        {% for make in makes %}
+                        <option value="{{ make }}" {% if request.GET.make == make %}selected{% endif %}>{{ make }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Customer</label>
+                    <select name="customer" class="form-select">
+                        <option value="">All Customers</option>
+                        {% for customer in customers %}
+                        <option value="{{ customer.id }}" {% if request.GET.customer|add:"0" == customer.id %}selected{% endif %}>
+                            {{ customer.user.get_full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Sort By</label>
+                    <select name="sort" class="form-select">
+                        <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Newest First</option>
+                        <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>Oldest First</option>
+                        <option value="year" {% if request.GET.sort == 'year' %}selected{% endif %}>Year (Ascending)</option>
+                        <option value="-year" {% if request.GET.sort == '-year' %}selected{% endif %}>Year (Descending)</option>
+                        <option value="make" {% if request.GET.sort == 'make' %}selected{% endif %}>Make A-Z</option>
+                        <option value="-make" {% if request.GET.sort == '-make' %}selected{% endif %}>Make Z-A</option>
+                    </select>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Year Range</label>
+                    <div class="row g-1">
+                        <div class="col-6">
+                            <input type="number" name="year_from" class="form-control" placeholder="From" value="{{ year_from }}" min="1900" max="2030">
+                        </div>
+                        <div class="col-6">
+                            <input type="number" name="year_to" class="form-control" placeholder="To" value="{{ year_to }}" min="1900" max="2030">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-9 d-flex align-items-end">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-1"></i> Filter
+                        </button>
+                        <a href="{% url 'vehicles:vehicle-list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i> Clear
+                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-download me-1"></i> Export
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" onclick="exportVehicles('csv')">Export as CSV</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="exportVehicles('pdf')">Export as PDF</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bulk Actions Toolbar -->
+    <div id="bulkActionsToolbar" class="alert alert-info d-none mb-3" role="alert">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-check-square me-2"></i>
+                <span id="selectedCount">0</span> vehicle(s) selected
+            </div>
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportSelected()">
+                    <i class="fas fa-download me-1"></i>Export Selected
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-warning" onclick="bulkUpdateStatus()">
+                    <i class="fas fa-edit me-1"></i>Update Status
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="bulkDelete()">
+                    <i class="fas fa-trash me-1"></i>Delete Selected
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle List -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2 text-primary"></i>Vehicle List
+                        <span class="badge bg-primary ms-2">{{ page_obj.paginator.count|default:0 }}</span>
+                    </h5>
+                    {% if request.GET %}
+                    <small class="text-muted">
+                        <i class="fas fa-filter me-1"></i>Filtered results
+                        <a href="{% url 'vehicles:vehicle-list' %}" class="ms-2 text-decoration-none">
+                            <i class="fas fa-times"></i> Clear filters
+                        </a>
+                    </small>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-end align-items-center gap-2">
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <span class="input-group-text"><i class="fas fa-list-ol"></i></span>
+                            <select class="form-select form-select-sm" id="perPageSelect" onchange="changePerPage(this.value)" style="width: auto;">
+                                <option value="10" {% if request.GET.per_page == '10' %}selected{% endif %}>10 per page</option>
+                                <option value="20" {% if request.GET.per_page == '20' or not request.GET.per_page %}selected{% endif %}>20 per page</option>
+                                <option value="50" {% if request.GET.per_page == '50' %}selected{% endif %}>50 per page</option>
+                                <option value="100" {% if request.GET.per_page == '100' %}selected{% endif %}>100 per page</option>
+                            </select>
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-secondary active" onclick="showTableView()">
+                                <i class="fas fa-list"></i> Table
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="showCardView()">
+                                <i class="fas fa-th-large"></i> Cards
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <!-- Table View -->
+            <div id="tableView" class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>
+                                <input type="checkbox" id="selectAll">
+                            </th>
+                            <th>Vehicle</th>
+                            <th>Owner</th>
+                            <th>Details</th>
+                            <th>Mileage</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vehicle in vehicles %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="vehicle-checkbox" value="{{ vehicle.id }}">
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="me-2">
+                                        {% if vehicle.image %}
+                                        <img src="{{ vehicle.image.url }}" alt="{{ vehicle.make }} {{ vehicle.model }}" 
+                                             class="rounded" style="width: 50px; height: 50px; object-fit: cover;">
+                                        {% else %}
+                                        <div class="bg-secondary text-white rounded d-flex align-items-center justify-content-center" 
+                                             style="width: 50px; height: 50px;">
+                                            <i class="fas fa-car"></i>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</div>
+                                        <small class="text-muted">{{ vehicle.vin }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <div class="fw-bold">{{ vehicle.owner.user.get_full_name }}</div>
+                                    <small class="text-muted">{{ vehicle.owner.user.email }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <div><i class="fas fa-id-card text-muted me-1"></i> {{ vehicle.license_plate }}</div>
+                                    <div><i class="fas fa-palette text-muted me-1"></i> {{ vehicle.exterior_color|default:"N/A" }}</div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="mileage-display">
+                                    {{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}
+                                </div>
+                            </td>
+                            <td>
+                                {% if vehicle.status == 'active' %}
+                                    <span class="badge bg-success status-badge">Active</span>
+                                {% elif vehicle.status == 'in_service' %}
+                                    <span class="badge bg-warning status-badge">In Service</span>
+                                {% elif vehicle.status == 'sold' %}
+                                    <span class="badge bg-info status-badge">Sold</span>
+                                {% elif vehicle.status == 'totaled' %}
+                                    <span class="badge bg-danger status-badge">Totaled</span>
+                                {% else %}
+                                    <span class="badge bg-secondary status-badge">{{ vehicle.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end table-actions">
+                                <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-sm btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'vehicles:vehicle-service-history' vehicle.id %}" class="btn btn-sm btn-outline-info" title="Service History">
+                                    <i class="fas fa-history"></i>
+                                </a>
+                                <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger" title="Delete" 
+                                        data-vehicle-id="{{ vehicle.id }}" 
+                                        data-vehicle-name="{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}"
+                                        onclick="confirmDelete(this.dataset.vehicleId, this.dataset.vehicleName)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="fas fa-car fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No vehicles found</p>
+                                <a href="{% url 'vehicles:vehicle-create' %}" class="btn btn-primary">Add Your First Vehicle</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Card View (Hidden by default) -->
+            <div id="cardView" style="display: none;">
+                {% for vehicle in vehicles %}
+                <div class="card vehicle-card">
+                    <!-- Status Badge Overlay -->
+                    <div class="status-badge-overlay">
+                        {% if vehicle.status == 'active' %}
+                            <span class="badge bg-success">Active</span>
+                        {% elif vehicle.status == 'in_service' %}
+                            <span class="badge bg-warning">In Service</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ vehicle.get_status_display }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Vehicle Image -->
+                    {% if vehicle.image %}
+                    <img src="{{ vehicle.image.url }}" class="card-img-top" alt="{{ vehicle.make }} {{ vehicle.model }}">
+                    {% else %}
+                    <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 180px;">
+                        <i class="fas fa-car fa-3x opacity-50"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body p-3">
+                        <!-- Vehicle Info -->
+                        <h6 class="card-title mb-1">{{ vehicle.year }} {{ vehicle.make }}</h6>
+                        <p class="mb-2"><strong>{{ vehicle.model }}</strong></p>
+                        
+                        <!-- Details -->
+                        <div class="small text-muted mb-2">
+                            <div class="mb-1"><i class="fas fa-user me-1"></i> {{ vehicle.owner.user.get_full_name|truncatewords:2 }}</div>
+                            <div class="mb-1"><i class="fas fa-id-card me-1"></i> {{ vehicle.license_plate }}</div>
+                            <div><i class="fas fa-tachometer-alt me-1"></i> {{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</div>
+                        </div>
+                        
+                        <!-- Action Button -->
+                        <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="text-center py-5">
+                        <i class="fas fa-car fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No vehicles found</p>
+                        <a href="{% url 'vehicles:vehicle-create' %}" class="btn btn-primary">Add Your First Vehicle</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="card-footer bg-light">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <small class="text-muted">
+                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} results
+                    </small>
+                </div>
+                <div class="col-md-8">
+                    <nav aria-label="Vehicle pagination">
+                        <ul class="pagination justify-content-end mb-0">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1" aria-label="First">
+                                        <i class="fas fa-angle-double-left"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                                        <i class="fas fa-angle-left"></i>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="fas fa-angle-double-left"></i></span>
+                                </li>
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="fas fa-angle-left"></i></span>
+                                </li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if num == page_obj.number %}
+                                    <li class="page-item active" aria-current="page">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% elif num == page_obj.number|add:-3 or num == page_obj.number|add:3 %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" aria-label="Next">
+                                        <i class="fas fa-angle-right"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                                        <i class="fas fa-angle-double-right"></i>
+                                    </a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="fas fa-angle-right"></i></span>
+                                </li>
+                                <li class="page-item disabled">
+                                    <span class="page-link"><i class="fas fa-angle-double-right"></i></span>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the vehicle <strong id="vehicleName"></strong>?</p>
+                <p class="text-danger small">This action cannot be undone and will also delete all associated service history, documents, and photos.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Vehicle</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Select all checkboxes
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.vehicle-checkbox');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+        });
+    }
+
+    // Individual checkbox listeners
+    document.querySelectorAll('.vehicle-checkbox').forEach(cb => {
+        cb.addEventListener('change', function() {
+            if (selectAllCheckbox) {
+                const totalCheckboxes = document.querySelectorAll('.vehicle-checkbox').length;
+                const checkedCount = document.querySelectorAll('.vehicle-checkbox:checked').length;
+                selectAllCheckbox.checked = checkedCount === totalCheckboxes && totalCheckboxes > 0;
+                selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < totalCheckboxes;
+            }
+        });
+    });
+
+    // Change results per page
+    function changePerPage(perPage) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('per_page', perPage);
+        params.delete('page'); // Reset to first page
+        window.location.href = `?${params.toString()}`;
+    }
+
+    // Toggle view
+    function showTableView() {
+        document.getElementById('tableView').style.display = 'block';
+        document.getElementById('cardView').style.display = 'none';
+        
+        // Update button states
+        document.querySelectorAll('.btn-group button').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        // Store preference
+        localStorage.setItem('vehicleListView', 'table');
+    }
+
+    function showCardView() {
+        document.getElementById('tableView').style.display = 'none';
+        document.getElementById('cardView').style.display = 'block';
+        
+        // Update button states
+        document.querySelectorAll('.btn-group button').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        
+        // Store preference
+        localStorage.setItem('vehicleListView', 'card');
+    }
+
+    // Restore view preference
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedView = localStorage.getItem('vehicleListView');
+        if (savedView === 'card') {
+            showCardView();
+        }
+    });
+
+    // Bulk actions
+    function exportSelected() {
+        const selected = Array.from(document.querySelectorAll('.vehicle-checkbox:checked'))
+            .map(cb => cb.value);
+        if (selected.length === 0) {
+            alert('Please select at least one vehicle');
+            return;
+        }
+        
+        const format = prompt('Export format (csv or pdf):', 'csv');
+        if (format) {
+            const params = new URLSearchParams();
+            params.set('format', format);
+            params.set('ids', selected.join(','));
+            window.location.href = `/vehicles/export/?${params.toString()}`;
+        }
+    }
+
+    function bulkUpdateStatus() {
+        const selected = Array.from(document.querySelectorAll('.vehicle-checkbox:checked'))
+            .map(cb => cb.value);
+        if (selected.length === 0) {
+            alert('Please select at least one vehicle');
+            return;
+        }
+        
+        const status = prompt('Enter new status (active, inactive, in_service):', 'active');
+        if (status) {
+            if (confirm(`Update status to "${status}" for ${selected.length} vehicle(s)?`)) {
+                // TODO: Implement bulk status update
+                alert('Bulk status update will be implemented soon');
+            }
+        }
+    }
+
+    function bulkDelete() {
+        const selected = Array.from(document.querySelectorAll('.vehicle-checkbox:checked'))
+            .map(cb => cb.value);
+        if (selected.length === 0) {
+            alert('Please select at least one vehicle');
+            return;
+        }
+        
+        if (confirm(`Are you sure you want to delete ${selected.length} vehicle(s)? This action cannot be undone!`)) {
+            // TODO: Implement bulk delete
+            alert('Bulk delete will be implemented soon');
+        }
+    }
+
+    // Delete confirmation
+    function confirmDelete(vehicleId, vehicleName) {
+        document.getElementById('vehicleName').textContent = vehicleName;
+        const deleteForm = document.getElementById('deleteForm');
+        deleteForm.action = `/vehicles/${vehicleId}/delete/`;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+
+    // Export vehicles
+    function exportVehicles(format) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('format', format);
+        window.location.href = `/vehicles/export/?${params.toString()}`;
+    }
+
+    // Auto-submit filter form on select change (except per-page)
+    document.querySelectorAll('#filterForm select').forEach(select => {
+        select.addEventListener('change', function() {
+            if (this.id !== 'perPageSelect') {
+                document.getElementById('filterForm').submit();
+            }
+        });
+    });
+
+    // Quick search with debounce
+    let searchTimeout;
+    const searchInput = document.querySelector('input[name="search"]');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                if (this.value.length >= 3 || this.value.length === 0) {
+                    document.getElementById('filterForm').submit();
+                }
+            }, 500);
+        });
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + K for search focus
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            document.querySelector('input[name="search"]')?.focus();
+        }
+        
+        // Ctrl/Cmd + N for new vehicle
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            window.location.href = '{% url "vehicles:vehicle-create" %}';
+        }
+    });
+</script>
+{% endblock %}

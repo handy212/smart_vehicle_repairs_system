@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}My Profile - Smart Vehicle Repairs{% endblock %}
+
+{% block page_header %}
+<div class="page-header">
+    <h1><i class="fas fa-user me-2"></i> My Profile</h1>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active">Profile</li>
+        </ol>
+    </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Profile Card -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <!-- Profile Picture -->
+                <div class="mb-3">
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" class="rounded-circle" width="150" height="150" alt="{{ user.get_full_name }}">
+                    {% else %}
+                        <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 150px; height: 150px; font-size: 3rem;">
+                            {{ user.first_name.0|upper }}{{ user.last_name.0|upper }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Name -->
+                <h3 class="mb-1">{{ user.get_full_name }}</h3>
+                <p class="text-muted mb-2">{{ user.email }}</p>
+                
+                <!-- Role Badge -->
+                <span class="badge bg-primary mb-3">{{ user.get_role_display }}</span>
+                
+                <!-- Quick Stats -->
+                <div class="row text-center border-top pt-3 mt-3">
+                    <div class="col-6">
+                        <h4 class="mb-0">{{ user.date_joined|date:"M Y" }}</h4>
+                        <small class="text-muted">Member Since</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="mb-0">{{ user.last_login|timesince }}</h4>
+                        <small class="text-muted">Last Login</small>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{% url 'password_change' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-key me-2"></i> Change Password
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Account Settings -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-cog me-2"></i> Account Settings</h6>
+            </div>
+            <div class="card-body">
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="emailNotif" {% if user.email_notifications %}checked{% endif %}>
+                    <label class="form-check-label" for="emailNotif">
+                        Email Notifications
+                    </label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="smsNotif" {% if user.sms_notifications %}checked{% endif %}>
+                    <label class="form-check-label" for="smsNotif">
+                        SMS Notifications
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Profile Details -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-edit me-2"></i> Edit Profile</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- First Name -->
+                        <div class="col-md-6 mb-3">
+                            <label for="id_first_name" class="form-label">First Name *</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="id_first_name" 
+                                   name="first_name" 
+                                   value="{{ user.first_name }}" 
+                                   required>
+                        </div>
+                        
+                        <!-- Last Name -->
+                        <div class="col-md-6 mb-3">
+                            <label for="id_last_name" class="form-label">Last Name *</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="id_last_name" 
+                                   name="last_name" 
+                                   value="{{ user.last_name }}" 
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <!-- Email (Read-only) -->
+                    <div class="mb-3">
+                        <label for="id_email" class="form-label">Email Address</label>
+                        <input type="email" 
+                               class="form-control" 
+                               id="id_email" 
+                               value="{{ user.email }}" 
+                               disabled>
+                        <small class="text-muted">Contact admin to change email address</small>
+                    </div>
+                    
+                    <!-- Phone -->
+                    <div class="mb-3">
+                        <label for="id_phone" class="form-label">Phone Number</label>
+                        <input type="tel" 
+                               class="form-control" 
+                               id="id_phone" 
+                               name="phone" 
+                               value="{{ user.phone|default:'' }}">
+                    </div>
+                    
+                    <!-- Date of Birth -->
+                    <div class="mb-3">
+                        <label for="id_date_of_birth" class="form-label">Date of Birth</label>
+                        <input type="date" 
+                               class="form-control" 
+                               id="id_date_of_birth" 
+                               name="date_of_birth" 
+                               value="{{ user.date_of_birth|date:'Y-m-d'|default:'' }}">
+                    </div>
+                    
+                    <!-- Address -->
+                    <div class="mb-3">
+                        <label for="id_address" class="form-label">Street Address</label>
+                        <textarea class="form-control" 
+                                  id="id_address" 
+                                  name="address" 
+                                  rows="2">{{ user.address|default:'' }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- City -->
+                        <div class="col-md-4 mb-3">
+                            <label for="id_city" class="form-label">City</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="id_city" 
+                                   name="city" 
+                                   value="{{ user.city|default:'' }}">
+                        </div>
+                        
+                        <!-- State -->
+                        <div class="col-md-4 mb-3">
+                            <label for="id_state" class="form-label">State/Province</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="id_state" 
+                                   name="state" 
+                                   value="{{ user.state|default:'' }}">
+                        </div>
+                        
+                        <!-- Zip Code -->
+                        <div class="col-md-4 mb-3">
+                            <label for="id_zip_code" class="form-label">Zip/Postal Code</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="id_zip_code" 
+                                   name="zip_code" 
+                                   value="{{ user.zip_code|default:'' }}">
+                        </div>
+                    </div>
+                    
+                    <!-- Country -->
+                    <div class="mb-3">
+                        <label for="id_country" class="form-label">Country</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="id_country" 
+                               name="country" 
+                               value="{{ user.country|default:'USA' }}">
+                    </div>
+                    
+                    <!-- Profile Picture -->
+                    <div class="mb-3">
+                        <label for="id_profile_picture" class="form-label">Profile Picture</label>
+                        <input type="file" 
+                               class="form-control" 
+                               id="id_profile_picture" 
+                               name="profile_picture" 
+                               accept="image/*">
+                        <small class="text-muted">Upload a new profile picture (JPG, PNG, max 5MB)</small>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i> Save Changes
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

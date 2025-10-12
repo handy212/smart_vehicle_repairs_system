@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ template.name }} - Inspection Template{% endblock %}
+
+{% block extra_css %}
+<style>
+    .template-header {
+        background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, black) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    .category-card {
+        border-left: 4px solid var(--primary-color);
+        transition: all 0.3s ease;
+    }
+    .category-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    .item-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .template-actions {
+        position: sticky;
+        top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="template-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h1 class="mb-2">
+                    <i class="fas fa-file-alt me-2"></i>{{ template.name }}
+                </h1>
+                <p class="mb-0 opacity-75">{{ template.description|default:"No description provided" }}</p>
+            </div>
+            <div>
+                {% if template.is_default %}
+                <span class="badge bg-warning text-dark">
+                    <i class="fas fa-star me-1"></i>Default Template
+                </span>
+                {% endif %}
+                {% if template.is_active %}
+                <span class="badge bg-success">
+                    <i class="fas fa-check-circle me-1"></i>Active
+                </span>
+                {% else %}
+                <span class="badge bg-secondary">
+                    <i class="fas fa-times-circle me-1"></i>Inactive
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-9">
+            <!-- Template Settings -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>Template Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <i class="fas fa-tachometer-alt text-primary me-2"></i>
+                                <strong>Requires Odometer:</strong>
+                                <span class="ms-2">
+                                    {% if template.requires_odometer %}
+                                        <i class="fas fa-check-circle text-success"></i> Yes
+                                    {% else %}
+                                        <i class="fas fa-times-circle text-danger"></i> No
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="mb-3">
+                                <i class="fas fa-signature text-primary me-2"></i>
+                                <strong>Requires Technician Signature:</strong>
+                                <span class="ms-2">
+                                    {% if template.requires_technician_signature %}
+                                        <i class="fas fa-check-circle text-success"></i> Yes
+                                    {% else %}
+                                        <i class="fas fa-times-circle text-danger"></i> No
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="mb-3">
+                                <i class="fas fa-user-check text-primary me-2"></i>
+                                <strong>Requires Customer Signature:</strong>
+                                <span class="ms-2">
+                                    {% if template.requires_customer_signature %}
+                                        <i class="fas fa-check-circle text-success"></i> Yes
+                                    {% else %}
+                                        <i class="fas fa-times-circle text-danger"></i> No
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <i class="fas fa-camera text-primary me-2"></i>
+                                <strong>Allows Photos:</strong>
+                                <span class="ms-2">
+                                    {% if template.allows_photos %}
+                                        <i class="fas fa-check-circle text-success"></i> Yes
+                                    {% else %}
+                                        <i class="fas fa-times-circle text-danger"></i> No
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="mb-3">
+                                <i class="fas fa-video text-primary me-2"></i>
+                                <strong>Allows Video:</strong>
+                                <span class="ms-2">
+                                    {% if template.allows_video %}
+                                        <i class="fas fa-check-circle text-success"></i> Yes
+                                    {% else %}
+                                        <i class="fas fa-times-circle text-danger"></i> No
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categories and Items -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>Inspection Categories & Items
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if template.categories.exists %}
+                        {% for category in template.categories.all %}
+                        <div class="category-card card mb-3">
+                            <div class="card-header bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-folder-open me-2 text-primary"></i>
+                                            {{ category.name }}
+                                            <span class="badge bg-primary ms-2">{{ category.items.count }} items</span>
+                                        </h6>
+                                        {% if category.description %}
+                                        <small class="text-muted d-block mt-1">{{ category.description }}</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'inspections:item-create' category.id %}" class="btn btn-sm btn-outline-primary" title="Add Item">
+                                            <i class="fas fa-plus"></i>
+                                        </a>
+                                        <a href="{% url 'inspections:category-edit' category.id %}" class="btn btn-sm btn-outline-secondary" title="Edit Category">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form method="post" action="{% url 'inspections:category-delete' category.id %}" style="display: inline;" 
+                                              onsubmit="return confirm('Delete this category and all its items?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Category">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                {% if category.items.exists %}
+                                <div class="list-group list-group-flush">
+                                    {% for item in category.items.all %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <strong>{{ item.name }}</strong>
+                                                {% if item.description %}
+                                                <small class="text-muted d-block">{{ item.description }}</small>
+                                                {% endif %}
+                                                {% if item.item_type == 'measurement' and item.measurement_unit %}
+                                                <small class="text-muted">
+                                                    <i class="fas fa-ruler me-1"></i>Unit: {{ item.measurement_unit }}
+                                                </small>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-end">
+                                                <span class="item-badge badge bg-info">{{ item.get_item_type_display }}</span>
+                                                {% if item.is_required %}
+                                                <span class="item-badge badge bg-danger">Required</span>
+                                                {% endif %}
+                                                {% if item.is_critical %}
+                                                <span class="item-badge badge bg-warning">Critical</span>
+                                                {% endif %}
+                                                <div class="btn-group btn-group-sm mt-1">
+                                                    <a href="{% url 'inspections:item-edit' item.id %}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <form method="post" action="{% url 'inspections:item-delete' item.id %}" style="display: inline;" 
+                                                          onsubmit="return confirm('Delete this item?');">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="text-center py-3">
+                                    <p class="text-muted mb-2">
+                                        <i class="fas fa-info-circle me-2"></i>No items in this category yet
+                                    </p>
+                                    <a href="{% url 'inspections:item-create' category.id %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-plus me-1"></i>Add First Item
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- Add Another Category Button -->
+                        <div class="text-center mt-3">
+                            <a href="{% url 'inspections:category-create' template.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-plus me-2"></i>Add Another Category
+                            </a>
+                        </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>No categories have been added to this template yet.</strong>
+                        <hr>
+                        <p class="mb-3">Start building your inspection checklist by adding categories and items.</p>
+                        <a href="{% url 'inspections:category-create' template.id %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Add First Category
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-3">
+            <div class="template-actions">
+                <!-- Actions Card -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="fas fa-bolt me-2"></i>Actions
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <a href="{% url 'inspections:inspection-create' %}?template={{ template.id }}" 
+                           class="btn btn-primary w-100 mb-2">
+                            <i class="fas fa-plus me-2"></i>Use This Template
+                        </a>
+                        <a href="{% url 'inspections:template-edit' template.id %}" 
+                           class="btn btn-outline-primary w-100 mb-2">
+                            <i class="fas fa-edit me-2"></i>Edit Template
+                        </a>
+                        <a href="{% url 'inspections:template-list' %}" 
+                           class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Templates
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Statistics Card -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>Statistics
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <small class="text-muted">Categories</small>
+                            <h4 class="mb-0">{{ template.categories.count }}</h4>
+                        </div>
+                        <div class="mb-3">
+                            <small class="text-muted">Total Items</small>
+                            <h4 class="mb-0">
+                                {% with total_items=0 %}
+                                    {% for category in template.categories.all %}
+                                        {% with total_items=total_items|add:category.items.count %}{% endwith %}
+                                    {% endfor %}
+                                    {{ total_items }}
+                                {% endwith %}
+                            </h4>
+                        </div>
+                        <hr>
+                        <div class="mb-2">
+                            <small class="text-muted">Created By</small>
+                            <div>{{ template.created_by.get_full_name|default:template.created_by.username }}</div>
+                        </div>
+                        <div class="mb-2">
+                            <small class="text-muted">Created</small>
+                            <div>{{ template.created_at|date:"M d, Y" }}</div>
+                        </div>
+                        <div>
+                            <small class="text-muted">Last Updated</small>
+                            <div>{{ template.updated_at|date:"M d, Y" }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

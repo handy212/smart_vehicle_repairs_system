@@ -1,0 +1,728 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}Create Work Order - Smart Vehicle Repairs{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+<style>
+    .form-section {
+        background: white;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--gray-200);
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .select2-container .select2-selection--single {
+        height: 38px;
+        border-color: #ced4da;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 36px;
+        padding-left: 12px;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    
+    .customer-info {
+        background: var(--gray-50);
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+    
+    .vehicle-info {
+        background: var(--gray-50);
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+    
+    /* Template and Appointment Modal Styles */
+    .template-card {
+        border: 2px solid var(--gray-200);
+        transition: all 0.3s ease;
+    }
+    
+    .template-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .template-card .card-body {
+        padding: 1.25rem;
+    }
+    
+    .template-card .card-title {
+        color: var(--gray-800);
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    #appointmentForm .form-label {
+        font-weight: 500;
+        color: var(--gray-700);
+        margin-bottom: 0.5rem;
+    }
+    
+    #appointmentForm .form-control:focus,
+    #appointmentForm .form-select:focus {
+        border-color: var(--success);
+        box-shadow: 0 0 0 0.25rem rgba(var(--success-rgb), 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'workorders:list' %}">Work Orders</a></li>
+                    <li class="breadcrumb-item active">Create Work Order</li>
+                </ol>
+            </nav>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">Create Work Order</h1>
+                    <p class="text-muted mb-0">Set up a new service work order</p>
+                </div>
+                <div>
+                    <a href="{% url 'workorders:list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="workorder-form">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Left Column -->
+            <div class="col-lg-8">
+                <!-- Customer & Vehicle Selection -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-user text-primary"></i>
+                        Customer & Vehicle
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customer" class="form-label">Customer <span class="text-danger">*</span></label>
+                                <select class="form-select select2" id="customer" name="customer" required>
+                                    <option value="">Select Customer</option>
+                                    {% for customer in customers %}
+                                        <option value="{{ customer.id }}" 
+                                                data-email="{{ customer.user.email }}"
+                                                data-phone="{{ customer.phone|default:'' }}"
+                                                data-address="{{ customer.address|default:'' }}">
+                                            {{ customer.user.first_name }} {{ customer.user.last_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="customer-info" id="customer-info">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <small class="text-muted">Email:</small><br>
+                                            <span id="customer-email"></span>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Phone:</small><br>
+                                            <span id="customer-phone"></span>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">Address:</small><br>
+                                        <span id="customer-address"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="vehicle" class="form-label">Vehicle <span class="text-danger">*</span></label>
+                                <select class="form-select select2" id="vehicle" name="vehicle" required disabled>
+                                    <option value="">Select Customer First</option>
+                                </select>
+                                <div class="vehicle-info" id="vehicle-info">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <small class="text-muted">VIN:</small><br>
+                                            <span id="vehicle-vin"></span>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted">Mileage:</small><br>
+                                            <span id="vehicle-mileage"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Work Order Details -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-clipboard text-primary"></i>
+                        Work Order Details
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="priority" class="form-label">Priority</label>
+                                <select class="form-select" id="priority" name="priority">
+                                    {% for value, label in priority_choices %}
+                                        <option value="{{ value }}" {% if value == 'normal' %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="estimated_completion" class="form-label">Estimated Completion</label>
+                                <input type="text" class="form-control" id="estimated_completion" name="estimated_completion"
+                                       placeholder="Select date and time">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="customer_concerns" class="form-label">Customer Concerns <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="customer_concerns" name="customer_concerns" rows="4" 
+                                  placeholder="Describe what the customer is experiencing or requesting..." required></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="special_instructions" class="form-label">Special Instructions</label>
+                        <textarea class="form-control" id="special_instructions" name="special_instructions" rows="3" 
+                                  placeholder="Special instructions for staff (not visible to customer)"></textarea>
+                    </div>
+                </div>
+
+                <!-- Vehicle Condition -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-car text-primary"></i>
+                        Vehicle Condition
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="odometer_in" class="form-label">Odometer Reading (miles)</label>
+                                <input type="number" class="form-control" id="odometer_in" name="odometer_in" 
+                                       min="0" step="1" placeholder="Current mileage" required>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-lg-4">
+                <!-- Technician Assignment -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-wrench text-primary"></i>
+                        Technician Assignment
+                    </h5>
+                    
+                    <div class="mb-3">
+                        <label for="primary_technician" class="form-label">Primary Technician</label>
+                        <select class="form-select select2" id="primary_technician" name="primary_technician">
+                            <option value="">Select Primary Technician</option>
+                            {% for tech in technicians %}
+                                <option value="{{ tech.id }}">{{ tech.first_name }} {{ tech.last_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="assigned_technicians" class="form-label">Additional Technicians</label>
+                        <select class="form-select select2" id="assigned_technicians" name="assigned_technicians" multiple>
+                            {% for tech in technicians %}
+                                <option value="{{ tech.id }}">{{ tech.first_name }} {{ tech.last_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Hold Ctrl/Cmd to select multiple technicians</div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-bolt text-primary"></i>
+                        Quick Actions
+                    </h5>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-primary" id="add-from-template">
+                            <i class="fas fa-clipboard-list me-2"></i> Use Service Template
+                        </button>
+                        <button type="button" class="btn btn-outline-success" id="schedule-appointment">
+                            <i class="fas fa-calendar me-2"></i> Schedule Follow-up
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-section">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save me-2"></i> Create Work Order
+                        </button>
+                        <a href="{% url 'workorders:list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize Select2
+    $('.select2').select2({
+        theme: 'bootstrap-5',
+        width: '100%'
+    });
+    
+    // Initialize date picker
+    flatpickr('#estimated_completion', {
+        enableTime: true,
+        dateFormat: 'Y-m-d H:i',
+        minDate: 'today',
+        time_24hr: false
+    });
+    
+    // Customer selection handler
+    $('#customer').change(function() {
+        const customerId = $(this).val();
+        const customerData = $(this).find('option:selected').data();
+        
+        if (customerId) {
+            // Show customer info
+            $('#customer-email').text(customerData.email || 'N/A');
+            $('#customer-phone').text(customerData.phone || 'N/A');
+            $('#customer-address').text(customerData.address || 'N/A');
+            $('#customer-info').show();
+            
+            // Load customer vehicles
+            loadCustomerVehicles(customerId);
+        } else {
+            $('#customer-info').hide();
+            $('#vehicle').prop('disabled', true).empty().append('<option value=\"\">Select Customer First</option>');
+            $('#vehicle-info').hide();
+        }
+    });
+    
+    // Vehicle selection handler
+    $('#vehicle').change(function() {
+        const vehicleData = $(this).find('option:selected').data();
+        
+        if ($(this).val()) {
+            $('#vehicle-vin').text(vehicleData.vin || 'N/A');
+            $('#vehicle-mileage').text(vehicleData.mileage ? vehicleData.mileage + ' miles' : 'N/A');
+            $('#vehicle-info').show();
+            
+            // Auto-fill odometer reading if available
+            if (vehicleData.mileage) {
+                $('#odometer_in').val(vehicleData.mileage);
+            }
+        } else {
+            $('#vehicle-info').hide();
+        }
+    });
+    
+    // Load customer vehicles function
+    function loadCustomerVehicles(customerId) {
+        $.get(`/workorders/customer/${customerId}/vehicles/`)
+            .done(function(data) {
+                const vehicleSelect = $('#vehicle');
+                vehicleSelect.empty().append('<option value=\"\">Select Vehicle</option>');
+                
+                data.vehicles.forEach(function(vehicle) {
+                    const option = $('<option></option>')
+                        .attr('value', vehicle.id)
+                        .attr('data-vin', vehicle.vin)
+                        .attr('data-mileage', vehicle.current_mileage)
+                        .text(vehicle.display);
+                    vehicleSelect.append(option);
+                });
+                
+                vehicleSelect.prop('disabled', false);
+            })
+            .fail(function() {
+                alert('Error loading vehicles for this customer');
+                $('#vehicle').prop('disabled', true);
+            });
+    }
+    
+    // Form validation
+    $('#workorder-form').submit(function(e) {
+        let isValid = true;
+        const requiredFields = ['customer', 'vehicle', 'customer_concerns'];
+        
+        requiredFields.forEach(function(fieldName) {
+            const field = $(`[name=\"${fieldName}\"]`);
+            if (!field.val().trim()) {
+                field.addClass('is-invalid');
+                isValid = false;
+            } else {
+                field.removeClass('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Please fill in all required fields');
+            return false;
+        }
+        
+        // Show loading state
+        const submitBtn = $(this).find('button[type=\"submit\"]');
+        submitBtn.prop('disabled', true).html('<i class=\"fas fa-spinner fa-spin me-2\"></i> Creating...');
+    });
+    
+    // Remove validation errors on input
+    $('input, select, textarea').on('input change', function() {
+        $(this).removeClass('is-invalid');
+    });
+    
+    // Service template functionality
+    $('#add-from-template').click(function() {
+        loadServiceTemplates();
+    });
+    
+    // Schedule appointment functionality
+    $('#schedule-appointment').click(function() {
+        showAppointmentScheduler();
+    });
+    
+    // Load service templates
+    function loadServiceTemplates() {
+        $.get('/inspections/templates/api/')
+            .done(function(data) {
+                showTemplateModal(data.templates || []);
+            })
+            .fail(function() {
+                alert('Error loading service templates. Please try again.');
+            });
+    }
+    
+    // Show template selection modal
+    function showTemplateModal(templates) {
+        if (templates.length === 0) {
+            alert('No active service templates found. Please create templates in the Inspections module first.');
+            return;
+        }
+        
+        let modalHTML = `
+            <div class="modal fade" id="serviceTemplateModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-clipboard-list me-2"></i>Select Service Template
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row g-3">
+                                ${templates.map(template => `
+                                    <div class="col-md-6">
+                                        <div class="card template-card" style="cursor: pointer;" data-template-id="${template.id}">
+                                            <div class="card-body">
+                                                <h6 class="card-title">${template.name}</h6>
+                                                <p class="card-text text-muted small">${template.description || 'No description'}</p>
+                                                <div class="small">
+                                                    <span class="badge bg-info">${template.category_count} categories</span>
+                                                    <span class="badge bg-secondary">${template.item_count} items</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        $('#serviceTemplateModal').remove();
+        
+        // Add modal to body
+        $('body').append(modalHTML);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('serviceTemplateModal'));
+        modal.show();
+        
+        // Handle template card click
+        $('.template-card').click(function() {
+            const templateId = $(this).data('template-id');
+            applyTemplate(templateId);
+            modal.hide();
+        });
+    }
+    
+    // Apply selected template
+    function applyTemplate(templateId) {
+        const template = $('#customer_concerns');
+        const currentText = template.val().trim();
+        
+        $.get(`/inspections/templates/${templateId}/details/`)
+            .done(function(data) {
+                let serviceText = `\n\n=== ${data.name} ===\n`;
+                
+                if (data.categories) {
+                    data.categories.forEach(category => {
+                        serviceText += `\n${category.name}:\n`;
+                        if (category.items) {
+                            category.items.forEach(item => {
+                                serviceText += `  • ${item.name}\n`;
+                            });
+                        }
+                    });
+                }
+                
+                template.val(currentText + serviceText);
+                
+                // Show success message
+                const alertHTML = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Service template "${data.name}" has been added to customer concerns.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                $('.container-fluid').prepend(alertHTML);
+                setTimeout(() => $('.alert').fadeOut(), 5000);
+            })
+            .fail(function() {
+                alert('Error loading template details. Please try again.');
+            });
+    }
+    
+    // Show appointment scheduler
+    function showAppointmentScheduler() {
+        const customerId = $('#customer').val();
+        const vehicleId = $('#vehicle').val();
+        
+        if (!customerId || !vehicleId) {
+            alert('Please select a customer and vehicle first.');
+            return;
+        }
+        
+        let modalHTML = `
+            <div class="modal fade" id="appointmentSchedulerModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title">
+                                <i class="fas fa-calendar-plus me-2"></i>Schedule Follow-up Appointment
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="appointmentForm">
+                                <input type="hidden" name="customer_id" value="${customerId}">
+                                <input type="hidden" name="vehicle_id" value="${vehicleId}">
+                                
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Service Type <span class="text-danger">*</span></label>
+                                        <select class="form-select" name="service_type" required>
+                                            <option value="">Select service type...</option>
+                                            <option value="inspection">Inspection</option>
+                                            <option value="maintenance">Maintenance</option>
+                                            <option value="repair">Repair</option>
+                                            <option value="diagnostic">Diagnostic</option>
+                                            <option value="tire_service">Tire Service</option>
+                                            <option value="oil_change">Oil Change</option>
+                                            <option value="brake_service">Brake Service</option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label">Priority</label>
+                                        <select class="form-select" name="priority">
+                                            <option value="normal" selected>Normal</option>
+                                            <option value="low">Low</option>
+                                            <option value="high">High</option>
+                                            <option value="urgent">Urgent</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label">Date <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control" name="appointment_date" 
+                                               min="${new Date().toISOString().split('T')[0]}" required>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label class="form-label">Time <span class="text-danger">*</span></label>
+                                        <input type="time" class="form-control" name="appointment_time" required>
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <label class="form-label">Service Description</label>
+                                        <textarea class="form-control" name="service_description" rows="3" 
+                                                  placeholder="Describe the service needed..."></textarea>
+                                    </div>
+                                    
+                                    <div class="col-12">
+                                        <label class="form-label">Special Instructions</label>
+                                        <textarea class="form-control" name="special_instructions" rows="2" 
+                                                  placeholder="Any special requirements or notes..."></textarea>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="send_confirmation" 
+                                                   id="sendConfirmation" checked>
+                                            <label class="form-check-label" for="sendConfirmation">
+                                                Send confirmation to customer
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-success" id="scheduleAppointmentBtn">
+                                <i class="fas fa-calendar-check me-2"></i>Schedule Appointment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        $('#appointmentSchedulerModal').remove();
+        
+        // Add modal to body
+        $('body').append(modalHTML);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('appointmentSchedulerModal'));
+        modal.show();
+        
+        // Handle appointment scheduling
+        $('#scheduleAppointmentBtn').click(function() {
+            scheduleAppointment(modal);
+        });
+    }
+    
+    // Schedule appointment
+    function scheduleAppointment(modal) {
+        const form = $('#appointmentForm');
+        const formData = new FormData(form[0]);
+        
+        // Validate required fields
+        if (!form[0].checkValidity()) {
+            form[0].reportValidity();
+            return;
+        }
+        
+        // Show loading state
+        const btn = $('#scheduleAppointmentBtn');
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Scheduling...');
+        
+        // Convert FormData to JSON
+        const data = {};
+        formData.forEach((value, key) => {
+            if (key === 'send_confirmation') {
+                data[key] = true;
+            } else {
+                data[key] = value;
+            }
+        });
+        
+        $.ajax({
+            url: '/appointments/create/api/',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            }
+        })
+        .done(function(response) {
+            modal.hide();
+            
+            // Show success message
+            const alertHTML = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Follow-up appointment scheduled successfully! 
+                    <a href="/appointments/${response.appointment_id}/" class="alert-link">View appointment</a>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            $('.container-fluid').prepend(alertHTML);
+            
+            // Add note to special instructions
+            const instructions = $('#special_instructions');
+            const currentInstructions = instructions.val().trim();
+            const appointmentNote = `\n\nFollow-up appointment scheduled for ${data.appointment_date} at ${data.appointment_time}`;
+            instructions.val(currentInstructions + appointmentNote);
+            
+            setTimeout(() => $('.alert').fadeOut(), 8000);
+        })
+        .fail(function(xhr) {
+            alert('Error scheduling appointment: ' + (xhr.responseJSON?.error || 'Please try again.'));
+        })
+        .always(function() {
+            btn.prop('disabled', false).html('<i class="fas fa-calendar-check me-2"></i>Schedule Appointment');
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,363 @@
+{% load static %}
+<style>
+    .nav-link.collapsible {
+        cursor: pointer;
+        position: relative;
+    }
+    .nav-link.collapsible .collapse-icon {
+        position: absolute;
+        right: 15px;
+        transition: transform 0.3s ease;
+    }
+    .nav-link.collapsible[aria-expanded="true"] .collapse-icon {
+        transform: rotate(90deg);
+    }
+    .submenu {
+        padding-left: 2rem;
+        background-color: rgba(0,0,0,0.02);
+    }
+    .submenu .nav-link {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    .submenu .nav-link:hover {
+        background-color: rgba(0,0,0,0.05);
+    }
+</style>
+<nav id="sidebar" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+    <div class="pt-3">
+        <ul class="nav flex-column">
+            <!-- Dashboard -->
+            <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+            </li>
+            
+            {% if user.role in 'admin,manager,receptionist' %}
+            <!-- Customers -->
+            <li class="nav-item">
+                <a class="nav-link {% if 'customers' in request.path %}active{% endif %}" href="{% url 'customers:customer-list' %}">
+                    <i class="fas fa-users"></i>
+                    Customers
+                </a>
+            </li>
+            
+            <!-- Vehicles -->
+            <li class="nav-item">
+                <a class="nav-link {% if 'vehicles' in request.path %}active{% endif %}" href="{% url 'vehicles:vehicle-list' %}">
+                    <i class="fas fa-car"></i>
+                    Vehicles
+                </a>
+            </li>
+            
+            <!-- Appointments -->
+            <li class="nav-item">
+                <a class="nav-link collapsible {% if 'appointments' in request.path %}active{% endif %}" 
+                   data-bs-toggle="collapse" 
+                   href="#appointmentsSubmenu" 
+                   role="button" 
+                   aria-expanded="false" 
+                   aria-controls="appointmentsSubmenu">
+                    <i class="fas fa-calendar-alt"></i>
+                    Appointments
+                    <i class="fas fa-chevron-right collapse-icon"></i>
+                </a>
+                <div class="collapse submenu" id="appointmentsSubmenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'appointments:appointment-list' %}">
+                                <i class="fas fa-list me-2"></i>All Appointments
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'appointments:calendar-view' %}">
+                                <i class="fas fa-calendar me-2"></i>Calendar View
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'appointments:appointment-create' %}">
+                                <i class="fas fa-plus me-2"></i>New Appointment
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
+            
+            {% if user.role in 'admin,manager,receptionist,technician' %}
+            <!-- Work Orders -->
+            <li class="nav-item">
+                <a class="nav-link collapsible {% if 'workorders' in request.path %}active{% endif %}"
+                   data-bs-toggle="collapse" 
+                   href="#workordersSubmenu" 
+                   role="button" 
+                   aria-expanded="false" 
+                   aria-controls="workordersSubmenu">
+                    <i class="fas fa-wrench"></i>
+                    Work Orders
+                    <i class="fas fa-chevron-right collapse-icon"></i>
+                </a>
+                <div class="collapse submenu" id="workordersSubmenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'workorders:list' %}">
+                                <i class="fas fa-list me-2"></i>All Work Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'workorders:kanban' %}">
+                                <i class="fas fa-columns me-2"></i>Kanban Board
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'workorders:create' %}">
+                                <i class="fas fa-plus me-2"></i>New Work Order
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
+            
+            {% if user.role in 'admin,manager,parts_manager' %}
+            <!-- Inventory -->
+            <li class="nav-item">
+                <a class="nav-link collapsible {% if 'inventory' in request.path %}active{% endif %}" 
+                   data-bs-toggle="collapse" 
+                   href="#inventorySubmenu" 
+                   role="button" 
+                   aria-expanded="false" 
+                   aria-controls="inventorySubmenu">
+                    <i class="fas fa-boxes"></i>
+                    Inventory
+                    <i class="fas fa-chevron-right collapse-icon"></i>
+                </a>
+                <div class="collapse submenu" id="inventorySubmenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inventory:dashboard' %}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inventory:part_list' %}">
+                                <i class="fas fa-cogs me-2"></i>Parts
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inventory:part_create' %}">
+                                <i class="fas fa-plus me-2"></i>New Part
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inventory:part_list' %}?low_stock=true">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Low Stock
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inventory:supplier_list' %}">
+                                <i class="fas fa-truck me-2"></i>Suppliers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inventory:purchase_order_list' %}">
+                                <i class="fas fa-shopping-cart me-2"></i>Purchase Orders
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inventory:category_list' %}">
+                                <i class="fas fa-tags me-2"></i>Categories
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
+            
+            {% if user.role in 'admin,manager,receptionist' %}
+            <!-- Billing -->
+            <li class="nav-item">
+                <a class="nav-link collapsible {% if 'billing' in request.path %}active{% endif %}"
+                   data-bs-toggle="collapse" 
+                   href="#billingSubmenu" 
+                   role="button" 
+                   aria-expanded="false" 
+                   aria-controls="billingSubmenu">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    Billing
+                    <i class="fas fa-chevron-right collapse-icon"></i>
+                </a>
+                <div class="collapse submenu" id="billingSubmenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'billing:dashboard' %}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'billing:invoice_list' %}">
+                                <i class="fas fa-file-invoice me-2"></i>Invoices
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'billing:invoice_create' %}">
+                                <i class="fas fa-plus me-2"></i>New Invoice
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'billing:estimate_list' %}">
+                                <i class="fas fa-file-alt me-2"></i>Estimates
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'billing:payment_list' %}">
+                                <i class="fas fa-credit-card me-2"></i>Payments
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
+            
+            {% if user.role in 'admin,manager,technician' %}
+            <!-- Inspections -->
+            <li class="nav-item">
+                <a class="nav-link collapsible {% if 'inspections' in request.path %}active{% endif %}"
+                   data-bs-toggle="collapse" 
+                   href="#inspectionsSubmenu" 
+                   role="button" 
+                   aria-expanded="false" 
+                   aria-controls="inspectionsSubmenu">
+                    <i class="fas fa-clipboard-check"></i>
+                    Inspections
+                    <i class="fas fa-chevron-right collapse-icon"></i>
+                </a>
+                <div class="collapse submenu" id="inspectionsSubmenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inspections:inspection-list' %}">
+                                <i class="fas fa-list me-2"></i>All Inspections
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inspections:inspection-create' %}">
+                                <i class="fas fa-plus me-2"></i>New Inspection
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'inspections:template-list' %}">
+                                <i class="fas fa-file-alt me-2"></i>Templates
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
+            
+            {% if user.role in 'admin,manager' %}
+            <!-- Reports -->
+            <li class="nav-item">
+                <a class="nav-link collapsible {% if 'reporting' in request.path %}active{% endif %}"
+                   data-bs-toggle="collapse" 
+                   href="#reportsSubmenu" 
+                   role="button" 
+                   aria-expanded="false" 
+                   aria-controls="reportsSubmenu">
+                    <i class="fas fa-chart-line"></i>
+                    Reports
+                    <i class="fas fa-chevron-right collapse-icon"></i>
+                </a>
+                <div class="collapse submenu" id="reportsSubmenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'reporting:report-dashboard' %}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'reporting:financial-report' %}">
+                                <i class="fas fa-dollar-sign me-2"></i>Financial
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'reporting:operational-report' %}">
+                                <i class="fas fa-cogs me-2"></i>Operational
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'reporting:inventory-report' %}">
+                                <i class="fas fa-boxes me-2"></i>Inventory
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
+            
+            <!-- Notifications -->
+            <li class="nav-item">
+                <a class="nav-link {% if 'notifications' in request.path %}active{% endif %}" href="{% url 'notifications:notification-center' %}">
+                    <i class="fas fa-bell"></i>
+                    Notifications
+                </a>
+            </li>
+            
+    
+            <li class="nav-item mt-4">
+                <hr class="dropdown-divider">
+            </li>
+            
+            {% if user.role == 'admin' %}
+            <!-- Admin & Settings Section -->
+            <li class="nav-item">
+                <small class="text-muted px-3 d-block mb-2">ADMINISTRATION</small>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsible {% if 'admin-panel' in request.path %}active{% endif %}"
+                   data-bs-toggle="collapse" 
+                   href="#adminSubmenu" 
+                   role="button" 
+                   aria-expanded="false" 
+                   aria-controls="adminSubmenu">
+                    <i class="fas fa-user-shield"></i>
+                    Admin & Settings
+                    <i class="fas fa-chevron-right collapse-icon"></i>
+                </a>
+                <div class="collapse submenu" id="adminSubmenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'admin_panel:settings' %}">
+                                <i class="fas fa-cog me-2"></i>System Settings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'admin_panel:user_management' %}">
+                                <i class="fas fa-users me-2"></i>User Management
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'admin_panel:role_management' %}">
+                                <i class="fas fa-user-shield me-2"></i>Role Management
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'admin_panel:audit_log' %}">
+                                <i class="fas fa-history me-2"></i>Audit Log
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'admin_panel:backup_restore' %}">
+                                <i class="fas fa-database me-2"></i>Backup & Restore
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {% endif %}
+            
+            
+        </ul>
+    </div>
+</nav>

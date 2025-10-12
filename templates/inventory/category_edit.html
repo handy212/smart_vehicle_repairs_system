@@ -1,0 +1,467 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Category - Inventory{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #fff;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-section-header {
+        background: var(--primary);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+        margin: 0;
+    }
+    
+    .form-section-header h5 {
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    .form-section-body {
+        padding: 1.5rem;
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.25);
+    }
+    
+
+    .category-preview {
+        background: #f8f9fa;
+        border: 1px dashed #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        text-align: center;
+        color: #6c757d;
+    }
+    
+    .category-icon {
+        width: 60px;
+        height: 60px;
+        background: var(--primary);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        margin: 0 auto 1rem;
+    }
+    
+    .hierarchy-indicator {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 0.75rem 1rem;
+        border-radius: 0.25rem;
+        margin: 1rem 0;
+    }
+    
+    .status-toggle {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 30px;
+    }
+    
+    .status-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 30px;
+    }
+    
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+        background-color: #28a745;
+    }
+    
+    input:checked + .slider:before {
+        transform: translateX(30px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">Edit Category</h1>
+            <p class="text-muted mb-0">Update category information and settings</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Categories
+            </a>
+            <a href="{% url 'inventory:part_list' %}?category={{ category.id }}" class="btn btn-outline-info">
+                <i class="fas fa-eye me-1"></i> View Parts ({{ category.parts.count }})
+            </a>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Basic Information -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+                    </div>
+                    <div class="form-section-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="id_name" class="form-label">
+                                    Category Name <span class="required">*</span>
+                                </label>
+                                <input type="text" 
+                                       name="name" 
+                                       id="id_name" 
+                                       class="form-control" 
+                                       value="{{ category.name }}" 
+                                       required
+                                       placeholder="e.g., Engine, Brakes, Electrical">
+                                <div class="form-text">Choose a clear, descriptive name for this category</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="id_parent" class="form-label">Parent Category</label>
+                                <select name="parent_id" id="id_parent" class="form-select">
+                                    <option value="">None (Top-level category)</option>
+                                    {% for parent_cat in categories %}
+                                        <option value="{{ parent_cat.id }}" 
+                                                {% if category.parent_id == parent_cat.id %}selected{% endif %}>
+                                            {{ parent_cat.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">Select a parent category to create a hierarchy</div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <label for="id_description" class="form-label">Description</label>
+                                <textarea name="description" 
+                                          id="id_description" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="Describe what types of parts belong in this category...">{{ category.description }}</textarea>
+                                <div class="form-text">Provide a helpful description of what parts belong in this category</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status & Settings -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <h5><i class="fas fa-cog me-2"></i>Status & Settings</h5>
+                    </div>
+                    <div class="form-section-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Category Status</label>
+                                <div class="d-flex align-items-center">
+                                    <label class="status-toggle me-3">
+                                        <input type="checkbox" 
+                                               name="is_active" 
+                                               {% if category.is_active %}checked{% endif %}>
+                                        <span class="slider"></span>
+                                    </label>
+                                    <div>
+                                        <div class="fw-semibold">
+                                            <span id="statusText">{% if category.is_active %}Active{% else %}Inactive{% endif %}</span>
+                                        </div>
+                                        <small class="text-muted">
+                                            {% if category.is_active %}
+                                                Category is visible and can be used for parts
+                                            {% else %}
+                                                Category is hidden from normal operations
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Category Statistics</label>
+                                <div class="d-flex gap-3">
+                                    <div class="text-center">
+                                        <div class="fw-bold text-primary">{{ category.parts.count }}</div>
+                                        <small class="text-muted">Parts</small>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="fw-bold text-success">{{ category.subcategories.count }}</div>
+                                        <small class="text-muted">Subcategories</small>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="fw-bold text-info">
+                                            {% with total_value=category.parts.all|length %}
+                                                ${% if total_value %}{{ total_value }}{% else %}0{% endif %}
+                                            {% endwith %}
+                                        </div>
+                                        <small class="text-muted">Total Value</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if category.parent %}
+                            <div class="hierarchy-indicator mt-3">
+                                <strong><i class="fas fa-sitemap me-2"></i>Category Hierarchy:</strong>
+                                <span class="text-muted">{{ category.parent.name }}</span> 
+                                <i class="fas fa-chevron-right mx-2"></i> 
+                                <strong>{{ category.name }}</strong>
+                            </div>
+                        {% endif %}
+                        
+                        {% if category.subcategories.exists %}
+                            <div class="mt-3">
+                                <strong><i class="fas fa-folder me-2"></i>Subcategories:</strong>
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    {% for subcategory in category.subcategories.all %}
+                                        <span class="badge bg-light text-dark">{{ subcategory.name }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <!-- Category Preview -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <h5><i class="fas fa-eye me-2"></i>Preview</h5>
+                    </div>
+                    <div class="form-section-body">
+                        <div class="category-preview">
+                            <div class="category-icon">
+                                <i class="fas fa-tag"></i>
+                            </div>
+                            <h6 id="previewName">{{ category.name }}</h6>
+                            <p id="previewDescription" class="small mb-2">
+                                {% if category.description %}
+                                    {{ category.description|truncatechars:100 }}
+                                {% else %}
+                                    No description provided
+                                {% endif %}
+                            </p>
+                            <div class="d-flex justify-content-center gap-2">
+                                <span class="badge bg-primary">{{ category.parts.count }} parts</span>
+                                <span class="badge {% if category.is_active %}bg-success{% else %}bg-secondary{% endif %}" id="previewStatus">
+                                    {% if category.is_active %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <h5><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+                    </div>
+                    <div class="form-section-body">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'inventory:part_list' %}?category={{ category.id }}" 
+                               class="btn btn-outline-primary">
+                                <i class="fas fa-list me-2"></i>View All Parts
+                            </a>
+                            <a href="{% url 'inventory:part_create' %}?category={{ category.id }}" 
+                               class="btn btn-outline-success">
+                                <i class="fas fa-plus me-2"></i>Add New Part
+                            </a>
+                            {% if category.parts.count > 0 %}
+                                <button type="button" class="btn btn-outline-warning" onclick="showMovePartsModal()">
+                                    <i class="fas fa-exchange-alt me-2"></i>Move All Parts
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category Info -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <h5><i class="fas fa-info me-2"></i>Category Info</h5>
+                    </div>
+                    <div class="form-section-body">
+                        <div class="small">
+                            <div class="row mb-2">
+                                <div class="col-5 text-muted">Created:</div>
+                                <div class="col-7">{{ category.created_at|date:"M d, Y g:i A" }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 text-muted">Modified:</div>
+                                <div class="col-7">{{ category.updated_at|date:"M d, Y g:i A" }}</div>
+                            </div>
+                            <div class="row mb-2">
+                                <div class="col-5 text-muted">ID:</div>
+                                <div class="col-7">#{{ category.id }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Submit Buttons -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <button type="button" 
+                                class="btn btn-outline-danger" 
+                                onclick="confirmDelete()">
+                            <i class="fas fa-trash me-2"></i>Delete Category
+                        </button>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'inventory:category_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning!</strong> This action cannot be undone.
+                </div>
+                <p>Are you sure you want to delete the category "<strong>{{ category.name }}</strong>"?</p>
+                {% if category.parts.count > 0 %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This category contains <strong>{{ category.parts.count }} part{{ category.parts.count|pluralize }}</strong>. 
+                        These parts will need to be reassigned to another category.
+                    </div>
+                {% endif %}
+                {% if category.subcategories.count > 0 %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This category has <strong>{{ category.subcategories.count }} subcategor{{ category.subcategories.count|pluralize:"y,ies" }}</strong>. 
+                        These will become top-level categories.
+                    </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="{% url 'inventory:category_delete' category.id %}" class="btn btn-danger">
+                    <i class="fas fa-trash me-2"></i>Delete Category
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Live preview updates
+    document.getElementById('id_name').addEventListener('input', function() {
+        document.getElementById('previewName').textContent = this.value || 'Category Name';
+    });
+    
+    document.getElementById('id_description').addEventListener('input', function() {
+        const preview = document.getElementById('previewDescription');
+        if (this.value.trim()) {
+            preview.textContent = this.value.length > 100 ? this.value.substring(0, 100) + '...' : this.value;
+        } else {
+            preview.textContent = 'No description provided';
+        }
+    });
+    
+    // Status toggle updates
+    document.querySelector('input[name="is_active"]').addEventListener('change', function() {
+        const statusText = document.getElementById('statusText');
+        const previewStatus = document.getElementById('previewStatus');
+        
+        if (this.checked) {
+            statusText.textContent = 'Active';
+            previewStatus.textContent = 'Active';
+            previewStatus.className = 'badge bg-success';
+        } else {
+            statusText.textContent = 'Inactive';
+            previewStatus.textContent = 'Inactive';
+            previewStatus.className = 'badge bg-secondary';
+        }
+    });
+    
+    function confirmDelete() {
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+    
+    function showMovePartsModal() {
+        // This would open a modal to move all parts to another category
+        alert('Move parts functionality would be implemented here');
+    }
+    
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const name = document.getElementById('id_name').value.trim();
+        if (!name) {
+            e.preventDefault();
+            alert('Category name is required');
+            document.getElementById('id_name').focus();
+        }
+    });
+</script>
+{% endblock %}

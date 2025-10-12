@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Confirm Delete - {{ part.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <!-- Warning Card -->
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Confirm Permanent Deletion
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-skull-crossbones me-2"></i>
+                            WARNING: This action cannot be undone!
+                        </h5>
+                        <p class="mb-0">
+                            You are about to <strong>permanently delete</strong> this part and all associated data. 
+                            This will result in <strong>permanent data loss</strong>.
+                        </p>
+                    </div>
+
+                    <!-- Part Info -->
+                    <div class="mb-4">
+                        <h5>Part to be deleted:</h5>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="mb-2">{{ part.name }}</h6>
+                                <p class="mb-1"><strong>Part Number:</strong> {{ part.part_number }}</p>
+                                {% if part.category %}
+                                <p class="mb-1"><strong>Category:</strong> {{ part.category.name }}</p>
+                                {% endif %}
+                                <p class="mb-0"><strong>Current Stock:</strong> {{ part.quantity_in_stock }} {{ part.get_unit_display }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- What will be deleted -->
+                    <div class="mb-4">
+                        <h5 class="text-danger">
+                            <i class="fas fa-trash-alt me-2"></i>
+                            This will permanently delete:
+                        </h5>
+                        <ul class="list-group">
+                            <li class="list-group-item">
+                                <i class="fas fa-cog text-danger me-2"></i>
+                                <strong>The part record</strong> ({{ part.name }})
+                            </li>
+                            {% if transaction_count > 0 %}
+                            <li class="list-group-item">
+                                <i class="fas fa-exchange-alt text-danger me-2"></i>
+                                <strong>{{ transaction_count }} transaction record(s)</strong>
+                                <br><small class="text-muted">All purchase, sale, and adjustment history</small>
+                            </li>
+                            {% endif %}
+                            {% if part.quantity_in_stock > 0 %}
+                            <li class="list-group-item">
+                                <i class="fas fa-boxes text-danger me-2"></i>
+                                <strong>{{ part.quantity_in_stock }} {{ part.get_unit_display }} inventory</strong>
+                                <br><small class="text-muted">Stock will be lost without adjustment</small>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <!-- Alternative suggestion -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Recommended Alternative:
+                        </h6>
+                        <p class="mb-2">
+                            Instead of deleting, consider <strong>marking this part as inactive</strong>. 
+                            This will:
+                        </p>
+                        <ul class="mb-2">
+                            <li>Hide it from normal inventory lists</li>
+                            <li>Preserve all transaction history for auditing</li>
+                            <li>Allow you to reactivate it later if needed</li>
+                            <li>Maintain data integrity for reports</li>
+                        </ul>
+                        <a href="{% url 'inventory:part_edit' part.pk %}" class="btn btn-info btn-sm">
+                            <i class="fas fa-edit me-1"></i> Mark as Inactive Instead
+                        </a>
+                    </div>
+
+                    <!-- Confirmation Form -->
+                    <div class="border-top pt-4 mt-4">
+                        <h6 class="mb-3">If you still want to proceed:</h6>
+                        
+                        <div class="form-check mb-3">
+                            <input type="checkbox" class="form-check-input" id="confirmDelete" required>
+                            <label class="form-check-label" for="confirmDelete">
+                                <strong>I understand this will permanently delete all data and cannot be undone</strong>
+                            </label>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <form method="post" action="{% url 'inventory:part_delete' part.pk %}" id="deleteForm">
+                                {% csrf_token %}
+                                <input type="hidden" name="force_delete" value="true">
+                                <button type="submit" class="btn btn-danger btn-lg w-100" id="deleteButton" disabled>
+                                    <i class="fas fa-trash-alt me-2"></i>
+                                    Yes, Permanently Delete This Part
+                                </button>
+                            </form>
+                            
+                            <a href="{% url 'inventory:part_detail' part.pk %}" class="btn btn-secondary btn-lg w-100">
+                                <i class="fas fa-times me-2"></i>
+                                Cancel - Keep This Part
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Enable delete button only when checkbox is checked
+document.getElementById('confirmDelete').addEventListener('change', function() {
+    document.getElementById('deleteButton').disabled = !this.checked;
+});
+
+// Additional confirmation on submit
+document.getElementById('deleteForm').addEventListener('submit', function(e) {
+    if (!confirm('FINAL WARNING: Are you absolutely sure you want to permanently delete "{{ part.name|escapejs }}" and all related data? This CANNOT be undone!')) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}

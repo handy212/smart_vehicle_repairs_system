@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Email Templates - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-envelope text-primary"></i> Email Templates</h2>
+            <p class="text-muted mb-0">Manage email notification templates</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#templateModal">
+            <i class="fas fa-plus"></i> Add Template
+        </button>
+    </div>
+
+    <!-- Templates List -->
+    <div class="card">
+        <div class="card-body">
+            {% if templates %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Subject</th>
+                            <th>Status</th>
+                            <th>Last Updated</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for template in templates %}
+                        <tr>
+                            <td><strong>{{ template.name }}</strong></td>
+                            <td>
+                                <span class="badge bg-info">
+                                    {{ template.get_template_type_display }}
+                                </span>
+                            </td>
+                            <td>{{ template.subject|truncatechars:50 }}</td>
+                            <td>
+                                {% if template.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ template.updated_at|date:"Y-m-d H:i" }}</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick="editTemplate({{ template.id }}, '{{ template.name|escapejs }}', '{{ template.template_type }}', '{{ template.subject|escapejs }}', '{{ template.body_html|escapejs }}', '{{ template.body_text|escapejs }}', {{ template.is_active|lower }})"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#templateModal">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" 
+                                        onclick="previewTemplate({{ template.id }})"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#previewModal{{ template.id }}">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Preview Modal -->
+                        <div class="modal fade" id="previewModal{{ template.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Preview: {{ template.name }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <h6>Subject:</h6>
+                                        <p class="bg-light p-2 rounded">{{ template.subject }}</p>
+                                        
+                                        <h6 class="mt-3">HTML Body:</h6>
+                                        <div class="border p-3 rounded bg-white" style="max-height: 400px; overflow-y: auto;">
+                                            {{ template.body_html|safe }}
+                                        </div>
+                                        
+                                        {% if template.body_text %}
+                                        <h6 class="mt-3">Plain Text Body:</h6>
+                                        <pre class="bg-light p-3 rounded">{{ template.body_text }}</pre>
+                                        {% endif %}
+                                        
+                                        {% if template.variables %}
+                                        <h6 class="mt-3">Available Variables:</h6>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            {% for var in template.variables %}
+                                            <code class="badge bg-secondary">{‎{ {{ var }} }‎}</code>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-envelope fa-4x text-muted mb-3"></i>
+                <p class="text-muted">No email templates found.</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#templateModal">
+                    <i class="fas fa-plus"></i> Create First Template
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Template Modal -->
+<div class="modal fade" id="templateModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Add Email Template</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="template_id" id="template_id">
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Template Name</label>
+                        <input type="text" class="form-control" name="name" id="name" 
+                               placeholder="e.g., Appointment Confirmation Email" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="template_type" class="form-label">Template Type</label>
+                        <select class="form-select" name="template_type" id="template_type" required>
+                            {% for code, name in template_types %}
+                            <option value="{{ code }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Email Subject</label>
+                        <input type="text" class="form-control" name="subject" id="subject" 
+                               placeholder="Use {customer_name} for variables" required>
+                        <small class="text-muted">You can use variables like {customer_name}, {appointment_date}, etc.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="body_html" class="form-label">HTML Body</label>
+                        <textarea class="form-control" name="body_html" id="body_html" rows="10" required></textarea>
+                        <small class="text-muted">HTML email content with variables in curly braces</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="body_text" class="form-label">Plain Text Body (Optional)</label>
+                        <textarea class="form-control" name="body_text" id="body_text" rows="5"></textarea>
+                        <small class="text-muted">Plain text fallback for email clients that don't support HTML</small>
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="is_active" checked>
+                        <label class="form-check-label" for="is_active">
+                            Active (template will be used for notifications)
+                        </label>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <strong>Common Variables:</strong>
+                        <div class="mt-2">
+                            <code>{customer_name}</code>
+                            <code>{appointment_date}</code>
+                            <code>{appointment_time}</code>
+                            <code>{vehicle}</code>
+                            <code>{invoice_number}</code>
+                            <code>{amount}</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Template</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function editTemplate(id, name, templateType, subject, bodyHtml, bodyText, isActive) {
+    document.getElementById('modalTitle').textContent = 'Edit Email Template';
+    document.getElementById('template_id').value = id;
+    document.getElementById('name').value = name;
+    document.getElementById('template_type').value = templateType;
+    document.getElementById('subject').value = subject;
+    document.getElementById('body_html').value = bodyHtml;
+    document.getElementById('body_text').value = bodyText;
+    document.getElementById('is_active').checked = isActive;
+}
+
+function previewTemplate(id) {
+    // Modal is already populated in the template
+}
+
+// Reset form when modal is closed
+document.getElementById('templateModal').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('modalTitle').textContent = 'Add Email Template';
+    document.getElementById('template_id').value = '';
+    document.querySelector('#templateModal form').reset();
+    document.getElementById('is_active').checked = true;
+});
+</script>
+{% endblock %}

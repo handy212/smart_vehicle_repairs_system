@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ notification.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notification-icon-large {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin-right: 1rem;
+    }
+    .notification-icon-large.appointment { background: #e3f2fd; color: #1976d2; }
+    .notification-icon-large.work_order { background: #fff3e0; color: #f57c00; }
+    .notification-icon-large.invoice { background: #e8f5e9; color: #388e3c; }
+    .notification-icon-large.payment { background: #fce4ec; color: #c2185b; }
+    .notification-icon-large.inspection { background: #f3e5f5; color: #7b1fa2; }
+    .notification-icon-large.inventory { background: #e0f2f1; color: #00796b; }
+    .notification-icon-large.system { background: #f5f5f5; color: #616161; }
+    .priority-badge.low { background: #e3f2fd; color: #1976d2; }
+    .priority-badge.normal { background: #f3e5f5; color: #7b1fa2; }
+    .priority-badge.high { background: #fff3e0; color: #f57c00; }
+    .priority-badge.urgent { background: #ffebee; color: #c62828; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="notification-detail-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div class="d-flex">
+                <div class="notification-icon-large {{ notification.notification_type }}">
+                    <i class="fas {% if notification.notification_type == 'appointment' %}fa-calendar
+                                  {% elif notification.notification_type == 'work_order' %}fa-wrench
+                                  {% elif notification.notification_type == 'invoice' %}fa-file-invoice
+                                  {% elif notification.notification_type == 'payment' %}fa-credit-card
+                                  {% elif notification.notification_type == 'inspection' %}fa-clipboard-check
+                                  {% elif notification.notification_type == 'inventory' %}fa-boxes
+                                  {% else %}fa-bell{% endif %}"></i>
+                </div>
+                <div>
+                    <h2 class="mb-2">{{ notification.title }}</h2>
+                    <p class="mb-0 opacity-75">
+                        <i class="fas fa-clock me-2"></i>{{ notification.created_at|date:"F d, Y g:i A" }}
+                    </p>
+                </div>
+            </div>
+            <div>
+                <span class="badge priority-badge {{ notification.priority }}">
+                    {{ notification.get_priority_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Notification Content -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5 class="mb-3">Message</h5>
+                        <div class="notification-message">
+                            {{ notification.message|linebreaks }}
+                        </div>
+                    </div>
+
+                    {% if notification.metadata %}
+                    <hr>
+                    <div class="mb-4">
+                        <h5 class="mb-3">Details</h5>
+                        <dl class="row">
+                            {% for key, value in notification.metadata.items %}
+                            <dt class="col-sm-4 text-muted">{{ key|title }}:</dt>
+                            <dd class="col-sm-8">{{ value }}</dd>
+                            {% endfor %}
+                        </dl>
+                    </div>
+                    {% endif %}
+
+                    {% if notification.action_url %}
+                    <hr>
+                    <div>
+                        <a href="{{ notification.action_url }}" class="btn btn-primary">
+                            <i class="fas fa-external-link-alt me-2"></i>View Details
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex gap-2">
+                <a href="{% url 'notifications:notification-center' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Notifications
+                </a>
+                {% if not notification.is_read %}
+                <button type="button" class="btn btn-success" onclick="markAsRead()">
+                    <i class="fas fa-check me-2"></i>Mark as Read
+                </button>
+                {% endif %}
+                <button type="button" class="btn btn-danger" onclick="deleteNotification()">
+                    <i class="fas fa-trash me-2"></i>Delete
+                </button>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Info Card -->
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Notification Info
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted">Type</small>
+                        <div>{{ notification.get_notification_type_display }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Priority</small>
+                        <div>
+                            <span class="badge priority-badge {{ notification.priority }}">
+                                {{ notification.get_priority_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Status</small>
+                        <div>
+                            {% if notification.is_read %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i>Read
+                                </span>
+                            {% else %}
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-envelope me-1"></i>Unread
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Received</small>
+                        <div>{{ notification.created_at|date:"F d, Y" }}</div>
+                        <small class="text-muted">{{ notification.created_at|date:"g:i A" }}</small>
+                    </div>
+                    {% if notification.is_read %}
+                    <div class="mb-3">
+                        <small class="text-muted">Read</small>
+                        <div>{{ notification.read_at|date:"F d, Y" }}</div>
+                        <small class="text-muted">{{ notification.read_at|date:"g:i A" }}</small>
+                    </div>
+                    {% endif %}
+                    {% if notification.sent_via %}
+                    <div>
+                        <small class="text-muted">Sent via</small>
+                        <div>
+                            {% for channel in notification.sent_via %}
+                                <span class="badge bg-info me-1">{{ channel }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Related Actions -->
+            {% if notification.action_url %}
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-link me-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <a href="{{ notification.action_url }}" class="btn btn-primary w-100 mb-2">
+                        <i class="fas fa-external-link-alt me-2"></i>View Related Item
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markAsRead() {
+    fetch('{% url "notifications:mark-as-read" notification.id %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function deleteNotification() {
+    if (confirm('Delete this notification?')) {
+        fetch('{% url "notifications:delete-notification" notification.id %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = '{% url "notifications:notification-center" %}';
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+</script>
+{% endblock %}

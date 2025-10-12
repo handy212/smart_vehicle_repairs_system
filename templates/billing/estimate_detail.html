@@ -1,0 +1,619 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .estimate-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
+        border-radius: 1rem;
+        padding: 2rem;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    
+    .status-badge {
+        font-size: 0.875rem;
+        font-weight: 600;
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border: 2px solid rgba(255,255,255,0.3);
+    }
+    
+    .status-draft { background-color: rgba(107, 114, 128, 0.2); }
+    .status-sent { background-color: rgba(59, 130, 246, 0.2); }
+    .status-viewed { background-color: rgba(245, 158, 11, 0.2); }
+    .status-accepted { background-color: rgba(16, 185, 129, 0.2); }
+    .status-rejected { background-color: rgba(239, 68, 68, 0.2); }
+    .status-expired { background-color: rgba(107, 114, 128, 0.2); }
+    
+    .info-card {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        border: 1px solid #e5e7eb;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .info-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .line-items-table {
+        background: #f8fafc;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .line-items-table .table {
+        margin-bottom: 0;
+    }
+    
+    .line-items-table thead th {
+        background: #e2e8f0;
+        border: none;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        color: #4a5568;
+        padding: 1rem;
+    }
+    
+    .line-items-table tbody td {
+        border: none;
+        padding: 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .line-items-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .totals-section {
+        background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, black) 100%);
+        color: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+    }
+    
+    .action-buttons {
+        position: sticky;
+        top: 2rem;
+        z-index: 10;
+    }
+    
+    .activity-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .activity-timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.5rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #e2e8f0;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+        padding-left: 1rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -0.75rem;
+        top: 0.5rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #6366f1;
+        border: 3px solid white;
+        box-shadow: 0 0 0 3px #e2e8f0;
+    }
+    
+    .estimate-actions {
+        background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid py-4">
+    <!-- Estimate Header -->
+    <div class="estimate-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center mb-2">
+                    <h1 class="h2 mb-0 me-3">
+                        <i class="fas fa-file-alt me-2"></i>
+                        {{ estimate.estimate_number }}
+                    </h1>
+                    <span class="status-badge status-{{ estimate.status }}">
+                        {{ estimate.get_status_display }}
+                    </span>
+                </div>
+                <div class="row">
+                    <div class="col-sm-6">
+                        <p class="mb-1 opacity-75">
+                            <i class="fas fa-user me-2"></i>
+                            {{ estimate.customer.user.first_name }} {{ estimate.customer.user.last_name }}
+                        </p>
+                        {% if estimate.vehicle %}
+                        <p class="mb-1 opacity-75">
+                            <i class="fas fa-car me-2"></i>
+                            {{ estimate.vehicle.year }} {{ estimate.vehicle.make }} {{ estimate.vehicle.model }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="col-sm-6">
+                        <p class="mb-1 opacity-75">
+                            <i class="fas fa-calendar me-2"></i>
+                            Created: {{ estimate.estimate_date|date:"M d, Y" }}
+                        </p>
+                        {% if estimate.valid_until %}
+                        <p class="mb-1 opacity-75">
+                            <i class="fas fa-clock me-2"></i>
+                            Valid Until: {{ estimate.valid_until|date:"M d, Y" }}
+                            {% if estimate.valid_until < today %}
+                            <span class="badge bg-danger ms-2">Expired</span>
+                            {% endif %}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <h2 class="mb-0">${{ estimate.total|floatformat:2 }}</h2>
+                <p class="mb-0 opacity-75">Total Amount</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Customer & Vehicle Information -->
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-info-circle text-primary me-2"></i>
+                    Estimate Information
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-2">Customer Details</h6>
+                        <p class="mb-1">
+                            <strong>{{ estimate.customer.user.first_name }} {{ estimate.customer.user.last_name }}</strong>
+                        </p>
+                        {% if estimate.customer.company_name %}
+                        <p class="mb-1">{{ estimate.customer.company_name }}</p>
+                        {% endif %}
+                        <p class="mb-1">
+                            <i class="fas fa-envelope me-2"></i>
+                            {{ estimate.customer.user.email }}
+                        </p>
+                        {% if estimate.customer.user.phone %}
+                        <p class="mb-1">
+                            <i class="fas fa-phone me-2"></i>
+                            {{ estimate.customer.user.phone }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        {% if estimate.vehicle %}
+                        <h6 class="text-muted mb-2">Vehicle Details</h6>
+                        <p class="mb-1">
+                            <strong>{{ estimate.vehicle.year }} {{ estimate.vehicle.make }} {{ estimate.vehicle.model }}</strong>
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-id-card me-2"></i>
+                            {{ estimate.vehicle.license_plate }}
+                        </p>
+                        {% if estimate.vehicle.vin %}
+                        <p class="mb-1">
+                            <i class="fas fa-barcode me-2"></i>
+                            VIN: {{ estimate.vehicle.vin }}
+                        </p>
+                        {% endif %}
+                        {% if estimate.vehicle.mileage %}
+                        <p class="mb-1">
+                            <i class="fas fa-tachometer-alt me-2"></i>
+                            {{ estimate.vehicle.mileage|floatformat:0 }} miles
+                        </p>
+                        {% endif %}
+                        {% else %}
+                        <h6 class="text-muted mb-2">Vehicle</h6>
+                        <p class="text-muted">No vehicle specified</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if estimate.description %}
+                <div class="mt-3 pt-3 border-top">
+                    <h6 class="text-muted mb-2">Description</h6>
+                    <p class="mb-0">{{ estimate.description|linebreaks }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Line Items -->
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-list text-primary me-2"></i>
+                    Line Items
+                </h5>
+                
+                {% if estimate.line_items.all %}
+                <div class="line-items-table">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th width="10%">Qty</th>
+                                <th width="15%">Unit Price</th>
+                                <th width="10%">Discount</th>
+                                <th width="15%">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in estimate.line_items.all %}
+                            <tr>
+                                <td>
+                                    <div class="fw-medium">{{ item.description }}</div>
+                                    {% if item.notes %}
+                                    <small class="text-muted">{{ item.notes }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.quantity|floatformat:2 }}</td>
+                                <td>${{ item.unit_price|floatformat:2 }}</td>
+                                <td>
+                                    {% if item.discount_percentage > 0 %}
+                                    {{ item.discount_percentage }}%
+                                    <br><small class="text-success">-${{ item.discount_amount|floatformat:2 }}</small>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td class="fw-bold">${{ item.total|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                    <p class="text-muted">No line items added to this estimate.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Notes and Terms -->
+            {% if estimate.notes or estimate.terms %}
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-sticky-note text-primary me-2"></i>
+                    Additional Information
+                </h5>
+                
+                <div class="row">
+                    {% if estimate.notes %}
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-2">Internal Notes</h6>
+                        <p>{{ estimate.notes|linebreaks }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if estimate.terms %}
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-2">Terms & Conditions</h6>
+                        <p>{{ estimate.terms|linebreaks }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <div class="estimate-actions">
+                    <h6 class="mb-3">
+                        <i class="fas fa-tools me-2"></i>
+                        Actions
+                    </h6>
+                    
+                    <div class="d-grid gap-2">
+                        {% if estimate.status == 'approved' %}
+                        <button class="btn btn-success" onclick="convertToInvoice()">
+                            <i class="fas fa-file-invoice me-2"></i>Convert to Invoice
+                        </button>
+                        {% endif %}
+                        
+                        <button class="btn btn-primary" onclick="emailEstimate()">
+                            <i class="fas fa-envelope me-2"></i>Email to Customer
+                        </button>
+                        
+                        <button class="btn btn-outline-secondary" onclick="printEstimate()">
+                            <i class="fas fa-print me-2"></i>Print Estimate
+                        </button>
+                        
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-cog me-2"></i>More Actions
+                            </button>
+                            <ul class="dropdown-menu w-100">
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="duplicateEstimate()">
+                                        <i class="fas fa-copy me-2"></i>Duplicate Estimate
+                                    </a>
+                                </li>
+                                {% if estimate.status == 'approved' %}
+                                <li>
+                                    <a class="dropdown-item" href="#" onclick="convertToInvoice()">
+                                        <i class="fas fa-file-invoice me-2"></i>Convert to Invoice
+                                    </a>
+                                </li>
+                                {% elif estimate.status == 'converted' %}
+                                <li>
+                                    <a class="dropdown-item disabled" href="#">
+                                        <i class="fas fa-check-circle me-2 text-success"></i>Already Converted
+                                    </a>
+                                </li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'billing:estimate_create' %}">
+                                        <i class="fas fa-edit me-2"></i>Edit Estimate
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="#" onclick="deleteEstimate()">
+                                        <i class="fas fa-trash me-2"></i>Delete Estimate
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Totals Summary -->
+            <div class="totals-section mt-3">
+                <h6 class="mb-3">
+                    <i class="fas fa-calculator me-2"></i>
+                    Summary
+                </h6>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <span>${{ estimate.subtotal|floatformat:2 }}</span>
+                </div>
+                
+                {% if estimate.total_discount > 0 %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Discount:</span>
+                    <span class="text-success">-${{ estimate.total_discount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tax ({{ estimate.tax_rate|floatformat:1 }}%):</span>
+                    <span>${{ estimate.tax_amount|floatformat:2 }}</span>
+                </div>
+                
+                <hr class="my-3 opacity-50">
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Total:</h5>
+                    <h4 class="mb-0">${{ estimate.total|floatformat:2 }}</h4>
+                </div>
+                
+                {% if estimate.valid_until %}
+                <div class="mt-3 pt-3 border-top border-light border-opacity-25">
+                    <small class="opacity-75">
+                        <i class="fas fa-clock me-1"></i>
+                        Valid until {{ estimate.valid_until|date:"M d, Y" }}
+                        {% if estimate.valid_until < today %}
+                        <span class="badge bg-danger ms-2">Expired</span>
+                        {% endif %}
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Activity Timeline -->
+            <div class="info-card mt-3">
+                <h6 class="mb-3">
+                    <i class="fas fa-history text-primary me-2"></i>
+                    Activity Timeline
+                </h6>
+                
+                <div class="activity-timeline">
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">Estimate Created</h6>
+                                <small class="text-muted">{{ estimate.created_at|date:"M d, Y g:i A" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if estimate.status == 'sent' %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">Sent to Customer</h6>
+                                <small class="text-muted">{{ estimate.updated_at|date:"M d, Y g:i A" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if estimate.status == 'viewed' %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">Viewed by Customer</h6>
+                                <small class="text-muted">{{ estimate.updated_at|date:"M d, Y g:i A" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if estimate.status == 'accepted' %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">Accepted by Customer</h6>
+                                <small class="text-muted">{{ estimate.updated_at|date:"M d, Y g:i A" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if estimate.status == 'rejected' %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">Rejected by Customer</h6>
+                                <small class="text-muted">{{ estimate.updated_at|date:"M d, Y g:i A" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Modal -->
+<div class="modal fade" id="emailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Email Estimate</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="emailForm">
+                    <div class="mb-3">
+                        <label class="form-label">To:</label>
+                        <input type="email" class="form-control" value="{{ estimate.customer.user.email }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Subject:</label>
+                        <input type="text" class="form-control" value="Estimate {{ estimate.estimate_number }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Message:</label>
+                        <textarea class="form-control" rows="4" placeholder="Dear {{ estimate.customer.user.first_name }},
+
+Please find attached your estimate for the requested services.
+
+Thank you for your business!"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="sendEmail()">
+                    <i class="fas fa-paper-plane me-2"></i>Send Email
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function emailEstimate() {
+    $('#emailModal').modal('show');
+}
+
+function sendEmail() {
+    // Implementation for sending email
+    console.log('Sending email...');
+    $('#emailModal').modal('hide');
+    
+    // Show success message
+    const toast = document.createElement('div');
+    toast.className = 'toast align-items-center text-white bg-success border-0';
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas fa-check me-2"></i>Estimate emailed successfully!
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    new bootstrap.Toast(toast).show();
+    
+    setTimeout(() => {
+        document.body.removeChild(toast);
+    }, 5000);
+}
+
+function printEstimate() {
+    window.open(`/billing/estimates/{{ estimate.id }}/print/`, '_blank');
+}
+
+function duplicateEstimate() {
+    if (confirm('Create a duplicate of this estimate?')) {
+        // Implementation for duplicating estimate
+        console.log('Duplicating estimate...');
+    }
+}
+
+function convertToInvoice() {
+    if (confirm('Convert this estimate to an invoice? This will mark the estimate as converted and create a new invoice.')) {
+        // Create a form and submit it as POST
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/billing/estimates/{{ estimate.id }}/convert-to-invoice/`;
+        
+        // Add CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken.value;
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function deleteEstimate() {
+    if (confirm('Are you sure you want to delete this estimate? This action cannot be undone.')) {
+        // Implementation for deleting estimate
+        console.log('Deleting estimate...');
+    }
+}
+</script>
+{% endblock %}

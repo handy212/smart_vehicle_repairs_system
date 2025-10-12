@@ -1,0 +1,2186 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block title %}{{ workorder.work_order_number }} - Work Order Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-section {
+        background: white;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--gray-200);
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .info-item {
+        display: flex;
+        margin-bottom: 0.75rem;
+    }
+    
+    .info-label {
+        font-weight: 500;
+        color: var(--gray-600);
+        min-width: 140px;
+        margin-right: 1rem;
+    }
+    
+    .info-value {
+        color: var(--gray-800);
+    }
+    
+    .status-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-bottom: 1.5rem;
+    }
+    
+    .timeline-item:not(:last-child)::before {
+        content: '';
+        position: absolute;
+        left: -1.5rem;
+        top: 1rem;
+        width: 2px;
+        height: calc(100% - 1rem);
+        background: var(--gray-300);
+    }
+    
+    .timeline-item::after {
+        content: '';
+        position: absolute;
+        left: -1.75rem;
+        top: 0.25rem;
+        width: 0.75rem;
+        height: 0.75rem;
+        background: var(--primary);
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px var(--primary);
+    }
+    
+    .timeline-item.completed::after {
+        background: var(--success);
+        box-shadow: 0 0 0 2px var(--success);
+    }
+    
+    .task-card {
+        border: 1px solid var(--gray-200);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.2s ease;
+    }
+    
+    .task-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .task-card.completed {
+        background: var(--gray-50);
+        border-color: var(--success);
+    }
+    
+    .part-card {
+        border: 1px solid var(--gray-200);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: white;
+    }
+    
+    .part-card.installed {
+        border-color: var(--success);
+        background: rgba(16, 185, 129, 0.05);
+    }
+    
+    .time-tracker {
+        background: var(--gray-50);
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .timer-display {
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--primary);
+        text-align: center;
+        margin: 1rem 0;
+    }
+    
+    .note-card {
+        border-left: 4px solid var(--gray-300);
+        background: var(--gray-50);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0 0.5rem 0.5rem 0;
+    }
+    
+    .note-card.important {
+        border-left-color: var(--warning);
+        background: rgba(245, 158, 11, 0.1);
+    }
+    
+    .note-card.customer {
+        border-left-color: var(--info);
+        background: rgba(59, 130, 246, 0.1);
+    }
+    
+    .signature-pad {
+        border: 2px dashed var(--gray-300);
+        border-radius: 0.5rem;
+        background: white;
+    }
+    
+    .cost-summary {
+        background: var(--gray-50);
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+    
+    .cost-item {
+        display: flex;
+        justify-content: between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .cost-item:last-child {
+        border-bottom: none;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .btn-floating {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1000;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'workorders:list' %}">Work Orders</a></li>
+                            <li class="breadcrumb-item active">{{ workorder.work_order_number }}</li>
+                        </ol>
+                    </nav>
+                    <h1 class="h3 mb-1">{{ workorder.work_order_number }}</h1>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        {% include 'workorders/partials/status_badge.html' with status=workorder.status %}
+                        {% include 'workorders/partials/priority_badge.html' with priority=workorder.priority %}
+                        {% if workorder.is_overdue %}
+                            <span class="badge bg-danger">Overdue</span>
+                        {% endif %}
+                        {% if workorder.requires_approval %}
+                            <span class="badge bg-warning">Needs Approval</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    {% if can_edit %}
+                    <a href="{% url 'workorders:edit' workorder.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-1"></i> Edit
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'workorders:print' workorder.pk %}" target="_blank" class="btn btn-outline-success">
+                        <i class="fas fa-print me-1"></i> Print
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Actions
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% if workorder.status == 'draft' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="inspection">
+                                <i class="fas fa-search me-2"></i>Start Initial Inspection
+                            </a></li>
+                            {% elif workorder.status == 'inspection' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="intake">
+                                <i class="fas fa-play me-2"></i>Start Intake
+                            </a></li>
+                            {% elif workorder.status == 'intake' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="diagnosis">
+                                <i class="fas fa-search me-2"></i>Start Diagnosis
+                            </a></li>
+                            {% elif workorder.status == 'diagnosis' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="awaiting_approval">
+                                <i class="fas fa-clipboard-check me-2"></i>Request Approval
+                            </a></li>
+                            {% elif workorder.status == 'awaiting_approval' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="approved">
+                                <i class="fas fa-check me-2"></i>Mark Approved
+                            </a></li>
+                            {% elif workorder.status == 'approved' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="in_progress">
+                                <i class="fas fa-wrench me-2"></i>Start Work
+                            </a></li>
+                            {% elif workorder.status == 'in_progress' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="quality_check">
+                                <i class="fas fa-clipboard-check me-2"></i>Quality Check
+                            </a></li>
+                            <li><a class="dropdown-item status-update" href="#" data-status="paused">
+                                <i class="fas fa-pause me-2"></i>Pause Work
+                            </a></li>
+                            {% elif workorder.status == 'paused' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="in_progress">
+                                <i class="fas fa-play me-2"></i>Resume Work
+                            </a></li>
+                            {% elif workorder.status == 'quality_check' %}
+                            <li><a class="dropdown-item" href="#" id="perform-quality-check-btn">
+                                <i class="fas fa-clipboard-check me-2"></i>Perform Quality Check
+                            </a></li>
+                            {% elif workorder.status == 'completed' %}
+                            <li><a class="dropdown-item status-update" href="#" data-status="invoiced">
+                                <i class="fas fa-file-invoice me-2"></i>Mark Invoiced
+                            </a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-warning" href="#" id="add-note-btn">
+                                <i class="fas fa-sticky-note me-2"></i>Add Note
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Basic Information -->
+            <div class="detail-section">
+                <h5 class="section-title">
+                    <i class="fas fa-info-circle text-primary"></i>
+                    Basic Information
+                </h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <div class="info-label">Customer:</div>
+                            <div class="info-value">
+                                <strong>{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</strong>
+                                <br><small class="text-muted">{{ workorder.customer.user.email }}</small>
+                                {% if workorder.customer.phone %}
+                                <br><small class="text-muted">{{ workorder.customer.phone }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Vehicle:</div>
+                            <div class="info-value">
+                                <strong>{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</strong>
+                                <br><small class="text-muted">{{ workorder.vehicle.license_plate }}</small>
+                                {% if workorder.vehicle.vin %}
+                                <br><small class="text-muted">VIN: {{ workorder.vehicle.vin }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if workorder.odometer_in %}
+                        <div class="info-item">
+                            <div class="info-label">Odometer:</div>
+                            <div class="info-value">{{ workorder.odometer_in|floatformat:0 }} miles</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <div class="info-label">Primary Technician:</div>
+                            <div class="info-value">
+                                {% if workorder.primary_technician %}
+                                    <strong>{{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}</strong>
+                                {% else %}
+                                    <span class="text-muted">Not assigned</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Created:</div>
+                            <div class="info-value">{{ workorder.created_at|date:"M d, Y H:i" }}</div>
+                        </div>
+                        {% if workorder.estimated_completion %}
+                        <div class="info-item">
+                            <div class="info-label">Estimated Completion:</div>
+                            <div class="info-value">{{ workorder.estimated_completion|date:"M d, Y H:i" }}</div>
+                        </div>
+                        {% endif %}
+                        {% if workorder.completed_at %}
+                        <div class="info-item">
+                            <div class="info-label">Completed:</div>
+                            <div class="info-value">{{ workorder.completed_at|date:"M d, Y H:i" }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if workorder.customer_concerns %}
+                <div class="mt-3">
+                    <div class="info-label">Customer Concerns:</div>
+                    <div class="info-value">{{ workorder.customer_concerns }}</div>
+                </div>
+                {% endif %}
+                
+                {% if workorder.diagnosis_notes %}
+                <div class="mt-3">
+                    <div class="info-label">Diagnosis Notes:</div>
+                    <div class="info-value">{{ workorder.diagnosis_notes }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Service Tasks -->
+            <div class="detail-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="section-title mb-0">
+                        <i class="fas fa-tasks text-primary"></i>
+                        Service Tasks
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary" id="add-task-btn">
+                        <i class="fas fa-plus me-1"></i> Add Task
+                    </button>
+                </div>
+                
+                {% for task in workorder.tasks.all %}
+                <div class="task-card {% if task.status == 'completed' %}completed{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ task.get_task_type_display }} - {{ task.description }}</h6>
+                            {% if task.detailed_notes %}
+                            <p class="text-muted mb-2 small">{{ task.detailed_notes }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            {% include 'workorders/partials/task_status_badge.html' with status=task.status %}
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    {% if task.status == 'pending' %}
+                                    <li><a class="dropdown-item task-status-update" href="#" data-task-id="{{ task.id }}" data-status="in_progress">
+                                        <i class="fas fa-play me-2"></i>Start Task
+                                    </a></li>
+                                    {% elif task.status == 'in_progress' %}
+                                    <li><a class="dropdown-item task-status-update" href="#" data-task-id="{{ task.id }}" data-status="completed">
+                                        <i class="fas fa-check me-2"></i>Mark Complete
+                                    </a></li>
+                                    <li><a class="dropdown-item task-status-update" href="#" data-task-id="{{ task.id }}" data-status="skipped">
+                                        <i class="fas fa-forward me-2"></i>Skip Task
+                                    </a></li>
+                                    {% endif %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item task-edit" href="#" data-task-id="{{ task.id }}">
+                                        <i class="fas fa-edit me-2"></i>Edit Task
+                                    </a></li>
+                                    <li><a class="dropdown-item text-danger task-delete" href="#" data-task-id="{{ task.id }}">
+                                        <i class="fas fa-trash me-2"></i>Delete Task
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-3">
+                            <small class="text-muted">Assigned To:</small><br>
+                            {% if task.assigned_to %}
+                                <span class="badge bg-success">{{ task.assigned_to.first_name }} {{ task.assigned_to.last_name }}</span>
+                            {% else %}
+                                <span class="text-muted">Unassigned</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Estimated Hours:</small><br>
+                            <strong>{{ task.estimated_hours|floatformat:1 }}h</strong>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Actual Hours:</small><br>
+                            <strong>{{ task.actual_hours|floatformat:1 }}h</strong>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">Labor Cost:</small><br>
+                            <strong>${{ task.labor_cost|floatformat:2 }}</strong>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4 text-muted">
+                    <i class="fas fa-tasks fa-2x mb-2"></i>
+                    <p class="mb-0">No tasks added yet</p>
+                    <button class="btn btn-primary mt-2" id="add-first-task-btn">
+                        <i class="fas fa-plus me-1"></i> Add First Task
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Diagnosis & Parts Estimate Section -->
+            {% if workorder.status == 'diagnosis' or workorder.status == 'awaiting_approval' or workorder.status == 'approved' or workorder.status == 'in_progress' or workorder.status == 'quality_check' or workorder.status == 'completed' %}
+            <div class="detail-section">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="section-title mb-0">
+                        <i class="fas fa-stethoscope text-primary"></i>
+                        Diagnosis & Parts Estimate
+                    </h5>
+                    {% if workorder.status == 'diagnosis' %}
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#diagnosisModal">
+                        <i class="fas fa-edit me-1"></i> Update Diagnosis
+                    </button>
+                    {% endif %}
+                </div>
+
+                <!-- Diagnosis Notes -->
+                {% if workorder.diagnosis_notes %}
+                {% else %}
+                {% if workorder.status == 'diagnosis' %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No diagnosis notes added yet. Click "Update Diagnosis" to add findings.
+                </div>
+                {% endif %}
+                {% endif %}
+
+                <!-- Parts Needed -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="mb-0"><i class="fas fa-cog me-2"></i>Parts Needed</h6>
+                    {% if workorder.status == 'diagnosis' or workorder.status == 'awaiting_approval' %}
+                    <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addPartModal">
+                        <i class="fas fa-plus me-1"></i> Add Part
+                    </button>
+                    {% endif %}
+                </div>
+
+                {% if workorder.parts.all %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Part #</th>
+                                <th>Description</th>
+                                <th>Linked Task</th>
+                                <th>Qty</th>
+                                <th>Unit Cost</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for part in workorder.parts.all %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ part.part_number }}</span></td>
+                                <td>
+                                    <strong>{{ part.part_name }}</strong>
+                                    {% if part.description %}
+                                    <br><small class="text-muted">{{ part.description|truncatewords:10 }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if part.task %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-link me-1"></i>{{ part.task.get_task_type_display }}
+                                    </small>
+                                    {% else %}
+                                    <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ part.quantity }}</td>
+                                <td>${{ part.unit_cost|floatformat:2 }}</td>
+                                <td><strong>${{ part.total_cost|floatformat:2 }}</strong></td>
+                                <td>
+                                    <span class="badge 
+                                        {% if part.status == 'received' %}bg-success
+                                        {% elif part.status == 'ordered' %}bg-info
+                                        {% elif part.status == 'installed' %}bg-primary
+                                        {% else %}bg-warning{% endif %}">
+                                        {{ part.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#" onclick="editPart({{ part.id }})">
+                                                <i class="fas fa-edit me-2"></i>Edit
+                                            </a></li>
+                                            {% if part.status == 'pending' %}
+                                            <li><a class="dropdown-item" href="#" onclick="updatePartStatus({{ part.id }}, 'ordered')">
+                                                <i class="fas fa-shopping-cart me-2"></i>Mark as Ordered
+                                            </a></li>
+                                            {% elif part.status == 'ordered' %}
+                                            <li><a class="dropdown-item" href="#" onclick="updatePartStatus({{ part.id }}, 'received')">
+                                                <i class="fas fa-check me-2"></i>Mark as Received
+                                            </a></li>
+                                            {% elif part.status == 'received' %}
+                                            <li><a class="dropdown-item" href="#" onclick="updatePartStatus({{ part.id }}, 'installed')">
+                                                <i class="fas fa-wrench me-2"></i>Mark as Installed
+                                            </a></li>
+                                            {% endif %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-danger" href="#" onclick="deletePart({{ part.id }})">
+                                                <i class="fas fa-trash me-2"></i>Delete
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="4" class="text-end"><strong>Estimated Parts Total:</strong></td>
+                                <td colspan="3"><strong>${{ workorder.estimated_parts_cost|floatformat:2 }}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-secondary text-center">
+                    <i class="fas fa-box-open me-2"></i>
+                    No parts added yet. Click "Add Part" to create an estimate.
+                </div>
+                {% endif %}
+
+                <!-- Estimate Summary -->
+                {% if workorder.parts.all or workorder.estimated_labor_cost > 0 %}
+                <div class="card mt-3">
+                    <div class="card-header bg-light">
+                        <strong><i class="fas fa-file-invoice-dollar me-2"></i>Estimate Summary</strong>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Labor ({{ workorder.estimated_labor_hours|floatformat:1 }}h):</span>
+                            <span>${{ workorder.estimated_labor_cost|floatformat:2 }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Parts:</span>
+                            <span>${{ workorder.estimated_parts_cost|floatformat:2 }}</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <strong>Total Estimate:</strong>
+                            <strong class="text-primary fs-5">${{ workorder.estimated_total|floatformat:2 }}</strong>
+                        </div>
+                        
+                        {% if workorder.status == 'diagnosis' %}
+                        <div class="d-grid gap-2 mt-3">
+                            <button class="btn btn-primary" onclick="requestApproval()">
+                                <i class="fas fa-paper-plane me-2"></i>Submit Estimate for Approval
+                            </button>
+                        </div>
+                        {% elif workorder.status == 'awaiting_approval' %}
+                        <div class="alert alert-warning mt-3 mb-0">
+                            <i class="fas fa-clock me-2"></i>
+                            Waiting for customer approval...
+                        </div>
+                        {% elif workorder.status == 'approved' %}
+                        <div class="alert alert-success mt-3 mb-0">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Estimate approved! Ready to start work.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Quality Check Information -->
+            {% if workorder.quality_check_completed %}
+            <div class="detail-section">
+                <h5 class="section-title">
+                    <i class="fas fa-clipboard-check text-success"></i>
+                    Quality Check Results
+                </h5>
+                
+                <div class="card border-{{ workorder.quality_check_passed|yesno:'success,danger' }}">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <strong class="d-block mb-1">Result:</strong>
+                                    <span class="badge bg-{{ workorder.quality_check_passed|yesno:'success,danger' }} fs-6">
+                                        <i class="fas fa-{{ workorder.quality_check_passed|yesno:'check-circle,times-circle' }} me-2"></i>
+                                        {{ workorder.quality_check_passed|yesno:'PASSED,FAILED' }}
+                                    </span>
+                                </div>
+                                {% if workorder.quality_check_by %}
+                                <div class="mb-2">
+                                    <strong>Inspected By:</strong> {{ workorder.quality_check_by.get_full_name }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {% if workorder.quality_check_at %}
+                                <div class="mb-2">
+                                    <strong>Date & Time:</strong> {{ workorder.quality_check_at|date:"M d, Y H:i" }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if workorder.quality_check_notes %}
+                        <div class="mt-3">
+                            <strong class="d-block mb-2">Quality Check Notes:</strong>
+                            <div class="alert alert-light mb-0">
+                                {{ workorder.quality_check_notes|linebreaks }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recent Activity -->
+            <div class="detail-section">
+                <h5 class="section-title">
+                    <i class="fas fa-history text-primary"></i>
+                    Recent Activity
+                </h5>
+                
+                <div class="status-timeline">
+                    {% for note in recent_notes %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ note.get_note_type_display }}</strong>
+                            <small class="text-muted">{{ note.created_at|date:"M d, H:i" }}</small>
+                        </div>
+                        <p class="mb-1">{{ note.note }}</p>
+                        <small class="text-muted">by {{ note.created_by.first_name }} {{ note.created_by.last_name }}</small>
+                    </div>
+                    {% endfor %}
+                    
+                    {% for log in recent_time_logs %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between">
+                            <strong>Time Log</strong>
+                            <small class="text-muted">{{ log.created_at|date:"M d, H:i" }}</small>
+                        </div>
+                        <p class="mb-1">{{ log.technician.first_name }} {{ log.technician.last_name }} - {{ log.duration_hours|floatformat:1 }}h</p>
+                        <small class="text-muted">{{ log.description }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4">
+            <!-- Time Tracking -->
+            {% if can_work %}
+            <div class="detail-section">
+                <h5 class="section-title">
+                    <i class="fas fa-clock text-primary"></i>
+                    Time Tracking
+                </h5>
+                
+                <div class="time-tracker">
+                    <div class="timer-display" id="timer-display">00:00:00</div>
+                    <div class="text-center">
+                        <button class="btn btn-success me-2" id="clock-in-btn">
+                            <i class="fas fa-play me-1"></i> Clock In
+                        </button>
+                        <button class="btn btn-danger" id="clock-out-btn" disabled>
+                            <i class="fas fa-stop me-1"></i> Clock Out
+                        </button>
+                    </div>
+                    <div class="mt-3">
+                        <input type="text" class="form-control form-control-sm" id="work-description" 
+                               placeholder="What are you working on?">
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Cost Summary -->
+            <div class="detail-section">
+                <h5 class="section-title">
+                    <i class="fas fa-calculator text-primary"></i>
+                    Cost Summary
+                </h5>
+                
+                <div class="cost-summary">
+                    <div class="cost-item">
+                        <span>Labor Cost:</span>
+                        <span>${{ total_labor_cost|floatformat:2 }}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Parts Cost:</span>
+                        <span>${{ total_parts_cost|floatformat:2 }}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Estimated Hours:</span>
+                        <span>{{ total_estimated_hours|floatformat:1 }}h</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Actual Hours:</span>
+                        <span>{{ total_actual_hours|floatformat:1 }}h</span>
+                    </div>
+                    <hr>
+                    <div class="cost-item">
+                        <span><strong>Total Cost:</strong></span>
+                        <span><strong>${{ total_labor_cost|add:total_parts_cost|floatformat:2 }}</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="detail-section">
+                <h5 class="section-title">
+                    <i class="fas fa-bolt text-primary"></i>
+                    Quick Actions
+                </h5>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" id="add-photo-btn">
+                        <i class="fas fa-camera me-2"></i> Add Photo
+                    </button>
+                    <button class="btn btn-outline-success" id="customer-approval-btn">
+                        <i class="fas fa-signature me-2"></i> Get Customer Approval
+                    </button>
+                    <button class="btn btn-outline-info" id="send-update-btn">
+                        <i class="fas fa-envelope me-2"></i> Send Customer Update
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Note Modal -->
+<div class="modal fade" id="addNoteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Note</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-note-form">
+                    <div class="mb-3">
+                        <label for="note-type" class="form-label">Note Type</label>
+                        <select class="form-select" id="note-type" required>
+                            <option value="general">General</option>
+                            <option value="internal">Internal Note</option>
+                            <option value="customer">Customer Communication</option>
+                            <option value="technician">Technician Note</option>
+                            <option value="parts">Parts Note</option>
+                            <option value="quality">Quality Check Note</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="note-text" class="form-label">Note</label>
+                        <textarea class="form-control" id="note-text" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="note-important">
+                        <label class="form-check-label" for="note-important">
+                            Mark as important
+                        </label>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="note-customer-visible">
+                        <label class="form-check-label" for="note-customer-visible">
+                            Visible to customer
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-note-btn">Save Note</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Service Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-task-form">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="task-type" class="form-label">Task Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="task-type" name="task_type" required>
+                            <option value="repair">Repair</option>
+                            <option value="maintenance">Maintenance</option>
+                            <option value="inspection">Inspection</option>
+                            <option value="diagnostic">Diagnostic</option>
+                            <option value="replacement">Replacement</option>
+                            <option value="adjustment">Adjustment</option>
+                            <option value="cleaning">Cleaning</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="task-description" class="form-label">Description <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="task-description" name="description" 
+                               placeholder="Brief description of the task" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="task-notes" class="form-label">Detailed Notes</label>
+                        <textarea class="form-control" id="task-notes" name="detailed_notes" rows="3"
+                                  placeholder="Additional notes or instructions"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="task-assigned-to" class="form-label">Assign To</label>
+                                <select class="form-select" id="task-assigned-to" name="assigned_to">
+                                    <option value="">Unassigned</option>
+                                    {% for tech in technicians %}
+                                    <option value="{{ tech.id }}">{{ tech.first_name }} {{ tech.last_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="task-estimated-hours" class="form-label">Estimated Hours</label>
+                                <input type="number" class="form-control" id="task-estimated-hours" 
+                                       name="estimated_hours" min="0" step="0.25" placeholder="0.0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="task-actual-hours" class="form-label">Actual Hours</label>
+                                <input type="number" class="form-control" id="task-actual-hours" 
+                                       name="actual_hours" min="0" step="0.25" placeholder="0.0">
+                                <small class="text-muted">Time actually spent on this task</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="task-labor-rate" class="form-label">Labor Rate ($/hour)</label>
+                                <input type="number" class="form-control" id="task-labor-rate" 
+                                       name="labor_rate" min="0" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-task-btn">Add Task</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Diagnosis Modal -->
+<div class="modal fade" id="diagnosisModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-stethoscope me-2"></i>Update Diagnosis</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="diagnosisForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="diagnosisNotes" class="form-label">Diagnosis Notes <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="diagnosisNotes" name="diagnosis_notes" rows="6" 
+                                  placeholder="Describe the issues found, root causes, and recommended repairs..."
+                                  required>{{ workorder.diagnosis_notes }}</textarea>
+                        <div class="form-text">Provide detailed findings from your inspection and diagnostic tests.</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="estimatedLaborHours" class="form-label">Estimated Labor Hours</label>
+                            <input type="number" class="form-control" id="estimatedLaborHours" name="estimated_labor_hours" 
+                                   step="0.5" min="0" value="{{ workorder.estimated_labor_hours }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="estimatedLaborCost" class="form-label">Labor Cost ($)</label>
+                            <input type="number" class="form-control" id="estimatedLaborCost" name="estimated_labor_cost" 
+                                   step="0.01" min="0" value="{{ workorder.estimated_labor_cost }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save Diagnosis
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Quality Check Modal -->
+<div class="modal fade" id="qualityCheckModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-clipboard-check me-2"></i>Quality Check - Final Verification
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="qualityCheckForm" novalidate>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Purpose:</strong> Verify all repairs were completed correctly before returning the vehicle to the customer.
+                    </div>
+                    
+                    <h6 class="mb-3"><i class="fas fa-tasks me-2"></i>Service Tasks Verification</h6>
+                    
+                    {% if workorder.tasks.all %}
+                    <div class="table-responsive mb-4">
+                        <table class="table table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Task</th>
+                                    <th>Status</th>
+                                    <th class="text-center">Verified</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in workorder.tasks.all %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ task.get_task_type_display }}</strong><br>
+                                        <small class="text-muted">{{ task.description|truncatewords:10 }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ task.status|default:'pending' }}">
+                                            {{ task.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input task-verify" 
+                                               data-task-id="{{ task.id }}" 
+                                               {% if task.status == 'completed' %}checked{% endif %}>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No service tasks found for this work order.
+                    </div>
+                    {% endif %}
+                    
+                    <h6 class="mb-3"><i class="fas fa-check-double me-2"></i>Final Checks</h6>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="checkTestDrive">
+                                <label class="form-check-label" for="checkTestDrive">
+                                    Test drive completed successfully
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="checkNoWarnings">
+                                <label class="form-check-label" for="checkNoWarnings">
+                                    No warning lights on dashboard
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="checkNoLeaks">
+                                <label class="form-check-label" for="checkNoLeaks">
+                                    No fluid leaks detected
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="checkFluidLevels">
+                                <label class="form-check-label" for="checkFluidLevels">
+                                    All fluid levels correct
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="checkToolsRemoved">
+                                <label class="form-check-label" for="checkToolsRemoved">
+                                    All tools removed from vehicle
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="checkVehicleCleaned">
+                                <label class="form-check-label" for="checkVehicleCleaned">
+                                    Vehicle cleaned (interior/exterior)
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="checkDocComplete">
+                                <label class="form-check-label" for="checkDocComplete">
+                                    Documentation complete
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="checkPartsInstalled">
+                                <label class="form-check-label" for="checkPartsInstalled">
+                                    All parts properly installed & torqued
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="qcNotes" class="form-label">
+                            <i class="fas fa-sticky-note me-2"></i>Quality Check Notes
+                        </label>
+                        <textarea class="form-control" id="qcNotes" name="notes" rows="4" 
+                                  placeholder="Enter any observations, issues found, or additional notes..."></textarea>
+                        <div class="form-text">Document any issues found or special notes about the completed work.</div>
+                    </div>
+                    
+                    <div class="alert alert-warning border-2">
+                        <h6 class="alert-heading mb-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Final Confirmation Required
+                        </h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmReadyForCustomer" 
+                                   style="width: 1.5em; height: 1.5em; margin-top: 0.15em;">
+                            <label class="form-check-label ms-2" for="confirmReadyForCustomer" style="font-size: 1.1em;">
+                                <strong>I confirm this vehicle is ready for customer pickup and meets quality standards</strong>
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            This confirmation is required before submitting the quality check
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Quality Check Result <span class="text-danger">*</span></label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="qc_result" id="qcPass" value="pass" required>
+                            <label class="btn btn-outline-success" for="qcPass">
+                                <i class="fas fa-check-circle me-2"></i>PASS - Mark Completed
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="qc_result" id="qcFail" value="fail" required>
+                            <label class="btn btn-outline-danger" for="qcFail">
+                                <i class="fas fa-times-circle me-2"></i>FAIL - Return to In Progress
+                            </label>
+                        </div>
+                        <div class="form-text mt-2">
+                            <strong>PASS:</strong> Vehicle will be marked as completed and ready for customer pickup.<br>
+                            <strong>FAIL:</strong> Work order will return to "In Progress" status for additional work.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-success" id="submitQualityCheck">
+                        <i class="fas fa-clipboard-check me-2"></i>Submit Quality Check
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Part Modal -->
+<div class="modal fade" id="addPartModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-cog me-2"></i>Add Part to Estimate</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addPartForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        You can search inventory or add custom parts.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="searchInventory" class="form-label">Search Inventory</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="searchInventory" 
+                                   placeholder="Search by part number or name...">
+                            <button class="btn btn-outline-secondary" type="button" onclick="searchInventoryParts()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <div id="inventoryResults" class="mt-2"></div>
+                    </div>
+                    
+                    <hr>
+                    <h6>Or Enter Part Manually</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="partNumber" class="form-label">Part Number <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="partNumber" name="part_number" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="partName" class="form-label">Part Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="partName" name="part_name" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="partDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="partDescription" name="description" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="partTask" class="form-label">Link to Task (Optional)</label>
+                        <select class="form-select" id="partTask" name="task_id">
+                            <option value="">Not linked to any task</option>
+                            {% for task in workorder.tasks.all %}
+                            <option value="{{ task.id }}">{{ task.get_task_type_display }} - {{ task.description }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Link this part to a specific service task</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="quantity" name="quantity" 
+                                       step="1" min="1" value="1" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="unitCost" class="form-label">Unit Cost ($) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="unitCost" name="unit_cost" 
+                                       step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="markupPercentage" class="form-label">Markup %</label>
+                                <input type="number" class="form-control" id="markupPercentage" name="markup_percentage" 
+                                       step="1" min="0" max="100" value="30">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-secondary">
+                        <div class="d-flex justify-content-between">
+                            <span><strong>Total Cost:</strong></span>
+                            <span id="partTotalCost">$0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span><strong>Selling Price:</strong></span>
+                            <span id="partSellingPrice">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Add Part
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Action Button -->
+{% if can_work %}
+<button class="btn btn-primary btn-floating" id="floating-timer" title="Quick Time Track">
+    <i class="fas fa-clock"></i>
+</button>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+// Inject inspection completed status for JS logic
+window.inspectionCompleted = "{{ workorder.inspection_completed|yesno:'true,false' }}" === "true";
+    let timerInterval = null;
+    let startTime = null;
+    let currentTimeLogId = null;
+    
+    // Timer functions
+    function startTimer() {
+        startTime = new Date();
+        timerInterval = setInterval(updateTimerDisplay, 1000);
+        document.getElementById('clock-in-btn').disabled = true;
+        document.getElementById('clock-out-btn').disabled = false;
+        updateTimerDisplay();
+    }
+    
+    function stopTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        startTime = null;
+        document.getElementById('clock-in-btn').disabled = false;
+        document.getElementById('clock-out-btn').disabled = true;
+        document.getElementById('timer-display').textContent = '00:00:00';
+    }
+    
+    function updateTimerDisplay() {
+        if (startTime) {
+            const now = new Date();
+            const diff = now - startTime;
+            const hours = Math.floor(diff / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            
+            document.getElementById('timer-display').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+    }
+    
+    // Clock in/out handlers
+    document.getElementById('clock-in-btn')?.addEventListener('click', function() {
+        const description = document.getElementById('work-description').value.trim();
+        if (!description) {
+            alert('Please describe what you\'re working on');
+            return;
+        }
+        
+        fetch(`/workorders/{{ workorder.id }}/time-clock/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                action: 'clock_in',
+                description: description
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentTimeLogId = data.time_log_id;
+                startTimer();
+                showToast('success', 'Clocked in successfully!');
+            } else {
+                showToast('danger', 'Error clocking in: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while clocking in.');
+        });
+    });
+    
+    document.getElementById('clock-out-btn')?.addEventListener('click', function() {
+        if (!currentTimeLogId) {
+            showToast('danger', 'No active time log found');
+            return;
+        }
+        
+        fetch(`/workorders/{{ workorder.id }}/time-clock/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                action: 'clock_out',
+                time_log_id: currentTimeLogId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                stopTimer();
+                currentTimeLogId = null;
+                showToast('success', `Clocked out! Duration: ${data.duration_hours}h, Cost: $${data.labor_cost}`);
+                // Refresh page to show updated data
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                showToast('danger', 'Error clocking out: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while clocking out.');
+        });
+    });
+    
+    // Status update handlers
+    document.querySelectorAll('.status-update').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const newStatus = this.dataset.status;
+            // Inspection status: confirmation and redirect
+            if (newStatus === 'inspection') {
+                if (confirm('Are you sure you want to change the status to "inspection"? You will be redirected to perform the inspection.')) {
+                    window.location.href = `/inspections/start/?workorder={{ workorder.id }}`;
+                }
+                return;
+            }
+            // Intake status: enforce inspection completion
+            if (newStatus === 'intake') {
+                if (!window.inspectionCompleted) {
+                    alert('Inspection must be completed before Intake is allowed.');
+                    return;
+                }
+            }
+            if (confirm(`Are you sure you want to change the status to "${newStatus}"?`)) {
+                updateWorkOrderStatus(newStatus);
+            }
+        });
+    });
+    
+    // Add note handler
+    document.getElementById('add-note-btn')?.addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('addNoteModal'));
+        modal.show();
+    });
+    
+    // Add task handlers
+    document.getElementById('add-task-btn')?.addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('addTaskModal'));
+        modal.show();
+    });
+    
+    document.getElementById('add-first-task-btn')?.addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('addTaskModal'));
+        modal.show();
+    });
+    
+    // Quality Check handler
+    document.getElementById('perform-quality-check-btn')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        const modalElement = document.getElementById('qualityCheckModal');
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        } else {
+            showToast('danger', 'Quality check modal not found');
+        }
+    });
+    
+    // Quality Check form submission
+    const qualityCheckForm = document.getElementById('qualityCheckForm');
+    if (qualityCheckForm) {
+        qualityCheckForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Form submitted, processing...');
+            
+            // Get form data from the form itself (more reliable than getElementById)
+            const formData = new FormData(this);
+            const result = formData.get('qc_result');
+            const notes = formData.get('notes') || '';
+            
+            // Use querySelector within the form for the checkbox
+            const confirmCheckbox = this.querySelector('#confirmReadyForCustomer');
+            
+            // Debug logging
+            console.log('Quality Check Submission:', {
+                form: !!this,
+                result: result,
+                notes: notes,
+                confirmCheckbox: !!confirmCheckbox,
+                checked: confirmCheckbox?.checked
+            });
+            
+            // Validation: Check result selection
+            if (!result) {
+                showToast('warning', 'Please select either PASS or FAIL for the quality check result');
+                // Scroll to the result buttons
+                const resultSection = this.querySelector('input[name="qc_result"]');
+                if (resultSection) {
+                    resultSection.closest('.mb-3').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return false;  // Explicitly return false
+            }
+            
+            // Validation: Check confirmation checkbox
+            if (!confirmCheckbox || !confirmCheckbox.checked) {
+                showToast('warning', 'Please check the confirmation checkbox: "I confirm this vehicle is ready for customer pickup"');
+                // Scroll to and highlight the confirmation checkbox
+                const alertBox = this.querySelector('.alert-warning');
+                if (alertBox) {
+                    alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    alertBox.classList.add('border', 'border-danger', 'border-3');
+                    if (confirmCheckbox) {
+                        confirmCheckbox.focus();
+                    }
+                    setTimeout(() => {
+                        alertBox.classList.remove('border', 'border-danger', 'border-3');
+                    }, 3000);
+                }
+                return false;  // Explicitly return false
+            }
+            
+            // Submit quality check
+        // Prepare data
+        const data = {
+            passed: result === 'pass',
+            notes: notes
+        };
+        
+        // Submit quality check
+        fetch(`/api/workorders/{{ workorder.id }}/quality_check/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.id || data.status) {
+                const message = result === 'pass' 
+                    ? 'Quality check passed! Work order marked as completed.' 
+                    : 'Quality check failed. Work order returned to in progress.';
+                showToast('success', message);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast('danger', 'Error: ' + (data.error || 'Failed to submit quality check'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while submitting quality check.');
+        });
+        });
+    }
+    
+    document.getElementById('save-task-btn')?.addEventListener('click', function() {
+        const form = document.getElementById('add-task-form');
+        const formData = new FormData(form);
+        
+        // Check if we're in edit mode
+        const isEditMode = form.dataset.editMode === 'true';
+        const taskId = form.dataset.taskId;
+        
+        const url = isEditMode 
+            ? `/workorders/{{ workorder.id }}/tasks/${taskId}/update/`
+            : `/workorders/{{ workorder.id }}/add-task/`;
+        
+        const successMessage = isEditMode ? 'Task updated successfully!' : 'Task added successfully!';
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', successMessage);
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addTaskModal'));
+                modal.hide();
+                resetTaskModal();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('danger', 'Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while saving the task.');
+        });
+    });
+    
+    // Reset task modal when closed
+    document.getElementById('addTaskModal')?.addEventListener('hidden.bs.modal', function() {
+        resetTaskModal();
+    });
+    
+    // Task status update handlers
+    document.querySelectorAll('.task-status-update').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const taskId = this.dataset.taskId;
+            const newStatus = this.dataset.status;
+            
+            fetch(`/workorders/{{ workorder.id }}/tasks/${taskId}/update-status/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: `status=${newStatus}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', data.message);
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('danger', 'Error updating task: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('danger', 'An error occurred while updating the task.');
+            });
+        });
+    });
+    
+    // Task delete handler
+    document.querySelectorAll('.task-delete').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const taskId = this.dataset.taskId;
+            
+            if (!confirm('Are you sure you want to delete this task?')) return;
+            
+            fetch(`/workorders/{{ workorder.id }}/tasks/${taskId}/delete/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', data.message);
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showToast('danger', 'Error deleting task: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('danger', 'An error occurred while deleting the task.');
+            });
+        });
+    });
+    
+    // Task edit handler
+    document.querySelectorAll('.task-edit').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const taskId = this.dataset.taskId;
+            editTask(taskId);
+        });
+    });
+    
+    document.getElementById('save-note-btn')?.addEventListener('click', function() {
+        const noteType = document.getElementById('note-type').value;
+        const noteText = document.getElementById('note-text').value.trim();
+        const isImportant = document.getElementById('note-important').checked;
+        const isCustomerVisible = document.getElementById('note-customer-visible').checked;
+        
+        if (!noteText) {
+            alert('Please enter a note');
+            return;
+        }
+        
+        fetch(`/workorders/{{ workorder.id }}/add-note/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                note_type: noteType,
+                note: noteText,
+                is_important: isImportant,
+                is_customer_visible: isCustomerVisible
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', 'Note added successfully!');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addNoteModal'));
+                modal.hide();
+                // Refresh page to show new note
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('danger', 'Error adding note: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while adding the note.');
+        });
+    });
+    
+    // Helper functions
+    function updateWorkOrderStatus(newStatus) {
+        fetch(`/workorders/{{ workorder.id }}/update-status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: `status=${newStatus}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', 'Status updated successfully!');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('danger', 'Error updating status: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while updating the status.');
+        });
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    function showToast(type, message) {
+        // Create toast element if container doesn't exist
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.style.zIndex = '1080';
+            document.body.appendChild(toastContainer);
+        }
+        
+        const toastHtml = `
+            <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        
+        toastContainer.innerHTML = toastHtml;
+        const toastElement = toastContainer.querySelector('.toast');
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
+        
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastElement.remove();
+        });
+    }
+    
+    // Diagnosis form handler
+    document.getElementById('diagnosisForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        fetch('/workorders/{{ workorder.id }}/update-diagnosis/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', 'Diagnosis updated successfully!');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('diagnosisModal'));
+                modal.hide();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('danger', 'Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while updating diagnosis.');
+        });
+    });
+    
+    // Add part form handler
+    document.getElementById('addPartForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const form = this;
+        const formData = new FormData(form);
+        
+        // Check if we're in edit mode
+        const isEditMode = form.dataset.editMode === 'true';
+        const partId = form.dataset.partId;
+        
+        const url = isEditMode 
+            ? `/workorders/{{ workorder.id }}/update-part/${partId}/`
+            : '/workorders/{{ workorder.id }}/add-part/';
+        
+        const successMessage = isEditMode ? 'Part updated successfully!' : 'Part added successfully!';
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('success', successMessage);
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addPartModal'));
+                modal.hide();
+                resetPartModal();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('danger', 'Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('danger', 'An error occurred while saving part.');
+        });
+    });
+    
+    // Reset modal when closed
+    document.getElementById('addPartModal')?.addEventListener('hidden.bs.modal', function() {
+        resetPartModal();
+    });
+    
+    // Calculate part costs dynamically
+    ['quantity', 'unitCost', 'markupPercentage'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', calculatePartCosts);
+    });
+    
+    // Initialize part cost calculation
+    calculatePartCosts();
+});
+
+// Global functions for inline handlers
+function calculatePartCosts() {
+    const qtyEl = document.getElementById('quantity');
+    const unitCostEl = document.getElementById('unitCost');
+    const markupEl = document.getElementById('markupPercentage');
+    const totalCostEl = document.getElementById('partTotalCost');
+    const sellingPriceEl = document.getElementById('partSellingPrice');
+    
+    // Check if elements exist (modal might not be open)
+    if (!qtyEl || !unitCostEl || !markupEl || !totalCostEl || !sellingPriceEl) {
+        return;
+    }
+    
+    const qty = parseFloat(qtyEl.value || 0);
+    const unitCost = parseFloat(unitCostEl.value || 0);
+    const markup = parseFloat(markupEl.value || 0);
+    
+    const totalCost = qty * unitCost;
+    const sellingPrice = totalCost * (1 + markup / 100);
+    
+    totalCostEl.textContent = `$${totalCost.toFixed(2)}`;
+    sellingPriceEl.textContent = `$${sellingPrice.toFixed(2)}`;
+}
+
+function editPart(partId) {
+    // Fetch part data and populate the modal
+    fetch(`/workorders/{{ workorder.id }}/get-part/${partId}/`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const part = data.part;
+            
+            // Update modal title
+            document.querySelector('#addPartModal .modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Part';
+            
+            // Populate form fields
+            document.getElementById('partNumber').value = part.part_number;
+            document.getElementById('partName').value = part.part_name;
+            document.getElementById('partDescription').value = part.description || '';
+            document.getElementById('quantity').value = part.quantity;
+            document.getElementById('unitCost').value = part.unit_cost;
+            document.getElementById('markupPercentage').value = part.markup_percentage || 30;
+            
+            // Set task dropdown if exists
+            const taskSelect = document.getElementById('partTask');
+            if (taskSelect && part.task_id) {
+                taskSelect.value = part.task_id;
+            } else if (taskSelect) {
+                taskSelect.value = '';
+            }
+            
+            // Calculate costs
+            calculatePartCosts();
+            
+            // Change form submit behavior to update instead of create
+            const form = document.getElementById('addPartForm');
+            form.dataset.editMode = 'true';
+            form.dataset.partId = partId;
+            
+            // Change button text
+            document.querySelector('#addPartForm button[type="submit"]').innerHTML = '<i class="fas fa-save me-2"></i>Update Part';
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addPartModal'));
+            modal.show();
+        } else {
+            alert('Error loading part data: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error loading part data');
+    });
+}
+
+function resetPartModal() {
+    const form = document.getElementById('addPartForm');
+    if (!form) return; // Exit if form doesn't exist
+    
+    form.reset();
+    form.dataset.editMode = 'false';
+    form.dataset.partId = '';
+    
+    // Reset modal title
+    const modalTitle = document.querySelector('#addPartModal .modal-title');
+    if (modalTitle) {
+        modalTitle.innerHTML = '<i class="fas fa-cog me-2"></i>Add Part to Estimate';
+    }
+    
+    // Reset button text
+    const submitBtn = document.querySelector('#addPartForm button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fas fa-plus me-2"></i>Add Part';
+    }
+    
+    // Clear inventory search results
+    const inventoryResults = document.getElementById('inventoryResults');
+    if (inventoryResults) {
+        inventoryResults.innerHTML = '';
+    }
+    
+    const searchInventory = document.getElementById('searchInventory');
+    if (searchInventory) {
+        searchInventory.value = '';
+    }
+    
+    // Reset cost displays
+    const partTotalCost = document.getElementById('partTotalCost');
+    if (partTotalCost) {
+        partTotalCost.textContent = '$0.00';
+    }
+    
+    const partSellingPrice = document.getElementById('partSellingPrice');
+    if (partSellingPrice) {
+        partSellingPrice.textContent = '$0.00';
+    }
+}
+
+function editTask(taskId) {
+    // Fetch task data and populate the modal
+    fetch(`/workorders/{{ workorder.id }}/tasks/${taskId}/get/`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const task = data.task;
+            
+            // Update modal title
+            document.querySelector('#addTaskModal .modal-title').textContent = 'Edit Service Task';
+            
+            // Populate form fields
+            document.getElementById('task-type').value = task.task_type;
+            document.getElementById('task-description').value = task.description;
+            document.getElementById('task-notes').value = task.detailed_notes || '';
+            document.getElementById('task-assigned-to').value = task.assigned_to || '';
+            document.getElementById('task-estimated-hours').value = task.estimated_hours || '';
+            document.getElementById('task-labor-rate').value = task.labor_rate || '';
+            
+            // Change form submit behavior to update instead of create
+            const form = document.getElementById('add-task-form');
+            form.dataset.editMode = 'true';
+            form.dataset.taskId = taskId;
+            
+            // Change button text
+            document.getElementById('save-task-btn').innerHTML = '<i class="fas fa-save me-2"></i>Update Task';
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addTaskModal'));
+            modal.show();
+        } else {
+            showToast('danger', 'Error loading task data: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('danger', 'Error loading task data');
+    });
+}
+
+function resetTaskModal() {
+    const form = document.getElementById('add-task-form');
+    if (!form) return;
+    
+    form.reset();
+    form.dataset.editMode = 'false';
+    form.dataset.taskId = '';
+    
+    // Reset modal title
+    const modalTitle = document.querySelector('#addTaskModal .modal-title');
+    if (modalTitle) {
+        modalTitle.textContent = 'Add Service Task';
+    }
+    
+    // Reset button text
+    const saveBtn = document.getElementById('save-task-btn');
+    if (saveBtn) {
+        saveBtn.innerHTML = 'Add Task';
+    }
+}
+
+function deletePart(partId) {
+    if (!confirm('Are you sure you want to delete this part?')) return;
+    
+    fetch(`/workorders/{{ workorder.id }}/delete-part/${partId}/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Part deleted successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while deleting the part.');
+    });
+}
+
+function updatePartStatus(partId, status) {
+    fetch(`/workorders/{{ workorder.id }}/update-part-status/${partId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ status: status })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Part status updated to ${status}!`);
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating part status.');
+    });
+}
+
+function requestApproval() {
+    if (!confirm('Submit this estimate for customer approval?')) return;
+    
+    fetch('/workorders/{{ workorder.id }}/request-approval/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Estimate submitted for approval!');
+            location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while submitting for approval.');
+    });
+}
+
+function searchInventoryParts() {
+    const query = document.getElementById('searchInventory').value;
+    if (!query) return;
+    
+    fetch(`/inventory/search/?q=${encodeURIComponent(query)}`)
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        const resultsDiv = document.getElementById('inventoryResults');
+        if (data.results && data.results.length > 0) {
+            resultsDiv.innerHTML = data.results.map(part => `
+                <div class="card mb-2">
+                    <div class="card-body p-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${escapeHtml(part.name)}</strong> 
+                                <span class="badge bg-secondary">${escapeHtml(part.part_number)}</span>
+                                <br><small class="text-muted">Stock: ${part.quantity} | Cost: $${parseFloat(part.cost).toFixed(2)}</small>
+                            </div>
+                            <button class="btn btn-sm btn-success" onclick='selectInventoryPart(${JSON.stringify(part.id)}, ${JSON.stringify(part.part_number)}, ${JSON.stringify(part.name)}, ${part.cost})'>
+                                <i class="fas fa-plus"></i> Select
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            resultsDiv.innerHTML = '<div class="alert alert-warning">No parts found</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error searching inventory:', error);
+        document.getElementById('inventoryResults').innerHTML = `<div class="alert alert-danger">Error searching inventory: ${error.message}</div>`;
+    });
+}
+
+function selectInventoryPart(partId, partNumber, partName, cost) {
+    document.getElementById('partNumber').value = partNumber;
+    document.getElementById('partName').value = partName;
+    document.getElementById('unitCost').value = parseFloat(cost).toFixed(2);
+    calculatePartCosts();
+    document.getElementById('inventoryResults').innerHTML = '';
+    document.getElementById('searchInventory').value = '';
+}
+
+function editTask(taskId) {
+    // Fetch task data and populate the modal
+    fetch(`/workorders/{{ workorder.id }}/tasks/${taskId}/get/`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const task = data.task;
+            
+            // Update modal title
+            document.querySelector('#addTaskModal .modal-title').textContent = 'Edit Service Task';
+            
+            // Populate form fields
+            document.getElementById('task-type').value = task.task_type;
+            document.getElementById('task-description').value = task.description;
+            document.getElementById('task-notes').value = task.detailed_notes || '';
+            document.getElementById('task-assigned-to').value = task.assigned_to || '';
+            document.getElementById('task-estimated-hours').value = task.estimated_hours || '';
+            document.getElementById('task-labor-rate').value = task.labor_rate || '';
+            
+            // Change form submit behavior to update instead of create
+            const form = document.getElementById('add-task-form');
+            form.dataset.editMode = 'true';
+            form.dataset.taskId = taskId;
+            
+            // Change button text
+            document.getElementById('save-task-btn').innerHTML = '<i class="fas fa-save me-2"></i>Update Task';
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('addTaskModal'));
+            modal.show();
+        } else {
+            alert('Error loading task data: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error loading task data');
+    });
+}
+
+function resetTaskModal() {
+    const form = document.getElementById('add-task-form');
+    if (!form) return;
+    
+    form.reset();
+    form.dataset.editMode = 'false';
+    form.dataset.taskId = '';
+    
+    // Reset modal title
+    document.querySelector('#addTaskModal .modal-title').textContent = 'Add Service Task';
+    
+    // Reset button text
+    document.getElementById('save-task-btn').innerHTML = '<i class="fas fa-plus me-2"></i>Add Task';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

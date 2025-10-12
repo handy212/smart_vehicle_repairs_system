@@ -1,0 +1,564 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - Vehicle Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .vehicle-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: bold;
+        border: 3px solid rgba(255,255,255,0.3);
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border: 1px solid #e9ecef;
+    }
+    
+    .info-card h6 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #f8f9fa;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #495057;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-badge {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+    
+    .photo-item {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        cursor: pointer;
+    }
+    
+    .photo-item img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+    }
+    
+    .document-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        transition: background-color 0.2s;
+    }
+    
+    .document-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 12px;
+        height: 12px;
+        background: #007bff;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 0 0 2px #007bff;
+    }
+    
+    .timeline-item::after {
+        content: '';
+        position: absolute;
+        left: 5px;
+        top: 12px;
+        width: 2px;
+        height: calc(100% + 1rem);
+        background: #e9ecef;
+    }
+    
+    .timeline-item:last-child::after {
+        display: none;
+    }
+    
+    .mileage-chart {
+        height: 300px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Vehicle Header -->
+    <div class="page-header-primary rounded p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-start">
+            <div class="d-flex align-items-center">
+                <div class="vehicle-avatar me-4">
+                    {% if vehicle.image %}
+                        <img src="{{ vehicle.image.url }}" alt="{{ vehicle.display_name }}" class="rounded" style="width: 80px; height: 80px; object-fit: cover;" onerror="this.style.display='none'; this.parentNode.innerHTML='{{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}'">
+                    {% else %}
+                        {{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}
+                    {% endif %}
+                </div>
+                <div>
+                    <h1 class="mb-1">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h1>
+                    {% if vehicle.trim %}
+                        <p class="mb-2 opacity-75">{{ vehicle.trim }}</p>
+                    {% endif %}
+                    <p class="mb-0 opacity-75">
+                        <i class="fas fa-user me-2"></i>{{ vehicle.owner.user.get_full_name }}
+                    </p>
+                    <p class="mb-0 opacity-75">
+                        <i class="fas fa-barcode me-2"></i>{{ vehicle.vin }}
+                    </p>
+                </div>
+            </div>
+            <div class="text-end">
+                {% if vehicle.status == 'active' %}
+                    <span class="badge bg-success status-badge">Active</span>
+                {% elif vehicle.status == 'in_service' %}
+                    <span class="badge bg-warning status-badge">In Service</span>
+                {% elif vehicle.status == 'sold' %}
+                    <span class="badge bg-info status-badge">Sold</span>
+                {% elif vehicle.status == 'totaled' %}
+                    <span class="badge bg-danger status-badge">Totaled</span>
+                {% else %}
+                    <span class="badge bg-secondary status-badge">{{ vehicle.get_status_display }}</span>
+                {% endif %}
+                <div class="mt-3">
+                    <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" class="btn btn-light btn-sm me-2">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <a href="{% url 'vehicles:vehicle-service-history' vehicle.id %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-history"></i> Service History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Main Details -->
+        <div class="col-lg-8">
+            <!-- Basic Information -->
+            <div class="info-card">
+                <h6><i class="fas fa-info-circle me-2"></i>Basic Information</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Year:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.year }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Make:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.make }}</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Model:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.model }}</div>
+                        </div>
+                        {% if vehicle.trim %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Trim:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.trim }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>VIN:</strong></div>
+                            <div class="col-sm-8"><code>{{ vehicle.vin }}</code></div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>License Plate:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.license_plate }}</div>
+                        </div>
+                        {% if vehicle.license_plate_state %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>State:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.license_plate_state }}</div>
+                        </div>
+                        {% endif %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Age:</strong></div>
+                            <div class="col-sm-8">{{ vehicle_age }} years</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Appearance & Details -->
+            <div class="info-card">
+                <h6><i class="fas fa-palette me-2"></i>Appearance & Details</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        {% if vehicle.exterior_color %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Exterior Color:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.exterior_color }}</div>
+                        </div>
+                        {% endif %}
+                        {% if vehicle.interior_color %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Interior Color:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.interior_color }}</div>
+                        </div>
+                        {% endif %}
+                        {% if vehicle.condition_rating %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Condition:</strong></div>
+                            <div class="col-sm-8">
+                                <div class="d-flex align-items-center">
+                                    {{ vehicle.get_condition_rating_display }}
+                                    <div class="ms-2">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= vehicle.condition_rating %}
+                                                <i class="fas fa-star text-warning"></i>
+                                            {% else %}
+                                                <i class="far fa-star text-muted"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Current Mileage:</strong></div>
+                            <div class="col-sm-8">
+                                <strong>{{ vehicle.current_mileage|floatformat:0 }}</strong> {{ vehicle.mileage_unit }}
+                            </div>
+                        </div>
+                        {% if vehicle.tire_size %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Tire Size:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.tire_size }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Engine & Transmission -->
+            <div class="info-card">
+                <h6><i class="fas fa-cogs me-2"></i>Engine & Transmission</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Engine Type:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.get_engine_type_display }}</div>
+                        </div>
+                        {% if vehicle.engine_size %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Engine Size:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.engine_size }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Transmission:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.get_transmission_type_display }}</div>
+                        </div>
+                        {% if vehicle.fuel_tank_capacity %}
+                        <div class="row mb-3">
+                            <div class="col-sm-4"><strong>Fuel Capacity:</strong></div>
+                            <div class="col-sm-8">{{ vehicle.fuel_tank_capacity }} gallons</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Service History -->
+            <div class="info-card">
+                <h6><i class="fas fa-wrench me-2"></i>Recent Service History</h6>
+                {% if recent_work_orders %}
+                    <div class="timeline">
+                        {% for work_order in recent_work_orders %}
+                        <div class="timeline-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">Work Order #{{ work_order.work_order_number }}</h6>
+                                    <p class="mb-1 text-muted">{{ work_order.description|truncatewords:15 }}</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>{{ work_order.created_at|date:"M d, Y" }}
+                                        {% if work_order.technician %}
+                                            <i class="fas fa-user ms-2 me-1"></i>{{ work_order.technician.get_full_name }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-primary">${{ work_order.actual_total|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'vehicles:vehicle-service-history' vehicle.id %}" class="btn btn-outline-primary">
+                            View Complete History
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-wrench fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No service history available</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Mileage History Chart -->
+            {% if mileage_history %}
+            <div class="info-card">
+                <h6><i class="fas fa-chart-line me-2"></i>Mileage History</h6>
+                <canvas id="mileageChart" class="mileage-chart"></canvas>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Stats & Media -->
+        <div class="col-lg-4">
+            <!-- Quick Stats -->
+            <div class="info-card">
+                <h6><i class="fas fa-chart-bar me-2"></i>Quick Stats</h6>
+                <div class="stat-item">
+                    <div class="stat-value">${{ total_spent|floatformat:2 }}</div>
+                    <div class="stat-label">Total Spent</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ work_order_count }}</div>
+                    <div class="stat-label">Work Orders</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ vehicle_age }}</div>
+                    <div class="stat-label">Years Old</div>
+                </div>
+            </div>
+
+            <!-- Recent Photos -->
+            {% if recent_photos %}
+            <div class="info-card">
+                <h6><i class="fas fa-images me-2"></i>Recent Photos</h6>
+                <div class="photo-grid">
+                    {% for photo in recent_photos %}
+                    <div class="photo-item" onclick="viewPhoto('{{ photo.image.url }}')">
+                        <img src="{{ photo.image.url }}" alt="{{ photo.description }}" class="img-fluid">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Documents -->
+            {% if recent_documents %}
+            <div class="info-card">
+                <h6><i class="fas fa-file-alt me-2"></i>Recent Documents</h6>
+                {% for document in recent_documents %}
+                <div class="document-item">
+                    <div class="me-3">
+                        <i class="fas fa-file-pdf text-danger fa-lg"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold">{{ document.name }}</div>
+                        <small class="text-muted">{{ document.uploaded_at|date:"M d, Y" }}</small>
+                    </div>
+                    <div>
+                        <a href="{{ document.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-download"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Warranty Information -->
+            {% if vehicle.warranty_type or vehicle.warranty_expiry_date or vehicle.warranty_coverage %}
+            <div class="info-card">
+                <h6><i class="fas fa-shield-alt me-2"></i>Warranty Information</h6>
+                {% if vehicle.warranty_type %}
+                <div class="row mb-2">
+                    <div class="col-sm-5"><strong>Warranty Type:</strong></div>
+                    <div class="col-sm-7">{{ vehicle.warranty_type }}</div>
+                </div>
+                {% endif %}
+                {% if vehicle.warranty_expiry_date %}
+                <div class="row mb-2">
+                    <div class="col-sm-5"><strong>Expires:</strong></div>
+                    <div class="col-sm-7">{{ vehicle.warranty_expiry_date|date:"M d, Y" }}</div>
+                </div>
+                {% endif %}
+                {% if vehicle.warranty_coverage %}
+                <div class="row mb-2">
+                    <div class="col-sm-5"><strong>Coverage:</strong></div>
+                    <div class="col-sm-7">{{ vehicle.warranty_coverage|linebreaks }}</div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            <!-- Notes -->
+            <!-- Notes -->
+            {% if vehicle.notes %}
+            <div class="info-card">
+                <h6><i class="fas fa-sticky-note me-2"></i>Notes</h6>
+                <p class="mb-0">{{ vehicle.notes|linebreaks }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Quick Actions -->
+            <div class="info-card">
+                <h6><i class="fas fa-tools me-2"></i>Quick Actions</h6>
+                <div class="d-grid gap-2">
+                    <a href="#" class="btn btn-outline-primary">
+                        <i class="fas fa-plus me-2"></i>New Work Order
+                    </a>
+                    <a href="#" class="btn btn-outline-success">
+                        <i class="fas fa-calendar me-2"></i>Schedule Service
+                    </a>
+                    <button class="btn btn-outline-info" onclick="uploadPhoto()">
+                        <i class="fas fa-camera me-2"></i>Upload Photo
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="uploadDocument()">
+                        <i class="fas fa-file-upload me-2"></i>Upload Document
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Photo Viewer Modal -->
+<div class="modal fade" id="photoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vehicle Photo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalPhoto" src="" alt="" class="img-fluid">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% if mileage_history %}
+<script>
+    // Mileage History Chart
+    fetch(`/vehicles/{{ vehicle.id }}/mileage-history/`)
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('mileageChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: `Mileage (${data.unit})`,
+                        data: data.data,
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: `Mileage (${data.unit})`
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => console.error('Error loading mileage chart:', error));
+</script>
+{% endif %}
+
+<script>
+    // Photo viewer
+    function viewPhoto(imageUrl) {
+        document.getElementById('modalPhoto').src = imageUrl;
+        new bootstrap.Modal(document.getElementById('photoModal')).show();
+    }
+
+    // Upload functions (placeholders for now)
+    function uploadPhoto() {
+        alert('Photo upload functionality will be implemented with Dropzone.js');
+    }
+
+    function uploadDocument() {
+        alert('Document upload functionality will be implemented with Dropzone.js');
+    }
+</script>
+{% endblock %}

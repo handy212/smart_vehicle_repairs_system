@@ -2,8 +2,7 @@
 
 **Date:** October 2, 2025  
 **Current Status:** Backend API Complete (85%) - Frontend Templates Needed  
-**Framework:** Django Templates + Bootstrap 5 + Vanilla JavaScript  
-**Approach:** Server-side rendered (SSR) with progressive enhancement
+enhancement
 
 ---
 

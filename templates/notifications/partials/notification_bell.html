@@ -1,0 +1,437 @@
+<!-- Notification Bell Icon for Header -->
+<style>
+    #notificationBell .dropdown-menu {
+        min-width: 320px;
+        max-width: 380px;
+        max-height: 450px;
+        overflow: hidden;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    #notificationDropdownContent {
+        max-height: 320px;
+        overflow-y: auto;
+    }
+    
+    #notificationDropdownContent::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    #notificationDropdownContent::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    
+    #notificationDropdownContent::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+    
+    #notificationDropdownContent::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    
+    #notificationBell .dropdown-item {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    #notificationBell .dropdown-item:last-child {
+        border-bottom: none;
+    }
+    
+    #notificationBell .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    #notificationBell .notification-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #e3f2fd;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    
+    #notificationBell .notification-content {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    #notificationBell .notification-title {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: #212529;
+    }
+    
+    #notificationBell .notification-message {
+        font-size: 0.813rem;
+        color: #6c757d;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    #notificationBell .notification-time {
+        font-size: 0.75rem;
+        color: #adb5bd;
+        margin-top: 0.25rem;
+    }
+    
+    #notificationBell .dropdown-header {
+        padding: 0.75rem 1rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    #notificationBell .dropdown-footer {
+        padding: 0.5rem;
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+    }
+</style>
+
+<div class="dropdown" id="notificationBell">
+    <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fas fa-bell fa-lg"></i>
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationBadge" style="display: none;">
+            0
+        </span>
+    </a>
+    <div class="dropdown-menu dropdown-menu-end">
+        <div class="dropdown-header d-flex justify-content-between align-items-center">
+            <span class="fw-bold">Notifications</span>
+            <a href="{% url 'notifications:notification-center' %}" class="text-decoration-none small">View All</a>
+        </div>
+        <div id="notificationDropdownContent">
+            <div class="text-center py-3">
+                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+        <!-- <div class="dropdown-footer text-center">
+            <a href="{% url 'notifications:notification-preferences' %}" class="dropdown-item small py-2">
+                <i class="fas fa-cog me-2"></i>Settings
+            </a>
+        </div> -->
+    </div>
+</div>
+
+<script>
+// Notification sound (using Web Audio API for cross-browser compatibility)
+let notificationSound = null;
+let lastNotificationCount = 0;
+let audioContext = null;
+let audioContextInitialized = false;
+
+// Initialize audio context (must be done after user interaction)
+function initializeAudioContext() {
+    if (!audioContextInitialized) {
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            audioContextInitialized = true;
+            console.log('Audio context initialized');
+        } catch (e) {
+            console.error('Failed to initialize audio context:', e);
+        }
+    }
+}
+
+// Create notification sound
+function createNotificationSound() {
+    try {
+        if (!audioContext) {
+            initializeAudioContext();
+        }
+        
+        // Resume audio context if suspended (required in some browsers)
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800; // Frequency in Hz
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+        
+        console.log('Notification sound played');
+        return true;
+    } catch (e) {
+        console.error('Error creating notification sound:', e);
+        return false;
+    }
+}
+
+// Play notification sound
+function playNotificationSound() {
+    try {
+        console.log('Attempting to play notification sound...');
+        const played = createNotificationSound();
+        if (!played) {
+            console.warn('Sound playback failed - may need user interaction first');
+        }
+    } catch (e) {
+        console.error('Error playing notification sound:', e);
+    }
+}
+
+// Show browser notification
+function showBrowserNotification(title, message) {
+    // Check if browser supports notifications
+    if (!("Notification" in window)) {
+        console.log("This browser does not support desktop notifications");
+        return;
+    }
+    
+    // Check if permission is granted
+    if (Notification.permission === "granted") {
+        new Notification(title, {
+            body: message,
+            icon: '/static/icons/icon-192x192.png',
+            badge: '/static/icons/icon-72x72.png',
+            tag: 'notification-' + Date.now()
+        });
+    } else if (Notification.permission !== "denied") {
+        // Request permission
+        Notification.requestPermission().then(function (permission) {
+            if (permission === "granted") {
+                new Notification(title, {
+                    body: message,
+                    icon: '/static/icons/icon-192x192.png',
+                    badge: '/static/icons/icon-72x72.png'
+                });
+            }
+        });
+    }
+}
+
+// Show toast notification
+function showToastNotification(title, message, type = 'info') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    toast.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <strong>${title}</strong><br>
+                <small>${message}</small>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Initialize and show toast
+    const bsToast = new bootstrap.Toast(toast, { delay: 5000 });
+    bsToast.show();
+    
+    // Remove toast after hiding
+    toast.addEventListener('hidden.bs.toast', function () {
+        toast.remove();
+    });
+}
+
+// Animate bell icon
+function animateBellIcon() {
+    const bellIcon = document.querySelector('#notificationBell .fa-bell');
+    if (bellIcon) {
+        bellIcon.classList.add('fa-shake');
+        setTimeout(() => {
+            bellIcon.classList.remove('fa-shake');
+        }, 1000);
+    }
+}
+
+// Update notification bell with sound and visual alerts
+function updateNotificationBell(playSound = false) {
+    fetch('{% url "notifications:unread-count" %}')
+        .then(response => response.json())
+        .then(data => {
+            const badge = document.getElementById('notificationBadge');
+            const currentCount = data.count || 0;
+            
+            // Check if there are new notifications
+            if (playSound && currentCount > lastNotificationCount && lastNotificationCount >= 0) {
+                const newNotificationsCount = currentCount - lastNotificationCount;
+                
+                console.log(`🔔 New notifications detected: ${newNotificationsCount}`);
+                
+                // Play sound
+                playNotificationSound();
+                
+                // Animate bell
+                animateBellIcon();
+                
+                // Show toast notification
+                showToastNotification(
+                    'New Notification' + (newNotificationsCount > 1 ? 's' : ''),
+                    `You have ${newNotificationsCount} new notification` + (newNotificationsCount > 1 ? 's' : ''),
+                    'primary'
+                );
+                
+                // Show browser notification
+                showBrowserNotification(
+                    'New Notification' + (newNotificationsCount > 1 ? 's' : ''),
+                    `You have ${newNotificationsCount} new notification` + (newNotificationsCount > 1 ? 's' : '')
+                );
+            }
+            
+            // Update badge
+            if (currentCount > 0) {
+                badge.textContent = currentCount > 99 ? '99+' : currentCount;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
+            }
+            
+            // Update last count
+            lastNotificationCount = currentCount;
+        })
+        .catch(error => {
+            // Silently fail if notifications endpoint is not available
+            // This prevents console spam when the endpoint is not configured
+            if (lastNotificationCount === -1) {
+                // Only log on first failure
+                console.warn('Notifications endpoint not available. Real-time notifications disabled.');
+                lastNotificationCount = 0; // Prevent further logging
+            }
+        });
+}
+
+// Test function for debugging (available in console)
+window.testNotification = function() {
+    console.log('🧪 Testing notification system...');
+    playNotificationSound();
+    animateBellIcon();
+    showToastNotification('Test Notification', 'This is a test notification', 'info');
+    showBrowserNotification('Test Notification', 'This is a test notification');
+    console.log('✅ Test complete - check if you heard sound and saw visual alerts');
+};
+
+// Load notifications when dropdown is opened
+document.getElementById('notificationBell').addEventListener('show.bs.dropdown', function() {
+    const content = document.getElementById('notificationDropdownContent');
+    
+    // Fetch only unread notifications
+    fetch('{% url "notifications:recent-notifications" %}?limit=10&unread_only=true')
+        .then(response => response.json())
+        .then(data => {
+            if (data.notifications.length === 0) {
+                content.innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-check-circle fa-2x mb-2 d-block text-success"></i>
+                        <small>All caught up!</small>
+                        <div class="mt-2">
+                            <a href="{% url 'notifications:notification-center' %}" class="btn btn-sm btn-outline-primary">
+                                View All Notifications
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } else {
+                let html = '';
+                data.notifications.forEach(notification => {
+                    html += `
+                        <a href="${notification.url}" class="dropdown-item bg-light text-decoration-none">
+                            <div class="d-flex gap-2">
+                                <div class="notification-icon">
+                                    <i class="fas ${getNotificationIcon(notification.notification_type)} text-primary"></i>
+                                </div>
+                                <div class="notification-content">
+                                    <div class="notification-title">${notification.title}</div>
+                                    <div class="notification-message">${notification.message}</div>
+                                    <div class="notification-time d-flex align-items-center justify-content-between">
+                                        <span><i class="fas fa-clock me-1"></i>${getTimeAgo(notification.created_at)}</span>
+                                        <span class="badge bg-primary badge-sm">New</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                });
+                content.innerHTML = html;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            content.innerHTML = '<div class="text-center py-3 text-danger"><i class="fas fa-exclamation-circle mb-2 d-block"></i><small>Error loading notifications</small></div>';
+        });
+});
+
+function getNotificationIcon(type) {
+    const icons = {
+        'appointment': 'fa-calendar',
+        'work_order': 'fa-wrench',
+        'invoice': 'fa-file-invoice',
+        'payment': 'fa-credit-card',
+        'inspection': 'fa-clipboard-check',
+        'inventory': 'fa-boxes',
+        'vehicle': 'fa-car',
+        'system': 'fa-bell'
+    };
+    return icons[type] || 'fa-bell';
+}
+
+function getTimeAgo(isoDate) {
+    const date = new Date(isoDate);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return Math.floor(seconds / 60) + ' minutes ago';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
+    return Math.floor(seconds / 86400) + ' days ago';
+}
+
+// Initialize audio context on first user interaction (required by browsers)
+document.addEventListener('click', function initAudioOnce() {
+    initializeAudioContext();
+    console.log('Audio context ready for notifications');
+}, { once: true });
+
+// Also try on any key press
+document.addEventListener('keydown', function initAudioOnceKey() {
+    initializeAudioContext();
+}, { once: true });
+
+// Request notification permission on page load
+if ("Notification" in window && Notification.permission === "default") {
+    // Only request permission when user interacts with the page
+    document.addEventListener('click', function requestPermissionOnce() {
+        Notification.requestPermission();
+        document.removeEventListener('click', requestPermissionOnce);
+    }, { once: true });
+}
+
+// Initial load without sound
+updateNotificationBell(false);
+
+// Update bell every 5 seconds with sound enabled (more frequent for real-time feel)
+setInterval(() => updateNotificationBell(true), 5000);
+
+// Add a test button in console for debugging
+console.log('%c🔊 Notification Sound Test', 'color: blue; font-size: 16px; font-weight: bold');
+console.log('To test notification sound, run: playNotificationSound()');
+console.log('To test full notification, run: testNotification()');
+</script>

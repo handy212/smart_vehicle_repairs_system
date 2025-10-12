@@ -1,0 +1,208 @@
+{% extends "portal/base_customer.html" %}
+{% load static %}
+
+{% block title %}Inspection Details{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    .inspection-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+    }
+    .inspection-item {
+        border-bottom: 1px solid #e9ecef;
+        padding: 1rem;
+    }
+    .inspection-item:last-child {
+        border-bottom: none;
+    }
+    .result-badge {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block portal_content %}
+<div class="inspection-header">
+    <div class="container">
+        <h1>
+            <i class="fas fa-clipboard-check me-2"></i>
+            Vehicle Inspection Report
+        </h1>
+        <p class="mb-0 opacity-75">Detailed inspection results for your vehicle</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Breadcrumb -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'portal:home' %}">Portal Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'portal:my-history' %}">Service History</a></li>
+                    <li class="breadcrumb-item active">Inspection Details</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Inspection Summary -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Inspection Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">Vehicle</small>
+                            <strong>{{ inspection.vehicle.year }} {{ inspection.vehicle.make }} {{ inspection.vehicle.model }}</strong>
+                            <div class="text-muted small">{{ inspection.vehicle.license_plate }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">Inspection Date</small>
+                            <strong>{{ inspection.inspection_date|date:"F d, Y" }}</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">Technician</small>
+                            <strong>{{ inspection.technician.get_full_name|default:'N/A' }}</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted d-block">Mileage</small>
+                            <strong>{{ inspection.mileage|default:0|floatformat:0 }} km</strong>
+                        </div>
+                        {% if inspection.notes %}
+                        <div class="col-12">
+                            <small class="text-muted d-block">General Notes</small>
+                            <p class="mb-0">{{ inspection.notes }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Status</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if inspection.status == 'completed' %}
+                        <div class="mb-3">
+                            <i class="fas fa-check-circle fa-4x text-success"></i>
+                        </div>
+                        <span class="badge bg-success result-badge">Completed</span>
+                    {% elif inspection.status == 'in_progress' %}
+                        <div class="mb-3">
+                            <i class="fas fa-spinner fa-4x text-warning"></i>
+                        </div>
+                        <span class="badge bg-warning result-badge">In Progress</span>
+                    {% else %}
+                        <div class="mb-3">
+                            <i class="fas fa-clock fa-4x text-secondary"></i>
+                        </div>
+                        <span class="badge bg-secondary result-badge">{{ inspection.get_status_display }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inspection Items -->
+    {% if inspection.items.exists %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-list-check me-2"></i>Inspection Items</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% for item in inspection.items.all %}
+                    <div class="inspection-item">
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <strong>{{ item.item_name }}</strong>
+                                {% if item.category %}
+                                    <div class="text-muted small">{{ item.category }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 text-center">
+                                {% if item.result == 'pass' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Pass
+                                    </span>
+                                {% elif item.result == 'fail' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times me-1"></i>Fail
+                                    </span>
+                                {% elif item.result == 'warning' %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-exclamation me-1"></i>Warning
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-minus me-1"></i>N/A
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {% if item.notes %}
+                                    <p class="mb-0 small text-muted">{{ item.notes }}</p>
+                                {% else %}
+                                    <p class="mb-0 small text-muted">No notes</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recommendations -->
+    {% if inspection.recommendations %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Recommendations</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ inspection.recommendations }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'portal:vehicle-detail' inspection.vehicle.id %}" class="btn btn-primary">
+                            <i class="fas fa-car me-2"></i>View Vehicle
+                        </a>
+                        <a href="{% url 'portal:my-history' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Service History
+                        </a>
+                        <a href="{% url 'portal:book-appointment' %}?vehicle={{ inspection.vehicle.id }}" class="btn btn-success">
+                            <i class="fas fa-calendar-plus me-2"></i>Book Service
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

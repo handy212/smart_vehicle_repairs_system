@@ -1,0 +1,532 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+{% load widget_tweaks %}
+
+{% block title %}Create Appointment - Smart Vehicle Repairs{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<style>
+.select2-container--default .select2-selection--single {
+    height: 38px;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 36px;
+    padding-left: 12px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+
+.time-slots {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+}
+
+.time-slot {
+    display: inline-block;
+    margin: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.time-slot:hover {
+    background-color: #e9ecef;
+}
+
+.time-slot.selected {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.time-slot.unavailable {
+    background-color: #f8d7da;
+    border-color: #dc3545;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.availability-indicator {
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    margin-top: 0.5rem;
+}
+
+.availability-indicator.available {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.availability-indicator.unavailable {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-plus text-primary me-2"></i>
+                Create New Appointment
+            </h1>
+            <p class="text-muted mb-0">Schedule a new customer appointment</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{% url 'appointments:appointment-list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>
+                Back to Appointments
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Main Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calendar-plus me-2"></i>
+                        Appointment Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="appointmentForm">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Customer Selection -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.customer.id_for_label }}" class="form-label">
+                                    <i class="fas fa-user me-1"></i>
+                                    Customer *
+                                </label>
+                                <select class="form-select" id="{{ form.customer.id_for_label }}" name="{{ form.customer.name }}" required>
+                                    <option value="">Select Customer</option>
+                                    {% for customer in customers %}
+                                    <option value="{{ customer.id }}" {% if form.customer.value == customer.id %}selected{% endif %}>
+                                        {% if customer.user %}
+                                            {{ customer.user.first_name }} {{ customer.user.last_name }}
+                                        {% elif customer.company_name %}
+                                            {{ customer.company_name }}
+                                        {% else %}
+                                            Customer #{{ customer.id }}
+                                        {% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.customer.errors %}
+                                <div class="text-danger small">{{ form.customer.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Vehicle Selection -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.vehicle.id_for_label }}" class="form-label">
+                                    <i class="fas fa-car me-1"></i>
+                                    Vehicle *
+                                </label>
+                                <select class="form-select" id="{{ form.vehicle.id_for_label }}" name="{{ form.vehicle.name }}" required>
+                                    <option value="">Select Customer First</option>
+                                </select>
+                                {% if form.vehicle.errors %}
+                                <div class="text-danger small">{{ form.vehicle.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <!-- Appointment Date -->
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.appointment_date.id_for_label }}" class="form-label">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Date *
+                                </label>
+                                <input type="date" class="form-control" id="{{ form.appointment_date.id_for_label }}" 
+                                       name="{{ form.appointment_date.name }}" value="{{ form.appointment_date.value|default_if_none:'' }}" required>
+                                {% if form.appointment_date.errors %}
+                                <div class="text-danger small">{{ form.appointment_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Appointment Time -->
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.appointment_time.id_for_label }}" class="form-label">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Time *
+                                </label>
+                                <input type="time" class="form-control" id="{{ form.appointment_time.id_for_label }}" 
+                                       name="{{ form.appointment_time.name }}" value="{{ form.appointment_time.value|default_if_none:'' }}" required>
+                                {% if form.appointment_time.errors %}
+                                <div class="text-danger small">{{ form.appointment_time.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Duration -->
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.estimated_duration.id_for_label }}" class="form-label">
+                                    <i class="fas fa-hourglass-half me-1"></i>
+                                    Duration (minutes) *
+                                </label>
+                                <input type="number" class="form-control" id="{{ form.estimated_duration.id_for_label }}" 
+                                       name="{{ form.estimated_duration.name }}" value="{{ form.estimated_duration.value|default_if_none:'60' }}" 
+                                       min="15" max="480" step="15" required>
+                                {% if form.estimated_duration.errors %}
+                                <div class="text-danger small">{{ form.estimated_duration.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <!-- Service Type -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.service_type.id_for_label }}" class="form-label">
+                                    <i class="fas fa-wrench me-1"></i>
+                                    Service Type *
+                                </label>
+                                {{ form.service_type|add_class:"form-select" }}
+                                {% if form.service_type.errors %}
+                                <div class="text-danger small">{{ form.service_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Priority -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.priority.id_for_label }}" class="form-label">
+                                    <i class="fas fa-flag me-1"></i>
+                                    Priority
+                                </label>
+                                {{ form.priority|add_class:"form-select" }}
+                                {% if form.priority.errors %}
+                                <div class="text-danger small">{{ form.priority.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <!-- Service Bay -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.service_bay.id_for_label }}" class="form-label">
+                                    <i class="fas fa-warehouse me-1"></i>
+                                    Service Bay
+                                </label>
+                                <select class="form-select" id="{{ form.service_bay.id_for_label }}" name="{{ form.service_bay.name }}">
+                                    <option value="">Auto-assign</option>
+                                    {% for bay in service_bays %}
+                                    <option value="{{ bay.id }}" {% if form.service_bay.value == bay.id %}selected{% endif %}>
+                                        {{ bay.name }} ({{ bay.get_bay_type_display }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.service_bay.errors %}
+                                <div class="text-danger small">{{ form.service_bay.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Estimated Cost -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.estimated_cost.id_for_label }}" class="form-label">
+                                    <i class="fas fa-dollar-sign me-1"></i>
+                                    Estimated Cost ($)
+                                </label>
+                                <input type="number" class="form-control" id="{{ form.estimated_cost.id_for_label }}" 
+                                       name="{{ form.estimated_cost.name }}" value="{{ form.estimated_cost.value|default_if_none:'' }}" 
+                                       min="0" step="0.01">
+                                {% if form.estimated_cost.errors %}
+                                <div class="text-danger small">{{ form.estimated_cost.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label for="{{ form.customer_concerns.id_for_label }}" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>
+                                Description
+                            </label>
+                            <textarea class="form-control" id="{{ form.customer_concerns.id_for_label }}" 
+                                      name="{{ form.customer_concerns.name }}" rows="3" 
+                                      placeholder="Describe the service or issue...">{{ form.customer_concerns.value|default_if_none:'' }}</textarea>
+                            {% if form.customer_concerns.errors %}
+                            <div class="text-danger small">{{ form.customer_concerns.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Notes -->
+                        <div class="mb-3">
+                            <label for="{{ form.special_instructions.id_for_label }}" class="form-label">
+                                <i class="fas fa-sticky-note me-1"></i>
+                                Internal Notes
+                            </label>
+                            <textarea class="form-control" id="{{ form.special_instructions.id_for_label }}" 
+                                      name="{{ form.special_instructions.name }}" rows="2" 
+                                      placeholder="Internal notes (not visible to customer)...">{{ form.special_instructions.value|default_if_none:'' }}</textarea>
+                            {% if form.special_instructions.errors %}
+                            <div class="text-danger small">{{ form.special_instructions.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Submit Buttons -->
+                        <div class="row">
+                            <div class="col-12">
+                                <hr>
+                                <button type="submit" class="btn btn-primary me-2">
+                                    <i class="fas fa-save me-1"></i>
+                                    Create Appointment
+                                </button>
+                                <a href="{% url 'appointments:appointment-list' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i>
+                                    Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Available Time Slots -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        Available Time Slots
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="timeSlots">
+                        <p class="text-muted">Please select a date to see available time slots.</p>
+                    </div>
+                    <div id="availabilityIndicator"></div>
+                </div>
+            </div>
+            
+            <!-- Service Bay Status -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-warehouse me-2"></i>
+                        Service Bay Status
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="serviceBayStatus">
+                        {% for bay in service_bays %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold">{{ bay.name }}</span>
+                            <span class="badge bg-{% if bay.status == 'available' %}success{% elif bay.status == 'occupied' %}warning{% elif bay.status == 'maintenance' %}danger{% else %}secondary{% endif %}">
+                                {{ bay.get_status_display }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Select2
+    $('#id_customer').select2({
+        placeholder: 'Select Customer',
+        allowClear: true
+    });
+    
+    $('#id_vehicle').select2({
+        placeholder: 'Select Vehicle',
+        allowClear: true
+    });
+    
+    $('#id_service_bay').select2({
+        placeholder: 'Auto-assign',
+        allowClear: true
+    });
+    
+    // Initialize date picker
+    flatpickr("#id_appointment_date", {
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        allowInput: true,
+        onChange: function(selectedDates, dateStr) {
+            if (dateStr) {
+                loadAvailableTimeSlots(dateStr);
+            }
+        }
+    });
+    
+    // Customer change handler
+    $('#id_customer').on('change', function() {
+        const customerId = $(this).val();
+        loadCustomerVehicles(customerId);
+    });
+    
+    // Date and time change handlers
+    $('#id_appointment_date, #id_appointment_time, #id_estimated_duration, #id_service_bay').on('change', function() {
+        checkAvailability();
+    });
+    
+    // Pre-fill from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('date')) {
+        $('#id_appointment_date').val(urlParams.get('date'));
+        loadAvailableTimeSlots(urlParams.get('date'));
+    }
+    if (urlParams.get('time')) {
+        $('#id_appointment_time').val(urlParams.get('time'));
+    }
+    if (urlParams.get('customer')) {
+        $('#id_customer').val(urlParams.get('customer')).trigger('change');
+    }
+    if (urlParams.get('service_type')) {
+        $('#id_service_type').val(urlParams.get('service_type'));
+    }
+    if (urlParams.get('description')) {
+        $('#id_customer_concerns').val(urlParams.get('description'));
+    }
+});
+
+function loadCustomerVehicles(customerId) {
+    if (!customerId) {
+        $('#id_vehicle').empty().append('<option value="">Select Customer First</option>').trigger('change');
+        return;
+    }
+    
+    fetch(`{% url 'appointments:customer-vehicles' %}?customer_id=${customerId}`)
+        .then(response => response.json())
+        .then(data => {
+            const vehicleSelect = $('#id_vehicle');
+            vehicleSelect.empty().append('<option value="">Select Vehicle</option>');
+            
+            data.vehicles.forEach(vehicle => {
+                vehicleSelect.append(new Option(vehicle.display, vehicle.id));
+            });
+            
+            vehicleSelect.trigger('change');
+        })
+        .catch(error => {
+            console.error('Error loading vehicles:', error);
+            alert('Error loading customer vehicles');
+        });
+}
+
+function loadAvailableTimeSlots(date) {
+    if (!date) return;
+    
+    const serviceBayId = $('#id_service_bay').val();
+    const duration = $('#id_estimated_duration').val() || 60;
+    
+    fetch(`/appointments/api/time-slots/?date=${date}&service_bay_id=${serviceBayId}&duration=${duration}`)
+        .then(response => response.json())
+        .then(data => {
+            const timeSlotsContainer = document.getElementById('timeSlots');
+            
+            if (data.slots && data.slots.length > 0) {
+                let slotsHtml = '<p class="small text-muted mb-2">Click a time slot to select:</p>';
+                data.slots.forEach(slot => {
+                    slotsHtml += `
+                        <span class="time-slot" onclick="selectTimeSlot('${slot.time}')">
+                            ${slot.display}
+                        </span>
+                    `;
+                });
+                timeSlotsContainer.innerHTML = slotsHtml;
+            } else {
+                timeSlotsContainer.innerHTML = '<p class="text-warning">No available time slots for this date.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading time slots:', error);
+            document.getElementById('timeSlots').innerHTML = '<p class="text-danger">Error loading time slots.</p>';
+        });
+}
+
+function selectTimeSlot(time) {
+    // Remove previous selection
+    document.querySelectorAll('.time-slot').forEach(slot => {
+        slot.classList.remove('selected');
+    });
+    
+    // Select new slot
+    event.target.classList.add('selected');
+    
+    // Update form field
+    document.getElementById('id_appointment_time').value = time;
+    
+    // Check availability
+    checkAvailability();
+}
+
+function checkAvailability() {
+    const date = document.getElementById('id_appointment_date').value;
+    const time = document.getElementById('id_appointment_time').value;
+    const duration = document.getElementById('id_estimated_duration').value || 60;
+    const serviceBayId = document.getElementById('id_service_bay').value;
+    
+    if (!date || !time) {
+        document.getElementById('availabilityIndicator').innerHTML = '';
+        return;
+    }
+    
+    const params = new URLSearchParams({
+        date: date,
+        time: time,
+        duration: duration
+    });
+    
+    if (serviceBayId) {
+        params.append('service_bay_id', serviceBayId);
+    }
+    
+    fetch(`/appointments/api/availability/?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            const indicator = document.getElementById('availabilityIndicator');
+            
+            if (data.available) {
+                indicator.innerHTML = `
+                    <div class="availability-indicator available">
+                        <i class="fas fa-check me-2"></i>
+                        Time slot is available
+                    </div>
+                `;
+            } else {
+                indicator.innerHTML = `
+                    <div class="availability-indicator unavailable">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Time slot conflicts with ${data.conflicts} existing appointment(s)
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error checking availability:', error);
+        });
+}
+</script>
+{% endblock %}

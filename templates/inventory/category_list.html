@@ -1,0 +1,430 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Category Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .category-card {
+        transition: transform 0.2s;
+        border: 1px solid #dee2e6;
+    }
+    
+    .category-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .category-icon {
+        width: 50px;
+        height: 50px;
+        background: var(--primary);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+    
+    .parts-count-badge {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 20px;
+        background: #e3f2fd;
+        color: #1565c0;
+        font-weight: 600;
+    }
+    
+    .action-buttons .btn {
+        margin: 0 2px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #6c757d;
+    }
+    
+    .empty-state-icon {
+        font-size: 4rem;
+        color: #dee2e6;
+        margin-bottom: 1rem;
+    }
+    
+    .table > :not(caption) > * > * {
+        padding: 0.75rem;
+        vertical-align: middle;
+    }
+    
+    .inactive-category {
+        background-color: #f8f9fa !important;
+        opacity: 0.7;
+    }
+    
+    .inactive-category td {
+        color: #6c757d;
+    }
+    
+    .view-toggle {
+        background: #f8f9fa;
+        border-radius: 0.375rem;
+        padding: 0.25rem;
+    }
+    
+    .view-toggle .btn {
+        border: none;
+        background: transparent;
+        color: #6c757d;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+    }
+    
+    .view-toggle .btn.active {
+        background: white;
+        color: #495057;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Category Management</h1>
+            <p class="text-muted mb-0">Organize and manage your parts categories</p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if request.user.role in 'admin,manager,parts_manager' %}
+                <a href="{% url 'inventory:category_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add Category
+                </a>
+            {% endif %}
+            
+            <!-- View Toggle -->
+            <div class="view-toggle">
+                <button class="btn active" onclick="toggleView('grid')" id="gridViewBtn">
+                    <i class="fas fa-th"></i>
+                </button>
+                <button class="btn" onclick="toggleView('table')" id="tableViewBtn">
+                    <i class="fas fa-list"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Total Categories</h6>
+                            <h3 class="mb-0">{{ categories.count }}</h3>
+                        </div>
+                        <i class="fas fa-tags fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Active Categories</h6>
+                            <h3 class="mb-0">{{ categories|length }}</h3>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card" style="background: var(--info); color: white;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Total Parts</h6>
+                            <h3 class="mb-0">
+                                {% with total_parts=0 %}
+                                    {% for category in categories %}
+                                        {% with total_parts=total_parts|add:category.parts_count %}{% endwith %}
+                                    {% endfor %}
+                                    {{ total_parts }}
+                                {% endwith %}
+                            </h3>
+                        </div>
+                        <i class="fas fa-cogs fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title mb-0">Empty Categories</h6>
+                            <h3 class="mb-0">
+                                {% with empty_count=0 %}
+                                    {% for category in categories %}
+                                        {% if category.parts_count == 0 %}
+                                            {% with empty_count=empty_count|add:1 %}{% endwith %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ empty_count }}
+                                {% endwith %}
+                            </h3>
+                        </div>
+                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if categories %}
+        <!-- Grid View -->
+        <div id="gridView" class="row">
+            {% for category in categories %}
+                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                    <div class="card category-card h-100 {% if not category.is_active %}inactive-category{% endif %}">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start mb-3">
+                                <div class="category-icon me-3">
+                                    <i class="fas fa-tag"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="card-title mb-1">{{ category.name }}</h6>
+                                    {% if not category.is_active %}
+                                        <span class="badge bg-secondary mb-2">Inactive</span>
+                                    {% endif %}
+                                    <div class="parts-count-badge">
+                                        {{ category.parts_count }} part{{ category.parts_count|pluralize }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if category.description %}
+                                <p class="card-text text-muted small mb-3">
+                                    {{ category.description|truncatechars:100 }}
+                                </p>
+                            {% endif %}
+                            
+                            {% if category.parent %}
+                                <div class="mb-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-sitemap me-1"></i>
+                                        Parent: {{ category.parent.name }}
+                                    </small>
+                                </div>
+                            {% endif %}
+                            
+                            {% if category.subcategories.exists %}
+                                <div class="mb-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-folder me-1"></i>
+                                        {{ category.subcategories.count }} subcategor{{ category.subcategories.count|pluralize:"y,ies" }}
+                                    </small>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="action-buttons d-flex gap-1">
+                                <a href="{% url 'inventory:part_list' %}?category={{ category.id }}" 
+                                   class="btn btn-outline-primary btn-sm flex-fill">
+                                    <i class="fas fa-eye me-1"></i>View Parts
+                                </a>
+                                {% if request.user.role in 'admin,manager,parts_manager' %}
+                                    <a href="{% url 'inventory:category_edit' category.id %}" 
+                                       class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" 
+                                            class="btn btn-outline-danger btn-sm"
+                                            onclick="confirmDelete('{{ category.name }}', '{% url 'inventory:category_delete' category.id %}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Table View -->
+        <div id="tableView" style="display: none;">
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Description</th>
+                                    <th>Parent</th>
+                                    <th>Parts Count</th>
+                                    <th>Subcategories</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    {% if request.user.role in 'admin,manager,parts_manager' %}
+                                        <th width="120">Actions</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for category in categories %}
+                                    <tr {% if not category.is_active %}class="inactive-category"{% endif %}>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="category-icon me-3" style="width: 30px; height: 30px; font-size: 0.875rem;">
+                                                    <i class="fas fa-tag"></i>
+                                                </div>
+                                                <strong>{{ category.name }}</strong>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="text-muted">
+                                                {{ category.description|truncatechars:50|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if category.parent %}
+                                                <span class="badge bg-light text-dark">{{ category.parent.name }}</span>
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{% url 'inventory:part_list' %}?category={{ category.id }}" 
+                                               class="text-decoration-none">
+                                                <span class="parts-count-badge">
+                                                    {{ category.parts_count }}
+                                                </span>
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {% if category.subcategories.exists %}
+                                                <span class="badge bg-secondary">{{ category.subcategories.count }}</span>
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if category.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ category.created_at|date:"M d, Y" }}
+                                            </small>
+                                        </td>
+                                        {% if request.user.role in 'admin,manager,parts_manager' %}
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'inventory:category_edit' category.id %}" 
+                                                       class="btn btn-outline-secondary btn-sm">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" 
+                                                            class="btn btn-outline-danger btn-sm"
+                                                            onclick="confirmDelete('{{ category.name }}', '{% url 'inventory:category_delete' category.id %}')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        {% endif %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fas fa-tags"></i>
+            </div>
+            <h4>No Categories Found</h4>
+            <p class="lead">Start organizing your inventory by creating your first category.</p>
+            {% if request.user.role in 'admin,manager,parts_manager' %}
+                <a href="{% url 'inventory:category_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Create First Category
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the category "<span id="deleteCategoryName"></span>"?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    This action cannot be undone. All parts in this category will need to be reassigned.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a href="#" id="deleteConfirmBtn" class="btn btn-danger">Delete Category</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleView(viewType) {
+        const gridView = document.getElementById('gridView');
+        const tableView = document.getElementById('tableView');
+        const gridBtn = document.getElementById('gridViewBtn');
+        const tableBtn = document.getElementById('tableViewBtn');
+        
+        if (viewType === 'grid') {
+            gridView.style.display = 'block';
+            tableView.style.display = 'none';
+            gridBtn.classList.add('active');
+            tableBtn.classList.remove('active');
+            localStorage.setItem('categoryViewType', 'grid');
+        } else {
+            gridView.style.display = 'none';
+            tableView.style.display = 'block';
+            gridBtn.classList.remove('active');
+            tableBtn.classList.add('active');
+            localStorage.setItem('categoryViewType', 'table');
+        }
+    }
+    
+    function confirmDelete(categoryName, deleteUrl) {
+        document.getElementById('deleteCategoryName').textContent = categoryName;
+        document.getElementById('deleteConfirmBtn').href = deleteUrl;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+    
+    // Restore saved view preference
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedView = localStorage.getItem('categoryViewType') || 'grid';
+        toggleView(savedView);
+    });
+</script>
+{% endblock %}

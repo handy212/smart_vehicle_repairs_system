@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Backup & Restore - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-database text-primary"></i> Backup & Restore</h2>
+            <p class="text-muted mb-0">Manage system backups and restoration</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBackupModal">
+            <i class="fas fa-plus"></i> Create Backup
+        </button>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Backups</h6>
+                            <h3 class="mb-0">{{ page_obj.paginator.count }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-archive fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Last Backup</h6>
+                            <h3 class="mb-0">
+                                {% if page_obj %}
+                                {{ page_obj.0.started_at|date:"M d" }}
+                                {% else %}
+                                Never
+                                {% endif %}
+                            </h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-clock fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Storage Used</h6>
+                            <h3 class="mb-0">
+                                {% widthratio page_obj|length 1 100 %} MB
+                            </h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-hdd fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup Schedule Info -->
+    <div class="alert alert-info mb-4">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-info-circle fa-2x me-3"></i>
+            <div>
+                <h6 class="mb-1">Automated Backups</h6>
+                <p class="mb-0">
+                    Automated backups run daily at 2:00 AM. Manual backups can be created anytime.
+                    Backups are retained for 30 days by default.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backups List -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Backup ID</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>File Size</th>
+                            <th>Created By</th>
+                            <th>Started</th>
+                            <th>Completed</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for backup in page_obj %}
+                        <tr>
+                            <td>
+                                <code>#{{ backup.id }}</code>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if backup.backup_type == 'full' %}primary{% elif backup.backup_type == 'database' %}info{% else %}secondary{% endif %}">
+                                    {{ backup.get_backup_type_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if backup.status == 'completed' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check"></i> Completed
+                                </span>
+                                {% elif backup.status == 'in_progress' %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-spinner fa-spin"></i> In Progress
+                                </span>
+                                {% elif backup.status == 'failed' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times"></i> Failed
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ backup.get_file_size_display }}</td>
+                            <td>
+                                {% if backup.created_by %}
+                                {{ backup.created_by.get_full_name }}
+                                {% else %}
+                                <span class="text-muted">System</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ backup.started_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                {% if backup.completed_at %}
+                                {{ backup.completed_at|date:"Y-m-d H:i" }}
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    {% if backup.status == 'completed' %}
+                                    <button class="btn btn-outline-primary" 
+                                            onclick="viewBackupDetails({{ backup.id }})"
+                                            title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-success" 
+                                            onclick="downloadBackup({{ backup.id }})"
+                                            title="Download">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <button class="btn btn-outline-warning" 
+                                            onclick="restoreBackup({{ backup.id }})"
+                                            title="Restore">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn btn-outline-danger" 
+                                            onclick="deleteBackup({{ backup.id }})"
+                                            title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="fas fa-database fa-4x text-muted mb-3"></i>
+                                <p class="text-muted">No backups found. Create your first backup to get started.</p>
+                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBackupModal">
+                                    <i class="fas fa-plus"></i> Create First Backup
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Backup Modal -->
+<div class="modal fade" id="createBackupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_backup">
+                
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Backup</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Backup Type</label>
+                        <select class="form-select" name="backup_type" required>
+                            {% for code, name in backup_types %}
+                            <option value="{{ code }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">
+                            Full backup includes database and media files. Database-only backup is faster.
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" name="notes" rows="3" 
+                                  placeholder="Add notes about this backup..."></textarea>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Note:</strong> Backup creation may take several minutes depending on the size of your data.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Create Backup
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function viewBackupDetails(backupId) {
+    fetch(`/admin-panel/backup/${backupId}/details/`)
+        .then(response => response.json())
+        .then(data => {
+            let detailsHtml = `
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <tr><th>Backup ID:</th><td>#${data.id}</td></tr>
+                        <tr><th>Type:</th><td>${data.type}</td></tr>
+                        <tr><th>Status:</th><td>${data.status}</td></tr>
+                        <tr><th>File Size:</th><td>${data.file_size}</td></tr>
+                        <tr><th>Created By:</th><td>${data.created_by}</td></tr>
+                        <tr><th>Started:</th><td>${data.started}</td></tr>
+                        <tr><th>Completed:</th><td>${data.completed || 'N/A'}</td></tr>
+                        <tr><th>File Exists:</th><td>${data.file_exists ? 'Yes' : 'No'}</td></tr>
+                        ${data.notes ? `<tr><th>Notes:</th><td>${data.notes}</td></tr>` : ''}
+                        ${data.error ? `<tr><th>Error:</th><td class="text-danger">${data.error}</td></tr>` : ''}
+                    </table>
+                </div>
+            `;
+            
+            // Show in a modal or alert
+            alert('Backup Details:\n\n' + 
+                  `ID: #${data.id}\n` +
+                  `Type: ${data.type}\n` +
+                  `Status: ${data.status}\n` +
+                  `Size: ${data.file_size}\n` +
+                  `Created: ${data.started}\n` +
+                  `By: ${data.created_by}`
+            );
+        })
+        .catch(error => {
+            alert('Error loading backup details: ' + error);
+        });
+}
+
+function downloadBackup(backupId) {
+    if (confirm('Download backup #' + backupId + '?')) {
+        window.location.href = `/admin-panel/backup/${backupId}/download/`;
+    }
+}
+
+function restoreBackup(backupId) {
+    if (!confirm('⚠️ WARNING: Restoring this backup will replace ALL current data!\n\nA safety backup will be created automatically before restore.\n\nAre you absolutely sure you want to continue?')) {
+        return;
+    }
+    
+    if (!confirm('This is your FINAL confirmation. The restore process cannot be undone.\n\nClick OK to proceed with restore.')) {
+        return;
+    }
+    
+    // Create a form and submit it
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/admin-panel/backup/${backupId}/restore/`;
+    
+    const csrfToken = getCookie('csrftoken');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function deleteBackup(backupId) {
+    if (!confirm('Are you sure you want to delete backup #' + backupId + '?\n\nThis action cannot be undone.')) {
+        return;
+    }
+    
+    // Create a form and submit it
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/admin-panel/backup/${backupId}/delete/`;
+    
+    const csrfToken = getCookie('csrftoken');
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endblock %}

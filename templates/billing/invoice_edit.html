@@ -1,0 +1,374 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .info-card {
+        background: #f8f9fa;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 5px;
+    }
+    
+    .form-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .readonly-field {
+        background-color: #f8f9fa;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="page-header-primary rounded p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-1">
+                    <i class="fas fa-edit me-2"></i>{{ page_title }}
+                </h2>
+                <p class="mb-0 opacity-75">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Only draft invoices can be edited
+                </p>
+            </div>
+            <div>
+                <span class="badge bg-{% if invoice.status == 'draft' %}secondary{% elif invoice.status == 'sent' %}info{% elif invoice.status == 'paid' %}success{% elif invoice.status == 'overdue' %}danger{% else %}warning{% endif %} fs-5">
+                    {{ invoice.get_status_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Invoice Info -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="info-card">
+                <h6 class="text-muted mb-2">
+                    <i class="fas fa-file-invoice me-1"></i>Invoice Number
+                </h6>
+                <h4 class="mb-0">{{ invoice.invoice_number }}</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="info-card">
+                <h6 class="text-muted mb-2">
+                    <i class="fas fa-user me-1"></i>Customer
+                </h6>
+                <h5 class="mb-0">{{ invoice.customer }}</h5>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="info-card">
+                <h6 class="text-muted mb-2">
+                    <i class="fas fa-car me-1"></i>Vehicle
+                </h6>
+                <h5 class="mb-0">{{ invoice.vehicle }}</h5>
+            </div>
+        </div>
+    </div>
+
+    {% if invoice.work_order %}
+    <div class="alert alert-info">
+        <i class="fas fa-link me-2"></i>
+        This invoice is linked to Work Order <strong>{{ invoice.work_order.work_order_number }}</strong>. 
+        Line items are calculated from the work order and cannot be edited here.
+    </div>
+    {% endif %}
+
+    <!-- Edit Form -->
+    <form method="post" id="invoiceEditForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Description & Notes -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-align-left me-2"></i>Description & Notes
+                    </h5>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea 
+                            class="form-control" 
+                            id="description" 
+                            name="description" 
+                            rows="3"
+                            placeholder="Brief description of work performed...">{{ invoice.description }}</textarea>
+                        <small class="form-text text-muted">
+                            This will appear on the invoice
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="customer_notes" class="form-label">Customer Notes</label>
+                        <textarea 
+                            class="form-control" 
+                            id="customer_notes" 
+                            name="customer_notes" 
+                            rows="3"
+                            placeholder="Notes visible to customer...">{{ invoice.customer_notes }}</textarea>
+                        <small class="form-text text-muted">
+                            These notes will be visible to the customer
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Internal Notes</label>
+                        <textarea 
+                            class="form-control" 
+                            id="notes" 
+                            name="notes" 
+                            rows="3"
+                            placeholder="Internal notes (not visible to customer)...">{{ invoice.notes }}</textarea>
+                        <small class="form-text text-muted">
+                            These notes are for internal use only
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="terms" class="form-label">Payment Terms</label>
+                        <select class="form-select" id="terms" name="terms">
+                            <option value="Due on Receipt" {% if invoice.terms == "Due on Receipt" %}selected{% endif %}>Due on Receipt</option>
+                            <option value="Net 15" {% if invoice.terms == "Net 15" %}selected{% endif %}>Net 15</option>
+                            <option value="Net 30" {% if invoice.terms == "Net 30" %}selected{% endif %}>Net 30</option>
+                            <option value="Net 45" {% if invoice.terms == "Net 45" %}selected{% endif %}>Net 45</option>
+                            <option value="Net 60" {% if invoice.terms == "Net 60" %}selected{% endif %}>Net 60</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Adjustments & Fees -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-percentage me-2"></i>Discounts & Fees
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="discount_percentage" class="form-label">Discount %</label>
+                            <input 
+                                type="number" 
+                                class="form-control" 
+                                id="discount_percentage" 
+                                name="discount_percentage"
+                                step="0.01" 
+                                min="0" 
+                                max="100"
+                                value="{{ invoice.discount_percentage|default:'0' }}">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="discount_reason" class="form-label">Discount Reason</label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="discount_reason" 
+                                name="discount_reason"
+                                placeholder="e.g., Loyalty discount"
+                                value="{{ invoice.discount_reason }}">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="shop_supplies_fee" class="form-label">Shop Supplies Fee</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input 
+                                    type="number" 
+                                    class="form-control" 
+                                    id="shop_supplies_fee" 
+                                    name="shop_supplies_fee"
+                                    step="0.01" 
+                                    min="0"
+                                    value="{{ invoice.shop_supplies_fee|default:'0' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="environmental_fee" class="form-label">Environmental Fee</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input 
+                                    type="number" 
+                                    class="form-control" 
+                                    id="environmental_fee" 
+                                    name="environmental_fee"
+                                    step="0.01" 
+                                    min="0"
+                                    value="{{ invoice.environmental_fee|default:'0' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column - Summary & Actions -->
+            <div class="col-lg-4">
+                <!-- Current Totals -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-calculator me-2"></i>Current Totals
+                    </h5>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Labor:</span>
+                        <strong>${{ invoice.labor_subtotal|floatformat:2 }}</strong>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Parts:</span>
+                        <strong>${{ invoice.parts_subtotal|floatformat:2 }}</strong>
+                    </div>
+                    
+                    {% if invoice.sublet_subtotal > 0 %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Sublet:</span>
+                        <strong>${{ invoice.sublet_subtotal|floatformat:2 }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
+                        <span class="text-muted">Subtotal:</span>
+                        <strong>${{ invoice.subtotal|floatformat:2 }}</strong>
+                    </div>
+                    
+                    {% if invoice.discount_amount > 0 %}
+                    <div class="d-flex justify-content-between mb-2 text-success">
+                        <span>Discount:</span>
+                        <strong>-${{ invoice.discount_amount|floatformat:2 }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    {% if invoice.tax_amount > 0 %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Tax:</span>
+                        <strong>${{ invoice.tax_amount|floatformat:2 }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    {% if invoice.shop_supplies_fee > 0 %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Shop Supplies:</span>
+                        <strong>${{ invoice.shop_supplies_fee|floatformat:2 }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    {% if invoice.environmental_fee > 0 %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Environmental:</span>
+                        <strong>${{ invoice.environmental_fee|floatformat:2 }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between mb-2 pt-2 border-top">
+                        <span class="fw-bold">Total:</span>
+                        <strong class="fs-5 text-primary">${{ invoice.total|floatformat:2 }}</strong>
+                    </div>
+                    
+                    {% if invoice.amount_paid > 0 %}
+                    <div class="d-flex justify-content-between mb-2 text-success">
+                        <span>Paid:</span>
+                        <strong>-${{ invoice.amount_paid|floatformat:2 }}</strong>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between pt-2 border-top">
+                        <span class="fw-bold">Amount Due:</span>
+                        <strong class="fs-5 text-danger">${{ invoice.amount_due|floatformat:2 }}</strong>
+                    </div>
+                </div>
+
+                <!-- Dates Info -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-calendar me-2"></i>Dates
+                    </h5>
+                    
+                    <div class="mb-2">
+                        <small class="text-muted">Invoice Date:</small><br>
+                        <strong>{{ invoice.invoice_date|date:"M d, Y" }}</strong>
+                    </div>
+                    
+                    {% if invoice.due_date %}
+                    <div class="mb-2">
+                        <small class="text-muted">Due Date:</small><br>
+                        <strong>{{ invoice.due_date|date:"M d, Y" }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Actions -->
+                <div class="form-section">
+                    <h5 class="section-title">
+                        <i class="fas fa-tasks me-2"></i>Actions
+                    </h5>
+                    
+                    <button type="submit" class="btn btn-primary w-100 mb-2">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                    
+                    <a href="{% url 'billing:invoice_detail' invoice.id %}" class="btn btn-outline-secondary w-100 mb-2">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                    
+                    <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Invoices
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Form validation
+    $('#invoiceEditForm').on('submit', function(e) {
+        // Validate discount percentage
+        const discountPercentage = parseFloat($('#discount_percentage').val());
+        if (discountPercentage < 0 || discountPercentage > 100) {
+            e.preventDefault();
+            alert('Discount percentage must be between 0 and 100');
+            return false;
+        }
+        
+        // Show loading state
+        const submitBtn = $(this).find('button[type="submit"]');
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
+    });
+    
+    // Auto-save draft (optional)
+    let autoSaveTimeout;
+    $('textarea, input[type="text"], input[type="number"], select').on('input change', function() {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(function() {
+            // Could implement auto-save functionality here
+            console.log('Changes detected - auto-save available');
+        }, 2000);
+    });
+});
+</script>
+{% endblock %}

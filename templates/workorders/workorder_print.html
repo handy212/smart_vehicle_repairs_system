@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Order {{ workorder.work_order_number }} - Print</title>
+    
+    <!-- Bootstrap for basic styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        @media print {
+            body { 
+                font-size: 12px;
+                line-height: 1.3;
+            }
+            .no-print { 
+                display: none !important; 
+            }
+            .page-break { 
+                page-break-before: always; 
+            }
+            .container-fluid {
+                margin: 0;
+                padding: 0;
+            }
+            .row {
+                margin: 0;
+            }
+            .col, .col-md-6, .col-md-4 {
+                padding: 0 5px;
+            }
+        }
+        
+        .print-header {
+            border-bottom: 3px solid #0d6efd;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+        }
+        
+        .company-info {
+            text-align: right;
+        }
+        
+        .workorder-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        
+        .info-section {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: #f8f9fa;
+        }
+        
+        .info-section h6 {
+            color: #495057;
+            font-weight: bold;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .info-item {
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #6c757d;
+            display: inline-block;
+            min-width: 120px;
+        }
+        
+        .info-value {
+            color: #212529;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-draft { background-color: #6c757d; color: white; }
+        .status-intake { background-color: #0dcaf0; color: white; }
+        .status-diagnosis { background-color: #ffc107; color: black; }
+        .status-awaiting_approval { background-color: #0d6efd; color: white; }
+        .status-approved { background-color: #198754; color: white; }
+        .status-in_progress { background-color: #fd7e14; color: white; }
+        .status-paused { background-color: #6c757d; color: white; }
+        .status-quality_check { background-color: #0dcaf0; color: white; }
+        .status-completed { background-color: #198754; color: white; }
+        .status-invoiced { background-color: #212529; color: white; }
+        .status-closed { background-color: #6c757d; color: white; }
+        
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .priority-low { background-color: #6c757d; color: white; }
+        .priority-normal { background-color: #0d6efd; color: white; }
+        .priority-high { background-color: #ffc107; color: black; }
+        .priority-urgent { background-color: #dc3545; color: white; }
+        
+        .task-table, .parts-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .task-table th, .task-table td,
+        .parts-table th, .parts-table td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            text-align: left;
+            font-size: 11px;
+        }
+        
+        .task-table th, .parts-table th {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+        
+        .cost-summary {
+            border: 2px solid #0d6efd;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+        
+        .cost-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            padding: 3px 0;
+        }
+        
+        .cost-total {
+            border-top: 2px solid #0d6efd;
+            padding-top: 8px;
+            margin-top: 8px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .signature-section {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 30px;
+            height: 120px;
+        }
+        
+        .signature-line {
+            border-bottom: 1px solid #212529;
+            width: 200px;
+            margin: 20px 0 5px 0;
+            display: inline-block;
+        }
+        
+        .print-timestamp {
+            text-align: center;
+            color: #6c757d;
+            font-size: 10px;
+            margin-top: 20px;
+            border-top: 1px solid #dee2e6;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Print Button (hidden when printing) -->
+        <div class="no-print text-center mb-3">
+            <button onclick="window.print()" class="btn btn-primary">
+                <i class="fas fa-print me-2"></i> Print Work Order
+            </button>
+            <button onclick="window.close()" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-times me-2"></i> Close
+            </button>
+        </div>
+
+        <!-- Header -->
+        <div class="print-header">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="workorder-title">WORK ORDER</div>
+                    <div class="h4">{{ workorder.work_order_number }}</div>
+                    <div>
+                        <span class="status-badge status-{{ workorder.status }}">{{ workorder.get_status_display }}</span>
+                        <span class="priority-badge priority-{{ workorder.priority }} ms-2">{{ workorder.get_priority_display }} Priority</span>
+                    </div>
+                </div>
+                <div class="col-md-6 company-info">
+                    <div class="h5">Smart Vehicle Repairs</div>
+                    <div>123 Auto Service Lane</div>
+                    <div>Your City, ST 12345</div>
+                    <div>Phone: (555) 123-4567</div>
+                    <div>Email: info@smartvehiclerepairs.com</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer and Vehicle Information -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="info-section">
+                    <h6><i class="fas fa-user me-2"></i>Customer Information</h6>
+                    <div class="info-item">
+                        <span class="info-label">Name:</span>
+                        <span class="info-value">{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value">{{ workorder.customer.user.email }}</span>
+                    </div>
+                    {% if workorder.customer.phone %}
+                    <div class="info-item">
+                        <span class="info-label">Phone:</span>
+                        <span class="info-value">{{ workorder.customer.phone }}</span>
+                    </div>
+                    {% endif %}
+                    {% if workorder.customer.address %}
+                    <div class="info-item">
+                        <span class="info-label">Address:</span>
+                        <span class="info-value">{{ workorder.customer.address }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-section">
+                    <h6><i class="fas fa-car me-2"></i>Vehicle Information</h6>
+                    <div class="info-item">
+                        <span class="info-label">Vehicle:</span>
+                        <span class="info-value">{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">License Plate:</span>
+                        <span class="info-value">{{ workorder.vehicle.license_plate }}</span>
+                    </div>
+                    {% if workorder.vehicle.vin %}
+                    <div class="info-item">
+                        <span class="info-label">VIN:</span>
+                        <span class="info-value">{{ workorder.vehicle.vin }}</span>
+                    </div>
+                    {% endif %}
+                    {% if workorder.odometer_in %}
+                    <div class="info-item">
+                        <span class="info-label">Odometer:</span>
+                        <span class="info-value">{{ workorder.odometer_in|floatformat:0 }} miles</span>
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Work Order Details -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="info-section">
+                    <h6><i class="fas fa-clipboard me-2"></i>Work Order Details</h6>
+                    <div class="info-item">
+                        <span class="info-label">Created:</span>
+                        <span class="info-value">{{ workorder.created_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                    {% if workorder.started_at %}
+                    <div class="info-item">
+                        <span class="info-label">Started:</span>
+                        <span class="info-value">{{ workorder.started_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if workorder.completed_at %}
+                    <div class="info-item">
+                        <span class="info-label">Completed:</span>
+                        <span class="info-value">{{ workorder.completed_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                    {% if workorder.estimated_completion %}
+                    <div class="info-item">
+                        <span class="info-label">Est. Completion:</span>
+                        <span class="info-value">{{ workorder.estimated_completion|date:"M d, Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-section">
+                    <h6><i class="fas fa-wrench me-2"></i>Technician Assignment</h6>
+                    {% if workorder.primary_technician %}
+                    <div class="info-item">
+                        <span class="info-label">Primary Tech:</span>
+                        <span class="info-value">{{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}</span>
+                    </div>
+                    {% endif %}
+                    {% if workorder.assigned_technicians.exists %}
+                    <div class="info-item">
+                        <span class="info-label">Additional:</span>
+                        <span class="info-value">
+                            {% for tech in workorder.assigned_technicians.all %}
+                                {{ tech.first_name }} {{ tech.last_name }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if workorder.created_by %}
+                    <div class="info-item">
+                        <span class="info-label">Created By:</span>
+                        <span class="info-value">{{ workorder.created_by.first_name }} {{ workorder.created_by.last_name }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Concerns -->
+        {% if workorder.customer_concerns %}
+        <div class="info-section">
+            <h6><i class="fas fa-comment me-2"></i>Customer Concerns</h6>
+            <div class="info-value">{{ workorder.customer_concerns }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Diagnosis Notes -->
+        {% if workorder.diagnosis_notes %}
+        <div class="info-section">
+            <h6><i class="fas fa-search me-2"></i>Diagnosis Notes</h6>
+            <div class="info-value">{{ workorder.diagnosis_notes }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Service Tasks -->
+        {% if workorder.tasks.exists %}
+        <div style="margin-bottom: 20px;">
+            <h6><i class="fas fa-tasks me-2"></i>Service Tasks</h6>
+            <table class="task-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Type</th>
+                        <th style="width: 35%;">Description</th>
+                        <th style="width: 15%;">Assigned To</th>
+                        <th style="width: 10%;">Est. Hours</th>
+                        <th style="width: 10%;">Actual Hours</th>
+                        <th style="width: 10%;">Labor Cost</th>
+                        <th style="width: 5%;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in workorder.tasks.all %}
+                    <tr>
+                        <td>{{ task.get_task_type_display }}</td>
+                        <td>
+                            {{ task.description }}
+                            {% if task.detailed_notes %}
+                                <br><small style="color: #6c757d;">{{ task.detailed_notes|truncatechars:100 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if task.assigned_to %}
+                                {{ task.assigned_to.first_name }} {{ task.assigned_to.last_name }}
+                            {% else %}
+                                <em>Unassigned</em>
+                            {% endif %}
+                        </td>
+                        <td>{{ task.estimated_hours|floatformat:1 }}h</td>
+                        <td>{{ task.actual_hours|floatformat:1 }}h</td>
+                        <td>${{ task.labor_cost|floatformat:2 }}</td>
+                        <td>{{ task.get_status_display }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Parts Used -->
+        {% if workorder.parts.exists %}
+        <div style="margin-bottom: 20px;">
+            <h6><i class="fas fa-cogs me-2"></i>Parts Used</h6>
+            <table class="parts-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Part Number</th>
+                        <th style="width: 25%;">Description</th>
+                        <th style="width: 10%;">Quantity</th>
+                        <th style="width: 12%;">Unit Cost</th>
+                        <th style="width: 10%;">Markup</th>
+                        <th style="width: 12%;">Selling Price</th>
+                        <th style="width: 12%;">Total</th>
+                        <th style="width: 4%;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in workorder.parts.all %}
+                    <tr>
+                        <td>{{ part.part_number }}</td>
+                        <td>
+                            {{ part.part_name }}
+                            {% if part.description %}
+                                <br><small style="color: #6c757d;">{{ part.description|truncatechars:80 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ part.quantity|floatformat:0 }}</td>
+                        <td>${{ part.unit_cost|floatformat:2 }}</td>
+                        <td>{{ part.markup_percentage|floatformat:0 }}%</td>
+                        <td>${{ part.selling_price|floatformat:2 }}</td>
+                        <td>${{ part.total_cost|floatformat:2 }}</td>
+                        <td>{{ part.get_status_display }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Cost Summary -->
+        <div class="row">
+            <div class="col-md-8"></div>
+            <div class="col-md-4">
+                <div class="cost-summary">
+                    <h6><i class="fas fa-calculator me-2"></i>Cost Summary</h6>
+                    <div class="cost-row">
+                        <span>Labor Cost:</span>
+                        <span>${{ total_labor_cost|floatformat:2 }}</span>
+                    </div>
+                    <div class="cost-row">
+                        <span>Parts Cost:</span>
+                        <span>${{ total_parts_cost|floatformat:2 }}</span>
+                    </div>
+                    <div class="cost-row">
+                        <span>Subtotal:</span>
+                        <span>${{ total_labor_cost|add:total_parts_cost|floatformat:2 }}</span>
+                    </div>
+                    <div class="cost-row">
+                        <span>Tax (0%):</span>
+                        <span>$0.00</span>
+                    </div>
+                    <div class="cost-row cost-total">
+                        <span>Total:</span>
+                        <span>${{ total_labor_cost|add:total_parts_cost|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Special Instructions -->
+        {% if workorder.special_instructions %}
+        <div class="info-section">
+            <h6><i class="fas fa-sticky-note me-2"></i>Special Instructions</h6>
+            <div class="info-value">{{ workorder.special_instructions }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Signature Section -->
+        <div class="signature-section">
+            <div class="row">
+                <div class="col-md-6">
+                    <div>Customer Signature:</div>
+                    <div class="signature-line"></div>
+                    <div style="font-size: 10px; margin-top: 5px;">Date: ________________</div>
+                </div>
+                <div class="col-md-6">
+                    <div>Technician Signature:</div>
+                    <div class="signature-line"></div>
+                    <div style="font-size: 10px; margin-top: 5px;">Date: ________________</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Print Timestamp -->
+        <div class="print-timestamp">
+            Work Order printed on {{ print_date|date:"M d, Y \a\\t H:i" }}
+        </div>
+    </div>
+
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    
+    <!-- Auto-print when loaded (optional) -->
+    <script>
+        // Uncomment the following line to auto-print when page loads
+        // window.onload = function() { window.print(); }
+        
+        // Close window after printing (optional)
+        window.onafterprint = function() {
+            // window.close();
+        }
+    </script>
+</body>
+</html>
