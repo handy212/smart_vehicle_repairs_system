@@ -99,11 +99,16 @@
     margin: 0 auto;
 }
 
-.vehicle-svg-container svg {
+.vehicle-diagram-container {
+    max-width: 100%;
+    height: auto;
+    position: relative;
+}
+
+.vehicle-damage-marker svg {
     width: 100%;
     height: auto;
-    max-width: 800px;
-    cursor: crosshair;
+    max-height: 400px;
 }
 
 .damage-dot {
@@ -111,61 +116,52 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.2);
+    vertical-align: middle;
 }
 
-.scratch-marker {
-    background: #ffc107;
-}
-
-.dent-marker {
-    background: #dc3545;
-}
-
-.rust-marker {
-    background: #6c757d;
-}
-
-.crack-marker {
-    background: #0dcaf0;
-}
+.scratch-marker { background-color: orange; }
+.dent-marker { background-color: red; }
+.rust-marker { background-color: #6c757d; }
+.crack-marker { background-color: #17a2b8; }
 
 .damage-marker {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
     cursor: pointer;
-    transition: all 0.2s;
+    border: 2px solid white;
+    box-shadow: 0 0 3px rgba(0,0,0,0.5);
 }
 
-.damage-marker:hover {
-    transform: scale(1.2);
+.damage-marker.scratch-marker { background-color: orange; }
+.damage-marker.dent-marker { background-color: red; }
+.damage-marker.rust-marker { background-color: #6c757d; }
+.damage-marker.crack-marker { background-color: #17a2b8; }
+
+.damage-items {
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 0.9rem;
 }
 
 .damage-item {
+    padding: 0.25rem 0.5rem;
     background: #f8f9fa;
-    padding: 0.5rem;
-    margin-bottom: 0.5rem;
     border-radius: 0.25rem;
-    border-left: 4px solid;
+    margin-bottom: 0.25rem;
     display: flex;
-    justify-content: between;
+    justify-content: space-between;
     align-items: center;
 }
 
-.damage-item.scratch { border-left-color: #ffc107; }
-.damage-item.dent { border-left-color: #dc3545; }
-.damage-item.rust { border-left-color: #6c757d; }
-.damage-item.crack { border-left-color: #0dcaf0; }
-
-.damage-item .remove-damage {
+.damage-item button {
+    padding: 0;
+    background: none;
+    border: none;
     color: #dc3545;
-    cursor: pointer;
     font-size: 0.8rem;
-}
-
-.damage-legend {
-    background: #f8f9fa;
-    padding: 0.5rem;
-    border-radius: 0.25rem;
 }
 </style>
 
@@ -174,29 +170,27 @@ class VehicleDamageMarker {
     constructor() {
         this.damages = [];
         this.damageCounter = 0;
-        this.selectedDamageType = 'scratch';
-        this.init();
-    }
-    
-    init() {
-        this.loadVehicleSVG();
+        this.selectedDamageType = 'scratch'; // Default damage type
+        
+        this.loadSVG();
         this.bindEvents();
     }
     
-    loadVehicleSVG() {
+    loadSVG() {
         fetch('/static/images/vehicle-diagram.svg')
             .then(response => response.text())
-            .then(svgText => {
-                const container = document.getElementById('vehicleDiagram');
-                container.innerHTML = svgText;
+            .then(svg => {
+                document.getElementById('vehicleDiagram').innerHTML = svg;
                 
-                const svg = container.querySelector('svg');
-                if (svg) {
-                    svg.addEventListener('click', (e) => this.handleSVGClick(e));
-                    // Make sure SVG is responsive
-                    svg.style.width = '100%';
-                    svg.style.height = 'auto';
-                }
+                // Add click event to SVG
+                document.querySelector('#vehicleDiagram svg').addEventListener('click', (e) => {
+                    this.handleSVGClick(e);
+                });
+                
+                // Load existing damage data if we're editing an inspection
+                {% if inspection and inspection.vehicle_damage %}
+                this.loadDamageData({{ inspection.vehicle_damage|safe }});
+                {% endif %}
             })
             .catch(error => {
                 console.error('Error loading vehicle SVG:', error);
@@ -346,7 +340,7 @@ class VehicleDamageMarker {
         try {
             const damages = typeof damageData === 'string' ? JSON.parse(damageData) : damageData;
             this.damages = damages;
-            this.damageCounter = Math.max(...damages.map(d => d.id), 0);
+            this.damageCounter = Math.max(...damages.map(d => d.id || 0), 0);
             
             // Wait for SVG to load, then render markers
             setTimeout(() => {
@@ -354,6 +348,7 @@ class VehicleDamageMarker {
                     this.renderDamageMarker(damage);
                 });
                 this.updateDamageList();
+                this.updateHiddenInput();
             }, 500);
         } catch (error) {
             console.error('Error loading damage data:', error);

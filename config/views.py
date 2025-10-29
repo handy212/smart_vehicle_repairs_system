@@ -217,6 +217,17 @@ def dashboard_view(request):
             'revenue': float(daily_revenue)
         })
     
+    # Active technicians count
+    active_technicians = User.objects.filter(
+        role='technician',
+        is_active=True
+    ).count()
+    
+    # Serialize chart data for JavaScript
+    import json
+    revenue_chart_json = json.dumps(revenue_chart_data)
+    workorder_stats_json = json.dumps(workorder_stats)
+    
     # Base context for all roles
     context = {
         'user': user,
@@ -225,19 +236,20 @@ def dashboard_view(request):
         'total_customers': total_customers,
         'total_vehicles': total_vehicles,
         'total_appointments': total_appointments,
-        'today_appointments': today_appointments,
-        'active_workorders': active_workorders,
+        'todays_appointments': today_appointments,
+        'active_work_orders': active_workorders,
         'monthly_revenue': monthly_revenue,
-        'pending_invoices_count': pending_invoices_count,
+        'pending_invoices': pending_invoices_count,
         'pending_invoices_amount': f"${pending_invoices_amount:,.2f}",
         'appointments_this_week': appointments_this_week,
-        'low_stock_count': low_stock_count,
+        'low_stock_items_count': low_stock_count,
         'low_stock_items': low_stock_items,
         'recent_appointments': recent_appointments,
         'recent_workorders': recent_workorders,
         'recent_notifications': recent_notifications,
-        'workorder_stats': workorder_stats,
-        'revenue_chart_data': revenue_chart_data,
+        'workorder_stats': workorder_stats_json,
+        'revenue_chart_data': revenue_chart_json,
+        'active_technicians': active_technicians,
     }
     
     # Role-specific context and template selection

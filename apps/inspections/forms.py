@@ -97,6 +97,18 @@ class InspectionForm(forms.ModelForm):
         self.fields['customer'].queryset = Customer.objects.select_related('user').filter(
             user__is_active=True
         ).order_by('user__first_name', 'user__last_name')
+        
+        # If this is an edit form with an existing inspection, set the customer field
+        if self.instance and self.instance.pk and self.instance.vehicle:
+            # Set the customer based on the vehicle's owner
+            self.fields['customer'].initial = self.instance.vehicle.owner
+            
+            # Also filter vehicles to show only those belonging to this customer
+            customer = self.instance.vehicle.owner
+            self.fields['vehicle'].queryset = Vehicle.objects.filter(
+                owner=customer,
+                status='active'
+            ).select_related('owner__user')
 
 
 class InspectionCategoryForm(forms.ModelForm):

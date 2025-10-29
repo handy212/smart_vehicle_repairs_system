@@ -1075,20 +1075,16 @@
                         <div class="form-text">Document any issues found or special notes about the completed work.</div>
                     </div>
                     
-                    <div class="alert alert-warning border-2">
+                    <div class="alert alert-info border-2">
                         <h6 class="alert-heading mb-3">
-                            <i class="fas fa-exclamation-triangle me-2"></i>Final Confirmation Required
+                            <i class="fas fa-clipboard-check me-2"></i>Final Confirmation
                         </h6>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="confirmReadyForCustomer" 
-                                   style="width: 1.5em; height: 1.5em; margin-top: 0.15em;">
-                            <label class="form-check-label ms-2" for="confirmReadyForCustomer" style="font-size: 1.1em;">
-                                <strong>I confirm this vehicle is ready for customer pickup and meets quality standards</strong>
-                            </label>
-                        </div>
+                        <p class="mb-0">
+                            <strong>By submitting this quality check, I confirm this vehicle is ready for customer pickup and meets all quality standards.</strong>
+                        </p>
                         <small class="text-muted d-block mt-2">
                             <i class="fas fa-info-circle me-1"></i>
-                            This confirmation is required before submitting the quality check
+                            Your submission serves as confirmation that all checks have been completed
                         </small>
                     </div>
                     
@@ -1420,16 +1416,11 @@ window.inspectionCompleted = "{{ workorder.inspection_completed|yesno:'true,fals
             const result = formData.get('qc_result');
             const notes = formData.get('notes') || '';
             
-            // Use querySelector within the form for the checkbox
-            const confirmCheckbox = this.querySelector('#confirmReadyForCustomer');
-            
             // Debug logging
             console.log('Quality Check Submission:', {
                 form: !!this,
                 result: result,
-                notes: notes,
-                confirmCheckbox: !!confirmCheckbox,
-                checked: confirmCheckbox?.checked
+                notes: notes
             });
             
             // Validation: Check result selection
@@ -1440,26 +1431,10 @@ window.inspectionCompleted = "{{ workorder.inspection_completed|yesno:'true,fals
                 if (resultSection) {
                     resultSection.closest('.mb-3').scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
-                return false;  // Explicitly return false
+                return false;
             }
-            
-            // Validation: Check confirmation checkbox
-            if (!confirmCheckbox || !confirmCheckbox.checked) {
-                showToast('warning', 'Please check the confirmation checkbox: "I confirm this vehicle is ready for customer pickup"');
-                // Scroll to and highlight the confirmation checkbox
-                const alertBox = this.querySelector('.alert-warning');
-                if (alertBox) {
-                    alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    alertBox.classList.add('border', 'border-danger', 'border-3');
-                    if (confirmCheckbox) {
-                        confirmCheckbox.focus();
-                    }
-                    setTimeout(() => {
-                        alertBox.classList.remove('border', 'border-danger', 'border-3');
-                    }, 3000);
-                }
-                return false;  // Explicitly return false
-            }
+
+            // Submit quality check - no checkbox validation needed
             
             // Submit quality check
         // Prepare data
@@ -1469,7 +1444,8 @@ window.inspectionCompleted = "{{ workorder.inspection_completed|yesno:'true,fals
         };
         
         // Submit quality check
-        fetch(`/api/workorders/{{ workorder.id }}/quality_check/`, {
+        const qualityCheckUrl = `/api/workorders/work-orders/{{ workorder.id }}/quality_check/`;
+        fetch(qualityCheckUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1477,11 +1453,17 @@ window.inspectionCompleted = "{{ workorder.inspection_completed|yesno:'true,fals
             },
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
+        .then(async response => {
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Request failed (${response.status}): ${errorText}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.id || data.status) {
-                const message = result === 'pass' 
-                    ? 'Quality check passed! Work order marked as completed.' 
+                const message = result === 'pass'
+                    ? 'Quality check passed! Work order marked as completed.'
                     : 'Quality check failed. Work order returned to in progress.';
                 showToast('success', message);
                 setTimeout(() => location.reload(), 1500);
@@ -1490,12 +1472,12 @@ window.inspectionCompleted = "{{ workorder.inspection_completed|yesno:'true,fals
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            showToast('danger', 'An error occurred while submitting quality check.');
+            console.error('Quality check submission error:', error);
+            showToast('danger', 'Quality check failed: ' + error.message);
         });
         });
     }
-    
+
     document.getElementById('save-task-btn')?.addEventListener('click', function() {
         const form = document.getElementById('add-task-form');
         const formData = new FormData(form);

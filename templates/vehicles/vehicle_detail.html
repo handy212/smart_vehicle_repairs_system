@@ -3,187 +3,70 @@
 
 {% block title %}{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - Vehicle Details{% endblock %}
 
-{% block extra_css %}
-<style>
-    .vehicle-avatar {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2rem;
-        font-weight: bold;
-        border: 3px solid rgba(255,255,255,0.3);
-    }
-    
-    .info-card {
-        background: white;
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        border: 1px solid #e9ecef;
-    }
-    
-    .info-card h6 {
-        color: #495057;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #f8f9fa;
-    }
-    
-    .stat-item {
-        text-align: center;
-        padding: 1rem;
-        background: #f8f9fa;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-    }
-    
-    .stat-value {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #495057;
-    }
-    
-    .stat-label {
-        font-size: 0.875rem;
-        color: #6c757d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .status-badge {
-        font-size: 0.875rem;
-        padding: 0.5rem 1rem;
-    }
-    
-    .photo-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 1rem;
-    }
-    
-    .photo-item {
-        position: relative;
-        border-radius: 8px;
-        overflow: hidden;
-        cursor: pointer;
-    }
-    
-    .photo-item img {
-        width: 100%;
-        height: 150px;
-        object-fit: cover;
-    }
-    
-    .document-item {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        margin-bottom: 0.5rem;
-        transition: background-color 0.2s;
-    }
-    
-    .document-item:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .timeline-item {
-        position: relative;
-        padding-left: 2rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .timeline-item::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 12px;
-        height: 12px;
-        background: #007bff;
-        border-radius: 50%;
-        border: 3px solid white;
-        box-shadow: 0 0 0 2px #007bff;
-    }
-    
-    .timeline-item::after {
-        content: '';
-        position: absolute;
-        left: 5px;
-        top: 12px;
-        width: 2px;
-        height: calc(100% + 1rem);
-        background: #e9ecef;
-    }
-    
-    .timeline-item:last-child::after {
-        display: none;
-    }
-    
-    .mileage-chart {
-        height: 300px;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid px-4">
-    <!-- Vehicle Header -->
-    <div class="page-header-primary rounded p-4 mb-4">
-        <div class="d-flex justify-content-between align-items-start">
-            <div class="d-flex align-items-center">
-                <div class="vehicle-avatar me-4">
-                    {% if vehicle.image %}
-                        <img src="{{ vehicle.image.url }}" alt="{{ vehicle.display_name }}" class="rounded" style="width: 80px; height: 80px; object-fit: cover;" onerror="this.style.display='none'; this.parentNode.innerHTML='{{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}'">
-                    {% else %}
-                        {{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}
-                    {% endif %}
-                </div>
-                <div>
-                    <h1 class="mb-1">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h1>
-                    {% if vehicle.trim %}
-                        <p class="mb-2 opacity-75">{{ vehicle.trim }}</p>
-                    {% endif %}
-                    <p class="mb-0 opacity-75">
-                        <i class="fas fa-user me-2"></i>{{ vehicle.owner.user.get_full_name }}
-                    </p>
-                    <p class="mb-0 opacity-75">
-                        <i class="fas fa-barcode me-2"></i>{{ vehicle.vin }}
-                    </p>
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'vehicles:vehicle-list' %}">Vehicles</a></li>
+            <li class="breadcrumb-item active">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</li>
+        </ol>
+    </nav>
+
+    <div class="page-header-card profile-header-card shadow-sm mb-4">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center gap-4">
+                    <div class="vehicle-avatar">
+                        {% if vehicle.image %}
+                            <img src="{{ vehicle.image.url }}" alt="{{ vehicle.display_name }}" onerror="this.remove(); this.parentNode.textContent='{{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}';">
+                        {% else %}
+                            {{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}
+                        {% endif %}
+                    </div>
+                    <div>
+                        <span class="badge-soft badge-soft-primary fw-semibold text-uppercase px-3 py-2">Vehicle Profile</span>
+                        <h1 class="page-title mt-3 mb-1">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h1>
+                        {% if vehicle.trim %}
+                            <p class="page-subtitle mb-2">{{ vehicle.trim }}</p>
+                        {% endif %}
+                        <div class="d-flex flex-wrap gap-3 small text-white-50">
+                            <span><i class="fas fa-user me-2"></i>{{ vehicle.owner.user.get_full_name }}</span>
+                            <span><i class="fas fa-barcode me-2"></i>{{ vehicle.vin }}</span>
+                            <span><i class="fas fa-id-card me-2"></i>{{ vehicle.license_plate }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="text-end">
-                {% if vehicle.status == 'active' %}
-                    <span class="badge bg-success status-badge">Active</span>
-                {% elif vehicle.status == 'in_service' %}
-                    <span class="badge bg-warning status-badge">In Service</span>
-                {% elif vehicle.status == 'sold' %}
-                    <span class="badge bg-info status-badge">Sold</span>
-                {% elif vehicle.status == 'totaled' %}
-                    <span class="badge bg-danger status-badge">Totaled</span>
-                {% else %}
-                    <span class="badge bg-secondary status-badge">{{ vehicle.get_status_display }}</span>
-                {% endif %}
-                <div class="mt-3">
-                    <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" class="btn btn-light btn-sm me-2">
-                        <i class="fas fa-edit"></i> Edit
-                    </a>
-                    <a href="{% url 'vehicles:vehicle-service-history' vehicle.id %}" class="btn btn-light btn-sm">
-                        <i class="fas fa-history"></i> Service History
-                    </a>
+            <div class="col-lg-4 text-lg-end">
+                <div class="d-flex flex-column align-items-lg-end gap-3">
+                    <div>
+                        {% if vehicle.status == 'active' %}
+                            <span class="badge-soft badge-soft-success">Active</span>
+                        {% elif vehicle.status == 'in_service' %}
+                            <span class="badge-soft badge-soft-warning">In Service</span>
+                        {% elif vehicle.status == 'sold' %}
+                            <span class="badge-soft badge-soft-info">Sold</span>
+                        {% elif vehicle.status == 'totaled' %}
+                            <span class="badge-soft badge-soft-danger">Totaled</span>
+                        {% else %}
+                            <span class="badge-soft badge-soft-muted">{{ vehicle.get_status_display }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="page-actions d-flex flex-wrap justify-content-lg-end gap-2">
+                        <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" class="btn btn-light">
+                            <i class="fas fa-edit me-2"></i>Edit Vehicle
+                        </a>
+                        <a href="{% url 'vehicles:vehicle-service-history' vehicle.id %}" class="btn btn-contrast">
+                            <i class="fas fa-history me-2"></i>Service History
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
+    <div class="row g-4">
         <!-- Left Column - Main Details -->
         <div class="col-lg-8">
             <!-- Basic Information -->
@@ -322,25 +205,31 @@
             <div class="info-card">
                 <h6><i class="fas fa-wrench me-2"></i>Recent Service History</h6>
                 {% if recent_work_orders %}
-                    <div class="timeline">
+                    <div class="timeline-modern">
                         {% for work_order in recent_work_orders %}
-                        <div class="timeline-item">
-                            <div class="d-flex justify-content-between align-items-start">
+                        <article class="timeline-card">
+                            <span class="timeline-marker {% if work_order.status == 'completed' %}is-success{% elif work_order.status == 'in_progress' %}is-warning{% elif work_order.status == 'cancelled' %}is-danger{% else %}is-info{% endif %}"></span>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
-                                    <h6 class="mb-1">Work Order #{{ work_order.work_order_number }}</h6>
-                                    <p class="mb-1 text-muted">{{ work_order.description|truncatewords:15 }}</p>
-                                    <small class="text-muted">
-                                        <i class="fas fa-calendar me-1"></i>{{ work_order.created_at|date:"M d, Y" }}
-                                        {% if work_order.technician %}
-                                            <i class="fas fa-user ms-2 me-1"></i>{{ work_order.technician.get_full_name }}
-                                        {% endif %}
-                                    </small>
+                                    <h5 class="mb-1">Work Order #{{ work_order.work_order_number }}</h5>
+                                    <div class="timeline-meta">
+                                        {{ work_order.created_at|date:"M d, Y" }}
+                                        {% with tech=work_order.primary_technician|default:work_order.technician %}
+                                            {% if tech %}
+                                                &middot; {% if tech.user %}{{ tech.user.get_full_name }}{% else %}{{ tech.get_full_name|default:tech }}{% endif %}
+                                            {% endif %}
+                                        {% endwith %}
+                                    </div>
                                 </div>
-                                <div class="text-end">
-                                    <span class="badge bg-primary">${{ work_order.actual_total|floatformat:2 }}</span>
-                                </div>
+                                {% if work_order.actual_total %}
+                                <span class="badge-soft badge-soft-success">${{ work_order.actual_total|floatformat:2 }}</span>
+                                {% endif %}
                             </div>
-                        </div>
+                            {% if work_order.description %}
+                            <p class="text-muted mb-2">{{ work_order.description|truncatewords:20 }}</p>
+                            {% endif %}
+                            <div class="timeline-meta">Mileage {{ work_order.mileage_at_service|default:vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</div>
+                        </article>
                         {% endfor %}
                     </div>
                     <div class="text-center mt-3">
@@ -446,7 +335,6 @@
             </div>
             {% endif %}
             <!-- Notes -->
-            <!-- Notes -->
             {% if vehicle.notes %}
             <div class="info-card">
                 <h6><i class="fas fa-sticky-note me-2"></i>Notes</h6>
@@ -458,16 +346,16 @@
             <div class="info-card">
                 <h6><i class="fas fa-tools me-2"></i>Quick Actions</h6>
                 <div class="d-grid gap-2">
-                    <a href="#" class="btn btn-outline-primary">
+                    <button class="btn btn-outline-primary" type="button" disabled>
                         <i class="fas fa-plus me-2"></i>New Work Order
-                    </a>
-                    <a href="#" class="btn btn-outline-success">
+                    </button>
+                    <button class="btn btn-outline-success" type="button" disabled>
                         <i class="fas fa-calendar me-2"></i>Schedule Service
-                    </a>
-                    <button class="btn btn-outline-info" onclick="uploadPhoto()">
+                    </button>
+                    <button class="btn btn-outline-info" type="button" onclick="uploadPhoto()">
                         <i class="fas fa-camera me-2"></i>Upload Photo
                     </button>
-                    <button class="btn btn-outline-secondary" onclick="uploadDocument()">
+                    <button class="btn btn-outline-secondary" type="button" onclick="uploadDocument()">
                         <i class="fas fa-file-upload me-2"></i>Upload Document
                     </button>
                 </div>

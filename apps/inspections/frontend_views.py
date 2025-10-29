@@ -279,7 +279,7 @@ def inspection_edit(request, pk):
         'is_edit': True,
     }
     
-    return render(request, 'inspections/inspection_form.html', context)
+    return render(request, 'inspections/inspection_form_new.html', context)
 
 
 @login_required

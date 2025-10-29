@@ -4,43 +4,43 @@ Usage: {% include 'workorders/partials/status_badge.html' with status=workorder.
 {% endcomment %}
 
 {% if status == 'draft' %}
-    <span class="badge bg-secondary status-badge">Draft</span>
+    <span class="status-badge badge-soft badge-soft-secondary">Draft</span>
 {% elif status == 'inspection' %}
-    <span class="badge bg-primary status-badge">
+    <span class="status-badge badge-soft badge-soft-primary">
         <i class="fas fa-search me-1"></i>Initial Inspection
     </span>
 {% elif status == 'intake' %}
-    <span class="badge bg-info status-badge">Intake</span>
+    <span class="status-badge badge-soft badge-soft-info">Intake</span>
 {% elif status == 'diagnosis' %}
-    <span class="badge bg-warning status-badge">Diagnosis</span>
+    <span class="status-badge badge-soft badge-soft-warning">Diagnosis</span>
 {% elif status == 'awaiting_approval' %}
-    <span class="badge bg-primary status-badge">Awaiting Approval</span>
+    <span class="status-badge badge-soft badge-soft-primary">Awaiting Approval</span>
 {% elif status == 'approved' %}
-    <span class="badge bg-success status-badge">Approved</span>
+    <span class="status-badge badge-soft badge-soft-success">Approved</span>
 {% elif status == 'in_progress' %}
-    <span class="badge bg-warning status-badge">
+    <span class="status-badge badge-soft badge-soft-warning">
         <i class="fas fa-spinner fa-spin me-1"></i>In Progress
     </span>
 {% elif status == 'paused' %}
-    <span class="badge bg-secondary status-badge">
+    <span class="status-badge badge-soft badge-soft-secondary">
         <i class="fas fa-pause me-1"></i>Paused
     </span>
 {% elif status == 'quality_check' %}
-    <span class="badge bg-info status-badge">
+    <span class="status-badge badge-soft badge-soft-info">
         <i class="fas fa-search me-1"></i>Quality Check
     </span>
 {% elif status == 'completed' %}
-    <span class="badge bg-success status-badge">
+    <span class="status-badge badge-soft badge-soft-success">
         <i class="fas fa-check me-1"></i>Completed
     </span>
 {% elif status == 'invoiced' %}
-    <span class="badge bg-dark status-badge">
+    <span class="status-badge badge-soft badge-soft-dark">
         <i class="fas fa-file-invoice me-1"></i>Invoiced
     </span>
 {% elif status == 'closed' %}
-    <span class="badge bg-secondary status-badge">
+    <span class="status-badge badge-soft badge-soft-secondary">
         <i class="fas fa-lock me-1"></i>Closed
     </span>
 {% else %}
-    <span class="badge bg-secondary status-badge">{{ status|title }}</span>
+    <span class="status-badge badge-soft badge-soft-secondary">{{ status|title }}</span>
 {% endif %}

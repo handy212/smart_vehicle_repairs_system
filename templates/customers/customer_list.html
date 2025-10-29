@@ -1,111 +1,84 @@
 {% extends 'base.html' %}
 {% load static %}
 
+
 {% block title %}Customers - Smart Vehicle Repairs{% endblock %}
 {% block page_title %}Customer Management{% endblock %}
 
-{% block extra_css %}
-<style>
-    .customer-card {
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .customer-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    .status-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-    }
-    .filter-section {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 1.5rem;
-    }
-    .table-actions {
-        white-space: nowrap;
-    }
-</style>
-{% endblock %}
+
 
 {% block content %}
 <div class="container-fluid">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1"><i class="fas fa-users text-primary me-2"></i> Customers</h1>
-            <p class="text-muted mb-0">Manage customer accounts and information</p>
-        </div>
-        <div>
-            <button class="btn btn-outline-secondary me-2" onclick="exportCustomers()">
-                <i class="fas fa-download me-2"></i> Export
-            </button>
-            <a href="{% url 'customers:customer-create' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i> Add Customer
-            </a>
+    <div class="page-header-card shadow-sm mb-4">
+        <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+                <div class="d-inline-flex align-items-center gap-3">
+                    <span class="badge bg-white text-primary fw-semibold text-uppercase px-3 py-2 shadow-sm">Customers</span>
+                </div>
+                <h1 class="page-title mt-3 mb-2">Customer Directory</h1>
+                <p class="page-subtitle">Manage relationships, track account health, and move quickly on follow-ups.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <div class="page-actions d-flex justify-content-lg-end gap-2 flex-wrap">
+                    <a href="{% url 'customers:customer-export' %}" class="btn btn-light">
+                        <i class="fas fa-file-arrow-down me-2"></i> Export CSV
+                    </a>
+                    <a href="{% url 'customers:customer-create' %}" class="btn btn-contrast">
+                        <i class="fas fa-plus me-2"></i> Add Customer
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Total Customers</h6>
-                            <h2 class="mb-0">{{ total_customers|default:0 }}</h2>
-                        </div>
-                        <div class="fs-1 opacity-50">
-                            <i class="fas fa-users"></i>
-                        </div>
-                    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-xxl-3 col-sm-6">
+            <div class="stat-card shadow-sm h-100">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div>
+                    <p class="stat-label">Total Customers</p>
+                    <p class="stat-value">{{ total_customers|default:0 }}</p>
+                    <p class="stat-meta">{{ active_customers|default:0 }} active accounts</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Active</h6>
-                            <h2 class="mb-0">{{ active_customers|default:0 }}</h2>
-                        </div>
-                        <div class="fs-1 opacity-50">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                    </div>
+        <div class="col-xxl-3 col-sm-6">
+            <div class="stat-card is-success shadow-sm h-100">
+                <div class="stat-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div>
+                    <p class="stat-label">Active Customers</p>
+                    <p class="stat-value">{{ active_customers|default:0 }}</p>
+                    <p class="stat-meta">Active rate {{ active_rate|default:0|floatformat:1 }}%</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">New This Month</h6>
-                            <h2 class="mb-0">{{ new_customers|default:0 }}</h2>
-                        </div>
-                        <div class="fs-1 opacity-50">
-                            <i class="fas fa-user-plus"></i>
-                        </div>
-                    </div>
+        <div class="col-xxl-3 col-sm-6">
+            <div class="stat-card is-neutral shadow-sm h-100">
+                <div class="stat-icon">
+                    <i class="fas fa-user-clock"></i>
+                </div>
+                <div>
+                    <p class="stat-label">Inactive Queue</p>
+                    <p class="stat-value">{{ inactive_customers|default:0 }}</p>
+                    <p class="stat-meta">Ready for follow-up</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Fleet Accounts</h6>
-                            <h2 class="mb-0">{{ fleet_customers|default:0 }}</h2>
-                        </div>
-                        <div class="fs-1 opacity-50">
-                            <i class="fas fa-truck"></i>
-                        </div>
-                    </div>
+        <div class="col-xxl-3 col-sm-6">
+            <div class="stat-card is-warning shadow-sm h-100">
+                <div class="stat-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <div>
+                    <p class="stat-label">New This Month</p>
+                    <p class="stat-value">{{ new_this_month|default:0 }}</p>
+                    <p class="stat-meta">Avg {{ average_vehicle_count|default:0|floatformat:1 }} vehicles / customer</p>
                 </div>
             </div>
         </div>
@@ -114,13 +87,16 @@
     <!-- Filters -->
     <div class="filter-section">
         <form method="get" id="filterForm">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label small fw-bold">Search</label>
-                    <input type="text" name="search" class="form-control" placeholder="Name, email, phone..." value="{{ request.GET.search }}">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-lg-4 col-xl-4">
+                    <label class="form-label">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent text-muted"><i class="fas fa-search"></i></span>
+                        <input type="text" name="search" class="form-control" placeholder="Name, email, phone..." value="{{ request.GET.search }}">
+                    </div>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold">Type</label>
+                <div class="col-6 col-lg-2 col-xl-2">
+                    <label class="form-label">Type</label>
                     <select name="customer_type" class="form-select">
                         <option value="">All Types</option>
                         <option value="individual" {% if request.GET.customer_type == 'individual' %}selected{% endif %}>Individual</option>
@@ -128,17 +104,17 @@
                         <option value="fleet" {% if request.GET.customer_type == 'fleet' %}selected{% endif %}>Fleet</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold">Status</label>
+                <div class="col-6 col-lg-2 col-xl-2">
+                    <label class="form-label">Status</label>
                     <select name="status" class="form-select">
-                        <option value="">All Status</option>
+                        <option value="">All Statuses</option>
                         <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
                         <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
                         <option value="suspended" {% if request.GET.status == 'suspended' %}selected{% endif %}>Suspended</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small fw-bold">Sort By</label>
+                <div class="col-6 col-lg-2 col-xl-2">
+                    <label class="form-label">Sort By</label>
                     <select name="sort" class="form-select">
                         <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Newest First</option>
                         <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>Oldest First</option>
@@ -146,14 +122,21 @@
                         <option value="-user__first_name" {% if request.GET.sort == '-user__first_name' %}selected{% endif %}>Name Z-A</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-bold">&nbsp;</label>
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary flex-fill">
-                            <i class="fas fa-filter me-1"></i> Filter
+                <div class="col-6 col-lg-2 col-xl-2">
+                    <label class="form-label">Customer Since</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                </div>
+                <div class="col-6 col-lg-2 col-xl-2">
+                    <label class="form-label">To</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                </div>
+                <div class="col-12 col-lg-4 col-xl-4">
+                    <div class="filter-actions justify-content-lg-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sliders-h me-2"></i>Apply Filters
                         </button>
                         <a href="{% url 'customers:customer-list' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times"></i>
+                            <i class="fas fa-undo me-2"></i>Reset
                         </a>
                     </div>
                 </div>
@@ -164,26 +147,33 @@
     <!-- Customers Table -->
     <div class="card">
         <div class="card-header bg-white">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Customer List ({{ customers.count }})</h5>
-                <div class="btn-group btn-group-sm" role="group">
-                    <button type="button" class="btn btn-outline-secondary active" onclick="showTableView()">
-                        <i class="fas fa-list"></i> Table
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" onclick="showCardView()">
-                        <i class="fas fa-th-large"></i> Cards
-                    </button>
+            <div class="card-toolbar w-100">
+                <div>
+                    <h5 class="mb-1">Customer List</h5>
+                    {% if customers.paginator.count > 0 %}
+                        <div class="table-meta">Showing {{ customers.start_index }}-{{ customers.end_index }} of {{ customers.paginator.count }}</div>
+                    {% else %}
+                        <div class="table-meta">No customers yet</div>
+                    {% endif %}
+                </div>
+                <div class="ms-auto view-toggle" role="group">
+                    <input type="radio" class="btn-check" name="viewToggle" id="viewToggleTable" data-view-target="table" autocomplete="off" checked>
+                    <label class="btn btn-outline-secondary active" for="viewToggleTable"><i class="fas fa-table me-1"></i>Table</label>
+                    <input type="radio" class="btn-check" name="viewToggle" id="viewToggleCards" data-view-target="card" autocomplete="off">
+                    <label class="btn btn-outline-secondary" for="viewToggleCards"><i class="fas fa-th-large me-1"></i>Cards</label>
                 </div>
             </div>
         </div>
         <div class="card-body p-0">
             <!-- Table View -->
             <div id="tableView" class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light">
+                <table class="table table-modern table-hover align-middle mb-0">
+                    <thead>
                         <tr>
-                            <th>
-                                <input type="checkbox" id="selectAll">
+                            <th class="ps-3" style="width: 48px;">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" id="selectAll">
+                                </div>
                             </th>
                             <th>Customer</th>
                             <th>Type</th>
@@ -196,12 +186,14 @@
                     <tbody>
                         {% for customer in customers %}
                         <tr>
-                            <td>
-                                <input type="checkbox" class="customer-checkbox" value="{{ customer.id }}">
+                            <td class="ps-3">
+                                <div class="form-check mb-0">
+                                    <input type="checkbox" class="form-check-input customer-checkbox" value="{{ customer.id }}">
+                                </div>
                             </td>
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <div class="avatar-circle bg-primary text-white me-2" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                                    <div class="avatar-initials me-3">
                                         {{ customer.user.first_name.0|upper }}{{ customer.user.last_name.0|upper }}
                                     </div>
                                     <div>
@@ -211,7 +203,7 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="badge bg-secondary">{{ customer.get_customer_type_display }}</span>
+                                <span class="badge-soft badge-soft-primary">{{ customer.get_customer_type_display }}</span>
                             </td>
                             <td>
                                 <div class="small">
@@ -220,15 +212,15 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="badge bg-info">{{ customer.vehicles.count }} vehicle{{ customer.vehicles.count|pluralize }}</span>
+                                <span class="badge-soft badge-soft-info">{{ customer.vehicles.count }} vehicle{{ customer.vehicles.count|pluralize }}</span>
                             </td>
                             <td>
                                 {% if customer.status == 'active' %}
-                                    <span class="badge bg-success">Active</span>
+                                    <span class="badge-soft badge-soft-success">Active</span>
                                 {% elif customer.status == 'inactive' %}
-                                    <span class="badge bg-secondary">Inactive</span>
+                                    <span class="badge-soft badge-soft-muted">Inactive</span>
                                 {% else %}
-                                    <span class="badge bg-danger">Suspended</span>
+                                    <span class="badge-soft badge-soft-danger">{{ customer.get_status_display }}</span>
                                 {% endif %}
                             </td>
                             <td class="text-end table-actions">
@@ -238,7 +230,7 @@
                                 <a href="{% url 'customers:customer-edit' customer.id %}" class="btn btn-sm btn-outline-secondary" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button class="btn btn-sm btn-outline-danger" title="Delete" onclick="confirmDelete({{ customer.id }}, '{{ customer.user.get_full_name|escapejs }}')">
+                                <button class="btn btn-sm btn-outline-danger js-delete-trigger" type="button" title="Delete" data-customer-id="{{ customer.id }}" data-customer-name="{{ customer.user.get_full_name|escape }}">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -257,30 +249,30 @@
             </div>
 
             <!-- Card View (Hidden by default) -->
-            <div id="cardView" class="row g-3 p-3" style="display: none;">
+            <div id="cardView" class="row g-3 p-3 d-none">
                 {% for customer in customers %}
                 <div class="col-md-6 col-lg-4">
                     <div class="card customer-card h-100">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-3">
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-circle bg-primary text-white me-2" style="width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="avatar-initials">
                                         {{ customer.user.first_name.0|upper }}{{ customer.user.last_name.0|upper }}
                                     </div>
                                     <div>
-                                        <h6 class="mb-0">{{ customer.user.get_full_name }}</h6>
-                                        <small class="text-muted">{{ customer.get_customer_type_display }}</small>
+                                        <h6 class="mb-1">{{ customer.user.get_full_name }}</h6>
+                                        <span class="badge-soft badge-soft-primary">{{ customer.get_customer_type_display }}</span>
                                     </div>
                                 </div>
                                 {% if customer.status == 'active' %}
-                                    <span class="badge bg-success">Active</span>
+                                    <span class="badge-soft badge-soft-success">Active</span>
+                                {% elif customer.status == 'inactive' %}
+                                    <span class="badge-soft badge-soft-muted">Inactive</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">{{ customer.get_status_display }}</span>
+                                    <span class="badge-soft badge-soft-danger">{{ customer.get_status_display }}</span>
                                 {% endif %}
                             </div>
-                            
-                            <hr>
-                            
+
                             <div class="small mb-3">
                                 <div class="mb-2"><i class="fas fa-envelope text-muted me-2"></i> {{ customer.user.email }}</div>
                                 <div class="mb-2"><i class="fas fa-phone text-muted me-2"></i> {{ customer.user.phone|default:"N/A" }}</div>
@@ -289,13 +281,14 @@
                                 <div class="mb-2"><i class="fas fa-building text-muted me-2"></i> {{ customer.company_name }}</div>
                                 {% endif %}
                             </div>
-                            
-                            <div class="d-flex justify-content-between align-items-center mt-3">
-                                <div>
-                                    <small class="text-muted">{{ customer.vehicles.count }} vehicle{{ customer.vehicles.count|pluralize }}</small>
-                                </div>
-                                <div>
-                                    <a href="{% url 'customers:customer-detail' customer.id %}" class="btn btn-sm btn-primary">View</a>
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="text-muted small">{{ customer.vehicles.count }} vehicle{{ customer.vehicles.count|pluralize }}</div>
+                                <div class="d-flex gap-2">
+                                    <a href="{% url 'customers:customer-detail' customer.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                                    <button class="btn btn-sm btn-outline-danger js-delete-trigger" type="button" data-customer-id="{{ customer.id }}" data-customer-name="{{ customer.user.get_full_name|escape }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -370,52 +363,50 @@
 
 {% block extra_js %}
 <script>
-    // Select all checkboxes
-    document.getElementById('selectAll')?.addEventListener('change', function() {
-        const checkboxes = document.querySelectorAll('.customer-checkbox');
-        checkboxes.forEach(cb => cb.checked = this.checked);
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectAll = document.getElementById('selectAll');
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                document.querySelectorAll('.customer-checkbox').forEach(cb => {
+                    cb.checked = selectAll.checked;
+                });
+            });
+        }
+
+        document.querySelectorAll('[data-view-target]').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                if (!this.checked) {
+                    return;
+                }
+                const target = this.getAttribute('data-view-target');
+                const tableView = document.getElementById('tableView');
+                const cardView = document.getElementById('cardView');
+                if (tableView && cardView) {
+                    tableView.classList.toggle('d-none', target !== 'table');
+                    cardView.classList.toggle('d-none', target !== 'card');
+                }
+                document.querySelectorAll('.view-toggle label.btn').forEach(label => label.classList.remove('active'));
+                const activeLabel = document.querySelector(`label[for="${this.id}"]`);
+                activeLabel?.classList.add('active');
+            });
+        });
+
+        document.querySelectorAll('#filterForm select').forEach(select => {
+            select.addEventListener('change', () => document.getElementById('filterForm').submit());
+        });
+
+        document.querySelectorAll('.js-delete-trigger').forEach(button => {
+            button.addEventListener('click', () => {
+                confirmDelete(button.dataset.customerId, button.dataset.customerName);
+            });
+        });
     });
 
-    // Toggle view
-    function showTableView() {
-        document.getElementById('tableView').style.display = 'block';
-        document.getElementById('cardView').style.display = 'none';
-        
-        // Update button states
-        document.querySelectorAll('.btn-group button').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
-    }
-
-    function showCardView() {
-        document.getElementById('tableView').style.display = 'none';
-        document.getElementById('cardView').style.display = 'block';
-        
-        // Update button states
-        document.querySelectorAll('.btn-group button').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
-    }
-
-    // Delete confirmation
     function confirmDelete(customerId, customerName) {
         document.getElementById('customerName').textContent = customerName;
         const deleteForm = document.getElementById('deleteForm');
         deleteForm.action = `/customers/${customerId}/delete/`;
         new bootstrap.Modal(document.getElementById('deleteModal')).show();
     }
-
-    // Export customers
-    function exportCustomers() {
-        const format = prompt('Export as (csv/pdf):', 'csv');
-        if (format) {
-            window.location.href = `/customers/export/?format=${format}`;
-        }
-    }
-
-    // Auto-submit filter form on select change
-    document.querySelectorAll('#filterForm select').forEach(select => {
-        select.addEventListener('change', function() {
-            document.getElementById('filterForm').submit();
-        });
-    });
 </script>
 {% endblock %}

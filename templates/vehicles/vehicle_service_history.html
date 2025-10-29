@@ -3,422 +3,296 @@
 
 {% block title %}Service History - {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - Smart Vehicle Repairs{% endblock %}
 
-{% block extra_css %}
-<style>
-    .vehicle-header {
-        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-        color: white;
-        border-radius: 12px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-    }
-    
-    .service-timeline {
-        position: relative;
-        padding-left: 2rem;
-    }
-    
-    .service-timeline::before {
-        content: '';
-        position: absolute;
-        left: 1rem;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: #e9ecef;
-    }
-    
-    .timeline-item {
-        position: relative;
-        margin-bottom: 2rem;
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    
-    .timeline-item:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    }
-    
-    .timeline-marker {
-        position: absolute;
-        left: -2.5rem;
-        top: 1.5rem;
-        width: 1rem;
-        height: 1rem;
-        border-radius: 50%;
-        background: #fff;
-        border: 3px solid;
-        z-index: 2;
-    }
-    
-    .timeline-marker.completed { border-color: #28a745; }
-    .timeline-marker.in-progress { border-color: #ffc107; }
-    .timeline-marker.pending { border-color: #6c757d; }
-    .timeline-marker.cancelled { border-color: #dc3545; }
-    
-    .service-card {
-        padding: 1.5rem;
-    }
-    
-    .service-status {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.875rem;
-        font-weight: 500;
-    }
-    
-    .status-completed { background: #d4edda; color: #155724; }
-    .status-in-progress { background: #fff3cd; color: #856404; }
-    .status-pending { background: #f8f9fa; color: #6c757d; }
-    .status-cancelled { background: #f8d7da; color: #721c24; }
-    
-    .mileage-badge {
-        background: #e3f2fd;
-        color: #1976d2;
-        padding: 0.25rem 0.5rem;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        font-weight: 500;
-    }
-    
-    .cost-display {
-        font-size: 1.25rem;
-        font-weight: bold;
-        color: #28a745;
-    }
-    
-    .stats-card {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 1.5rem;
-        text-align: center;
-        border: 1px solid #e9ecef;
-    }
-    
-    .filter-tabs {
-        background: #fff;
-        border-radius: 8px;
-        padding: 1rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        margin-bottom: 2rem;
-    }
-    
-    .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: #6c757d;
-    }
-    
-    .maintenance-indicator {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 0.5rem;
-    }
-    
-    .maintenance-routine { background: #28a745; }
-    .maintenance-repair { background: #dc3545; }
-    .maintenance-inspection { background: #17a2b8; }
-    .maintenance-other { background: #6c757d; }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid px-4">
-    <!-- Vehicle Header -->
-    <div class="vehicle-header">
-        <div class="d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center">
-                <div class="me-4">
-                    <i class="fas fa-history fa-2x"></i>
-                </div>
-                <div>
-                    <h2 class="mb-1">Service History</h2>
-                    <h4 class="mb-0 opacity-75">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h4>
-                    <p class="mb-0 opacity-50">VIN: {{ vehicle.vin }}</p>
-                </div>
-            </div>
-            <div class="text-end">
-                <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-light btn-lg">
-                    <i class="fas fa-arrow-left me-2"></i>Back to Vehicle
-                </a>
-            </div>
-        </div>
-    </div>
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'vehicles:vehicle-list' %}">Vehicles</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'vehicles:vehicle-detail' vehicle.id %}">Vehicle Detail</a></li>
+            <li class="breadcrumb-item active">Service History</li>
+        </ol>
+    </nav>
 
-    <!-- Service Statistics -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="display-6 text-primary mb-2">{{ total_services }}</div>
-                <div class="fw-bold">Total Services</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="display-6 text-success mb-2">${{ total_cost|floatformat:2 }}</div>
-                <div class="fw-bold">Total Cost</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="display-6 text-info mb-2">{{ avg_interval|floatformat:0 }}</div>
-                <div class="fw-bold">Avg Days Between Services</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="display-6 text-warning mb-2">{{ last_service_days }}</div>
-                <div class="fw-bold">Days Since Last Service</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filter Controls -->
-    <div class="filter-tabs">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <div class="btn-group" role="group" aria-label="Service type filter">
-                    <input type="radio" class="btn-check" name="serviceFilter" id="all" value="all" checked>
-                    <label class="btn btn-outline-primary" for="all">All Services</label>
-                    
-                    <input type="radio" class="btn-check" name="serviceFilter" id="routine" value="routine">
-                    <label class="btn btn-outline-success" for="routine">
-                        <span class="maintenance-indicator maintenance-routine"></span>Routine
-                    </label>
-                    
-                    <input type="radio" class="btn-check" name="serviceFilter" id="repair" value="repair">
-                    <label class="btn btn-outline-danger" for="repair">
-                        <span class="maintenance-indicator maintenance-repair"></span>Repairs
-                    </label>
-                    
-                    <input type="radio" class="btn-check" name="serviceFilter" id="inspection" value="inspection">
-                    <label class="btn btn-outline-info" for="inspection">
-                        <span class="maintenance-indicator maintenance-inspection"></span>Inspections
-                    </label>
+    <div class="page-header-card profile-header-card shadow-sm mb-4">
+        <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+                <span class="badge-soft badge-soft-primary fw-semibold text-uppercase px-3 py-2">Vehicle</span>
+                <h1 class="page-title mt-3 mb-2">Service History</h1>
+                <p class="page-subtitle">Track every maintenance milestone and repair action logged for this vehicle.</p>
+                <div class="d-flex flex-wrap gap-3 mt-3 small text-white-50">
+                    <span><i class="fas fa-car-side me-2"></i>{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</span>
+                    <span><i class="fas fa-barcode me-2"></i>{{ vehicle.vin }}</span>
+                    <span><i class="fas fa-user me-2"></i>{{ vehicle.owner.user.get_full_name }}</span>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="d-flex justify-content-end">
-                    <div class="me-3">
-                        <select class="form-select" id="yearFilter">
-                            <option value="">All Years</option>
-                            {% for year in service_years %}
-                            <option value="{{ year }}">{{ year }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <button class="btn btn-success" onclick="exportServiceHistory()">
-                        <i class="fas fa-download me-2"></i>Export
+            <div class="col-lg-4 text-lg-end">
+                <div class="page-actions d-flex justify-content-lg-end gap-2 flex-wrap">
+                    <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Vehicle
+                    </a>
+                    <button type="button" class="btn btn-contrast" onclick="exportServiceHistory()">
+                        <i class="fas fa-download me-2"></i>Export PDF
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row">
-        <!-- Service Timeline -->
-        <div class="col-lg-8">
-            {% if work_orders %}
-            <div class="service-timeline">
-                {% for work_order in work_orders %}
-                <div class="timeline-item" 
-                     data-service-type="{{ work_order.service_type|lower }}" 
-                     data-year="{{ work_order.created_at.year }}">
-                    <div class="timeline-marker {{ work_order.status|lower }}"></div>
-                    
-                    <div class="service-card">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div>
-                                <h5 class="mb-1">
-                                    {% if work_order.service_type == 'routine' %}
-                                        <i class="fas fa-tools text-success me-2"></i>
-                                    {% elif work_order.service_type == 'repair' %}
-                                        <i class="fas fa-wrench text-danger me-2"></i>
-                                    {% elif work_order.service_type == 'inspection' %}
-                                        <i class="fas fa-search text-info me-2"></i>
-                                    {% else %}
-                                        <i class="fas fa-cog text-secondary me-2"></i>
-                                    {% endif %}
-                                    {{ work_order.title }}
-                                </h5>
-                                <div class="text-muted small">
-                                    Work Order #{{ work_order.work_order_number }}
-                                </div>
-                            </div>
-                            <div class="text-end">
-                                <div class="service-status status-{{ work_order.status|lower }}">
-                                    {{ work_order.get_status_display }}
-                                </div>
-                                {% if work_order.total_cost %}
-                                <div class="cost-display mt-1">${{ work_order.total_cost|floatformat:2 }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <small class="text-muted">Date:</small><br>
-                                <strong>{{ work_order.created_at|date:"M d, Y" }}</strong>
-                            </div>
-                            <div class="col-md-4">
-                                <small class="text-muted">Mileage:</small><br>
-                                <span class="mileage-badge">
-                                    {{ work_order.mileage_at_service|floatformat:0 }} {{ vehicle.mileage_unit }}
-                                </span>
-                            </div>
-                            <div class="col-md-4">
-                                <small class="text-muted">Technician:</small><br>
-                                <strong>{{ work_order.assigned_technician.user.get_full_name|default:"Not Assigned" }}</strong>
-                            </div>
-                        </div>
-                        
-                        {% if work_order.description %}
-                        <div class="mb-3">
-                            <small class="text-muted">Description:</small><br>
-                            <p class="mb-0">{{ work_order.description|truncatewords:20 }}</p>
-                        </div>
-                        {% endif %}
-                        
-                        <!-- Service Items -->
-                        {% if work_order.service_items.exists %}
-                        <div class="mb-3">
-                            <small class="text-muted">Services Performed:</small>
-                            <ul class="list-unstyled mt-1">
-                                {% for item in work_order.service_items.all|slice:":3" %}
-                                <li class="small">
-                                    <i class="fas fa-check text-success me-1"></i>
-                                    {{ item.service_name }}
-                                    {% if item.cost %}
-                                        <span class="text-success fw-bold">${{ item.cost|floatformat:2 }}</span>
-                                    {% endif %}
-                                </li>
-                                {% endfor %}
-                                {% if work_order.service_items.count > 3 %}
-                                <li class="small text-muted">
-                                    <i class="fas fa-ellipsis-h me-1"></i>
-                                    {{ work_order.service_items.count|add:"-3" }} more item{{ work_order.service_items.count|add:"-3"|pluralize }}
-                                </li>
-                                {% endif %}
-                            </ul>
-                        </div>
-                        {% endif %}
-                        
-                        <!-- Parts Used -->
-                        {% if work_order.parts_used.exists %}
-                        <div class="mb-3">
-                            <small class="text-muted">Parts Used:</small>
-                            <div class="mt-1">
-                                {% for part in work_order.parts_used.all|slice:":2" %}
-                                <span class="badge bg-light text-dark me-1">{{ part.part_name }}</span>
-                                {% endfor %}
-                                {% if work_order.parts_used.count > 2 %}
-                                <span class="badge bg-secondary">+{{ work_order.parts_used.count|add:"-2" }} more</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% endif %}
-                        
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="text-muted small">
-                                {% if work_order.completion_date %}
-                                    Completed: {{ work_order.completion_date|date:"M d, Y" }}
-                                {% else %}
-                                    Created: {{ work_order.created_at|date:"M d, Y g:i A" }}
-                                {% endif %}
-                            </div>
-                            <a href="#" class="btn btn-sm btn-outline-primary disabled" title="Work order details (coming soon)">
-                                <i class="fas fa-eye me-1"></i>View Details
-                            </a>
-                        </div>
+    <div class="row g-3 mb-4">
+        <div class="col-xxl-3 col-sm-6">
+            <div class="stat-card shadow-sm h-100">
+                <div class="stat-icon">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div>
+                    <p class="stat-label">Total Services</p>
+                    <p class="stat-value">{{ total_services|default:0 }}</p>
+                    <p class="stat-meta">Logged work orders</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xxl-3 col-sm-6">
+            <div class="stat-card is-success shadow-sm h-100">
+                <div class="stat-icon">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div>
+                    <p class="stat-label">Total Cost</p>
+                    <p class="stat-value">${{ total_cost|floatformat:2 }}</p>
+                    <p class="stat-meta">Approved invoices</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xxl-3 col-sm-6">
+            <div class="stat-card shadow-sm h-100">
+                <div class="stat-icon">
+                    <i class="fas fa-stopwatch"></i>
+                </div>
+                <div>
+                    <p class="stat-label">Avg Days Between</p>
+                    <p class="stat-value">{{ avg_interval|floatformat:0 }}</p>
+                    <p class="stat-meta">Rolling average interval</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xxl-3 col-sm-6">
+            <div class="stat-card is-warning shadow-sm h-100">
+                <div class="stat-icon">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div>
+                    <p class="stat-label">Days Since Service</p>
+                    <p class="stat-value">{{ last_service_days|default:0 }}</p>
+                    <p class="stat-meta">Last closed work order</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-center">
+                <div class="col-lg-7">
+                    <div class="btn-group" role="group" aria-label="Service type filter">
+                        <input type="radio" class="btn-check" name="serviceFilter" id="filterAll" value="all" checked>
+                        <label class="btn btn-outline-primary" for="filterAll">All Services</label>
+
+                        <input type="radio" class="btn-check" name="serviceFilter" id="filterRoutine" value="routine">
+                        <label class="btn btn-outline-success" for="filterRoutine">
+                            <span class="maintenance-indicator maintenance-routine"></span>Routine
+                        </label>
+
+                        <input type="radio" class="btn-check" name="serviceFilter" id="filterRepair" value="repair">
+                        <label class="btn btn-outline-danger" for="filterRepair">
+                            <span class="maintenance-indicator maintenance-repair"></span>Repairs
+                        </label>
+
+                        <input type="radio" class="btn-check" name="serviceFilter" id="filterInspection" value="inspection">
+                        <label class="btn btn-outline-info" for="filterInspection">
+                            <span class="maintenance-indicator maintenance-inspection"></span>Inspections
+                        </label>
                     </div>
                 </div>
+                <div class="col-lg-3">
+                    <label for="yearFilter" class="form-label mb-0 small text-muted">Filter by year</label>
+                    <select class="form-select" id="yearFilter">
+                        <option value="">All Years</option>
+                        {% for year in service_years %}
+                        <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-lg-2 text-lg-end">
+                    <button type="button" class="btn btn-outline-secondary w-100" onclick="resetServiceFilters()">
+                        <i class="fas fa-undo me-2"></i>Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            {% if work_orders %}
+            <div class="timeline-modern" id="serviceTimeline">
+                {% for work_order in work_orders %}
+                <article class="timeline-card animate-fade-in-up" data-service-type="{{ work_order.service_type|lower }}" data-year="{{ work_order.created_at.year }}">
+                    <span class="timeline-marker {% if work_order.status == 'completed' %}is-success{% elif work_order.status == 'in_progress' %}is-warning{% elif work_order.status == 'cancelled' %}is-danger{% elif work_order.status == 'pending' %}is-muted{% else %}is-info{% endif %}"></span>
+
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="mb-1">
+                                {% if work_order.service_type == 'routine' %}
+                                    <i class="fas fa-tools text-success me-2"></i>
+                                {% elif work_order.service_type == 'repair' %}
+                                    <i class="fas fa-wrench text-danger me-2"></i>
+                                {% elif work_order.service_type == 'inspection' %}
+                                    <i class="fas fa-search text-info me-2"></i>
+                                {% else %}
+                                    <i class="fas fa-cog text-secondary me-2"></i>
+                                {% endif %}
+                                {{ work_order.title|default:"Work Order" }}
+                            </h5>
+                            <div class="timeline-meta">
+                                Work Order #{{ work_order.work_order_number }} · {{ work_order.created_at|date:"M d, Y" }}
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            {% if work_order.status == 'completed' %}
+                                <span class="badge-soft badge-soft-success">Completed</span>
+                            {% elif work_order.status == 'in_progress' %}
+                                <span class="badge-soft badge-soft-warning">In Progress</span>
+                            {% elif work_order.status == 'pending' %}
+                                <span class="badge-soft badge-soft-muted">Pending</span>
+                            {% elif work_order.status == 'cancelled' %}
+                                <span class="badge-soft badge-soft-danger">Cancelled</span>
+                            {% else %}
+                                <span class="badge-soft badge-soft-info">{{ work_order.get_status_display }}</span>
+                            {% endif %}
+                            {% if work_order.total_cost %}
+                            <div class="cost-emphasis mt-2">${{ work_order.total_cost|floatformat:2 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row gy-3 mb-3">
+                        <div class="col-sm-4">
+                            <small class="text-muted d-block">Completed</small>
+                            <span class="fw-semibold">{% if work_order.completion_date %}{{ work_order.completion_date|date:"M d, Y" }}{% else %}In progress{% endif %}</span>
+                        </div>
+                        <div class="col-sm-4">
+                            <small class="text-muted d-block">Mileage</small>
+                            <span class="mileage-chip"><i class="fas fa-tachometer-alt"></i>{{ work_order.mileage_at_service|floatformat:0 }} {{ vehicle.mileage_unit }}</span>
+                        </div>
+                        <div class="col-sm-4">
+                            <small class="text-muted d-block">Technician</small>
+                            <span class="fw-semibold">{{ work_order.assigned_technician.user.get_full_name|default:"Not Assigned" }}</span>
+                        </div>
+                    </div>
+
+                    {% if work_order.description %}
+                    <p class="mb-3 text-muted">{{ work_order.description|truncatewords:28 }}</p>
+                    {% endif %}
+
+                    {% if work_order.service_items.exists %}
+                    <div class="mb-3">
+                        <small class="text-muted">Services Performed</small>
+                        <ul class="service-steps mt-2">
+                            {% for item in work_order.service_items.all|slice:":3" %}
+                            <li><i class="fas fa-check"></i>{{ item.service_name }}{% if item.cost %} · <span class="text-success">${{ item.cost|floatformat:2 }}</span>{% endif %}</li>
+                            {% endfor %}
+                            {% if work_order.service_items.count > 3 %}
+                            <li class="text-muted"><i class="fas fa-ellipsis-h"></i>{{ work_order.service_items.count|add:"-3" }} additional item{{ work_order.service_items.count|add:"-3"|pluralize }}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {% if work_order.parts_used.exists %}
+                    <div class="mb-3">
+                        <small class="text-muted">Parts Utilized</small>
+                        <div class="mt-2 d-flex flex-wrap gap-2">
+                            {% for part in work_order.parts_used.all|slice:":3" %}
+                            <span class="badge-soft badge-soft-muted">{{ part.part_name }}</span>
+                            {% endfor %}
+                            {% if work_order.parts_used.count > 3 %}
+                            <span class="badge-soft badge-soft-info">+{{ work_order.parts_used.count|add:"-3" }} more</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="timeline-meta">
+                            Logged {{ work_order.created_at|date:"M d, Y g:i A" }}
+                        </span>
+                        <button type="button" class="btn btn-sm btn-outline-primary" disabled title="Work order details coming soon">
+                            <i class="fas fa-eye me-1"></i>Details
+                        </button>
+                    </div>
+                </article>
                 {% endfor %}
             </div>
             {% else %}
             <div class="empty-state">
-                <i class="fas fa-tools fa-4x text-muted mb-4"></i>
-                <h4 class="text-muted">No Service History</h4>
-                <p class="text-muted">This vehicle doesn't have any service records yet.</p>
-                <a href="#" class="btn btn-primary btn-lg mt-3 disabled" title="Create work order (coming soon)">
+                <i class="fas fa-tools mb-3"></i>
+                <h4 class="fw-semibold">No Service History Yet</h4>
+                <p>Log the first work order to populate this timeline.</p>
+                <button class="btn btn-primary" type="button" disabled>
                     <i class="fas fa-plus me-2"></i>Create First Work Order
-                </a>
+                </button>
             </div>
             {% endif %}
         </div>
 
-        <!-- Sidebar -->
         <div class="col-lg-4">
-            <!-- Upcoming Maintenance -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-calendar-alt me-2"></i>Upcoming Maintenance
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if upcoming_maintenance %}
-                        {% for maintenance in upcoming_maintenance %}
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
-                                <div class="fw-bold">{{ maintenance.service_name }}</div>
-                                <small class="text-muted">Due: {{ maintenance.due_date|date:"M d, Y" }}</small>
-                            </div>
-                            <span class="badge bg-warning">{{ maintenance.days_until_due }} days</span>
+            <div class="info-card">
+                <h6><i class="fas fa-calendar-alt"></i>Upcoming Maintenance</h6>
+                {% if upcoming_maintenance %}
+                    {% for maintenance in upcoming_maintenance %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <div class="fw-semibold">{{ maintenance.service_name }}</div>
+                            <small class="text-muted">Due {{ maintenance.due_date|date:"M d, Y" }}</small>
                         </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="text-center text-muted">
-                            <i class="fas fa-check-circle fa-2x mb-2"></i>
-                            <p class="mb-0">No upcoming maintenance scheduled</p>
-                        </div>
-                    {% endif %}
+                        <span class="badge-soft badge-soft-warning">{{ maintenance.days_until_due }} days</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <p class="mb-0">No scheduled maintenance</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="info-card">
+                <h6><i class="fas fa-chart-bar"></i>Service Frequency</h6>
+                <div style="height: 220px;">
+                    <canvas id="serviceFrequencyChart"></canvas>
                 </div>
             </div>
 
-            <!-- Service Frequency Chart -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-chart-bar me-2"></i>Service Frequency
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="serviceFrequencyChart" height="200"></canvas>
-                </div>
-            </div>
-
-            <!-- Recent Technicians -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-users me-2"></i>Recent Technicians
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if recent_technicians %}
-                        {% for tech in recent_technicians %}
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="avatar avatar-sm bg-primary text-white rounded-circle me-3">
-                                {{ tech.user.first_name.0 }}{{ tech.user.last_name.0 }}
-                            </div>
-                            <div>
-                                <div class="fw-bold">{{ tech.user.get_full_name }}</div>
-                                <small class="text-muted">{{ tech.work_order_count }} service{{ tech.work_order_count|pluralize }}</small>
-                            </div>
+            <div class="info-card mb-0">
+                <h6><i class="fas fa-users"></i>Recent Technicians</h6>
+                {% if recent_technicians %}
+                    {% for tech in recent_technicians %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="avatar-initials avatar-md bg-primary text-white me-3">
+                            {{ tech.user.first_name|default:''|slice:':1' }}{{ tech.user.last_name|default:''|slice:':1' }}
                         </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="text-center text-muted">
-                            <p class="mb-0">No technicians assigned yet</p>
+                        <div>
+                            <div class="fw-semibold">{{ tech.user.get_full_name }}</div>
+                            <small class="text-muted">{{ tech.work_order_count }} service{{ tech.work_order_count|pluralize }}</small>
                         </div>
-                    {% endif %}
-                </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted">
+                        <p class="mb-0">No technician assignments yet</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -430,7 +304,7 @@
 <script>
     // Service frequency chart
     const ctx = document.getElementById('serviceFrequencyChart').getContext('2d');
-    const serviceData = {{ service_frequency_data|safe }};
+    const serviceData = JSON.parse('{{ service_frequency_data|escapejs }}');
     
     new Chart(ctx, {
         type: 'doughnut',
@@ -458,10 +332,9 @@
         }
     });
 
-    // Filter functionality
     const serviceFilters = document.querySelectorAll('input[name="serviceFilter"]');
     const yearFilter = document.getElementById('yearFilter');
-    const timelineItems = document.querySelectorAll('.timeline-item');
+    const timelineItems = document.querySelectorAll('.timeline-card');
 
     function filterServices() {
         const selectedType = document.querySelector('input[name="serviceFilter"]:checked').value;
@@ -476,7 +349,7 @@
             
             if (showType && showYear) {
                 item.style.display = 'block';
-                item.style.animation = 'fadeIn 0.3s ease';
+                item.classList.add('animate-fade-in-up');
             } else {
                 item.style.display = 'none';
             }
@@ -489,20 +362,15 @@
 
     yearFilter.addEventListener('change', filterServices);
 
-    // Export function
-    function exportServiceHistory() {
-        // This would integrate with the export functionality
-        window.location.href = `{% url 'vehicles:vehicle-service-history' vehicle.id %}?export=pdf`;
+    function resetServiceFilters() {
+        document.getElementById('filterAll').checked = true;
+        yearFilter.value = '';
+        filterServices();
     }
 
-    // Add CSS animation
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    `;
-    document.head.appendChild(style);
+    // Export function
+    function exportServiceHistory() {
+        window.location.href = `{% url 'vehicles:vehicle-service-history' vehicle.id %}?export=pdf`;
+    }
 </script>
 {% endblock %}

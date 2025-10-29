@@ -2,403 +2,369 @@
 {% load static %}
 {% load crispy_forms_tags %}
 {% load widget_tweaks %}
-
-{% block title %}Edit {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - Smart Vehicle Repairs{% endblock %}
-
-{% block extra_css %}
-<style>
-    .form-section {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .section-header {
-        color: #495057;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #dee2e6;
-    }
-    
-    .required {
-        color: #dc3545;
-    }
-    
-    .vehicle-avatar {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: rgba(255,255,255,0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        font-weight: bold;
-        border: 2px solid rgba(255,255,255,0.3);
-    }
-    
-    .vin-input {
-        font-family: 'Courier New', monospace;
-        font-weight: bold;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid px-4">
-    <!-- Vehicle Header -->
-    <div class="page-header-primary rounded p-4 mb-4">
-        <div class="d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
-                <div class="vehicle-avatar me-3">
-                    {{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}
-                </div>
-                <div>
-                    <h3 class="mb-1">Edit {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h3>
-                    <p class="mb-0 opacity-75">
-                        <i class="fas fa-barcode me-2"></i>{{ vehicle.vin }}
-                    </p>
+<div class="container-fluid">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'vehicles:vehicle-list' %}">Vehicles</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'vehicles:vehicle-detail' vehicle.id %}">Vehicle Detail</a></li>
+            <li class="breadcrumb-item active">Edit Vehicle</li>
+        </ol>
+    </nav>
+
+    <div class="page-header-card profile-header-card shadow-sm mb-4">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center gap-4">
+                    <div class="vehicle-avatar">
+                        {% if vehicle.image %}
+                            <img src="{{ vehicle.image.url }}" alt="{{ vehicle.display_name }}" onerror="this.remove(); this.parentNode.textContent='{{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}';">
+                        {% else %}
+                            {{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}
+                        {% endif %}
+                    </div>
+                    <div>
+                        <span class="badge-soft badge-soft-warning fw-semibold text-uppercase px-3 py-2">Edit Vehicle</span>
+                        <h1 class="page-title mt-3 mb-1">Update {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h1>
+                        <p class="page-subtitle mb-0">Refresh ownership, specifications, and compliance details to keep this record accurate.</p>
+                        <div class="d-flex flex-wrap gap-3 mt-3 small text-white-50">
+                            <span><i class="fas fa-barcode me-2"></i>{{ vehicle.vin }}</span>
+                            <span><i class="fas fa-user me-2"></i>{{ vehicle.owner.user.get_full_name }}</span>
+                            <span><i class="fas fa-road me-2"></i>{{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div>
-                <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-light">
-                    <i class="fas fa-arrow-left me-2"></i>Back to Details
-                </a>
+            <div class="col-lg-4 text-lg-end">
+                <div class="page-actions d-flex flex-wrap justify-content-lg-end gap-2">
+                    <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Details
+                    </a>
+                    <a href="{% url 'vehicles:vehicle-service-history' vehicle.id %}" class="btn btn-contrast">
+                        <i class="fas fa-history me-2"></i>Service History
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Edit Form -->
-        <!-- Vehicle Form -->
-    <form method="post" enctype="multipart/form-data" id="vehicleForm">
-        {% csrf_token %}
-        
-        <!-- Basic Information -->
-        <div class="form-section">
-            <h5 class="section-header">
-                <i class="fas fa-info-circle me-2"></i>Basic Information
-            </h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Customer <span class="required">*</span></label>
-                        {{ form.owner|add_class:"form-select" }}
-                        {% if form.owner.errors %}
-                            <div class="text-danger small mt-1">{{ form.owner.errors }}</div>
-                        {% endif %}
-                    </div>
+    <div class="row g-4">
+        <div class="col-xl-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-brand text-white">
+                    <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Vehicle Update Form</h4>
                 </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">VIN <span class="required">*</span></label>
-                        {{ form.vin|add_class:"form-control vin-input" }}
-                        {% if form.vin.errors %}
-                            <div class="text-danger small mt-1">{{ form.vin.errors }}</div>
-                        {% endif %}
-                        <div class="form-text">17-character Vehicle Identification Number</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="vehicleForm" novalidate>
+                        {% csrf_token %}
 
-        <!-- Vehicle Details -->
-        <div class="form-section">
-            <h5 class="section-header">
-                <i class="fas fa-car me-2"></i>Vehicle Details
-            </h5>
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Year <span class="required">*</span></label>
-                        {{ form.year|add_class:"form-control" }}
-                        {% if form.year.errors %}
-                            <div class="text-danger small mt-1">{{ form.year.errors }}</div>
+                        {% if form.errors or form.non_field_errors %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Please resolve the highlighted fields:</strong>
+                            <ul class="mb-0 mt-2">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
                         {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Make <span class="required">*</span></label>
-                        {{ form.make|add_class:"form-control" }}
-                        {% if form.make.errors %}
-                            <div class="text-danger small mt-1">{{ form.make.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Model <span class="required">*</span></label>
-                        {{ form.model|add_class:"form-control" }}
-                        {% if form.model.errors %}
-                            <div class="text-danger small mt-1">{{ form.model.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Trim</label>
-                        {{ form.trim|add_class:"form-control" }}
-                        {% if form.trim.errors %}
-                            <div class="text-danger small mt-1">{{ form.trim.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Exterior Color</label>
-                        {{ form.exterior_color|add_class:"form-control" }}
-                        {% if form.exterior_color.errors %}
-                            <div class="text-danger small mt-1">{{ form.exterior_color.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Interior Color</label>
-                        {{ form.interior_color|add_class:"form-control" }}
-                        {% if form.interior_color.errors %}
-                            <div class="text-danger small mt-1">{{ form.interior_color.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- License & Registration -->
-        <div class="form-section">
-            <h5 class="section-header">
-                <i class="fas fa-id-card me-2"></i>License & Registration
-            </h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">License Plate <span class="required">*</span></label>
-                        {{ form.license_plate|add_class:"form-control" }}
-                        {% if form.license_plate.errors %}
-                            <div class="text-danger small mt-1">{{ form.license_plate.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">State/Province</label>
-                        {{ form.license_plate_state|add_class:"form-control" }}
-                        {% if form.license_plate_state.errors %}
-                            <div class="text-danger small mt-1">{{ form.license_plate_state.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Status</label>
-                        {{ form.status|add_class:"form-select" }}
-                        {% if form.status.errors %}
-                            <div class="text-danger small mt-1">{{ form.status.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Tags</label>
-                        {{ form.tags|add_class:"form-control" }}
-                        {% if form.tags.errors %}
-                            <div class="text-danger small mt-1">{{ form.tags.errors }}</div>
-                        {% endif %}
-                        <div class="form-text">Comma-separated tags for this vehicle</div>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Vehicle Image</label>
-                        {{ form.image|add_class:"form-control" }}
-                        {% if form.image.errors %}
-                            <div class="text-danger small mt-1">{{ form.image.errors }}</div>
-                        {% endif %}
-                        {% if vehicle.image %}
-                            <div class="mt-2">
-                                <small class="text-muted">Current image:</small><br>
-                                <img src="{{ vehicle.image.url }}" alt="Current vehicle image" class="img-thumbnail" style="max-width: 200px; max-height: 150px;">
+                        <div class="form-section">
+                            <h5 class="form-section-title"><i class="fas fa-info-circle"></i> Basic Information</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.owner.id_for_label }}" class="form-label required-field">Customer</label>
+                                    {% render_field form.owner class="form-select" %}
+                                    {% if form.owner.errors %}
+                                        <div class="text-danger small mt-1">{{ form.owner.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.vin.id_for_label }}" class="form-label required-field">VIN</label>
+                                    {% render_field form.vin class="form-control vin-input" %}
+                                    {% if form.vin.errors %}
+                                        <div class="text-danger small mt-1">{{ form.vin.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-help-text">17-character Vehicle Identification Number.</div>
+                                </div>
                             </div>
-                        {% endif %}
-                        <div class="form-text">Upload a main image for this vehicle (JPG, PNG, etc.)</div>
-                    </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h5 class="form-section-title"><i class="fas fa-car"></i> Vehicle Details</h5>
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label for="{{ form.year.id_for_label }}" class="form-label required-field">Year</label>
+                                    {% render_field form.year class="form-control" %}
+                                    {% if form.year.errors %}
+                                        <div class="text-danger small mt-1">{{ form.year.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="{{ form.make.id_for_label }}" class="form-label required-field">Make</label>
+                                    {% render_field form.make class="form-control" %}
+                                    {% if form.make.errors %}
+                                        <div class="text-danger small mt-1">{{ form.make.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="{{ form.model.id_for_label }}" class="form-label required-field">Model</label>
+                                    {% render_field form.model class="form-control" %}
+                                    {% if form.model.errors %}
+                                        <div class="text-danger small mt-1">{{ form.model.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="{{ form.trim.id_for_label }}" class="form-label">Trim</label>
+                                    {% render_field form.trim class="form-control" %}
+                                    {% if form.trim.errors %}
+                                        <div class="text-danger small mt-1">{{ form.trim.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.exterior_color.id_for_label }}" class="form-label">Exterior Color</label>
+                                    {% render_field form.exterior_color class="form-control" %}
+                                    {% if form.exterior_color.errors %}
+                                        <div class="text-danger small mt-1">{{ form.exterior_color.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.interior_color.id_for_label }}" class="form-label">Interior Color</label>
+                                    {% render_field form.interior_color class="form-control" %}
+                                    {% if form.interior_color.errors %}
+                                        <div class="text-danger small mt-1">{{ form.interior_color.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h5 class="form-section-title"><i class="fas fa-id-card"></i> License & Registration</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.license_plate.id_for_label }}" class="form-label required-field">License Plate</label>
+                                    {% render_field form.license_plate class="form-control" %}
+                                    {% if form.license_plate.errors %}
+                                        <div class="text-danger small mt-1">{{ form.license_plate.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.license_plate_state.id_for_label }}" class="form-label">State/Province</label>
+                                    {% render_field form.license_plate_state class="form-control" %}
+                                    {% if form.license_plate_state.errors %}
+                                        <div class="text-danger small mt-1">{{ form.license_plate_state.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                                    {% render_field form.status class="form-select" %}
+                                    {% if form.status.errors %}
+                                        <div class="text-danger small mt-1">{{ form.status.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.tags.id_for_label }}" class="form-label">Tags</label>
+                                    {% render_field form.tags class="form-control" %}
+                                    {% if form.tags.errors %}
+                                        <div class="text-danger small mt-1">{{ form.tags.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-help-text">Use commas to separate multiple tags.</div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ form.image.id_for_label }}" class="form-label">Vehicle Image</label>
+                                {% render_field form.image class="form-control" %}
+                                {% if form.image.errors %}
+                                    <div class="text-danger small mt-1">{{ form.image.errors }}</div>
+                                {% endif %}
+                                {% if vehicle.image %}
+                                <div class="border rounded bg-light p-3 mt-3 d-flex gap-3 align-items-center">
+                                    <img src="{{ vehicle.image.url }}" alt="Current vehicle image" class="rounded" style="max-width: 160px; max-height: 120px; object-fit: cover;">
+                                    <div class="small text-muted">
+                                        <p class="mb-1 fw-semibold">Current image on file</p>
+                                        <p class="mb-0">Upload a new image to replace this preview.</p>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                <div class="form-help-text">Upload a clear exterior photo (JPG or PNG, max 5 MB).</div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h5 class="form-section-title"><i class="fas fa-tachometer-alt"></i> Mileage & Engine</h5>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.current_mileage.id_for_label }}" class="form-label required-field">Current Mileage</label>
+                                    {% render_field form.current_mileage class="form-control" %}
+                                    {% if form.current_mileage.errors %}
+                                        <div class="text-danger small mt-1">{{ form.current_mileage.errors }}</div>
+                                    {% endif %}
+                                    <div class="form-help-text">Previous reading: {{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.mileage_unit.id_for_label }}" class="form-label">Mileage Unit</label>
+                                    {% render_field form.mileage_unit class="form-select" %}
+                                    {% if form.mileage_unit.errors %}
+                                        <div class="text-danger small mt-1">{{ form.mileage_unit.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.engine_type.id_for_label }}" class="form-label">Engine Type</label>
+                                    {% render_field form.engine_type class="form-select" %}
+                                    {% if form.engine_type.errors %}
+                                        <div class="text-danger small mt-1">{{ form.engine_type.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.engine_size.id_for_label }}" class="form-label">Engine Size</label>
+                                    {% render_field form.engine_size class="form-control" %}
+                                    {% if form.engine_size.errors %}
+                                        <div class="text-danger small mt-1">{{ form.engine_size.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.transmission_type.id_for_label }}" class="form-label">Transmission Type</label>
+                                    {% render_field form.transmission_type class="form-select" %}
+                                    {% if form.transmission_type.errors %}
+                                        <div class="text-danger small mt-1">{{ form.transmission_type.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h5 class="form-section-title"><i class="fas fa-cogs"></i> Additional Details</h5>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.fuel_tank_capacity.id_for_label }}" class="form-label">Fuel Tank Capacity</label>
+                                    {% render_field form.fuel_tank_capacity class="form-control" %}
+                                    {% if form.fuel_tank_capacity.errors %}
+                                        <div class="text-danger small mt-1">{{ form.fuel_tank_capacity.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.tire_size.id_for_label }}" class="form-label">Tire Size</label>
+                                    {% render_field form.tire_size class="form-control" %}
+                                    {% if form.tire_size.errors %}
+                                        <div class="text-danger small mt-1">{{ form.tire_size.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.condition_rating.id_for_label }}" class="form-label">Condition Rating</label>
+                                    {% render_field form.condition_rating class="form-select" %}
+                                    {% if form.condition_rating.errors %}
+                                        <div class="text-danger small mt-1">{{ form.condition_rating.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h5 class="form-section-title"><i class="fas fa-dollar-sign"></i> Purchase & Warranty</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.purchase_date.id_for_label }}" class="form-label">Purchase Date</label>
+                                    {% render_field form.purchase_date class="form-control" %}
+                                    {% if form.purchase_date.errors %}
+                                        <div class="text-danger small mt-1">{{ form.purchase_date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.warranty_expiry_date.id_for_label }}" class="form-label">Warranty Expiration</label>
+                                    {% render_field form.warranty_expiry_date class="form-control" %}
+                                    {% if form.warranty_expiry_date.errors %}
+                                        <div class="text-danger small mt-1">{{ form.warranty_expiry_date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.warranty_type.id_for_label }}" class="form-label">Warranty Type</label>
+                                    {% render_field form.warranty_type class="form-control" %}
+                                    {% if form.warranty_type.errors %}
+                                        <div class="text-danger small mt-1">{{ form.warranty_type.errors }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.warranty_coverage.id_for_label }}" class="form-label">Warranty Coverage</label>
+                                    {% render_field form.warranty_coverage class="form-control" %}
+                                    {% if form.warranty_coverage.errors %}
+                                        <div class="text-danger small mt-1">{{ form.warranty_coverage.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h5 class="form-section-title"><i class="fas fa-sticky-note"></i> Notes</h5>
+                            <div class="mb-3">
+                                <label for="{{ form.notes.id_for_label }}" class="form-label">Additional Notes</label>
+                                {% render_field form.notes class="form-control" %}
+                                {% if form.notes.errors %}
+                                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="sticky-actions d-flex flex-wrap gap-3 justify-content-between align-items-center">
+                            <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save me-2"></i>Update Vehicle
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
 
-        <!-- Mileage & Engine -->
-        <div class="form-section">
-            <h5 class="section-header">
-                <i class="fas fa-tachometer-alt me-2"></i>Mileage & Engine
-            </h5>
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Current Mileage <span class="required">*</span></label>
-                        {{ form.current_mileage|add_class:"form-control" }}
-                        {% if form.current_mileage.errors %}
-                            <div class="text-danger small mt-1">{{ form.current_mileage.errors }}</div>
-                        {% endif %}
-                        <div class="form-text">Previous: {{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</div>
+        <div class="col-xl-3">
+            <div class="info-card">
+                <h6><i class="fas fa-user-circle me-2"></i>Owner Snapshot</h6>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-initials avatar-md bg-primary text-white fw-semibold">
+                        {{ vehicle.owner.user.get_full_name|first|default:""|upper }}
                     </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Mileage Unit</label>
-                        {{ form.mileage_unit|add_class:"form-select" }}
-                        {% if form.mileage_unit.errors %}
-                            <div class="text-danger small mt-1">{{ form.mileage_unit.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Engine Type</label>
-                        {{ form.engine_type|add_class:"form-select" }}
-                        {% if form.engine_type.errors %}
-                            <div class="text-danger small mt-1">{{ form.engine_type.errors }}</div>
-                        {% endif %}
+                    <div>
+                        <p class="mb-0 fw-semibold">{{ vehicle.owner.user.get_full_name }}</p>
+                        <small class="text-muted">{{ vehicle.owner.phone|default:"No phone on file" }}</small>
                     </div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Engine Size</label>
-                        {{ form.engine_size|add_class:"form-control" }}
-                        {% if form.engine_size.errors %}
-                            <div class="text-danger small mt-1">{{ form.engine_size.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Transmission Type</label>
-                        {{ form.transmission_type|add_class:"form-select" }}
-                        {% if form.transmission_type.errors %}
-                            <div class="text-danger small mt-1">{{ form.transmission_type.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- Additional Details -->
-        <div class="form-section">
-            <h5 class="section-header">
-                <i class="fas fa-cogs me-2"></i>Additional Details
-            </h5>
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Fuel Tank Capacity</label>
-                        {{ form.fuel_tank_capacity|add_class:"form-control" }}
-                        {% if form.fuel_tank_capacity.errors %}
-                            <div class="text-danger small mt-1">{{ form.fuel_tank_capacity.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Tire Size</label>
-                        {{ form.tire_size|add_class:"form-control" }}
-                        {% if form.tire_size.errors %}
-                            <div class="text-danger small mt-1">{{ form.tire_size.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Condition Rating</label>
-                        {{ form.condition_rating|add_class:"form-select" }}
-                        {% if form.condition_rating.errors %}
-                            <div class="text-danger small mt-1">{{ form.condition_rating.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
+            <div class="info-card">
+                <h6><i class="fas fa-clipboard-list me-2"></i>Update Checklist</h6>
+                <ul class="list-unstyled mb-0 small text-muted">
+                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Verify VIN and license plate spelling.</li>
+                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Confirm mileage exceeds previous reading.</li>
+                    <li><i class="fas fa-check-circle text-success me-2"></i>Refresh warranty dates before saving changes.</li>
+                </ul>
             </div>
-        </div>
 
-        <!-- Purchase & Warranty -->
-        <div class="form-section">
-            <h5 class="section-header">
-                <i class="fas fa-dollar-sign me-2"></i>Purchase & Warranty
-            </h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Purchase Date</label>
-                        {{ form.purchase_date|add_class:"form-control" }}
-                        {% if form.purchase_date.errors %}
-                            <div class="text-danger small mt-1">{{ form.purchase_date.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Warranty Expiration</label>
-                        {{ form.warranty_expiry_date|add_class:"form-control" }}
-                        {% if form.warranty_expiry_date.errors %}
-                            <div class="text-danger small mt-1">{{ form.warranty_expiry_date.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Warranty Type</label>
-                        {{ form.warranty_type|add_class:"form-control" }}
-                        {% if form.warranty_type.errors %}
-                            <div class="text-danger small mt-1">{{ form.warranty_type.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Warranty Coverage</label>
-                        {{ form.warranty_coverage|add_class:"form-control" }}
-                        {% if form.warranty_coverage.errors %}
-                            <div class="text-danger small mt-1">{{ form.warranty_coverage.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
+            <div class="info-card">
+                <h6><i class="fas fa-info-circle me-2"></i>Need to add more?</h6>
+                <p class="mb-2 small text-muted">Attachments and additional photos can be uploaded from the vehicle detail page after saving.</p>
+                <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}#documents" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-folder-open me-2"></i>Manage Documents
+                </a>
             </div>
         </div>
-
-        <!-- Notes -->
-        <div class="form-section">
-            <h5 class="section-header">
-                <i class="fas fa-sticky-note me-2"></i>Notes
-            </h5>
-            <div class="mb-3">
-                <label class="form-label fw-bold">Additional Notes</label>
-                {{ form.notes|add_class:"form-control" }}
-                {% if form.notes.errors %}
-                    <div class="text-danger small mt-1">{{ form.notes.errors }}</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Form Actions -->
-        <div class="d-flex justify-content-between">
-            <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-secondary btn-lg">
-                <i class="fas fa-times me-2"></i>Cancel
-            </a>
-            <button type="submit" class="btn btn-primary btn-lg">
-                <i class="fas fa-save me-2"></i>Update Vehicle
-            </button>
-        </div>
-    </form>
-</div>
+    </div>
 {% endblock %}
 
 {% block extra_js %}

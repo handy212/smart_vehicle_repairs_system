@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.http import JsonResponse
-from django.db.models import Q, Count, Sum
+from django.db.models import Q, Count, Sum, Avg
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -73,14 +73,25 @@ class CustomerListView(LoginRequiredMixin, ListView):
         # Statistics
         total_customers = Customer.objects.count()
         active_customers = Customer.objects.filter(status='active').count()
+        inactive_customers = Customer.objects.filter(status='inactive').count()
         new_this_month = Customer.objects.filter(
             created_at__gte=timezone.now().replace(day=1)
         ).count()
+        vehicle_metrics = Customer.objects.annotate(
+            vehicle_total=Count('vehicles')
+        ).aggregate(
+            avg_vehicles=Avg('vehicle_total')
+        )
+        average_vehicle_count = vehicle_metrics.get('avg_vehicles') or 0
+        active_rate = (active_customers / total_customers * 100) if total_customers else 0
         
         context.update({
             'total_customers': total_customers,
             'active_customers': active_customers,
+            'inactive_customers': inactive_customers,
             'new_this_month': new_this_month,
+            'average_vehicle_count': average_vehicle_count,
+            'active_rate': active_rate,
             'search': self.request.GET.get('search', ''),
             'status_filter': self.request.GET.get('status', ''),
             'customer_type_filter': self.request.GET.get('customer_type', ''),

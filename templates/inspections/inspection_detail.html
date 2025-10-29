@@ -367,7 +367,7 @@
             </div>
 
             <!-- Vehicle Damage Assessment -->
-            {% if inspection.vehicle_damage %}
+            {% if inspection.vehicle_damage and inspection.vehicle_damage != '[]' and inspection.vehicle_damage != '{}' and inspection.vehicle_damage != '' %}
             <div class="card info-card mb-4">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0"><i class="fas fa-car-crash me-2"></i>Vehicle Damage Assessment</h5>
@@ -394,15 +394,21 @@
             <script>
             // Load and display vehicle damage for detail view
             document.addEventListener('DOMContentLoaded', function() {
-                const damageData = JSON.parse('{{ inspection.vehicle_damage|escapejs }}');
-                
-                if (damageData && damageData.length > 0) {
-                    loadVehicleDamageDisplay(damageData);
+                try {
+                    const damageDataStr = '{{ inspection.vehicle_damage|escapejs }}';
+                    if (damageDataStr && damageDataStr.trim() !== '' && damageDataStr !== '[]') {
+                        const damageData = JSON.parse(damageDataStr);
+                        if (damageData && damageData.length > 0) {
+                            loadVehicleDamageDisplay(damageData);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error parsing vehicle damage data:', error);
                 }
             });
             
             function loadVehicleDamageDisplay(damageData) {
-                fetch('/media/scratch/scratch_dents.svg')
+                fetch('/static/images/vehicle-diagram.svg')
                     .then(response => response.text())
                     .then(svgText => {
                         const container = document.getElementById('vehicleDamageDisplay');

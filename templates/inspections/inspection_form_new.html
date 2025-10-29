@@ -236,11 +236,11 @@
 
     <!-- Step Indicator -->
     <div class="step-indicator">
-        <div class="step active" data-step="1">
+        <div class="step {% if not workorder and not inspection %}active{% elif workorder or inspection %}completed{% endif %}" data-step="1">
             <div class="step-number">1</div>
             <div>Customer & Vehicle</div>
         </div>
-        <div class="step" data-step="2">
+        <div class="step {% if workorder or inspection %}active{% endif %}" data-step="2">
             <div class="step-number">2</div>
             <div>Inspection Details</div>
         </div>
@@ -290,7 +290,7 @@
         <input type="hidden" name="vehicle" value="{{ workorder.vehicle.id }}">
         {% else %}
         <!-- Step 1: Customer & Vehicle Selection -->
-        <div class="form-step active" id="step1">
+        <div class="form-step {% if not workorder and not inspection %}active{% endif %}" id="step1">
             <div class="card">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><i class="fas fa-user me-2"></i>Step 1: Select Customer & Vehicle</h5>
@@ -328,7 +328,7 @@
         {% endif %}
 
         <!-- Step 2: Inspection Details -->
-        <div class="form-step {% if workorder %}active{% endif %}" id="step2">
+        <div class="form-step {% if workorder or inspection %}active{% endif %}" id="step2">
             <div class="card">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><i class="fas fa-clipboard me-2"></i>{% if workorder %}Step 1: Inspection Details{% else %}Step 2: Inspection Details{% endif %}</h5>
@@ -356,6 +356,7 @@
                     <div class="mt-4">
                         {% include 'inspections/vehicle_damage_marker.html' %}
                         {{ form.vehicle_damage }}
+                        {% include 'inspections/vehicle_damage_loader.html' %}
                     </div>
                 </div>
                 <div class="card-footer d-flex justify-content-between">
@@ -407,8 +408,17 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    let currentStep = {% if workorder %}2{% else %}1{% endif %};
-    let selectedVehicleId = {% if workorder %}{{ workorder.vehicle.id }}{% else %}null{% endif %};
+    let currentStep = "{% if workorder %}2{% elif inspection %}2{% else %}1{% endif %}";
+    currentStep = parseInt(currentStep);
+    let selectedVehicleId = {% if workorder %}{{ workorder.vehicle.id }}{% elif inspection %}{{ inspection.vehicle.id }}{% else %}null{% endif %};
+    
+    {% if inspection and not workorder %}
+    // Initialize edit mode - pre-select customer and vehicle
+    const isEditMode = true;
+    const editModeCustomerId = "{{ inspection.vehicle.owner.id|default:'' }}";
+    const editModeVehicleId = {{ inspection.vehicle.id|default:"null" }};
+    
+    {% endif %}
     
     // Step Navigation
     function showStep(step) {
@@ -429,6 +439,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Customer Selection (only if not from work order)
     const customerSelect = document.getElementById('id_customer');
     if (customerSelect) {
+        {% if inspection and not workorder %}
+        // Initialize edit mode - pre-select customer and vehicle
+        const editModeCustomerId = "{{ inspection.vehicle.owner.id|default:'' }}";
+        const editModeVehicleId = {{ inspection.vehicle.id|default:"null" }};
+        
+        // Set customer dropdown value
+        customerSelect.value = editModeCustomerId;
+        customerSelect.dispatchEvent(new Event('change'));
+        
+        // After customer is loaded, select the vehicle
+        setTimeout(() => {
+            const vehicleCard = document.querySelector('[data-vehicle-id="' + editModeVehicleId + '"]');
+            if (vehicleCard) {
+                vehicleCard.click();
+            }
+        }, 1000);
+        {% endif %}
+        
         customerSelect.addEventListener('change', function() {
             const customerId = this.value;
             if (customerId) {

@@ -1,0 +1,16 @@
+<!-- Add this right after the vehicle_damage_marker.html include -->
+{% if inspection and inspection.vehicle_damage %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize vehicle damage data from database
+    setTimeout(function() {
+        // Make sure vehicleDamageMarker has been initialized
+        if (window.vehicleDamageMarker) {
+            const damageData = JSON.parse('{{ inspection.vehicle_damage|escapejs }}');
+            window.vehicleDamageMarker.loadDamageData(damageData);
+            console.log('Loaded vehicle damage data:', damageData);
+        }
+    }, 1000); // Wait for vehicle damage marker to initialize
+});
+</script>
+{% endif %}

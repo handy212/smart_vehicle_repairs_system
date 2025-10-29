@@ -4,19 +4,19 @@ Usage: {% include 'workorders/partials/priority_badge.html' with priority=workor
 {% endcomment %}
 
 {% if priority == 'urgent' %}
-    <span class="badge bg-danger priority-badge">
+    <span class="status-badge badge-soft badge-soft-danger">
         <i class="fas fa-exclamation-triangle me-1"></i>Urgent
     </span>
 {% elif priority == 'high' %}
-    <span class="badge bg-warning priority-badge">
+    <span class="status-badge badge-soft badge-soft-warning">
         <i class="fas fa-arrow-up me-1"></i>High
     </span>
 {% elif priority == 'normal' %}
-    <span class="badge bg-primary priority-badge">Normal</span>
+    <span class="status-badge badge-soft badge-soft-primary">Normal</span>
 {% elif priority == 'low' %}
-    <span class="badge bg-secondary priority-badge">
+    <span class="status-badge badge-soft badge-soft-secondary">
         <i class="fas fa-arrow-down me-1"></i>Low
     </span>
 {% else %}
-    <span class="badge bg-secondary priority-badge">{{ priority|title }}</span>
+    <span class="status-badge badge-soft badge-soft-secondary">{{ priority|title }}</span>
 {% endif %}

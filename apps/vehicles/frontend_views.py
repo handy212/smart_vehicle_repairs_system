@@ -9,7 +9,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.http import JsonResponse
 from django.db.models import Q, Count, Sum, Avg
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.utils import timezone
@@ -198,6 +198,21 @@ class VehicleCreateView(LoginRequiredMixin, CreateView):
     template_name = 'vehicles/vehicle_create.html'
     success_url = reverse_lazy('vehicles:vehicle-list')
     
+    def get_initial(self):
+        initial = super().get_initial()
+        owner_id = self.request.GET.get('owner')
+
+        if owner_id:
+            try:
+                owner_pk = int(owner_id)
+            except (TypeError, ValueError):
+                pass
+            else:
+                if Customer.objects.filter(pk=owner_pk).exists():
+                    initial['owner'] = owner_pk
+
+        return initial
+
     def form_valid(self, form):
         messages.success(self.request, 'Vehicle created successfully!')
         return super().form_valid(form)
@@ -205,6 +220,19 @@ class VehicleCreateView(LoginRequiredMixin, CreateView):
     def form_invalid(self, form):
         messages.error(self.request, 'Please correct the errors below.')
         return super().form_invalid(form)
+
+    def get_success_url(self):
+        owner_param = self.request.GET.get('owner') or self.request.POST.get('owner')
+
+        if owner_param:
+            try:
+                owner_pk = int(owner_param)
+            except (TypeError, ValueError):
+                owner_pk = None
+            if owner_pk and Customer.objects.filter(pk=owner_pk).exists():
+                return reverse('customers:customer-detail', kwargs={'pk': owner_pk})
+
+        return super().get_success_url()
 
 
 class VehicleUpdateView(LoginRequiredMixin, UpdateView):

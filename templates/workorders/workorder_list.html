@@ -6,68 +6,55 @@
 
 {% block extra_css %}
 <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-<style>
-    .priority-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-    }
-    .status-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.75rem;
-        border-radius: 1rem;
-    }
-    .workorder-card {
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .workorder-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .filter-section {
-        background: var(--bg-card);
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-bottom: 1.5rem;
-        border: 1px solid var(--gray-200);
-    }
-</style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0">Work Orders</h1>
-            <p class="text-muted mb-0">Manage and track service work orders</p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'workorders:kanban' %}" class="btn btn-outline-primary">
-                <i class="fas fa-columns me-1"></i> Kanban View
-            </a>
-            <a href="{% url 'workorders:create' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i> New Work Order
-            </a>
-            <div class="dropdown">
-                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    <i class="fas fa-download me-1"></i> Export
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{% url 'workorders:export' %}?format=csv">Export to CSV</a></li>
-                </ul>
+    <!-- Page Header -->
+    <div class="page-header-card shadow-sm mb-4">
+        <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+                <div class="d-inline-flex align-items-center gap-3">
+                    <span class="badge bg-white text-primary fw-semibold text-uppercase px-3 py-2 shadow-sm">Work Orders</span>
+                </div>
+                <h1 class="page-title mt-3 mb-2">Service Work Orders</h1>
+                <p class="page-subtitle">Track job status, technician assignments, and progress across every repair.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <div class="page-actions d-flex justify-content-lg-end gap-2 flex-wrap">
+                    <a href="{% url 'workorders:kanban' %}" class="btn btn-light">
+                        <i class="fas fa-columns me-2"></i> Kanban View
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-download me-2"></i> Export
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'workorders:export' %}?format=csv">Export to CSV</a></li>
+                        </ul>
+                    </div>
+                    <a href="{% url 'workorders:create' %}" class="btn btn-contrast">
+                        <i class="fas fa-plus me-2"></i> New Work Order
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Filter Section -->
+    <div id="alerts-container" class="mb-3"></div>
+
+    <!-- Filters -->
     <div class="filter-section">
-        <form method="get" class="row g-3">
-            <div class="col-md-3">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-12 col-lg-4">
                 <label for="search" class="form-label">Search</label>
-                <input type="text" class="form-control" id="search" name="search" 
-                       value="{{ current_filters.search }}" placeholder="Work order #, customer, vehicle...">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent text-muted"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="search" name="search"
+                           value="{{ current_filters.search }}" placeholder="Work order #, customer, vehicle...">
+                </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-lg-2">
                 <label for="status" class="form-label">Status</label>
                 <select class="form-select" id="status" name="status">
                     <option value="">All Statuses</option>
@@ -78,7 +65,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-lg-2">
                 <label for="priority" class="form-label">Priority</label>
                 <select class="form-select" id="priority" name="priority">
                     <option value="">All Priorities</option>
@@ -89,7 +76,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-12 col-lg-3">
                 <label for="technician" class="form-label">Technician</label>
                 <select class="form-select" id="technician" name="technician">
                     <option value="">All Technicians</option>
@@ -100,216 +87,229 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary me-2">Filter</button>
-                <a href="{% url 'workorders:list' %}" class="btn btn-outline-secondary">Clear</a>
+            <div class="col-12 col-lg-8">
+                <div class="filter-actions justify-content-lg-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sliders-h me-2"></i>Apply Filters
+                    </button>
+                    <a href="{% url 'workorders:list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-undo me-2"></i>Reset
+                    </a>
+                </div>
             </div>
         </form>
     </div>
 
-    <!-- Results Summary -->
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="text-muted">
-                    Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} work orders
-                </span>
-                <div class="btn-group" role="group">
-                    <input type="radio" class="btn-check" name="view" id="list-view" autocomplete="off" checked>
-                    <label class="btn btn-outline-primary" for="list-view">
-                        <i class="fas fa-list"></i>
-                    </label>
-                    <input type="radio" class="btn-check" name="view" id="card-view" autocomplete="off">
-                    <label class="btn btn-outline-primary" for="card-view">
-                        <i class="fas fa-th-large"></i>
-                    </label>
+    <!-- Work Orders List View -->
+    <div id="list-view-content">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white border-0 pb-0">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div class="table-meta">
+                        {% if page_obj.paginator.count %}
+                            Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} work orders
+                        {% else %}
+                            No work orders yet
+                        {% endif %}
+                    </div>
+                    <div class="btn-group view-toggle" role="group">
+                        <input type="radio" class="btn-check" name="view" id="list-view" autocomplete="off" checked>
+                        <label class="btn btn-outline-primary active" for="list-view">
+                            <i class="fas fa-list"></i>
+                        </label>
+                        <input type="radio" class="btn-check" name="view" id="card-view" autocomplete="off">
+                        <label class="btn btn-outline-primary" for="card-view">
+                            <i class="fas fa-th-large"></i>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-modern align-middle mb-0" id="workorders-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Work Order #</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Customer</th>
+                                <th>Vehicle</th>
+                                <th>Technician</th>
+                                <th>Created</th>
+                                <th>Progress</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for workorder in workorders %}
+                            <tr data-workorder-id="{{ workorder.id }}">
+                                <td>
+                                    <a href="{% url 'workorders:detail' workorder.pk %}" class="text-decoration-none fw-bold">
+                                        {{ workorder.work_order_number }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% include 'workorders/partials/status_badge.html' with status=workorder.status %}
+                                </td>
+                                <td>
+                                    {% include 'workorders/partials/priority_badge.html' with priority=workorder.priority %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-initials me-2">
+                                            {{ workorder.customer.user.first_name|first }}{{ workorder.customer.user.last_name|first }}
+                                        </div>
+                                        <div>
+                                            <div class="fw-medium">{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</div>
+                                            <small class="text-muted">{{ workorder.customer.user.email }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <div class="fw-medium">{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</div>
+                                        <small class="text-muted">{{ workorder.vehicle.license_plate }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if workorder.primary_technician %}
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-initials bg-success text-white me-2">
+                                                {{ workorder.primary_technician.first_name|first }}{{ workorder.primary_technician.last_name|first }}
+                                            </div>
+                                            <span>{{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}</span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Unassigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div>{{ workorder.created_at|date:"M d, Y" }}</div>
+                                    <small class="text-muted">{{ workorder.created_at|time:"H:i" }}</small>
+                                </td>
+                                <td>
+                                    {% if workorder.task_count > 0 %}
+                                        {% widthratio workorder.completed_tasks_count workorder.task_count 100 as completion_pct %}
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="progress progress-thin flex-grow-1" data-progress="{{ completion_pct }}">
+                                                <div class="progress-bar bg-primary" role="progressbar" aria-valuenow="{{ completion_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                            <small class="text-muted">{{ workorder.completed_tasks_count }}/{{ workorder.task_count }}</small>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">No tasks</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            Actions
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                            <li><a class="dropdown-item" href="{% url 'workorders:detail' workorder.pk %}">
+                                                <i class="fas fa-eye me-2"></i>View Details
+                                            </a></li>
+                                            {% if request.user.role in 'admin,manager,receptionist' %}
+                                            <li><a class="dropdown-item" href="{% url 'workorders:edit' workorder.pk %}">
+                                                <i class="fas fa-edit me-2"></i>Edit
+                                            </a></li>
+                                            {% endif %}
+                                            <li><a class="dropdown-item" href="{% url 'workorders:print' workorder.pk %}" target="_blank">
+                                                <i class="fas fa-print me-2"></i>Print
+                                            </a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><a class="dropdown-item text-success status-update" href="#"
+                                                   data-workorder-id="{{ workorder.id }}" data-status="in_progress">
+                                                <i class="fas fa-play me-2"></i>Mark In Progress
+                                            </a></li>
+                                            <li><a class="dropdown-item text-primary status-update" href="#"
+                                                   data-workorder-id="{{ workorder.id }}" data-status="completed">
+                                                <i class="fas fa-check me-2"></i>Mark Completed
+                                            </a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr data-empty="true">
+                                <td colspan="9" class="text-center py-4">
+                                    <div class="text-muted">
+                                        <i class="fas fa-search fa-2x mb-3"></i>
+                                        <p>No work orders found matching your criteria.</p>
+                                        <a href="{% url 'workorders:create' %}" class="btn btn-primary">Create First Work Order</a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Work Orders List View -->
-    <div id="list-view-content">
-        <div class="card">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0" id="workorders-table">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Work Order #</th>
-                            <th>Status</th>
-                            <th>Priority</th>
-                            <th>Customer</th>
-                            <th>Vehicle</th>
-                            <th>Technician</th>
-                            <th>Created</th>
-                            <th>Progress</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for workorder in workorders %}
-                        <tr data-workorder-id="{{ workorder.id }}">
-                            <td>
-                                <a href="{% url 'workorders:detail' workorder.pk %}" class="text-decoration-none fw-bold">
-                                    {{ workorder.work_order_number }}
-                                </a>
-                            </td>
-                            <td>
-                                {% include 'workorders/partials/status_badge.html' with status=workorder.status %}
-                            </td>
-                            <td>
-                                {% include 'workorders/partials/priority_badge.html' with priority=workorder.priority %}
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
-                                        {{ workorder.customer.user.first_name|first }}{{ workorder.customer.user.last_name|first }}
-                                    </div>
-                                    <div>
-                                        <div class="fw-medium">{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</div>
-                                        <small class="text-muted">{{ workorder.customer.user.email }}</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    <div class="fw-medium">{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</div>
-                                    <small class="text-muted">{{ workorder.vehicle.license_plate }}</small>
-                                </div>
-                            </td>
-                            <td>
-                                {% if workorder.primary_technician %}
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar-sm bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-2">
-                                            {{ workorder.primary_technician.first_name|first }}{{ workorder.primary_technician.last_name|first }}
-                                        </div>
-                                        <span>{{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}</span>
-                                    </div>
-                                {% else %}
-                                    <span class="text-muted">Unassigned</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div>{{ workorder.created_at|date:"M d, Y" }}</div>
-                                <small class="text-muted">{{ workorder.created_at|time:"H:i" }}</small>
-                            </td>
-                            <td>
-                                {% if workorder.task_count > 0 %}
-                                    <div class="d-flex align-items-center">
-                                        <div class="progress flex-grow-1 me-2" style="height: 6px;">
-                                            <div class="progress-bar" role="progressbar" 
-                                                 style="width: {% widthratio workorder.completed_tasks_count workorder.task_count|default:1 100 %}%"></div>
-                                        </div>
-                                        <small class="text-muted">{{ workorder.completed_tasks_count }}/{{ workorder.task_count }}</small>
-                                    </div>
-                                {% else %}
-                                    <span class="text-muted">No tasks</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                        Actions
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="{% url 'workorders:detail' workorder.pk %}">
-                                            <i class="fas fa-eye me-2"></i>View Details
-                                        </a></li>
-                                        {% if request.user.role in 'admin,manager,receptionist' %}
-                                        <li><a class="dropdown-item" href="{% url 'workorders:edit' workorder.pk %}">
-                                            <i class="fas fa-edit me-2"></i>Edit
-                                        </a></li>
-                                        {% endif %}
-                                        <li><a class="dropdown-item" href="{% url 'workorders:print' workorder.pk %}" target="_blank">
-                                            <i class="fas fa-print me-2"></i>Print
-                                        </a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-success status-update" href="#" 
-                                               data-workorder-id="{{ workorder.id }}" data-status="in_progress">
-                                            <i class="fas fa-play me-2"></i>Mark In Progress
-                                        </a></li>
-                                        <li><a class="dropdown-item text-primary status-update" href="#" 
-                                               data-workorder-id="{{ workorder.id }}" data-status="completed">
-                                            <i class="fas fa-check me-2"></i>Mark Completed
-                                        </a></li>
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr data-empty="true">
-                            <td colspan="9" class="text-center py-4">
-                                <div class="text-muted">
-                                    <i class="fas fa-search fa-2x mb-3"></i>
-                                    <p>No work orders found matching your criteria.</p>
-                                    <a href="{% url 'workorders:create' %}" class="btn btn-primary">Create First Work Order</a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <!-- Work Orders Card View -->
-    <div id="card-view-content" style="display: none;">
-        <div class="row">
+    <div id="card-view-content" class="d-none">
+        <div class="row g-3">
             {% for workorder in workorders %}
-            <div class="col-lg-4 col-md-6 mb-4">
-                <div class="card workorder-card h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="col-xxl-3 col-lg-4 col-md-6">
+                <div class="card h-100 card-hover-lift shadow-sm border-0">
+                    <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">{{ workorder.work_order_number }}</h6>
-                        <div class="d-flex gap-1">
+                        <div class="d-flex gap-2">
                             {% include 'workorders/partials/status_badge.html' with status=workorder.status %}
                             {% include 'workorders/partials/priority_badge.html' with priority=workorder.priority %}
                         </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body pt-0 px-4 pb-4">
                         <div class="mb-3">
                             <div class="d-flex align-items-center mb-2">
-                                <i class="fas fa-user text-primary me-2"></i>
-                                <strong>{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</strong>
+                                <div class="avatar-initials me-3">
+                                    {{ workorder.customer.user.first_name|first }}{{ workorder.customer.user.last_name|first }}
+                                </div>
+                                <div>
+                                    <strong>{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</strong>
+                                    <div class="text-muted small">{{ workorder.customer.user.email }}</div>
+                                </div>
                             </div>
-                            <div class="d-flex align-items-center mb-2">
-                                <i class="fas fa-car text-success me-2"></i>
+                            <div class="d-flex align-items-center mb-2 text-muted">
+                                <i class="fas fa-car text-primary me-2"></i>
                                 <span>{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</span>
                             </div>
                             {% if workorder.primary_technician %}
-                            <div class="d-flex align-items-center mb-2">
+                            <div class="d-flex align-items-center text-muted">
                                 <i class="fas fa-wrench text-warning me-2"></i>
                                 <span>{{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}</span>
                             </div>
+                            {% else %}
+                            <div class="text-muted small"><i class="fas fa-user-clock me-1"></i>Unassigned</div>
                             {% endif %}
                         </div>
-                        
+
                         {% if workorder.customer_concerns %}
                         <div class="mb-3">
-                            <small class="text-muted d-block">Customer Concerns:</small>
+                            <small class="text-muted d-block text-uppercase fw-semibold">Customer Concerns</small>
                             <p class="mb-0 small">{{ workorder.customer_concerns|truncatechars:100 }}</p>
                         </div>
                         {% endif %}
-                        
+
                         {% if workorder.task_count > 0 %}
+                        {% widthratio workorder.completed_tasks_count workorder.task_count 100 as card_completion_pct %}
                         <div class="mb-3">
-                            <div class="d-flex justify-content-between mb-1">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
                                 <small class="text-muted">Progress</small>
                                 <small class="text-muted">{{ workorder.completed_tasks_count }}/{{ workorder.task_count }} tasks</small>
                             </div>
-                            <div class="progress" style="height: 6px;">
-                                <div class="progress-bar" role="progressbar" 
-                                     style="width: {% widthratio workorder.completed_tasks_count workorder.task_count|default:1 100 %}%"></div>
+                            <div class="progress progress-thin" data-progress="{{ card_completion_pct }}">
+                                <div class="progress-bar bg-primary" role="progressbar" aria-valuenow="{{ card_completion_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
                             </div>
                         </div>
                         {% endif %}
                     </div>
-                    <div class="card-footer">
+                    <div class="card-footer bg-white border-0 pt-0 px-4 pb-4">
                         <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">
-                                {{ workorder.created_at|date:"M d, Y" }}
-                            </small>
-                            <div class="btn-group btn-group-sm">
+                            <small class="text-muted">{{ workorder.created_at|date:"M d, Y" }}</small>
+                            <div class="btn-group btn-group-sm" role="group">
                                 <a href="{% url 'workorders:detail' workorder.pk %}" class="btn btn-outline-primary">
                                     <i class="fas fa-eye"></i>
                                 </a>
@@ -348,7 +348,7 @@
                     <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.status %}status={{ current_filters.status }}&{% endif %}{% if current_filters.priority %}priority={{ current_filters.priority }}&{% endif %}{% if current_filters.technician %}technician={{ current_filters.technician }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
                 </li>
             {% endif %}
-            
+
             {% for num in page_obj.paginator.page_range %}
                 {% if page_obj.number == num %}
                     <li class="page-item active">
@@ -360,7 +360,7 @@
                     </li>
                 {% endif %}
             {% endfor %}
-            
+
             {% if page_obj.has_next %}
                 <li class="page-item">
                     <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.status %}status={{ current_filters.status }}&{% endif %}{% if current_filters.priority %}priority={{ current_filters.priority }}&{% endif %}{% if current_filters.technician %}technician={{ current_filters.technician }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
@@ -379,23 +379,24 @@
 
 <script>
 $(document).ready(function() {
-    // Initialize DataTable for list view
-    var table = $('#workorders-table');
-    if (table.length > 0) {
-        // Check if table has actual data rows (not just empty state)
-        var dataRows = table.find('tbody tr:not([data-empty])');
-        
+    const $table = $('#workorders-table');
+    const $listContent = $('#list-view-content');
+    const $cardContent = $('#card-view-content');
+
+    if ($table.length > 0) {
+        const dataRows = $table.find('tbody tr:not([data-empty])');
+
         if (dataRows.length > 0) {
             try {
-                table.DataTable({
+                $table.DataTable({
                     paging: false,
                     searching: false,
                     info: false,
                     columnDefs: [
-                        { orderable: false, targets: [8] } // Actions column not sortable
+                        { orderable: false, targets: [8] }
                     ],
                     language: {
-                        emptyTable: "No work orders found"
+                        emptyTable: 'No work orders found'
                     }
                 });
             } catch (error) {
@@ -403,26 +404,28 @@ $(document).ready(function() {
             }
         }
     }
-    
-    // View toggle
-    $('input[name="view"]').change(function() {
-        if ($(this).attr('id') === 'list-view') {
-            $('#list-view-content').show();
-            $('#card-view-content').hide();
-        } else {
-            $('#list-view-content').hide();
-            $('#card-view-content').show();
-        }
+
+    hydrateProgress($(document));
+
+    $('input[name="view"]').on('change', function() {
+        const isListView = this.id === 'list-view';
+
+        $listContent.toggleClass('d-none', !isListView);
+        $cardContent.toggleClass('d-none', isListView);
+
+        $('.view-toggle label').removeClass('active');
+        $(`label[for="${this.id}"]`).addClass('active');
+
+        hydrateProgress(isListView ? $listContent : $cardContent);
     });
-    
-    // Status update via AJAX
-    $('.status-update').click(function(e) {
+
+    $('.status-update').on('click', function(e) {
         e.preventDefault();
-        
+
         const workorderId = $(this).data('workorder-id');
         const newStatus = $(this).data('status');
         const $row = $(`tr[data-workorder-id="${workorderId}"]`);
-        
+
         if (confirm(`Are you sure you want to change the status to "${newStatus}"?`)) {
             fetch(`/workorders/${workorderId}/update-status/`, {
                 method: 'POST',
@@ -432,27 +435,33 @@ $(document).ready(function() {
                 },
                 body: `status=${newStatus}`
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Update status badge in the row
-                    const statusCell = $row.find('td:nth-child(2)');
-                    statusCell.html(getStatusBadgeHtml(data.status, data.status_display));
-                    
-                    // Show success message
-                    showAlert('success', 'Status updated successfully!');
-                } else {
-                    showAlert('danger', 'Error updating status: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showAlert('danger', 'An error occurred while updating the status.');
-            });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const statusCell = $row.find('td:nth-child(2)');
+                        statusCell.html(getStatusBadgeHtml(data.status, data.status_display));
+                        showAlert('success', 'Status updated successfully!');
+                    } else {
+                        showAlert('danger', 'Error updating status: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('danger', 'An error occurred while updating the status.');
+                });
         }
     });
-    
-    // Helper functions
+
+    function hydrateProgress(scope) {
+        const $scope = scope instanceof jQuery ? scope : $(scope);
+        $scope.find('.progress[data-progress]').each(function() {
+            const value = parseFloat($(this).data('progress')) || 0;
+            $(this).find('.progress-bar')
+                .css('width', `${value}%`)
+                .attr('aria-valuenow', value);
+        });
+    }
+
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -467,25 +476,29 @@ $(document).ready(function() {
         }
         return cookieValue;
     }
-    
+
+    const statusStyles = {
+        draft: { cls: 'status-badge badge-soft badge-soft-secondary' },
+        inspection: { cls: 'status-badge badge-soft badge-soft-primary', icon: '<i class="fas fa-search me-1"></i>' },
+        intake: { cls: 'status-badge badge-soft badge-soft-info' },
+        diagnosis: { cls: 'status-badge badge-soft badge-soft-warning' },
+        awaiting_approval: { cls: 'status-badge badge-soft badge-soft-primary' },
+        approved: { cls: 'status-badge badge-soft badge-soft-success' },
+        in_progress: { cls: 'status-badge badge-soft badge-soft-warning', icon: '<i class="fas fa-spinner fa-spin me-1"></i>' },
+        paused: { cls: 'status-badge badge-soft badge-soft-secondary', icon: '<i class="fas fa-pause me-1"></i>' },
+        quality_check: { cls: 'status-badge badge-soft badge-soft-info', icon: '<i class="fas fa-search me-1"></i>' },
+        completed: { cls: 'status-badge badge-soft badge-soft-success', icon: '<i class="fas fa-check me-1"></i>' },
+        invoiced: { cls: 'status-badge badge-soft badge-soft-dark', icon: '<i class="fas fa-file-invoice me-1"></i>' },
+        closed: { cls: 'status-badge badge-soft badge-soft-secondary', icon: '<i class="fas fa-lock me-1"></i>' },
+        default: { cls: 'status-badge badge-soft badge-soft-secondary' }
+    };
+
     function getStatusBadgeHtml(status, display) {
-        const statusColors = {
-            'draft': 'secondary',
-            'intake': 'info',
-            'diagnosis': 'warning',
-            'awaiting_approval': 'primary',
-            'approved': 'success',
-            'in_progress': 'warning',
-            'paused': 'secondary',
-            'quality_check': 'info',
-            'completed': 'success',
-            'invoiced': 'dark',
-            'closed': 'secondary'
-        };
-        const color = statusColors[status] || 'secondary';
-        return `<span class="badge bg-${color} status-badge">${display}</span>`;
+        const config = statusStyles[status] || statusStyles.default;
+        const icon = config.icon ? `${config.icon}` : '';
+        return `<span class="${config.cls}">${icon}${display}</span>`;
     }
-    
+
     function showAlert(type, message) {
         const alertHtml = `
             <div class="alert alert-${type} alert-dismissible fade show" role="alert">
@@ -494,8 +507,7 @@ $(document).ready(function() {
             </div>
         `;
         $('#alerts-container').html(alertHtml);
-        
-        // Auto-dismiss after 3 seconds
+
         setTimeout(() => {
             $('.alert').alert('close');
         }, 3000);
