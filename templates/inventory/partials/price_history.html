@@ -14,218 +14,117 @@ Props:
 
 {% with chart_id=chart_id|default:'price-history-chart' height=height|default:300 show_controls=show_controls|default:True time_period=time_period|default:'30d' %}
 
-<div class="price-history-container">
-    <div class="price-history-header">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0">
-                <i class="fas fa-chart-line me-2 text-primary"></i>
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-4">
+    <div class="mb-4">
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+            <h6 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                <i class="fas fa-chart-line text-primary"></i>
                 Price History - {{ part.name }}
             </h6>
             {% if show_controls %}
-            <div class="chart-controls">
-                <div class="btn-group btn-group-sm" role="group">
-                    <input type="radio" class="btn-check" name="period-{{ chart_id }}" id="period-7d-{{ chart_id }}" value="7d">
-                    <label class="btn btn-outline-primary" for="period-7d-{{ chart_id }}">7D</label>
+            <div class="flex items-center gap-2">
+                <div class="inline-flex bg-slate-100 rounded-lg p-0.5">
+                    <input type="radio" class="hidden" name="period-{{ chart_id }}" id="period-7d-{{ chart_id }}" value="7d">
+                    <label class="px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer hover:bg-white hover:text-primary" for="period-7d-{{ chart_id }}">7D</label>
                     
-                    <input type="radio" class="btn-check" name="period-{{ chart_id }}" id="period-30d-{{ chart_id }}" value="30d" {% if time_period == '30d' %}checked{% endif %}>
-                    <label class="btn btn-outline-primary" for="period-30d-{{ chart_id }}">30D</label>
+                    <input type="radio" class="hidden" name="period-{{ chart_id }}" id="period-30d-{{ chart_id }}" value="30d" {% if time_period == '30d' %}checked{% endif %}>
+                    <label class="px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer {% if time_period == '30d' %}bg-white text-primary shadow-sm{% else %}hover:bg-white hover:text-primary{% endif %}" for="period-30d-{{ chart_id }}">30D</label>
                     
-                    <input type="radio" class="btn-check" name="period-{{ chart_id }}" id="period-90d-{{ chart_id }}" value="90d">
-                    <label class="btn btn-outline-primary" for="period-90d-{{ chart_id }}">90D</label>
+                    <input type="radio" class="hidden" name="period-{{ chart_id }}" id="period-90d-{{ chart_id }}" value="90d">
+                    <label class="px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer hover:bg-white hover:text-primary" for="period-90d-{{ chart_id }}">90D</label>
                     
-                    <input type="radio" class="btn-check" name="period-{{ chart_id }}" id="period-1y-{{ chart_id }}" value="1y">
-                    <label class="btn btn-outline-primary" for="period-1y-{{ chart_id }}">1Y</label>
+                    <input type="radio" class="hidden" name="period-{{ chart_id }}" id="period-1y-{{ chart_id }}" value="1y">
+                    <label class="px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer hover:bg-white hover:text-primary" for="period-1y-{{ chart_id }}">1Y</label>
                     
-                    <input type="radio" class="btn-check" name="period-{{ chart_id }}" id="period-all-{{ chart_id }}" value="all">
-                    <label class="btn btn-outline-primary" for="period-all-{{ chart_id }}">ALL</label>
+                    <input type="radio" class="hidden" name="period-{{ chart_id }}" id="period-all-{{ chart_id }}" value="all">
+                    <label class="px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer hover:bg-white hover:text-primary" for="period-all-{{ chart_id }}">ALL</label>
                 </div>
                 
-                <div class="dropdown ms-2">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <div class="relative">
+                    <button class="inline-flex items-center justify-center w-9 h-9 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors" type="button" onclick="toggleChartSettings('{{ chart_id }}')">
                         <i class="fas fa-cog"></i>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                            <div class="dropdown-item-text">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="show-cost-{{ chart_id }}" checked>
-                                    <label class="form-check-label" for="show-cost-{{ chart_id }}">
-                                        Cost Price
-                                    </label>
-                                </div>
-                            </div>
-                        </li>
-                        <li>
-                            <div class="dropdown-item-text">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="show-selling-{{ chart_id }}" checked>
-                                    <label class="form-check-label" for="show-selling-{{ chart_id }}">
-                                        Selling Price
-                                    </label>
-                                </div>
-                            </div>
-                        </li>
-                        <li>
-                            <div class="dropdown-item-text">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="show-markup-{{ chart_id }}">
-                                    <label class="form-check-label" for="show-markup-{{ chart_id }}">
-                                        Markup %
-                                    </label>
-                                </div>
-                            </div>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" onclick="exportChart('{{ chart_id }}')">
-                            <i class="fas fa-download me-2"></i>Export Chart
-                        </a></li>
-                        <li><a class="dropdown-item" href="#" onclick="fullscreenChart('{{ chart_id }}')">
-                            <i class="fas fa-expand me-2"></i>Fullscreen
-                        </a></li>
-                    </ul>
+                    <div class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 z-50" id="chartSettings-{{ chart_id }}">
+                        <div class="py-1">
+                            <label class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
+                                <input type="checkbox" class="mr-2" id="show-cost-{{ chart_id }}" checked onchange="toggleChartDataset('{{ chart_id }}', 'cost', this.checked)">
+                                Cost Price
+                            </label>
+                            <label class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
+                                <input type="checkbox" class="mr-2" id="show-selling-{{ chart_id }}" checked onchange="toggleChartDataset('{{ chart_id }}', 'selling', this.checked)">
+                                Selling Price
+                            </label>
+                            <label class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
+                                <input type="checkbox" class="mr-2" id="show-markup-{{ chart_id }}" onchange="toggleChartDataset('{{ chart_id }}', 'markup', this.checked)">
+                                Markup %
+                            </label>
+                            <hr class="my-1 border-slate-200">
+                            <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer" href="#" onclick="event.preventDefault(); exportChart('{{ chart_id }}')">
+                                <i class="fas fa-download mr-2"></i>Export Chart
+                            </a>
+                            <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer" href="#" onclick="event.preventDefault(); fullscreenChart('{{ chart_id }}')">
+                                <i class="fas fa-expand mr-2"></i>Fullscreen
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
             {% endif %}
         </div>
     </div>
     
-    <div class="price-history-chart">
+    <div class="relative bg-slate-50 rounded-lg p-4">
         <canvas id="{{ chart_id }}" height="{{ height }}"></canvas>
     </div>
     
     <!-- Loading State -->
-    <div class="chart-loading" id="{{ chart_id }}-loading" style="display: none;">
-        <div class="d-flex justify-content-center align-items-center" style="height: {{ height }}px;">
+    <div class="hidden relative bg-slate-50 rounded-lg border-2 border-dashed border-slate-300" id="{{ chart_id }}-loading" style="height: {{ height }}px;">
+        <div class="absolute inset-0 flex justify-center items-center">
             <div class="text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-2 text-muted">Loading price history...</p>
+                <div class="inline-block w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+                <p class="text-sm text-slate-500">Loading price history...</p>
             </div>
         </div>
     </div>
     
     <!-- No Data State -->
-    <div class="chart-no-data" id="{{ chart_id }}-no-data" style="display: none;">
-        <div class="d-flex justify-content-center align-items-center text-center" style="height: {{ height }}px;">
+    <div class="hidden relative bg-slate-50 rounded-lg border-2 border-dashed border-slate-300" id="{{ chart_id }}-no-data" style="height: {{ height }}px;">
+        <div class="absolute inset-0 flex justify-center items-center text-center">
             <div>
-                <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
-                <h6 class="text-muted">No Price History Available</h6>
-                <p class="text-muted small">Price changes will appear here once recorded.</p>
+                <i class="fas fa-chart-line text-4xl text-slate-400 mb-3"></i>
+                <h6 class="text-sm font-semibold text-slate-500 mb-1">No Price History Available</h6>
+                <p class="text-xs text-slate-400">Price changes will appear here once recorded.</p>
             </div>
         </div>
     </div>
     
     <!-- Chart Statistics -->
-    <div class="price-statistics mt-3" id="{{ chart_id }}-stats" style="display: none;">
-        <div class="row g-3">
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-value" id="{{ chart_id }}-current-cost">$0.00</div>
-                    <div class="stat-label">Current Cost</div>
-                </div>
+    <div class="hidden mt-4 pt-4 border-t border-slate-200 bg-slate-50 rounded-lg p-4" id="{{ chart_id }}-stats">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="text-center">
+                <div class="text-xl font-bold text-slate-900 mb-1" id="{{ chart_id }}-current-cost">$0.00</div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Current Cost</div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-value" id="{{ chart_id }}-current-selling">$0.00</div>
-                    <div class="stat-label">Current Selling</div>
-                </div>
+            <div class="text-center">
+                <div class="text-xl font-bold text-slate-900 mb-1" id="{{ chart_id }}-current-selling">$0.00</div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Current Selling</div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-value" id="{{ chart_id }}-cost-change">+0.0%</div>
-                    <div class="stat-label">Cost Change</div>
-                </div>
+            <div class="text-center">
+                <div class="text-xl font-bold mb-1" id="{{ chart_id }}-cost-change">+0.0%</div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cost Change</div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-value" id="{{ chart_id }}-selling-change">+0.0%</div>
-                    <div class="stat-label">Selling Change</div>
-                </div>
+            <div class="text-center">
+                <div class="text-xl font-bold mb-1" id="{{ chart_id }}-selling-change">+0.0%</div>
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Selling Change</div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- CSS Styles -->
+<!-- CSS Styles (minimal) -->
 <style>
-    .price-history-container {
-        background: white;
-        border-radius: 0.5rem;
-        border: 1px solid var(--gray-200);
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    
-    .chart-controls .btn-group {
-        border-radius: 0.375rem;
-        overflow: hidden;
-    }
-    
-    .chart-controls .btn {
-        font-size: 0.75rem;
-        font-weight: 600;
-        padding: 0.375rem 0.75rem;
-    }
-    
-    .price-history-chart {
-        position: relative;
-        background: #fafafa;
-        border-radius: 0.375rem;
-        padding: 1rem;
-    }
-    
-    .price-statistics {
-        background: var(--gray-50);
-        border-radius: 0.375rem;
-        padding: 1rem;
-        border-top: 1px solid var(--gray-200);
-    }
-    
-    .stat-item {
-        text-align: center;
-        padding: 0.5rem;
-    }
-    
-    .stat-value {
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin-bottom: 0.25rem;
-    }
-    
-    .stat-label {
-        font-size: 0.75rem;
-        color: var(--gray-600);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    
-    .chart-loading,
-    .chart-no-data {
-        background: #fafafa;
-        border-radius: 0.375rem;
-        border: 2px dashed var(--gray-300);
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .price-history-header .d-flex {
-            flex-direction: column;
-            gap: 1rem;
-        }
-        
-        .chart-controls {
-            align-self: stretch;
-        }
-        
-        .chart-controls .btn-group {
-            width: 100%;
-        }
-        
-        .chart-controls .btn {
-            flex: 1;
-        }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 </style>
 
@@ -364,28 +263,23 @@ class PriceHistoryChart {
                 if (e.target.checked) {
                     this.currentPeriod = e.target.value;
                     this.loadData();
+                    // Update label styles
+                    document.querySelectorAll(`label[for^="period-"]`).forEach(label => {
+                        if (label.getAttribute('for').startsWith('period-')) {
+                            label.classList.remove('bg-white', 'text-primary', 'shadow-sm');
+                            label.classList.add('hover:bg-white', 'hover:text-primary');
+                        }
+                    });
+                    const activeLabel = document.querySelector(`label[for="${e.target.id}"]`);
+                    if (activeLabel) {
+                        activeLabel.classList.add('bg-white', 'text-primary', 'shadow-sm');
+                        activeLabel.classList.remove('hover:bg-white', 'hover:text-primary');
+                    }
                 }
             });
         });
         
-        // Chart display options
-        document.getElementById(`show-cost-${this.chartId}`).addEventListener('change', (e) => {
-            this.chart.data.datasets[0].hidden = !e.target.checked;
-            this.chart.update();
-        });
-        
-        document.getElementById(`show-selling-${this.chartId}`).addEventListener('change', (e) => {
-            this.chart.data.datasets[1].hidden = !e.target.checked;
-            this.chart.update();
-        });
-        
-        document.getElementById(`show-markup-${this.chartId}`).addEventListener('change', (e) => {
-            if (e.target.checked) {
-                this.addMarkupDataset();
-            } else {
-                this.removeMarkupDataset();
-            }
-        });
+        // Chart display options - handled by inline onchange handlers
     }
     
     loadData() {
@@ -433,11 +327,11 @@ class PriceHistoryChart {
         const statsContainer = document.getElementById(`${this.chartId}-stats`);
         
         if (!data.current) {
-            statsContainer.style.display = 'none';
+            statsContainer.classList.add('hidden');
             return;
         }
         
-        statsContainer.style.display = 'block';
+        statsContainer.classList.remove('hidden');
         
         document.getElementById(`${this.chartId}-current-cost`).textContent = 
             '$' + parseFloat(data.current.cost_price).toFixed(2);
@@ -457,10 +351,10 @@ class PriceHistoryChart {
     updateChangeDisplay(elementId, change) {
         const element = document.getElementById(elementId);
         const prefix = change >= 0 ? '+' : '';
-        const color = change >= 0 ? 'text-success' : 'text-danger';
+        const color = change >= 0 ? 'text-emerald-600' : 'text-rose-600';
         
         element.textContent = `${prefix}${change.toFixed(1)}%`;
-        element.className = `stat-value ${color}`;
+        element.className = `text-xl font-bold mb-1 ${color}`;
     }
     
     addMarkupDataset() {
@@ -512,24 +406,24 @@ class PriceHistoryChart {
     }
     
     showLoading() {
-        document.getElementById(`${this.chartId}-loading`).style.display = 'block';
-        document.getElementById(this.chartId).style.display = 'none';
-        document.getElementById(`${this.chartId}-stats`).style.display = 'none';
+        document.getElementById(`${this.chartId}-loading`).classList.remove('hidden');
+        document.getElementById(this.chartId).parentElement.classList.add('hidden');
+        document.getElementById(`${this.chartId}-stats`).classList.add('hidden');
     }
     
     hideLoading() {
-        document.getElementById(`${this.chartId}-loading`).style.display = 'none';
-        document.getElementById(this.chartId).style.display = 'block';
+        document.getElementById(`${this.chartId}-loading`).classList.add('hidden');
+        document.getElementById(this.chartId).parentElement.classList.remove('hidden');
     }
     
     showNoData() {
-        document.getElementById(`${this.chartId}-no-data`).style.display = 'block';
-        document.getElementById(this.chartId).style.display = 'none';
+        document.getElementById(`${this.chartId}-no-data`).classList.remove('hidden');
+        document.getElementById(this.chartId).parentElement.classList.add('hidden');
     }
     
     hideNoData() {
-        document.getElementById(`${this.chartId}-no-data`).style.display = 'none';
-        document.getElementById(this.chartId).style.display = 'block';
+        document.getElementById(`${this.chartId}-no-data`).classList.add('hidden');
+        document.getElementById(this.chartId).parentElement.classList.remove('hidden');
     }
 }
 
@@ -554,7 +448,7 @@ function exportChart(chartId) {
 }
 
 function fullscreenChart(chartId) {
-    const container = document.querySelector(`#${chartId}`).closest('.price-history-container');
+    const container = document.querySelector(`#${chartId}`).closest('.bg-white');
     if (container.requestFullscreen) {
         container.requestFullscreen();
     } else if (container.webkitRequestFullscreen) {
@@ -563,6 +457,42 @@ function fullscreenChart(chartId) {
         container.msRequestFullscreen();
     }
 }
+
+function toggleChartSettings(chartId) {
+    const menu = document.getElementById(`chartSettings-${chartId}`);
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
+function toggleChartDataset(chartId, type, show) {
+    const chart = window[`priceChart_${chartId.replace('-', '_')}`];
+    if (!chart || !chart.chart) return;
+    
+    if (type === 'cost') {
+        chart.chart.data.datasets[0].hidden = !show;
+    } else if (type === 'selling') {
+        chart.chart.data.datasets[1].hidden = !show;
+    } else if (type === 'markup') {
+        if (show) {
+            chart.addMarkupDataset();
+        } else {
+            chart.removeMarkupDataset();
+        }
+    }
+    chart.chart.update();
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.relative')) {
+        document.querySelectorAll('[id^="chartSettings-"]').forEach(menu => {
+            if (!menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        });
+    }
+});
 </script>
 
 {% endwith %}

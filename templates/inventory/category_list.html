@@ -4,113 +4,30 @@
 {% block title %}Category Management{% endblock %}
 
 {% block extra_css %}
-<style>
-    .category-card {
-        transition: transform 0.2s;
-        border: 1px solid #dee2e6;
-    }
-    
-    .category-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    
-    .category-icon {
-        width: 50px;
-        height: 50px;
-        background: var(--primary);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.5rem;
-    }
-    
-    .parts-count-badge {
-        font-size: 0.875rem;
-        padding: 0.375rem 0.75rem;
-        border-radius: 20px;
-        background: #e3f2fd;
-        color: #1565c0;
-        font-weight: 600;
-    }
-    
-    .action-buttons .btn {
-        margin: 0 2px;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-    }
-    
-    .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: #6c757d;
-    }
-    
-    .empty-state-icon {
-        font-size: 4rem;
-        color: #dee2e6;
-        margin-bottom: 1rem;
-    }
-    
-    .table > :not(caption) > * > * {
-        padding: 0.75rem;
-        vertical-align: middle;
-    }
-    
-    .inactive-category {
-        background-color: #f8f9fa !important;
-        opacity: 0.7;
-    }
-    
-    .inactive-category td {
-        color: #6c757d;
-    }
-    
-    .view-toggle {
-        background: #f8f9fa;
-        border-radius: 0.375rem;
-        padding: 0.25rem;
-    }
-    
-    .view-toggle .btn {
-        border: none;
-        background: transparent;
-        color: #6c757d;
-        padding: 0.375rem 0.75rem;
-        border-radius: 0.25rem;
-    }
-    
-    .view-toggle .btn.active {
-        background: white;
-        color: #495057;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-</style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="h3 mb-0">Category Management</h1>
-            <p class="text-muted mb-0">Organize and manage your parts categories</p>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">Category Management</h1>
+            <p class="text-sm text-slate-500">Organize and manage your parts categories</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="flex items-center gap-2">
             {% if request.user.role in 'admin,manager,parts_manager' %}
-                <a href="{% url 'inventory:category_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>Add Category
+                <a href="{% url 'inventory:category_create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Category</span>
                 </a>
             {% endif %}
             
             <!-- View Toggle -->
-            <div class="view-toggle">
-                <button class="btn active" onclick="toggleView('grid')" id="gridViewBtn">
+            <div class="inline-flex bg-slate-100 rounded-lg p-0.5">
+                <button class="px-3 py-1.5 text-sm font-medium rounded transition-colors active bg-white text-primary shadow-sm" onclick="toggleView('grid')" id="gridViewBtn">
                     <i class="fas fa-th"></i>
                 </button>
-                <button class="btn" onclick="toggleView('table')" id="tableViewBtn">
+                <button class="px-3 py-1.5 text-sm font-medium rounded transition-colors text-slate-600 hover:text-slate-900" onclick="toggleView('table')" id="tableViewBtn">
                     <i class="fas fa-list"></i>
                 </button>
             </div>
@@ -118,140 +35,123 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card stats-card-primary">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-0">Total Categories</h6>
-                            <h3 class="mb-0">{{ categories.count }}</h3>
-                        </div>
-                        <i class="fas fa-tags fa-2x opacity-75"></i>
-                    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Total Categories</div>
+                    <div class="text-2xl font-bold text-primary">{{ categories.count }}</div>
                 </div>
+                <i class="fas fa-tags text-2xl text-primary/50"></i>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stats-card-success">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-0">Active Categories</h6>
-                            <h3 class="mb-0">{{ categories|length }}</h3>
-                        </div>
-                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
-                    </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Active Categories</div>
+                    <div class="text-2xl font-bold text-emerald-600">{{ categories|length }}</div>
                 </div>
+                <i class="fas fa-check-circle text-2xl text-emerald-600/50"></i>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card" style="background: var(--info); color: white;">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-0">Total Parts</h6>
-                            <h3 class="mb-0">
-                                {% with total_parts=0 %}
-                                    {% for category in categories %}
-                                        {% with total_parts=total_parts|add:category.parts_count %}{% endwith %}
-                                    {% endfor %}
-                                    {{ total_parts }}
-                                {% endwith %}
-                            </h3>
-                        </div>
-                        <i class="fas fa-cogs fa-2x opacity-75"></i>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Total Parts</div>
+                    <div class="text-2xl font-bold text-blue-600">
+                        {% with total_parts=0 %}
+                            {% for category in categories %}
+                                {% with total_parts=total_parts|add:category.parts_count %}{% endwith %}
+                            {% endfor %}
+                            {{ total_parts }}
+                        {% endwith %}
                     </div>
                 </div>
+                <i class="fas fa-cogs text-2xl text-blue-600/50"></i>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stats-card-warning">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="card-title mb-0">Empty Categories</h6>
-                            <h3 class="mb-0">
-                                {% with empty_count=0 %}
-                                    {% for category in categories %}
-                                        {% if category.parts_count == 0 %}
-                                            {% with empty_count=empty_count|add:1 %}{% endwith %}
-                                        {% endif %}
-                                    {% endfor %}
-                                    {{ empty_count }}
-                                {% endwith %}
-                            </h3>
-                        </div>
-                        <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Empty Categories</div>
+                    <div class="text-2xl font-bold text-amber-600">
+                        {% with empty_count=0 %}
+                            {% for category in categories %}
+                                {% if category.parts_count == 0 %}
+                                    {% with empty_count=empty_count|add:1 %}{% endwith %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ empty_count }}
+                        {% endwith %}
                     </div>
                 </div>
+                <i class="fas fa-exclamation-triangle text-2xl text-amber-600/50"></i>
             </div>
         </div>
     </div>
 
     {% if categories %}
         <!-- Grid View -->
-        <div id="gridView" class="row">
+        <div id="gridView" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {% for category in categories %}
-                <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                    <div class="card category-card h-100 {% if not category.is_active %}inactive-category{% endif %}">
-                        <div class="card-body">
-                            <div class="d-flex align-items-start mb-3">
-                                <div class="category-icon me-3">
-                                    <i class="fas fa-tag"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="card-title mb-1">{{ category.name }}</h6>
-                                    {% if not category.is_active %}
-                                        <span class="badge bg-secondary mb-2">Inactive</span>
-                                    {% endif %}
-                                    <div class="parts-count-badge">
-                                        {{ category.parts_count }} part{{ category.parts_count|pluralize }}
-                                    </div>
-                                </div>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow {% if not category.is_active %}opacity-60{% endif %}">
+                    <div class="p-6">
+                        <div class="flex items-start mb-4">
+                            <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-lg mr-3 flex-shrink-0">
+                                <i class="fas fa-tag"></i>
                             </div>
-                            
-                            {% if category.description %}
-                                <p class="card-text text-muted small mb-3">
-                                    {{ category.description|truncatechars:100 }}
-                                </p>
-                            {% endif %}
-                            
-                            {% if category.parent %}
-                                <div class="mb-3">
-                                    <small class="text-muted">
-                                        <i class="fas fa-sitemap me-1"></i>
-                                        Parent: {{ category.parent.name }}
-                                    </small>
-                                </div>
-                            {% endif %}
-                            
-                            {% if category.subcategories.exists %}
-                                <div class="mb-3">
-                                    <small class="text-muted">
-                                        <i class="fas fa-folder me-1"></i>
-                                        {{ category.subcategories.count }} subcategor{{ category.subcategories.count|pluralize:"y,ies" }}
-                                    </small>
-                                </div>
-                            {% endif %}
-                            
-                            <div class="action-buttons d-flex gap-1">
-                                <a href="{% url 'inventory:part_list' %}?category={{ category.id }}" 
-                                   class="btn btn-outline-primary btn-sm flex-fill">
-                                    <i class="fas fa-eye me-1"></i>View Parts
-                                </a>
-                                {% if request.user.role in 'admin,manager,parts_manager' %}
-                                    <a href="{% url 'inventory:category_edit' category.id %}" 
-                                       class="btn btn-outline-secondary btn-sm">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <button type="button" 
-                                            class="btn btn-outline-danger btn-sm"
-                                            onclick="confirmDelete('{{ category.name }}', '{% url 'inventory:category_delete' category.id %}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                            <div class="flex-1 min-w-0">
+                                <h6 class="text-sm font-semibold text-slate-900 mb-1">{{ category.name }}</h6>
+                                {% if not category.is_active %}
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 mb-2">Inactive</span>
                                 {% endif %}
+                                <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                    {{ category.parts_count }} part{{ category.parts_count|pluralize }}
+                                </div>
                             </div>
+                        </div>
+                        
+                        {% if category.description %}
+                            <p class="text-xs text-slate-600 mb-3">
+                                {{ category.description|truncatechars:100 }}
+                            </p>
+                        {% endif %}
+                        
+                        {% if category.parent %}
+                            <div class="mb-3">
+                                <div class="text-xs text-slate-500 flex items-center gap-1">
+                                    <i class="fas fa-sitemap"></i>
+                                    <span>Parent: {{ category.parent.name }}</span>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if category.subcategories.exists %}
+                            <div class="mb-3">
+                                <div class="text-xs text-slate-500 flex items-center gap-1">
+                                    <i class="fas fa-folder"></i>
+                                    <span>{{ category.subcategories.count }} subcategor{{ category.subcategories.count|pluralize:"y,ies" }}</span>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="flex items-center gap-2 mt-4">
+                            <a href="{% url 'inventory:part_list' %}?category={{ category.id }}" 
+                               class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border border-primary text-primary rounded-lg text-xs font-medium hover:bg-primary/10 transition-colors">
+                                <i class="fas fa-eye"></i>
+                                <span>View Parts</span>
+                            </a>
+                            {% if request.user.role in 'admin,manager,parts_manager' %}
+                                <a href="{% url 'inventory:category_edit' category.id %}" 
+                                   class="inline-flex items-center justify-center w-9 h-9 border border-slate-300 text-slate-600 rounded-lg text-xs hover:bg-slate-50 transition-colors">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" 
+                                        class="inline-flex items-center justify-center w-9 h-9 border border-rose-300 text-rose-600 rounded-lg text-xs hover:bg-rose-50 transition-colors"
+                                        onclick="confirmDelete('{{ category.name }}', '{% url 'inventory:category_delete' category.id %}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -259,109 +159,106 @@
         </div>
 
         <!-- Table View -->
-        <div id="tableView" style="display: none;">
-            <div class="card">
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Category</th>
-                                    <th>Description</th>
-                                    <th>Parent</th>
-                                    <th>Parts Count</th>
-                                    <th>Subcategories</th>
-                                    <th>Status</th>
-                                    <th>Created</th>
+        <div id="tableView" class="hidden">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Category</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Description</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Parent</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Parts Count</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Subcategories</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Created</th>
+                                {% if request.user.role in 'admin,manager,parts_manager' %}
+                                    <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-32">Actions</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-slate-100">
+                            {% for category in categories %}
+                                <tr class="hover:bg-slate-50 transition-colors {% if not category.is_active %}opacity-60{% endif %}">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs mr-3">
+                                                <i class="fas fa-tag"></i>
+                                            </div>
+                                            <span class="text-sm font-semibold text-slate-900">{{ category.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <span class="text-xs text-slate-600">
+                                            {{ category.description|truncatechars:50|default:"—" }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        {% if category.parent %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">{{ category.parent.name }}</span>
+                                        {% else %}
+                                            <span class="text-xs text-slate-400">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <a href="{% url 'inventory:part_list' %}?category={{ category.id }}" 
+                                           class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors">
+                                            {{ category.parts_count }}
+                                        </a>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        {% if category.subcategories.exists %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">{{ category.subcategories.count }}</span>
+                                        {% else %}
+                                            <span class="text-xs text-slate-400">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        {% if category.is_active %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>
+                                        {% else %}
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="text-xs text-slate-500">
+                                            {{ category.created_at|date:"M d, Y" }}
+                                        </span>
+                                    </td>
                                     {% if request.user.role in 'admin,manager,parts_manager' %}
-                                        <th width="120">Actions</th>
-                                    {% endif %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for category in categories %}
-                                    <tr {% if not category.is_active %}class="inactive-category"{% endif %}>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="category-icon me-3" style="width: 30px; height: 30px; font-size: 0.875rem;">
-                                                    <i class="fas fa-tag"></i>
-                                                </div>
-                                                <strong>{{ category.name }}</strong>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center gap-1">
+                                                <a href="{% url 'inventory:category_edit' category.id %}" 
+                                                   class="inline-flex items-center justify-center w-8 h-8 border border-slate-300 text-slate-600 rounded-lg text-xs hover:bg-slate-50 transition-colors">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <button type="button" 
+                                                        class="inline-flex items-center justify-center w-8 h-8 border border-rose-300 text-rose-600 rounded-lg text-xs hover:bg-rose-50 transition-colors"
+                                                        onclick="confirmDelete('{{ category.name }}', '{% url 'inventory:category_delete' category.id %}')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
                                             </div>
                                         </td>
-                                        <td>
-                                            <span class="text-muted">
-                                                {{ category.description|truncatechars:50|default:"—" }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {% if category.parent %}
-                                                <span class="badge bg-light text-dark">{{ category.parent.name }}</span>
-                                            {% else %}
-                                                <span class="text-muted">—</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <a href="{% url 'inventory:part_list' %}?category={{ category.id }}" 
-                                               class="text-decoration-none">
-                                                <span class="parts-count-badge">
-                                                    {{ category.parts_count }}
-                                                </span>
-                                            </a>
-                                        </td>
-                                        <td>
-                                            {% if category.subcategories.exists %}
-                                                <span class="badge bg-secondary">{{ category.subcategories.count }}</span>
-                                            {% else %}
-                                                <span class="text-muted">—</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if category.is_active %}
-                                                <span class="badge bg-success">Active</span>
-                                            {% else %}
-                                                <span class="badge bg-secondary">Inactive</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                {{ category.created_at|date:"M d, Y" }}
-                                            </small>
-                                        </td>
-                                        {% if request.user.role in 'admin,manager,parts_manager' %}
-                                            <td>
-                                                <div class="btn-group" role="group">
-                                                    <a href="{% url 'inventory:category_edit' category.id %}" 
-                                                       class="btn btn-outline-secondary btn-sm">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
-                                                    <button type="button" 
-                                                            class="btn btn-outline-danger btn-sm"
-                                                            onclick="confirmDelete('{{ category.name }}', '{% url 'inventory:category_delete' category.id %}')">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        {% endif %}
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                                    {% endif %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     {% else %}
         <!-- Empty State -->
-        <div class="empty-state">
-            <div class="empty-state-icon">
-                <i class="fas fa-tags"></i>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+            <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+                <i class="fas fa-tags text-3xl text-slate-400"></i>
             </div>
-            <h4>No Categories Found</h4>
-            <p class="lead">Start organizing your inventory by creating your first category.</p>
+            <h4 class="text-lg font-semibold text-slate-900 mb-2">No Categories Found</h4>
+            <p class="text-sm text-slate-600 mb-6">Start organizing your inventory by creating your first category.</p>
             {% if request.user.role in 'admin,manager,parts_manager' %}
-                <a href="{% url 'inventory:category_create' %}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>Create First Category
+                <a href="{% url 'inventory:category_create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-plus"></i>
+                    <span>Create First Category</span>
                 </a>
             {% endif %}
         </div>
@@ -369,23 +266,25 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 transition-opacity" onclick="closeDeleteModal()"></div>
+        <div class="relative bg-white rounded-xl shadow-lg max-w-md w-full">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-rose-50 to-white">
+                <h5 class="text-sm font-semibold text-slate-900">Confirm Delete</h5>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete the category "<span id="deleteCategoryName"></span>"?</p>
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    This action cannot be undone. All parts in this category will need to be reassigned.
+            <div class="p-6">
+                <p class="text-sm text-slate-700 mb-4">Are you sure you want to delete the category "<span id="deleteCategoryName" class="font-semibold"></span>"?</p>
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div class="flex items-center gap-2 text-sm text-amber-700">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>This action cannot be undone. All parts in this category will need to be reassigned.</span>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="#" id="deleteConfirmBtn" class="btn btn-danger">Delete Category</a>
+            <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" onclick="closeDeleteModal()">Cancel</button>
+                <a href="#" id="deleteConfirmBtn" class="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700 transition-colors">Delete Category</a>
             </div>
         </div>
     </div>
@@ -401,16 +300,20 @@
         const tableBtn = document.getElementById('tableViewBtn');
         
         if (viewType === 'grid') {
-            gridView.style.display = 'block';
-            tableView.style.display = 'none';
-            gridBtn.classList.add('active');
-            tableBtn.classList.remove('active');
+            gridView.classList.remove('hidden');
+            tableView.classList.add('hidden');
+            gridBtn.classList.add('bg-white', 'text-primary', 'shadow-sm');
+            gridBtn.classList.remove('text-slate-600', 'hover:text-slate-900');
+            tableBtn.classList.remove('bg-white', 'text-primary', 'shadow-sm');
+            tableBtn.classList.add('text-slate-600', 'hover:text-slate-900');
             localStorage.setItem('categoryViewType', 'grid');
         } else {
-            gridView.style.display = 'none';
-            tableView.style.display = 'block';
-            gridBtn.classList.remove('active');
-            tableBtn.classList.add('active');
+            gridView.classList.add('hidden');
+            tableView.classList.remove('hidden');
+            tableBtn.classList.add('bg-white', 'text-primary', 'shadow-sm');
+            tableBtn.classList.remove('text-slate-600', 'hover:text-slate-900');
+            gridBtn.classList.remove('bg-white', 'text-primary', 'shadow-sm');
+            gridBtn.classList.add('text-slate-600', 'hover:text-slate-900');
             localStorage.setItem('categoryViewType', 'table');
         }
     }
@@ -418,7 +321,11 @@
     function confirmDelete(categoryName, deleteUrl) {
         document.getElementById('deleteCategoryName').textContent = categoryName;
         document.getElementById('deleteConfirmBtn').href = deleteUrl;
-        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+    
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
     }
     
     // Restore saved view preference

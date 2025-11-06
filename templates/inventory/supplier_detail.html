@@ -4,141 +4,179 @@
 {% block title %}{{ supplier.name }} - Suppliers{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="flex flex-wrap justify-between items-center gap-4">
         <div>
-            <h1 class="h3 mb-1">{{ supplier.name }}</h1>
-            <p class="text-muted mb-0">
-                <i class="fas fa-barcode me-1"></i> {{ supplier.supplier_code }}
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">{{ supplier.name }}</h1>
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="flex items-center gap-1 text-sm text-slate-500">
+                    <i class="fas fa-barcode"></i>
+                    <span>{{ supplier.supplier_code }}</span>
+                </div>
                 {% if supplier.is_preferred %}
-                <span class="badge bg-warning ms-2"><i class="fas fa-star me-1"></i>Preferred</span>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                    <i class="fas fa-star"></i>
+                    <span>Preferred</span>
+                </span>
                 {% endif %}
                 {% if not supplier.is_active %}
-                <span class="badge bg-secondary ms-2">Inactive</span>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">Inactive</span>
                 {% endif %}
-            </p>
+            </div>
         </div>
-        <div>
-            <a href="{% url 'inventory:supplier_list' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Back to List
+        <div class="flex items-center gap-2">
+            <a href="{% url 'inventory:supplier_list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to List</span>
             </a>
-            <a href="{% url 'inventory:supplier_edit' supplier.pk %}" class="btn btn-primary">
-                <i class="fas fa-edit me-1"></i> Edit Supplier
+            <a href="{% url 'inventory:supplier_edit' supplier.pk %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                <i class="fas fa-edit"></i>
+                <span>Edit Supplier</span>
             </a>
         </div>
     </div>
 
-    <div class="row">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Supplier Information -->
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Supplier Information</h5>
-                </div>
-                <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-4">Type:</dt>
-                        <dd class="col-sm-8">{{ supplier.get_supplier_type_display }}</dd>
-                        
-                        <dt class="col-sm-4">Contact Person:</dt>
-                        <dd class="col-sm-8">{{ supplier.contact_person|default:"—" }}</dd>
-                        
-                        <dt class="col-sm-4">Email:</dt>
-                        <dd class="col-sm-8">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                    <i class="fas fa-info-circle text-primary"></i>
+                    Supplier Information
+                </h5>
+            </div>
+            <div class="p-6">
+                <dl class="grid grid-cols-1 gap-4 mb-0">
+                    <div>
+                        <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Type:</dt>
+                        <dd class="text-sm text-slate-900">{{ supplier.get_supplier_type_display }}</dd>
+                    </div>
+                    
+                    <div>
+                        <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Contact Person:</dt>
+                        <dd class="text-sm text-slate-900">{{ supplier.contact_person|default:"—" }}</dd>
+                    </div>
+                    
+                    <div>
+                        <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Email:</dt>
+                        <dd class="text-sm text-slate-900">
                             {% if supplier.email %}
-                            <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>
+                            <a href="mailto:{{ supplier.email }}" class="text-primary hover:text-primary/80">{{ supplier.email }}</a>
                             {% else %}—{% endif %}
                         </dd>
-                        
-                        <dt class="col-sm-4">Phone:</dt>
-                        <dd class="col-sm-8">
+                    </div>
+                    
+                    <div>
+                        <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Phone:</dt>
+                        <dd class="text-sm text-slate-900">
                             {% if supplier.phone %}
-                            <a href="tel:{{ supplier.phone }}">{{ supplier.phone }}</a>
+                            <a href="tel:{{ supplier.phone }}" class="text-primary hover:text-primary/80">{{ supplier.phone }}</a>
                             {% else %}—{% endif %}
                         </dd>
-                        
-                        <dt class="col-sm-4">Website:</dt>
-                        <dd class="col-sm-8">
+                    </div>
+                    
+                    <div>
+                        <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Website:</dt>
+                        <dd class="text-sm text-slate-900">
                             {% if supplier.website %}
-                            <a href="{{ supplier.website }}" target="_blank">{{ supplier.website }}</a>
+                            <a href="{{ supplier.website }}" target="_blank" class="text-primary hover:text-primary/80">{{ supplier.website }}</a>
                             {% else %}—{% endif %}
                         </dd>
-                        
-                        <dt class="col-sm-4">Payment Terms:</dt>
-                        <dd class="col-sm-8">{{ supplier.payment_terms|default:"—" }}</dd>
-                        
-                        <dt class="col-sm-4">Credit Limit:</dt>
-                        <dd class="col-sm-8">
+                    </div>
+                    
+                    <div>
+                        <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Payment Terms:</dt>
+                        <dd class="text-sm text-slate-900">{{ supplier.payment_terms|default:"—" }}</dd>
+                    </div>
+                    
+                    <div>
+                        <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Credit Limit:</dt>
+                        <dd class="text-sm text-slate-900">
                             {% if supplier.credit_limit %}
                             ${{ supplier.credit_limit|floatformat:2 }}
                             {% else %}—{% endif %}
                         </dd>
-                    </dl>
-                </div>
+                    </div>
+                </dl>
             </div>
         </div>
 
         <!-- Address -->
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Address</h5>
-                </div>
-                <div class="card-body">
-                    {% if supplier.address_line1 %}
-                    <address class="mb-0">
-                        {{ supplier.address_line1 }}<br>
-                        {% if supplier.address_line2 %}
-                        {{ supplier.address_line2 }}<br>
-                        {% endif %}
-                        {{ supplier.city }}{% if supplier.state %}, {{ supplier.state }}{% endif %} {{ supplier.postal_code }}<br>
-                        {{ supplier.country }}
-                    </address>
-                    {% else %}
-                    <p class="text-muted mb-0">No address on file</p>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-white">
+                <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                    <i class="fas fa-map-marker-alt text-blue-600"></i>
+                    Address
+                </h5>
+            </div>
+            <div class="p-6">
+                {% if supplier.address_line1 %}
+                <address class="text-sm text-slate-700 not-italic mb-0">
+                    {{ supplier.address_line1 }}<br>
+                    {% if supplier.address_line2 %}
+                    {{ supplier.address_line2 }}<br>
                     {% endif %}
-                    
-                    {% if supplier.notes %}
-                    <hr>
-                    <h6>Notes:</h6>
-                    <p class="mb-0">{{ supplier.notes }}</p>
-                    {% endif %}
+                    {{ supplier.city }}{% if supplier.state %}, {{ supplier.state }}{% endif %} {{ supplier.postal_code }}<br>
+                    {{ supplier.country }}
+                </address>
+                {% else %}
+                <p class="text-sm text-slate-500 mb-0">No address on file</p>
+                {% endif %}
+                
+                {% if supplier.notes %}
+                <div class="mt-6 pt-6 border-t border-slate-200">
+                    <h6 class="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">Notes:</h6>
+                    <p class="text-sm text-slate-700 mb-0">{{ supplier.notes }}</p>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
 
     <!-- Parts from this Supplier -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-box me-2"></i>Parts from this Supplier</h5>
-            <span class="badge bg-light text-dark">{{ parts.count }} parts</span>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-white flex justify-between items-center">
+            <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                <i class="fas fa-box text-emerald-600"></i>
+                Parts from this Supplier
+            </h5>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-white text-slate-700 border border-slate-200">{{ parts.count }} parts</span>
         </div>
-        <div class="card-body">
+        <div class="p-6">
             {% if parts %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+            <div class="overflow-x-auto">
+                <table class="w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
                         <tr>
-                            <th>Part Number</th>
-                            <th>Name</th>
-                            <th>Category</th>
-                            <th>In Stock</th>
-                            <th>Cost Price</th>
-                            <th>Actions</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Part Number</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Category</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">In Stock</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Cost Price</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="bg-white divide-y divide-slate-100">
                         {% for part in parts %}
-                        <tr>
-                            <td><code>{{ part.part_number }}</code></td>
-                            <td>{{ part.name }}</td>
-                            <td>{{ part.category.name }}</td>
-                            <td>{{ part.quantity_in_stock }}</td>
-                            <td>${{ part.cost_price }}</td>
-                            <td>
-                                <a href="{% url 'inventory:part_detail' part.pk %}" class="btn btn-sm btn-outline-primary">
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <code class="px-2 py-1 bg-slate-100 rounded text-xs text-slate-700">{{ part.part_number }}</code>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="text-sm text-slate-900">{{ part.name }}</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="text-sm text-slate-600">{{ part.category.name }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-sm text-slate-900">{{ part.quantity_in_stock }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-sm text-slate-900">${{ part.cost_price }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a href="{% url 'inventory:part_detail' part.pk %}" class="inline-flex items-center justify-center w-8 h-8 border border-primary text-primary rounded-lg text-xs hover:bg-primary/10 transition-colors">
                                     <i class="fas fa-eye"></i>
                                 </a>
                             </td>
@@ -148,43 +186,58 @@
                 </table>
             </div>
             {% else %}
-            <p class="text-muted mb-0">No parts from this supplier yet.</p>
+            <p class="text-sm text-slate-500 mb-0">No parts from this supplier yet.</p>
             {% endif %}
         </div>
     </div>
 
     <!-- Recent Purchase Orders -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-warning d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>Recent Purchase Orders</h5>
-            <span class="badge bg-light text-dark">{{ purchase_orders.count }} orders</span>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-amber-50 to-white flex justify-between items-center">
+            <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                <i class="fas fa-shopping-cart text-amber-600"></i>
+                Recent Purchase Orders
+            </h5>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-white text-slate-700 border border-slate-200">{{ purchase_orders.count }} orders</span>
         </div>
-        <div class="card-body">
+        <div class="p-6">
             {% if purchase_orders %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+            <div class="overflow-x-auto">
+                <table class="w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
                         <tr>
-                            <th>PO Number</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Total Amount</th>
-                            <th>Actions</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">PO Number</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Total Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="bg-white divide-y divide-slate-100">
                         {% for po in purchase_orders %}
-                        <tr>
-                            <td><code>{{ po.po_number }}</code></td>
-                            <td>{{ po.created_at|date:"M d, Y" }}</td>
-                            <td>
-                                <span class="badge bg-{{ po.status|default:'secondary' }}">
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <code class="px-2 py-1 bg-slate-100 rounded text-xs text-slate-700">{{ po.po_number }}</code>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-sm text-slate-900">{{ po.created_at|date:"M d, Y" }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold
+                                    {% if po.status == 'draft' %}bg-slate-100 text-slate-700 border border-slate-200
+                                    {% elif po.status == 'submitted' %}bg-amber-50 text-amber-700 border border-amber-200
+                                    {% elif po.status == 'confirmed' %}bg-blue-50 text-blue-700 border border-blue-200
+                                    {% elif po.status == 'received' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                                    {% elif po.status == 'cancelled' %}bg-rose-50 text-rose-700 border border-rose-200
+                                    {% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
                                     {{ po.get_status_display }}
                                 </span>
                             </td>
-                            <td>${{ po.total_amount|floatformat:2 }}</td>
-                            <td>
-                                <a href="{% url 'inventory:purchase_order_detail' po.pk %}" class="btn btn-sm btn-outline-primary">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-sm text-slate-900">${{ po.total_amount|floatformat:2 }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a href="{% url 'inventory:purchase_order_detail' po.pk %}" class="inline-flex items-center justify-center w-8 h-8 border border-primary text-primary rounded-lg text-xs hover:bg-primary/10 transition-colors">
                                     <i class="fas fa-eye"></i>
                                 </a>
                             </td>
@@ -194,41 +247,57 @@
                 </table>
             </div>
             {% else %}
-            <p class="text-muted mb-0">No purchase orders yet.</p>
+            <p class="text-sm text-slate-500 mb-0">No purchase orders yet.</p>
             {% endif %}
         </div>
     </div>
 
     <!-- Delete Button -->
     {% if request.user.role in 'admin,manager,parts_manager' %}
-    <div class="mt-4">
-        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
-            <i class="fas fa-trash me-1"></i> Delete Supplier
+    <div>
+        <button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700 transition-colors" onclick="openDeleteModal()">
+            <i class="fas fa-trash"></i>
+            <span>Delete Supplier</span>
         </button>
     </div>
     {% endif %}
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Confirm Delete</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 transition-opacity" onclick="closeDeleteModal()"></div>
+        <div class="relative bg-white rounded-xl shadow-lg max-w-md w-full">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-rose-50 to-white">
+                <h5 class="text-sm font-semibold text-slate-900">Confirm Delete</h5>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete supplier <strong>{{ supplier.name }}</strong>?</p>
-                <p class="text-danger mb-0"><i class="fas fa-exclamation-triangle me-1"></i> This action cannot be undone.</p>
+            <div class="p-6">
+                <p class="text-sm text-slate-700 mb-4">Are you sure you want to delete supplier <strong>{{ supplier.name }}</strong>?</p>
+                <div class="p-3 bg-rose-50 border border-rose-200 rounded-lg">
+                    <div class="flex items-center gap-2 text-sm text-rose-700">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>This action cannot be undone.</span>
+                    </div>
+                </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="post" action="{% url 'inventory:supplier_delete' supplier.pk %}" class="d-inline">
+            <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" onclick="closeDeleteModal()">Cancel</button>
+                <form method="post" action="{% url 'inventory:supplier_delete' supplier.pk %}" class="inline">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Delete Supplier</button>
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700 transition-colors">Delete Supplier</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+function openDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+}
+</script>
 {% endblock %}

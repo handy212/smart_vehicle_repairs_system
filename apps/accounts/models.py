@@ -52,6 +52,26 @@ class User(AbstractUser):
     hire_date = models.DateField(_('hire date'), blank=True, null=True)
     hourly_rate = models.DecimalField(_('hourly rate'), max_digits=10, decimal_places=2, blank=True, null=True)
     
+    # Branch assignment
+    # Staff members (non-managers) are assigned to a single branch
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='staff_members',
+        verbose_name=_('assigned branch'),
+        help_text="Primary branch for staff members (receptionist, technician, parts_manager)"
+    )
+    # Managers can have access to multiple branches
+    managed_branches = models.ManyToManyField(
+        'branches.Branch',
+        related_name='managers',
+        blank=True,
+        verbose_name=_('managed branches'),
+        help_text="Branches that this manager has access to"
+    )
+    
     # Preferences
     email_notifications = models.BooleanField(_('email notifications'), default=True)
     sms_notifications = models.BooleanField(_('SMS notifications'), default=False)
@@ -93,6 +113,48 @@ class User(AbstractUser):
     def is_manager_or_admin(self):
         """Check if user is manager or admin"""
         return self.role in ['admin', 'manager']
+    
+    def get_accessible_branches(self):
+        """
+        Get all branches this user has access to
+        - Admins: all branches
+        - Managers: their managed branches
+        - Other staff: their assigned branch
+        - Customers: None
+        """
+        from apps.branches.models import Branch
+        
+        if self.role == 'admin':
+            return Branch.objects.filter(is_active=True)
+        elif self.role == 'manager':
+            return self.managed_branches.filter(is_active=True)
+        elif self.role in ['receptionist', 'technician', 'parts_manager']:
+            if self.branch:
+                return Branch.objects.filter(id=self.branch.id, is_active=True)
+            return Branch.objects.none()
+        return Branch.objects.none()
+    
+    def has_branch_access(self, branch):
+        """Check if user has access to a specific branch"""
+        if self.role == 'admin':
+            return True
+        elif self.role == 'manager':
+            return self.managed_branches.filter(id=branch.id).exists()
+        elif self.role in ['receptionist', 'technician', 'parts_manager']:
+            return self.branch and self.branch.id == branch.id
+        return False
+    
+    @property
+    def primary_branch(self):
+        """Get the primary branch for this user"""
+        if self.role == 'admin':
+            from apps.branches.models import Branch
+            return Branch.objects.filter(is_headquarters=True).first() or Branch.objects.filter(is_active=True).first()
+        elif self.role == 'manager':
+            return self.managed_branches.filter(is_active=True).first()
+        elif self.role in ['receptionist', 'technician', 'parts_manager']:
+            return self.branch
+        return None
 
 
 # Import permission models

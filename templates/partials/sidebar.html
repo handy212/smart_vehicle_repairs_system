@@ -1,363 +1,359 @@
 {% load static %}
-<style>
-    .nav-link.collapsible {
-        cursor: pointer;
-        position: relative;
-    }
-    .nav-link.collapsible .collapse-icon {
-        position: absolute;
-        right: 15px;
-        transition: transform 0.3s ease;
-    }
-    .nav-link.collapsible[aria-expanded="true"] .collapse-icon {
-        transform: rotate(90deg);
-    }
-    .submenu {
-        padding-left: 2rem;
-        background-color: rgba(0,0,0,0.02);
-    }
-    .submenu .nav-link {
-        padding: 0.5rem 1rem;
-        font-size: 0.9rem;
-    }
-    .submenu .nav-link:hover {
-        background-color: rgba(0,0,0,0.05);
-    }
-</style>
-<nav id="sidebar" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
-    <div class="pt-3">
-        <ul class="nav flex-column">
+{# Standardized Sidebar using Tailwind CSS #}
+<aside id="sidebar" class="fixed left-0 z-30 w-64 overflow-y-auto bg-white border-r border-slate-200 shadow-sm" style="top: 56px; bottom: 0; display: block; height: calc(100vh - 56px);">
+    <nav class="pt-6 px-4">
+        <ul class="space-y-1">
             <!-- Dashboard -->
-            <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
-                    <i class="fas fa-tachometer-alt"></i>
-                    Dashboard
+            <li>
+                <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'dashboard' %}bg-primary text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-primary{% endif %}">
+                    <i class="fas fa-tachometer-alt w-5 text-center"></i>
+                    <span>Dashboard</span>
                 </a>
             </li>
             
+            {% if user.role in 'admin,manager,receptionist,technician,parts_manager' %}
+        
+            {% endif %}
+            
             {% if user.role in 'admin,manager,receptionist' %}
             <!-- Customers -->
-            <li class="nav-item">
-                <a class="nav-link {% if 'customers' in request.path %}active{% endif %}" href="{% url 'customers:customer-list' %}">
-                    <i class="fas fa-users"></i>
-                    Customers
+            <li>
+                <a href="{% url 'customers:customer-list' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors {% if 'customers' in request.path %}bg-primary text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-primary{% endif %}">
+                    <i class="fas fa-users w-5 text-center"></i>
+                    <span>Customers</span>
                 </a>
             </li>
             
             <!-- Vehicles -->
-            <li class="nav-item">
-                <a class="nav-link {% if 'vehicles' in request.path %}active{% endif %}" href="{% url 'vehicles:vehicle-list' %}">
-                    <i class="fas fa-car"></i>
-                    Vehicles
+            <li>
+                <a href="{% url 'vehicles:vehicle-list' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors {% if 'vehicles' in request.path %}bg-primary text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-primary{% endif %}">
+                    <i class="fas fa-car w-5 text-center"></i>
+                    <span>Vehicles</span>
                 </a>
             </li>
             
             <!-- Appointments -->
-            <li class="nav-item">
-                <a class="nav-link collapsible {% if 'appointments' in request.path %}active{% endif %}" 
-                   data-bs-toggle="collapse" 
-                   href="#appointmentsSubmenu" 
-                   role="button" 
-                   aria-expanded="false" 
-                   aria-controls="appointmentsSubmenu">
-                    <i class="fas fa-calendar-alt"></i>
-                    Appointments
-                    <i class="fas fa-chevron-right collapse-icon"></i>
-                </a>
-                <div class="collapse submenu" id="appointmentsSubmenu">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'appointments:appointment-list' %}">
-                                <i class="fas fa-list me-2"></i>All Appointments
+            <li>
+                <button type="button" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors {% if 'appointments' in request.path %}bg-primary text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-primary{% endif %}" onclick="toggleSubmenu('appointmentsSubmenu', this)">
+                    <span class="flex items-center gap-3">
+                        <i class="fas fa-calendar-alt w-5 text-center"></i>
+                        <span>Appointments</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-xs transition-transform duration-200" id="appointmentsSubmenuIcon"></i>
+                </button>
+                <ul id="appointmentsSubmenu" class="hidden mt-1 ml-4 space-y-1 border-l-2 border-slate-200 pl-4">
+                    <li>
+                        <a href="{% url 'appointments:appointment-list' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-list w-4 text-center"></i>
+                            <span>All Appointments</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'appointments:calendar-view' %}">
-                                <i class="fas fa-calendar me-2"></i>Calendar View
+                    <li>
+                        <a href="{% url 'appointments:calendar-view' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-calendar w-4 text-center"></i>
+                            <span>Calendar View</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'appointments:appointment-create' %}">
-                                <i class="fas fa-plus me-2"></i>New Appointment
+                    <li>
+                        <a href="{% url 'appointments:appointment-create' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-plus w-4 text-center"></i>
+                            <span>New Appointment</span>
                             </a>
                         </li>
                     </ul>
-                </div>
             </li>
             {% endif %}
             
             {% if user.role in 'admin,manager,receptionist,technician' %}
             <!-- Work Orders -->
-            <li class="nav-item">
-                <a class="nav-link collapsible {% if 'workorders' in request.path %}active{% endif %}"
-                   data-bs-toggle="collapse" 
-                   href="#workordersSubmenu" 
-                   role="button" 
-                   aria-expanded="false" 
-                   aria-controls="workordersSubmenu">
-                    <i class="fas fa-wrench"></i>
-                    Work Orders
-                    <i class="fas fa-chevron-right collapse-icon"></i>
-                </a>
-                <div class="collapse submenu" id="workordersSubmenu">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'workorders:list' %}">
-                                <i class="fas fa-list me-2"></i>All Work Orders
+            <li>
+                <button type="button" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors {% if 'workorders' in request.path %}bg-primary text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-primary{% endif %}" onclick="toggleSubmenu('workordersSubmenu', this)">
+                    <span class="flex items-center gap-3">
+                        <i class="fas fa-wrench w-5 text-center"></i>
+                        <span>Work Orders</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-xs transition-transform duration-200" id="workordersSubmenuIcon"></i>
+                </button>
+                <ul id="workordersSubmenu" class="hidden mt-1 ml-4 space-y-1 border-l-2 border-slate-200 pl-4">
+                    <li>
+                        <a href="{% url 'workorders:list' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-list w-4 text-center"></i>
+                            <span>All Work Orders</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'workorders:kanban' %}">
-                                <i class="fas fa-columns me-2"></i>Kanban Board
+                    <li>
+                        <a href="{% url 'workorders:kanban' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-columns w-4 text-center"></i>
+                            <span>Kanban Board</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'workorders:create' %}">
-                                <i class="fas fa-plus me-2"></i>New Work Order
+                    <li>
+                        <a href="{% url 'workorders:create' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-plus w-4 text-center"></i>
+                            <span>New Work Order</span>
                             </a>
                         </li>
                     </ul>
-                </div>
             </li>
             {% endif %}
             
             {% if user.role in 'admin,manager,parts_manager' %}
             <!-- Inventory -->
-            <li class="nav-item">
-                <a class="nav-link collapsible {% if 'inventory' in request.path %}active{% endif %}" 
-                   data-bs-toggle="collapse" 
-                   href="#inventorySubmenu" 
-                   role="button" 
-                   aria-expanded="false" 
-                   aria-controls="inventorySubmenu">
-                    <i class="fas fa-boxes"></i>
-                    Inventory
-                    <i class="fas fa-chevron-right collapse-icon"></i>
-                </a>
-                <div class="collapse submenu" id="inventorySubmenu">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'inventory:dashboard' %}">
-                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+            <li>
+                <button type="button" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors {% if 'inventory' in request.path %}bg-primary text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-primary{% endif %}" onclick="toggleSubmenu('inventorySubmenu', this)">
+                    <span class="flex items-center gap-3">
+                        <i class="fas fa-boxes w-5 text-center"></i>
+                        <span>Inventory</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-xs transition-transform duration-200" id="inventorySubmenuIcon"></i>
+                </button>
+                <ul id="inventorySubmenu" class="hidden mt-1 ml-4 space-y-1 border-l-2 border-slate-200 pl-4">
+                    <li>
+                        <a href="{% url 'inventory:dashboard' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-tachometer-alt w-4 text-center"></i>
+                            <span>Dashboard</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'inventory:part_list' %}">
-                                <i class="fas fa-cogs me-2"></i>Parts
+                    <li>
+                        <a href="{% url 'inventory:part_list' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-cogs w-4 text-center"></i>
+                            <span>Parts</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'inventory:part_create' %}">
-                                <i class="fas fa-plus me-2"></i>New Part
+            
+                    <li>
+                        <a href="{% url 'inventory:supplier_list' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-truck w-4 text-center"></i>
+                            <span>Suppliers</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'inventory:part_list' %}?low_stock=true">
-                                <i class="fas fa-exclamation-triangle me-2"></i>Low Stock
+                    <li>
+                        <a href="{% url 'inventory:purchase_order_list' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-shopping-cart w-4 text-center"></i>
+                            <span>Purchase Orders</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'inventory:supplier_list' %}">
-                                <i class="fas fa-truck me-2"></i>Suppliers
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'inventory:purchase_order_list' %}">
-                                <i class="fas fa-shopping-cart me-2"></i>Purchase Orders
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'inventory:category_list' %}">
-                                <i class="fas fa-tags me-2"></i>Categories
+                    <li>
+                        <a href="{% url 'inventory:category_list' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-tags w-4 text-center"></i>
+                            <span>Categories</span>
                             </a>
                         </li>
                     </ul>
-                </div>
             </li>
             {% endif %}
             
             {% if user.role in 'admin,manager,receptionist' %}
             <!-- Billing -->
-            <li class="nav-item">
-                <a class="nav-link collapsible {% if 'billing' in request.path %}active{% endif %}"
-                   data-bs-toggle="collapse" 
-                   href="#billingSubmenu" 
-                   role="button" 
-                   aria-expanded="false" 
-                   aria-controls="billingSubmenu">
-                    <i class="fas fa-file-invoice-dollar"></i>
-                    Billing
-                    <i class="fas fa-chevron-right collapse-icon"></i>
-                </a>
-                <div class="collapse submenu" id="billingSubmenu">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'billing:dashboard' %}">
-                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+            <li>
+                <button type="button" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors {% if 'billing' in request.path %}bg-primary text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-primary{% endif %}" onclick="toggleSubmenu('billingSubmenu', this)">
+                    <span class="flex items-center gap-3">
+                        <i class="fas fa-file-invoice-dollar w-5 text-center"></i>
+                        <span>Billing</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-xs transition-transform duration-200" id="billingSubmenuIcon"></i>
+                </button>
+                <ul id="billingSubmenu" class="hidden mt-1 ml-4 space-y-1 border-l-2 border-slate-200 pl-4">
+                    <li>
+                        <a href="{% url 'billing:dashboard' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-tachometer-alt w-4 text-center"></i>
+                            <span>Dashboard</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'billing:invoice_list' %}">
-                                <i class="fas fa-file-invoice me-2"></i>Invoices
+                    <li>
+                        <a href="{% url 'billing:invoice_list' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-file-invoice w-4 text-center"></i>
+                            <span>Invoices</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'billing:invoice_create' %}">
-                                <i class="fas fa-plus me-2"></i>New Invoice
+                    <li>
+                        <a href="{% url 'billing:estimate_list' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-file-alt w-4 text-center"></i>
+                            <span>Estimates</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'billing:estimate_list' %}">
-                                <i class="fas fa-file-alt me-2"></i>Estimates
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'billing:payment_list' %}">
-                                <i class="fas fa-credit-card me-2"></i>Payments
+                    <li>
+                        <a href="{% url 'billing:payment_list' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-credit-card w-4 text-center"></i>
+                            <span>Payments</span>
                             </a>
                         </li>
                     </ul>
-                </div>
             </li>
             {% endif %}
             
             {% if user.role in 'admin,manager,technician' %}
             <!-- Inspections -->
-            <li class="nav-item">
-                <a class="nav-link collapsible {% if 'inspections' in request.path %}active{% endif %}"
-                   data-bs-toggle="collapse" 
-                   href="#inspectionsSubmenu" 
-                   role="button" 
-                   aria-expanded="false" 
-                   aria-controls="inspectionsSubmenu">
-                    <i class="fas fa-clipboard-check"></i>
-                    Inspections
-                    <i class="fas fa-chevron-right collapse-icon"></i>
-                </a>
-                <div class="collapse submenu" id="inspectionsSubmenu">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'inspections:inspection-list' %}">
-                                <i class="fas fa-list me-2"></i>All Inspections
+            <li>
+                <button type="button" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors {% if 'inspections' in request.path %}bg-primary text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-primary{% endif %}" onclick="toggleSubmenu('inspectionsSubmenu', this)">
+                    <span class="flex items-center gap-3">
+                        <i class="fas fa-clipboard-check w-5 text-center"></i>
+                        <span>Inspections</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-xs transition-transform duration-200" id="inspectionsSubmenuIcon"></i>
+                </button>
+                <ul id="inspectionsSubmenu" class="hidden mt-1 ml-4 space-y-1 border-l-2 border-slate-200 pl-4">
+                    <li>
+                        <a href="{% url 'inspections:inspection-list' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-list w-4 text-center"></i>
+                            <span>All Inspections</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'inspections:inspection-create' %}">
-                                <i class="fas fa-plus me-2"></i>New Inspection
+                    <li>
+                        <a href="{% url 'inspections:inspection-create' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-plus w-4 text-center"></i>
+                            <span>New Inspection</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'inspections:template-list' %}">
-                                <i class="fas fa-file-alt me-2"></i>Templates
+                    <li>
+                        <a href="{% url 'inspections:template-list' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-file-alt w-4 text-center"></i>
+                            <span>Templates</span>
                             </a>
                         </li>
                     </ul>
-                </div>
             </li>
             {% endif %}
             
             {% if user.role in 'admin,manager' %}
             <!-- Reports -->
-            <li class="nav-item">
-                <a class="nav-link collapsible {% if 'reporting' in request.path %}active{% endif %}"
-                   data-bs-toggle="collapse" 
-                   href="#reportsSubmenu" 
-                   role="button" 
-                   aria-expanded="false" 
-                   aria-controls="reportsSubmenu">
-                    <i class="fas fa-chart-line"></i>
-                    Reports
-                    <i class="fas fa-chevron-right collapse-icon"></i>
-                </a>
-                <div class="collapse submenu" id="reportsSubmenu">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'reporting:report-dashboard' %}">
-                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+            <li>
+                <button type="button" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors {% if 'reporting' in request.path %}bg-primary text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-primary{% endif %}" onclick="toggleSubmenu('reportsSubmenu', this)">
+                    <span class="flex items-center gap-3">
+                        <i class="fas fa-chart-line w-5 text-center"></i>
+                        <span>Reports</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-xs transition-transform duration-200" id="reportsSubmenuIcon"></i>
+                </button>
+                <ul id="reportsSubmenu" class="hidden mt-1 ml-4 space-y-1 border-l-2 border-slate-200 pl-4">
+                    <li>
+                        <a href="{% url 'reporting:report-dashboard' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-tachometer-alt w-4 text-center"></i>
+                            <span>Dashboard</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'reporting:financial-report' %}">
-                                <i class="fas fa-dollar-sign me-2"></i>Financial
+                    <li>
+                        <a href="{% url 'reporting:financial-report' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-dollar-sign w-4 text-center"></i>
+                            <span>Financial</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'reporting:operational-report' %}">
-                                <i class="fas fa-cogs me-2"></i>Operational
+                    <li>
+                        <a href="{% url 'reporting:operational-report' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-cogs w-4 text-center"></i>
+                            <span>Operational</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'reporting:inventory-report' %}">
-                                <i class="fas fa-boxes me-2"></i>Inventory
+                    <li>
+                        <a href="{% url 'reporting:inventory-report' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-boxes w-4 text-center"></i>
+                            <span>Inventory</span>
                             </a>
                         </li>
                     </ul>
-                </div>
             </li>
             {% endif %}
             
             <!-- Notifications -->
-            <li class="nav-item">
-                <a class="nav-link {% if 'notifications' in request.path %}active{% endif %}" href="{% url 'notifications:notification-center' %}">
-                    <i class="fas fa-bell"></i>
-                    Notifications
+            <li>
+                <a href="{% url 'notifications:notification-center' %}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors {% if 'notifications' in request.path %}bg-primary text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-primary{% endif %}">
+                    <i class="fas fa-bell w-5 text-center"></i>
+                    <span>Notifications</span>
                 </a>
-            </li>
-            
-    
-            <li class="nav-item mt-4">
-                <hr class="dropdown-divider">
             </li>
             
             {% if user.role == 'admin' %}
-            <!-- Admin & Settings Section -->
-            <li class="nav-item">
-                <small class="text-muted px-3 d-block mb-2">ADMINISTRATION</small>
+            <!-- Divider -->
+            <li class="pt-4 mt-4 border-t border-slate-200">
+                <span class="px-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Administration</span>
             </li>
-            <li class="nav-item">
-                <a class="nav-link collapsible {% if 'admin-panel' in request.path %}active{% endif %}"
-                   data-bs-toggle="collapse" 
-                   href="#adminSubmenu" 
-                   role="button" 
-                   aria-expanded="false" 
-                   aria-controls="adminSubmenu">
-                    <i class="fas fa-user-shield"></i>
-                    Admin & Settings
-                    <i class="fas fa-chevron-right collapse-icon"></i>
-                </a>
-                <div class="collapse submenu" id="adminSubmenu">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'admin_panel:settings' %}">
-                                <i class="fas fa-cog me-2"></i>System Settings
+            
+            <!-- Admin & Settings -->
+            <li>
+                <button type="button" class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors {% if 'admin-panel' in request.path %}bg-primary text-white{% else %}text-slate-700 hover:bg-slate-100 hover:text-primary{% endif %}" onclick="toggleSubmenu('adminSubmenu', this)">
+                    <span class="flex items-center gap-3">
+                        <i class="fas fa-user-shield w-5 text-center"></i>
+                        <span>Admin & Settings</span>
+                    </span>
+                    <i class="fas fa-chevron-right text-xs transition-transform duration-200" id="adminSubmenuIcon"></i>
+                </button>
+                <ul id="adminSubmenu" class="hidden mt-1 ml-4 space-y-1 border-l-2 border-slate-200 pl-4">
+                    <li>
+                        <a href="{% url 'admin_panel:settings' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-cog w-4 text-center"></i>
+                            <span>System Settings</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'admin_panel:user_management' %}">
-                                <i class="fas fa-users me-2"></i>User Management
+                    <li>
+                        <a href="{% url 'admin_panel:user_management' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-users w-4 text-center"></i>
+                            <span>User</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'admin_panel:role_management' %}">
-                                <i class="fas fa-user-shield me-2"></i>Role Management
+
+                        <li>
+                            <a href="{% url 'branches:manage' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                                <i class="fas fa-users w-4 text-center"></i>
+                                <span>Branch</span>
+                                </a>
+                            </li>
+                        <li>
+                        <a href="{% url 'admin_panel:role_management' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-user-shield w-4 text-center"></i>
+                            <span>Role</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'admin_panel:audit_log' %}">
-                                <i class="fas fa-history me-2"></i>Audit Log
+                    <li>
+                        <a href="{% url 'admin_panel:audit_log' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-history w-4 text-center"></i>
+                            <span>Audit Log</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'admin_panel:backup_restore' %}">
-                                <i class="fas fa-database me-2"></i>Backup & Restore
+                    <li>
+                        <a href="{% url 'admin_panel:backup_restore' %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-primary transition-colors">
+                            <i class="fas fa-database w-4 text-center"></i>
+                            <span>Backup & Restore</span>
                             </a>
                         </li>
                     </ul>
-                </div>
             </li>
             {% endif %}
-            
-            
         </ul>
-    </div>
 </nav>
+</aside>
+
+<script>
+function toggleSubmenu(submenuId, button) {
+    const submenu = document.getElementById(submenuId);
+    const icon = button.querySelector('i[id$="Icon"]') || button.querySelector('.fa-chevron-right');
+    
+    if (submenu) {
+        const isHidden = submenu.classList.contains('hidden');
+        submenu.classList.toggle('hidden', !isHidden);
+        
+        if (icon) {
+            if (isHidden) {
+                icon.classList.add('rotate-90');
+            } else {
+                icon.classList.remove('rotate-90');
+            }
+        }
+    }
+}
+
+// Auto-expand submenus if active
+document.addEventListener('DOMContentLoaded', function() {
+    const activeLinks = document.querySelectorAll('#sidebar a[href*="' + window.location.pathname + '"]');
+    activeLinks.forEach(link => {
+        let parent = link.closest('ul[id$="Submenu"]');
+        if (parent) {
+            parent.classList.remove('hidden');
+            const button = parent.previousElementSibling;
+            if (button && button.tagName === 'BUTTON') {
+                const icon = button.querySelector('.fa-chevron-right');
+                if (icon) icon.classList.add('rotate-90');
+            }
+        }
+    });
+});
+</script>

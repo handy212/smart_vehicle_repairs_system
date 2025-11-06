@@ -7,55 +7,6 @@
 {% block extra_css %}
 <link href="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.css" rel="stylesheet">
 <style>
-    .kanban-board {
-        display: flex;
-        gap: 1rem;
-        overflow-x: auto;
-        padding-bottom: 1rem;
-        min-height: 70vh;
-    }
-    
-    .kanban-column {
-        min-width: 300px;
-        max-width: 300px;
-        background: var(--gray-50);
-        border-radius: 0.5rem;
-        padding: 1rem;
-        border: 1px solid var(--gray-200);
-    }
-    
-    .kanban-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-        padding: 0.5rem;
-        background: white;
-        border-radius: 0.375rem;
-        border: 1px solid var(--gray-200);
-    }
-    
-    .kanban-cards {
-        min-height: 500px;
-        padding: 0.5rem 0;
-    }
-    
-    .kanban-card {
-        background: white;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-bottom: 0.75rem;
-        border: 1px solid var(--gray-200);
-        cursor: move;
-        transition: all 0.2s ease;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .kanban-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        transform: translateY(-2px);
-    }
-    
     .kanban-card.sortable-ghost {
         opacity: 0.4;
     }
@@ -68,121 +19,35 @@
         transform: rotate(5deg);
         box-shadow: 0 8px 16px rgba(0,0,0,0.2);
     }
-    
-    .workorder-number {
-        font-weight: 600;
-        color: var(--primary);
-        text-decoration: none;
-    }
-    
-    .workorder-number:hover {
-        color: var(--primary-dark);
-    }
-    
-    .customer-info {
-        display: flex;
-        align-items: center;
-        margin: 0.5rem 0;
-    }
-    
-    .customer-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: var(--primary);
-        color: white;
-        font-size: 0.75rem;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 0.5rem;
-    }
-    
-    .vehicle-info {
-        font-size: 0.875rem;
-        color: var(--gray-600);
-        margin: 0.25rem 0;
-    }
-    
-    .technician-badge {
-        display: inline-flex;
-        align-items: center;
-        background: var(--success);
-        color: white;
-        padding: 0.25rem 0.5rem;
-        border-radius: 1rem;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-    
-    .progress-info {
-        margin-top: 0.75rem;
-        padding-top: 0.75rem;
-        border-top: 1px solid var(--gray-200);
-    }
-    
-    .task-progress {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.75rem;
-        color: var(--gray-600);
-        margin-bottom: 0.25rem;
-    }
-    
-    .progress-bar-small {
-        height: 4px;
-        border-radius: 2px;
-    }
-    
-    .filter-section {
-        background: white;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-bottom: 1.5rem;
-        border: 1px solid var(--gray-200);
-    }
-    
-    .column-count {
-        background: var(--primary);
-        color: white;
-        border-radius: 50%;
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="h3 mb-0">Work Orders Kanban</h1>
-            <p class="text-muted mb-0">Drag and drop to update work order status</p>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">Work Orders Kanban</h1>
+            <p class="text-sm text-slate-500">Drag and drop to update work order status</p>
         </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'workorders:list' %}" class="btn btn-outline-primary">
-                <i class="fas fa-list me-1"></i> List View
+        <div class="flex items-center gap-2">
+            <a href="{% url 'workorders:list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors">
+                <i class="fas fa-list"></i>
+                <span>List View</span>
             </a>
-            <a href="{% url 'workorders:create' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i> New Work Order
+            <a href="{% url 'workorders:create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                <i class="fas fa-plus"></i>
+                <span>New Work Order</span>
             </a>
         </div>
     </div>
 
     <!-- Filter Section -->
-    <div class="filter-section">
-        <form method="get" class="row g-3">
-            <div class="col-md-4">
-                <label for="technician" class="form-label">Filter by Technician</label>
-                <select class="form-select" id="technician" name="technician">
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div class="md:col-span-4">
+                <label for="technician" class="block text-xs font-semibold text-slate-700 mb-2">Filter by Technician</label>
+                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="technician" name="technician">
                     <option value="">All Technicians</option>
                     {% for tech in technicians %}
                         <option value="{{ tech.id }}" {% if current_filters.technician == tech.id|stringformat:"s" %}selected{% endif %}>
@@ -191,9 +56,9 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
-                <label for="priority" class="form-label">Filter by Priority</label>
-                <select class="form-select" id="priority" name="priority">
+            <div class="md:col-span-3">
+                <label for="priority" class="block text-xs font-semibold text-slate-700 mb-2">Filter by Priority</label>
+                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="priority" name="priority">
                     <option value="">All Priorities</option>
                     {% for value, label in priority_choices %}
                         <option value="{{ value }}" {% if current_filters.priority == value %}selected{% endif %}>
@@ -202,63 +67,65 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary me-2">Filter</button>
-                <a href="{% url 'workorders:kanban' %}" class="btn btn-outline-secondary">Clear</a>
+            <div class="md:col-span-3 flex items-end gap-2">
+                <button type="submit" class="flex-1 inline-flex items-center justify-center px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">Filter</button>
+                <a href="{% url 'workorders:kanban' %}" class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">Clear</a>
             </div>
-            <div class="col-md-2 d-flex align-items-end justify-content-end">
-                <button type="button" class="btn btn-outline-info" id="refresh-board">
-                    <i class="fas fa-sync-alt me-1"></i> Refresh
+            <div class="md:col-span-2 flex items-end justify-end">
+                <button type="button" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-blue-600 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors" id="refresh-board">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Refresh</span>
                 </button>
             </div>
         </form>
     </div>
 
     <!-- Kanban Board -->
-    <div class="kanban-board">
+    <div class="flex gap-4 overflow-x-auto pb-4" style="min-height: 70vh;">
         {% for status_code, status_data in status_groups.items %}
-        <div class="kanban-column" data-status="{{ status_code }}">
-            <div class="kanban-header">
-                <div>
-                    <h6 class="mb-0">{{ status_data.label }}</h6>
+        <div class="min-w-[300px] max-w-[300px] bg-slate-50 rounded-lg p-4 border border-slate-200" data-status="{{ status_code }}">
+            <div class="flex justify-between items-center mb-4 p-2 bg-white rounded border border-slate-200">
+                <h6 class="text-sm font-semibold text-slate-900 mb-0">{{ status_data.label }}</h6>
+                <div class="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold">
+                    {{ status_data.count }}
                 </div>
-                <div class="column-count">{{ status_data.count }}</div>
             </div>
             
-            <div class="kanban-cards" id="kanban-{{ status_code }}">
+            <div class="min-h-[500px] py-2" id="kanban-{{ status_code }}">
                 {% for workorder in status_data.workorders %}
-                <div class="kanban-card" data-workorder-id="{{ workorder.id }}" data-current-status="{{ workorder.status }}">
+                <div class="bg-white rounded-lg p-4 mb-3 border border-slate-200 cursor-move transition-all hover:shadow-lg hover:-translate-y-0.5 kanban-card" data-workorder-id="{{ workorder.id }}" data-current-status="{{ workorder.status }}">
                     <!-- Work Order Header -->
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <a href="{% url 'workorders:detail' workorder.pk %}" class="workorder-number">
+                    <div class="flex justify-between items-start mb-2">
+                        <a href="{% url 'workorders:detail' workorder.pk %}" class="text-sm font-semibold text-primary hover:text-primary/80 no-underline">
                             {{ workorder.work_order_number }}
                         </a>
                         {% include 'workorders/partials/priority_badge.html' with priority=workorder.priority %}
                     </div>
                     
                     <!-- Customer Info -->
-                    <div class="customer-info">
-                        <div class="customer-avatar">
+                    <div class="flex items-center my-2">
+                        <div class="w-8 h-8 rounded-full bg-primary text-white text-xs font-semibold flex items-center justify-center mr-2">
                             {{ workorder.customer.user.first_name|first }}{{ workorder.customer.user.last_name|first }}
                         </div>
-                        <div>
-                            <div class="fw-medium">{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</div>
+                        <div class="text-sm font-medium text-slate-900">
+                            {{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}
                         </div>
                     </div>
                     
                     <!-- Vehicle Info -->
-                    <div class="vehicle-info">
-                        <i class="fas fa-car me-1"></i>
-                        {{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}
-                        <br>
-                        <small class="text-muted">{{ workorder.vehicle.license_plate }}</small>
+                    <div class="text-sm text-slate-600 my-1">
+                        <div class="flex items-center gap-1">
+                            <i class="fas fa-car text-xs"></i>
+                            <span>{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</span>
+                        </div>
+                        <div class="text-xs text-slate-500 mt-0.5">{{ workorder.vehicle.license_plate }}</div>
                     </div>
                     
                     <!-- Technician -->
                     {% if workorder.primary_technician %}
                     <div class="mt-2">
-                        <span class="technician-badge">
-                            <i class="fas fa-wrench me-1"></i>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                            <i class="fas fa-wrench"></i>
                             {{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}
                         </span>
                     </div>
@@ -267,47 +134,48 @@
                     <!-- Customer Concerns -->
                     {% if workorder.customer_concerns %}
                     <div class="mt-2">
-                        <small class="text-muted d-block">Concerns:</small>
-                        <small>{{ workorder.customer_concerns|truncatechars:80 }}</small>
+                        <div class="text-xs text-slate-500 mb-0.5">Concerns:</div>
+                        <div class="text-xs text-slate-700">{{ workorder.customer_concerns|truncatechars:80 }}</div>
                     </div>
                     {% endif %}
                     
                     <!-- Progress Information -->
                     {% if workorder.task_count > 0 %}
                     {% widthratio workorder.completed_tasks workorder.task_count 100 as progress_percent %}
-                    <div class="progress-info">
-                        <div class="task-progress">
+                    <div class="mt-3 pt-3 border-t border-slate-200">
+                        <div class="flex justify-between items-center text-xs text-slate-600 mb-1">
                             <span>Tasks: {{ workorder.completed_tasks }}/{{ workorder.task_count }}</span>
                             <span>{{ progress_percent }}%</span>
                         </div>
-                        <div class="progress progress-bar-small">
-                            <div class="progress-bar bg-success" role="progressbar" 
-                                 style="width: {{ progress_percent }}%"></div>
+                        <div class="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-emerald-600 rounded-full transition-all" style="width: {{ progress_percent }}%"></div>
                         </div>
                     </div>
                     {% endif %}
                     
                     <!-- Card Footer -->
-                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2" style="border-top: 1px solid var(--gray-200);">
-                        <small class="text-muted">
+                    <div class="flex justify-between items-center mt-2 pt-2 border-t border-slate-200">
+                        <span class="text-xs text-slate-500">
                             {{ workorder.created_at|date:"M d" }}
-                        </small>
-                        <div class="btn-group btn-group-sm">
-                            <a href="{% url 'workorders:detail' workorder.pk %}" class="btn btn-outline-primary btn-sm" title=\"View Details\">
-                                <i class=\"fas fa-eye\"></i>
+                        </span>
+                        <div class="flex items-center gap-1">
+                            <a href="{% url 'workorders:detail' workorder.pk %}" class="inline-flex items-center justify-center w-7 h-7 border border-primary text-primary rounded text-xs hover:bg-primary/10 transition-colors" title="View Details">
+                                <i class="fas fa-eye"></i>
                             </a>
                             {% if request.user.role in 'admin,manager,receptionist' %}
-                            <a href="{% url 'workorders:edit' workorder.pk %}" class="btn btn-outline-secondary btn-sm" title=\"Edit\">
-                                <i class=\"fas fa-edit\"></i>
+                            <a href="{% url 'workorders:edit' workorder.pk %}" class="inline-flex items-center justify-center w-7 h-7 border border-slate-300 text-slate-600 rounded text-xs hover:bg-slate-50 transition-colors" title="Edit">
+                                <i class="fas fa-edit"></i>
                             </a>
                             {% endif %}
                         </div>
                     </div>
                 </div>
                 {% empty %}
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-inbox fa-2x mb-2"></i>
-                    <p class="mb-0 small">No work orders</p>
+                <div class="text-center text-slate-500 py-8">
+                    <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-100 flex items-center justify-center">
+                        <i class="fas fa-inbox text-2xl text-slate-400"></i>
+                    </div>
+                    <p class="text-xs mb-0">No work orders</p>
                 </div>
                 {% endfor %}
             </div>
@@ -316,20 +184,22 @@
     </div>
 
     <!-- Status Change Confirmation Modal -->
-    <div class="modal fade" id="statusChangeModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Confirm Status Change</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to change the status of work order <strong id="modal-workorder-number"></strong> to <strong id="modal-new-status"></strong>?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="confirm-status-change">Confirm</button>
-                </div>
+    <div class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" id="statusChangeModal" onclick="if(event.target===this) closeStatusModal()">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full" onclick="event.stopPropagation()">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                <h5 class="text-lg font-semibold text-slate-900">Confirm Status Change</h5>
+                <button type="button" class="text-slate-400 hover:text-slate-600" onclick="closeStatusModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-slate-700">
+                    Are you sure you want to change the status of work order <strong id="modal-workorder-number"></strong> to <strong id="modal-new-status"></strong>?
+                </p>
+            </div>
+            <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50">
+                <button type="button" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors" onclick="closeStatusModal()">Cancel</button>
+                <button type="button" class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors" id="confirm-status-change">Confirm</button>
             </div>
         </div>
     </div>
@@ -374,8 +244,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('modal-workorder-number').textContent = workorderNumber;
                     document.getElementById('modal-new-status').textContent = getStatusDisplayName(newStatus);
                     
-                    const modal = new bootstrap.Modal(document.getElementById('statusChangeModal'));
-                    modal.show();
+                    openStatusModal();
                 } else {
                     // Same status, no change needed
                     console.log('No status change needed');
@@ -389,18 +258,28 @@ document.addEventListener('DOMContentLoaded', function() {
         if (pendingStatusChange) {
             updateWorkOrderStatus(pendingStatusChange);
         }
-        
-        // Hide modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('statusChangeModal'));
-        modal.hide();
+        closeStatusModal();
     });
     
-    // Handle modal cancellation - revert the drag operation
-    document.getElementById('statusChangeModal').addEventListener('hidden.bs.modal', function() {
-        if (pendingStatusChange && pendingStatusChange.element) {
-            // If the modal was dismissed without confirmation, revert the move
-            if (document.getElementById('statusChangeModal').querySelector('.btn-primary:focus') === null) {
-                // Move the element back to its original position
+    // Modal helper functions
+    function openStatusModal() {
+        const modal = document.getElementById('statusChangeModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+    
+    function closeStatusModal() {
+        const modal = document.getElementById('statusChangeModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+            
+            // If modal was closed without confirmation, revert the move
+            if (pendingStatusChange && pendingStatusChange.element) {
                 const element = pendingStatusChange.element;
                 const oldParent = pendingStatusChange.oldParent;
                 const oldIndex = pendingStatusChange.oldIndex;
@@ -417,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         pendingStatusChange = null;
-    });
+    }
     
     // Refresh board
     document.getElementById('refresh-board').addEventListener('click', function() {
@@ -515,12 +394,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function showToast(type, message) {
         // Create toast element
+        const bgColor = type === 'success' ? 'bg-emerald-600' : type === 'danger' ? 'bg-rose-600' : 'bg-blue-600';
         const toastHtml = `
-            <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
-                <div class="d-flex">
-                    <div class="toast-body">${message}</div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                </div>
+            <div class="flex items-center gap-3 px-4 py-3 ${bgColor} text-white rounded-lg shadow-lg min-w-[300px]" role="alert">
+                <div class="flex-1 text-sm">${message}</div>
+                <button type="button" class="text-white/80 hover:text-white" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
         `;
         
@@ -529,23 +409,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!toastContainer) {
             toastContainer = document.createElement('div');
             toastContainer.id = 'toast-container';
-            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-            toastContainer.style.zIndex = '1080';
+            toastContainer.className = 'fixed top-4 right-4 z-50 space-y-2';
             document.body.appendChild(toastContainer);
         }
         
-        // Add toast to container
-        toastContainer.innerHTML = toastHtml;
+        // Create toast element
+        const toastDiv = document.createElement('div');
+        toastDiv.innerHTML = toastHtml;
+        const toastElement = toastDiv.firstElementChild;
+        toastContainer.appendChild(toastElement);
         
-        // Show toast
-        const toastElement = toastContainer.querySelector('.toast');
-        const toast = new bootstrap.Toast(toastElement);
-        toast.show();
-        
-        // Remove toast after it's hidden
-        toastElement.addEventListener('hidden.bs.toast', function() {
-            toastElement.remove();
-        });
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            toastElement.style.opacity = '0';
+            toastElement.style.transition = 'opacity 0.3s';
+            setTimeout(() => toastElement.remove(), 300);
+        }, 5000);
     }
 });
 </script>

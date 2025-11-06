@@ -1,0 +1,16 @@
+{# Standardized Stat Card Component using Tailwind CSS - Minimal Version #}
+{# Usage Option 1: Wrap in <a> tag: <a href="...">{% include 'partials/stat_card.html' with label="..." %}</a> #}
+{# Usage Option 2: Use link parameter: {% include 'partials/stat_card.html' with label="..." link="customers:customer-list" %} #}
+{# Usage Option 3: Use link_url parameter: {% include 'partials/stat_card.html' with label="..." link_url="/customers/" %} #}
+
+<div class="bg-white rounded-lg border border-slate-200 p-4 h-full w-full hover:border-primary/50 transition-colors">
+    <div class="flex items-center justify-between gap-3">
+        <div class="flex-1 min-w-0">
+            <div class="text-xs font-medium text-slate-500 mb-1">{{ label|default:"Label" }}</div>
+            <div class="text-xl font-bold text-slate-900">{{ value|default:"0" }}</div>
+        </div>
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center text-lg flex-shrink-0" style="background: color-mix(in srgb, var(--{{ color|default:'primary' }}) 10%, #ffffff); color: var(--{{ color|default:'primary' }});">
+            <i class="{{ icon|default:'fas fa-chart-bar' }}"></i>
+        </div>
+    </div>
+</div>

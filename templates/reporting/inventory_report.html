@@ -8,90 +8,87 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2><i class="fas fa-boxes me-2"></i>Inventory Reports</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'reporting:report-dashboard' %}">Reports</a></li>
-                    <li class="breadcrumb-item active">Inventory</li>
-                </ol>
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <a href="{% url 'dashboard' %}" class="hover:text-slate-700">Dashboard</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <a href="{% url 'reporting:report-dashboard' %}" class="hover:text-slate-700">Reports</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <span class="text-slate-700">Inventory</span>
             </nav>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">
+                <i class="fas fa-boxes mr-2 text-primary"></i>
+                Inventory Reports
+            </h1>
         </div>
-        <div class="col-md-4 text-end">
-            <button class="btn btn-primary" onclick="window.print()">
-                <i class="fas fa-print me-2"></i>Print Report
+        <div class="flex items-center gap-2">
+            <button class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="window.print()">
+                <i class="fas fa-print"></i>
+                <span>Print Report</span>
             </button>
-            <button class="btn btn-success" onclick="exportToExcel()">
-                <i class="fas fa-file-excel me-2"></i>Export
+            <button class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors" onclick="exportToExcel()">
+                <i class="fas fa-file-excel"></i>
+                <span>Export</span>
             </button>
         </div>
     </div>
 
     <!-- KPI Cards -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Total Parts</h6>
-                            <h3 class="mb-0">{{ total_parts }}</h3>
-                        </div>
-                        <div class="fs-1 opacity-50">
-                            <i class="fas fa-cubes"></i>
-                        </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-primary text-white rounded-xl shadow-sm overflow-hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-xs font-semibold text-white/70 uppercase tracking-wide mb-1">Total Parts</p>
+                        <h3 class="text-2xl font-bold text-white mb-0">{{ total_parts }}</h3>
+                    </div>
+                    <div class="text-4xl opacity-50">
+                        <i class="fas fa-cubes"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">In Stock</h6>
-                            <h3 class="mb-0">{{ in_stock }}</h3>
-                        </div>
-                        <div class="fs-1 opacity-50">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
+        <div class="bg-emerald-600 text-white rounded-xl shadow-sm overflow-hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-xs font-semibold text-white/70 uppercase tracking-wide mb-1">In Stock</p>
+                        <h3 class="text-2xl font-bold text-white mb-0">{{ in_stock }}</h3>
+                    </div>
+                    <div class="text-4xl opacity-50">
+                        <i class="fas fa-check-circle"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Low Stock</h6>
-                            <h3 class="mb-0">{{ low_stock }}</h3>
-                        </div>
-                        <div class="fs-1 opacity-50">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
+        <div class="bg-amber-600 text-white rounded-xl shadow-sm overflow-hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-xs font-semibold text-white/70 uppercase tracking-wide mb-1">Low Stock</p>
+                        <h3 class="text-2xl font-bold text-white mb-0">{{ low_stock }}</h3>
+                    </div>
+                    <div class="text-4xl opacity-50">
+                        <i class="fas fa-exclamation-triangle"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-3">
-            <div class="card bg-danger text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Out of Stock</h6>
-                            <h3 class="mb-0">{{ out_of_stock }}</h3>
-                        </div>
-                        <div class="fs-1 opacity-50">
-                            <i class="fas fa-times-circle"></i>
-                        </div>
+        <div class="bg-rose-600 text-white rounded-xl shadow-sm overflow-hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-xs font-semibold text-white/70 uppercase tracking-wide mb-1">Out of Stock</p>
+                        <h3 class="text-2xl font-bold text-white mb-0">{{ out_of_stock }}</h3>
+                    </div>
+                    <div class="text-4xl opacity-50">
+                        <i class="fas fa-times-circle"></i>
                     </div>
                 </div>
             </div>
@@ -99,47 +96,57 @@
     </div>
 
     <!-- Inventory Value -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Total Inventory Value</h5>
-                </div>
-                <div class="card-body text-center py-5">
-                    <h1 class="display-3 mb-0">${{ total_value|floatformat:2 }}</h1>
-                    <p class="text-muted mb-0">Current inventory worth</p>
-                </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 bg-primary text-white">
+                <h5 class="text-sm font-semibold text-white mb-0 flex items-center gap-2">
+                    <i class="fas fa-dollar-sign"></i>
+                    <span>Total Inventory Value</span>
+                </h5>
+            </div>
+            <div class="p-8 text-center">
+                <h1 class="text-5xl font-bold text-slate-900 mb-2">${{ total_value|floatformat:2 }}</h1>
+                <p class="text-sm text-slate-500 mb-0">Current inventory worth</p>
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Stock Status Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="inventoryChart" height="200"></canvas>
-                </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                <h5 class="text-sm font-semibold text-slate-900 mb-0 flex items-center gap-2">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Stock Status Distribution</span>
+                </h5>
+            </div>
+            <div class="p-6">
+                <canvas id="inventoryChart" height="200"></canvas>
             </div>
         </div>
     </div>
 
     <!-- Low Stock Alerts -->
-    <div class="card mb-4">
-        <div class="card-header bg-warning text-white">
-            <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Low Stock Alerts</h5>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 bg-amber-600 text-white">
+            <h5 class="text-sm font-semibold text-white mb-0 flex items-center gap-2">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Low Stock Alerts</span>
+            </h5>
         </div>
-        <div class="card-body">
+        <div class="p-6">
             {% if low_stock > 0 %}
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>{{ low_stock }}</strong> part(s) need reordering. Please review and order stock.
+            <div class="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-3">
+                <div class="flex items-center gap-2 text-amber-800">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong class="text-sm">{{ low_stock }}</strong>
+                    <span class="text-sm">part(s) need reordering. Please review and order stock.</span>
+                </div>
             </div>
-            <p class="text-muted mb-3">Parts below reorder point should be restocked soon to avoid stockouts.</p>
+            <p class="text-sm text-slate-600 mb-0">Parts below reorder point should be restocked soon to avoid stockouts.</p>
             {% else %}
-            <div class="alert alert-success">
-                <i class="fas fa-check-circle me-2"></i>
-                All parts are adequately stocked. No low stock alerts at this time.
+            <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                <div class="flex items-center gap-2 text-emerald-800">
+                    <i class="fas fa-check-circle"></i>
+                    <span class="text-sm">All parts are adequately stocked. No low stock alerts at this time.</span>
+                </div>
             </div>
             {% endif %}
         </div>
@@ -147,58 +154,61 @@
 
     <!-- Out of Stock Items -->
     {% if out_of_stock > 0 %}
-    <div class="card mb-4">
-        <div class="card-header bg-danger text-white">
-            <h5 class="mb-0"><i class="fas fa-times-circle me-2"></i>Out of Stock Items</h5>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 bg-rose-600 text-white">
+            <h5 class="text-sm font-semibold text-white mb-0 flex items-center gap-2">
+                <i class="fas fa-times-circle"></i>
+                <span>Out of Stock Items</span>
+            </h5>
         </div>
-        <div class="card-body">
-            <div class="alert alert-danger">
-                <i class="fas fa-times-circle me-2"></i>
-                <strong>{{ out_of_stock }}</strong> part(s) are completely out of stock. Immediate action required!
+        <div class="p-6">
+            <div class="p-4 bg-rose-50 border border-rose-200 rounded-lg mb-3">
+                <div class="flex items-center gap-2 text-rose-800">
+                    <i class="fas fa-times-circle"></i>
+                    <strong class="text-sm">{{ out_of_stock }}</strong>
+                    <span class="text-sm">part(s) are completely out of stock. Immediate action required!</span>
+                </div>
             </div>
-            <p class="text-muted mb-0">These parts are unavailable and may delay service completion.</p>
+            <p class="text-sm text-slate-600 mb-0">These parts are unavailable and may delay service completion.</p>
         </div>
     </div>
     {% endif %}
 
     <!-- Stock Health Summary -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Inventory Health Summary</h5>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+            <h5 class="text-sm font-semibold text-slate-900 mb-0 flex items-center gap-2">
+                <i class="fas fa-heartbeat"></i>
+                <span>Inventory Health Summary</span>
+            </h5>
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="text-center p-3">
-                        <div class="display-6 mb-2">
-                            {% widthratio in_stock total_parts 100 %}%
-                        </div>
-                        <p class="text-muted mb-0">Parts in Stock</p>
-                        <div class="progress mt-2" style="height: 8px;">
-                            <div class="progress-bar bg-success" style="width: {% widthratio in_stock total_parts 100 %}%"></div>
-                        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-slate-900 mb-2">
+                        {% widthratio in_stock total_parts 100 %}%
+                    </div>
+                    <p class="text-sm text-slate-500 mb-2">Parts in Stock</p>
+                    <div class="w-full bg-slate-200 rounded-full h-2">
+                        <div class="bg-emerald-600 h-2 rounded-full" style="width: {% widthratio in_stock total_parts 100 %}%"></div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="text-center p-3">
-                        <div class="display-6 mb-2">
-                            {% widthratio low_stock total_parts 100 %}%
-                        </div>
-                        <p class="text-muted mb-0">Low Stock Items</p>
-                        <div class="progress mt-2" style="height: 8px;">
-                            <div class="progress-bar bg-warning" style="width: {% widthratio low_stock total_parts 100 %}%"></div>
-                        </div>
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-slate-900 mb-2">
+                        {% widthratio low_stock total_parts 100 %}%
+                    </div>
+                    <p class="text-sm text-slate-500 mb-2">Low Stock Items</p>
+                    <div class="w-full bg-slate-200 rounded-full h-2">
+                        <div class="bg-amber-600 h-2 rounded-full" style="width: {% widthratio low_stock total_parts 100 %}%"></div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="text-center p-3">
-                        <div class="display-6 mb-2">
-                            {% widthratio out_of_stock total_parts 100 %}%
-                        </div>
-                        <p class="text-muted mb-0">Out of Stock</p>
-                        <div class="progress mt-2" style="height: 8px;">
-                            <div class="progress-bar bg-danger" style="width: {% widthratio out_of_stock total_parts 100 %}%"></div>
-                        </div>
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-slate-900 mb-2">
+                        {% widthratio out_of_stock total_parts 100 %}%
+                    </div>
+                    <p class="text-sm text-slate-500 mb-2">Out of Stock</p>
+                    <div class="w-full bg-slate-200 rounded-full h-2">
+                        <div class="bg-rose-600 h-2 rounded-full" style="width: {% widthratio out_of_stock total_parts 100 %}%"></div>
                     </div>
                 </div>
             </div>
@@ -220,14 +230,14 @@
                 datasets: [{
                     data: {{ inventory_data|safe }},
                     backgroundColor: [
-                        'rgba(40, 167, 69, 0.8)',   // Success green
-                        'rgba(255, 193, 7, 0.8)',    // Warning yellow
-                        'rgba(220, 53, 69, 0.8)'     // Danger red
+                        'rgba(16, 185, 129, 0.8)',   // Success green
+                        'rgba(245, 158, 11, 0.8)',    // Warning yellow
+                        'rgba(239, 68, 68, 0.8)'      // Danger red
                     ],
                     borderColor: [
-                        'rgba(40, 167, 69, 1)',
-                        'rgba(255, 193, 7, 1)',
-                        'rgba(220, 53, 69, 1)'
+                        'rgba(16, 185, 129, 1)',
+                        'rgba(245, 158, 11, 1)',
+                        'rgba(239, 68, 68, 1)'
                     ],
                     borderWidth: 2
                 }]

@@ -38,6 +38,16 @@ class WorkOrder(models.Model):
     # Auto-generated work order number
     work_order_number = models.CharField(max_length=20, unique=True, editable=False, db_index=True)
     
+    # Branch assignment
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        related_name='work_orders',
+        null=True,  # Allow null for migration
+        blank=True,
+        help_text="Branch where this work order is being handled"
+    )
+    
     # Relationships
     appointment = models.ForeignKey(
         Appointment, 
@@ -210,6 +220,7 @@ class WorkOrder(models.Model):
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['work_order_number']),
+            models.Index(fields=['branch', 'status', 'created_at']),
             models.Index(fields=['status', 'created_at']),
             models.Index(fields=['customer', 'created_at']),
             models.Index(fields=['vehicle', 'created_at']),
@@ -220,18 +231,9 @@ class WorkOrder(models.Model):
         return f"{self.work_order_number} - {self.customer} - {self.vehicle}"
     
     def save(self, *args, **kwargs):
-        # Auto-generate work order number
-        if not self.work_order_number:
-            last_wo = WorkOrder.objects.order_by('-id').first()
-            if last_wo and last_wo.work_order_number:
-                try:
-                    last_number = int(last_wo.work_order_number.replace('WO', ''))
-                    new_number = last_number + 1
-                except (ValueError, AttributeError):
-                    new_number = 1
-            else:
-                new_number = 1
-            self.work_order_number = f'WO{new_number:06d}'
+        # Auto-generate work order number using branch sequence
+        if not self.work_order_number and self.branch:
+            self.work_order_number = self.branch.get_next_workorder_number()
         
         # Calculate estimated total
         self.estimated_total = self.estimated_labor_cost + self.estimated_parts_cost

@@ -21,21 +21,24 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2><i class="fas fa-chart-line me-2"></i>Reports & Analytics</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item active">Reports</li>
-                </ol>
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <a href="{% url 'dashboard' %}" class="hover:text-slate-700">Dashboard</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <span class="text-slate-700">Reports</span>
             </nav>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">
+                <i class="fas fa-chart-line mr-2 text-primary"></i>
+                Reports & Analytics
+            </h1>
         </div>
-        <div class="col-md-4 text-end">
-            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#savedReportsModal">
-                <i class="fas fa-bookmark me-2"></i>Saved Reports
+        <div>
+            <button class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors" onclick="openSavedReportsModal()">
+                <i class="fas fa-bookmark"></i>
+                <span>Saved Reports</span>
             </button>
         </div>
     </div>
@@ -44,191 +47,262 @@
     {% include 'reporting/partials/kpi_cards.html' %}
 
     <!-- Report Categories -->
-    <div class="row g-4 mb-5">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         <!-- Financial Reports -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card report-card h-100" onclick="location.href='{% url 'reporting:financial-report' %}'">
-                <div class="card-body text-center">
-                    <div class="report-icon text-success mb-3">
-                        <i class="fas fa-dollar-sign"></i>
-                    </div>
-                    <h5 class="card-title">Financial Reports</h5>
-                    <p class="text-muted">Revenue, profits, expenses, and payment analytics</p>
-                    <ul class="list-unstyled text-start small">
-                        <li><i class="fas fa-check text-success me-2"></i>Revenue Analysis</li>
-                        <li><i class="fas fa-check text-success me-2"></i>Profit Margins</li>
-                        <li><i class="fas fa-check text-success me-2"></i>Payment Trends</li>
-                        <li><i class="fas fa-check text-success me-2"></i>Expense Tracking</li>
-                    </ul>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-full report-card" onclick="location.href='{% url 'reporting:financial-report' %}'">
+            <div class="p-6 text-center">
+                <div class="report-icon text-emerald-600 mb-4">
+                    <i class="fas fa-dollar-sign"></i>
                 </div>
-                <div class="card-footer bg-light text-center">
-                    <small class="text-muted">Last updated: Today</small>
-                </div>
+                <h5 class="text-base font-semibold text-slate-900 mb-2">Financial Reports</h5>
+                <p class="text-sm text-slate-500 mb-4">Revenue, profits, expenses, and payment analytics</p>
+                <ul class="text-left space-y-1 text-xs">
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-emerald-600"></i>
+                        <span>Revenue Analysis</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-emerald-600"></i>
+                        <span>Profit Margins</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-emerald-600"></i>
+                        <span>Payment Trends</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-emerald-600"></i>
+                        <span>Expense Tracking</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 text-center">
+                <small class="text-xs text-slate-500">Last updated: Today</small>
             </div>
         </div>
 
         <!-- Operational Reports -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card report-card h-100" onclick="location.href='{% url 'reporting:operational-report' %}'">
-                <div class="card-body text-center">
-                    <div class="report-icon text-primary mb-3">
-                        <i class="fas fa-cogs"></i>
-                    </div>
-                    <h5 class="card-title">Operational Reports</h5>
-                    <p class="text-muted">Work orders, appointments, and efficiency metrics</p>
-                    <ul class="list-unstyled text-start small">
-                        <li><i class="fas fa-check text-primary me-2"></i>Work Order Status</li>
-                        <li><i class="fas fa-check text-primary me-2"></i>Appointment Analytics</li>
-                        <li><i class="fas fa-check text-primary me-2"></i>Technician Performance</li>
-                        <li><i class="fas fa-check text-primary me-2"></i>Service Bay Utilization</li>
-                    </ul>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-full report-card" onclick="location.href='{% url 'reporting:operational-report' %}'">
+            <div class="p-6 text-center">
+                <div class="report-icon text-primary mb-4">
+                    <i class="fas fa-cogs"></i>
                 </div>
-                <div class="card-footer bg-light text-center">
-                    <small class="text-muted">Real-time data</small>
-                </div>
+                <h5 class="text-base font-semibold text-slate-900 mb-2">Operational Reports</h5>
+                <p class="text-sm text-slate-500 mb-4">Work orders, appointments, and efficiency metrics</p>
+                <ul class="text-left space-y-1 text-xs">
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-primary"></i>
+                        <span>Work Order Status</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-primary"></i>
+                        <span>Appointment Analytics</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-primary"></i>
+                        <span>Technician Performance</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-primary"></i>
+                        <span>Service Bay Utilization</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 text-center">
+                <small class="text-xs text-slate-500">Real-time data</small>
             </div>
         </div>
 
         <!-- Inventory Reports -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card report-card h-100" onclick="location.href='{% url 'reporting:inventory-report' %}'">
-                <div class="card-body text-center">
-                    <div class="report-icon text-warning mb-3">
-                        <i class="fas fa-boxes"></i>
-                    </div>
-                    <h5 class="card-title">Inventory Reports</h5>
-                    <p class="text-muted">Stock levels, usage, and reorder analysis</p>
-                    <ul class="list-unstyled text-start small">
-                        <li><i class="fas fa-check text-warning me-2"></i>Stock Levels</li>
-                        <li><i class="fas fa-check text-warning me-2"></i>Parts Usage</li>
-                        <li><i class="fas fa-check text-warning me-2"></i>Reorder Alerts</li>
-                        <li><i class="fas fa-check text-warning me-2"></i>Supplier Performance</li>
-                    </ul>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-full report-card" onclick="location.href='{% url 'reporting:inventory-report' %}'">
+            <div class="p-6 text-center">
+                <div class="report-icon text-amber-600 mb-4">
+                    <i class="fas fa-boxes"></i>
                 </div>
-                <div class="card-footer bg-light text-center">
-                    <small class="text-muted">Updated hourly</small>
-                </div>
+                <h5 class="text-base font-semibold text-slate-900 mb-2">Inventory Reports</h5>
+                <p class="text-sm text-slate-500 mb-4">Stock levels, usage, and reorder analysis</p>
+                <ul class="text-left space-y-1 text-xs">
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-amber-600"></i>
+                        <span>Stock Levels</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-amber-600"></i>
+                        <span>Parts Usage</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-amber-600"></i>
+                        <span>Reorder Alerts</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-amber-600"></i>
+                        <span>Supplier Performance</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 text-center">
+                <small class="text-xs text-slate-500">Updated hourly</small>
             </div>
         </div>
 
         <!-- Customer Reports -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card report-card h-100" onclick="location.href='{% url 'reporting:customer-report' %}'">
-                <div class="card-body text-center">
-                    <div class="report-icon text-info mb-3">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <h5 class="card-title">Customer Reports</h5>
-                    <p class="text-muted">Customer behavior and retention analytics</p>
-                    <ul class="list-unstyled text-start small">
-                        <li><i class="fas fa-check text-info me-2"></i>Customer Growth</li>
-                        <li><i class="fas fa-check text-info me-2"></i>Retention Rate</li>
-                        <li><i class="fas fa-check text-info me-2"></i>Top Customers</li>
-                        <li><i class="fas fa-check text-info me-2"></i>Service Frequency</li>
-                    </ul>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-full report-card" onclick="location.href='{% url 'reporting:customer-report' %}'">
+            <div class="p-6 text-center">
+                <div class="report-icon text-blue-600 mb-4">
+                    <i class="fas fa-users"></i>
                 </div>
-                <div class="card-footer bg-light text-center">
-                    <small class="text-muted">Updated daily</small>
-                </div>
+                <h5 class="text-base font-semibold text-slate-900 mb-2">Customer Reports</h5>
+                <p class="text-sm text-slate-500 mb-4">Customer behavior and retention analytics</p>
+                <ul class="text-left space-y-1 text-xs">
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-blue-600"></i>
+                        <span>Customer Growth</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-blue-600"></i>
+                        <span>Retention Rate</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-blue-600"></i>
+                        <span>Top Customers</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-blue-600"></i>
+                        <span>Service Frequency</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 text-center">
+                <small class="text-xs text-slate-500">Updated daily</small>
             </div>
         </div>
 
         <!-- Vehicle Reports -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card report-card h-100" onclick="location.href='{% url 'reporting:vehicle-report' %}'">
-                <div class="card-body text-center">
-                    <div class="report-icon text-danger mb-3">
-                        <i class="fas fa-car"></i>
-                    </div>
-                    <h5 class="card-title">Vehicle Reports</h5>
-                    <p class="text-muted">Fleet analysis and vehicle service patterns</p>
-                    <ul class="list-unstyled text-start small">
-                        <li><i class="fas fa-check text-danger me-2"></i>Service History</li>
-                        <li><i class="fas fa-check text-danger me-2"></i>Make/Model Trends</li>
-                        <li><i class="fas fa-check text-danger me-2"></i>Common Issues</li>
-                        <li><i class="fas fa-check text-danger me-2"></i>Warranty Status</li>
-                    </ul>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-full report-card" onclick="location.href='{% url 'reporting:vehicle-report' %}'">
+            <div class="p-6 text-center">
+                <div class="report-icon text-rose-600 mb-4">
+                    <i class="fas fa-car"></i>
                 </div>
-                <div class="card-footer bg-light text-center">
-                    <small class="text-muted">Updated daily</small>
-                </div>
+                <h5 class="text-base font-semibold text-slate-900 mb-2">Vehicle Reports</h5>
+                <p class="text-sm text-slate-500 mb-4">Fleet analysis and vehicle service patterns</p>
+                <ul class="text-left space-y-1 text-xs">
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-rose-600"></i>
+                        <span>Service History</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-rose-600"></i>
+                        <span>Make/Model Trends</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-rose-600"></i>
+                        <span>Common Issues</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-rose-600"></i>
+                        <span>Warranty Status</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 text-center">
+                <small class="text-xs text-slate-500">Updated daily</small>
             </div>
         </div>
 
         <!-- Custom Report Builder -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card report-card h-100 border-primary" onclick="location.href='{% url 'reporting:custom-report' %}'">
-                <div class="card-body text-center">
-                    <div class="report-icon text-secondary mb-3">
-                        <i class="fas fa-magic"></i>
-                    </div>
-                    <h5 class="card-title">Custom Report Builder</h5>
-                    <p class="text-muted">Create your own custom reports with filters</p>
-                    <ul class="list-unstyled text-start small">
-                        <li><i class="fas fa-check text-secondary me-2"></i>Flexible Filters</li>
-                        <li><i class="fas fa-check text-secondary me-2"></i>Multiple Data Sources</li>
-                        <li><i class="fas fa-check text-secondary me-2"></i>Save & Schedule</li>
-                        <li><i class="fas fa-check text-secondary me-2"></i>Export Options</li>
-                    </ul>
+        <div class="bg-white rounded-xl border-2 border-primary shadow-sm overflow-hidden h-full report-card" onclick="location.href='{% url 'reporting:custom-report' %}'">
+            <div class="p-6 text-center">
+                <div class="report-icon text-slate-600 mb-4">
+                    <i class="fas fa-magic"></i>
                 </div>
-                <div class="card-footer bg-primary bg-opacity-10 text-center">
-                    <small class="text-primary fw-bold">Build Your Own</small>
-                </div>
+                <h5 class="text-base font-semibold text-slate-900 mb-2">Custom Report Builder</h5>
+                <p class="text-sm text-slate-500 mb-4">Create your own custom reports with filters</p>
+                <ul class="text-left space-y-1 text-xs">
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-slate-600"></i>
+                        <span>Flexible Filters</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-slate-600"></i>
+                        <span>Multiple Data Sources</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-slate-600"></i>
+                        <span>Save & Schedule</span>
+                    </li>
+                    <li class="flex items-center gap-2 text-slate-600">
+                        <i class="fas fa-check text-slate-600"></i>
+                        <span>Export Options</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="px-6 py-3 bg-primary/10 border-t border-primary text-center">
+                <small class="text-xs font-semibold text-primary">Build Your Own</small>
             </div>
         </div>
     </div>
 
     <!-- Scheduled Reports -->
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Scheduled Reports</h5>
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#scheduleReportModal">
-                <i class="fas fa-plus me-1"></i>Schedule Report
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white flex justify-between items-center">
+            <h5 class="text-sm font-semibold text-slate-900 mb-0">Scheduled Reports</h5>
+            <button class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors" onclick="openScheduleModal()">
+                <i class="fas fa-plus"></i>
+                <span>Schedule Report</span>
             </button>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
                         <tr>
-                            <th>Report Name</th>
-                            <th>Type</th>
-                            <th>Frequency</th>
-                            <th>Recipients</th>
-                            <th>Next Run</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Report Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Frequency</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Recipients</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Next Run</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="divide-y divide-slate-100 bg-white">
                         {% for schedule in scheduled_reports %}
-                        <tr>
-                            <td><strong>{{ schedule.name }}</strong></td>
-                            <td><span class="badge bg-secondary">{{ schedule.get_report_type_display }}</span></td>
-                            <td>{{ schedule.get_frequency_display }}</td>
-                            <td>{{ schedule.email_recipients|truncatewords:3 }}</td>
-                            <td>{{ schedule.next_run_date|date:"M d, Y H:i" }}</td>
-                            <td>
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-semibold text-slate-900">{{ schedule.name }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                    {{ schedule.get_report_type_display }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ schedule.get_frequency_display }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ schedule.email_recipients|truncatewords:3 }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ schedule.next_run_date|date:"M d, Y H:i" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
                                 {% if schedule.is_active %}
-                                <span class="badge bg-success">Active</span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    Active
+                                </span>
                                 {% else %}
-                                <span class="badge bg-secondary">Inactive</span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                    Inactive
+                                </span>
                                 {% endif %}
                             </td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary" onclick="editSchedule({{ schedule.id }})">
-                                        <i class="fas fa-edit"></i>
+                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    <button class="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-all" onclick="editSchedule({{ schedule.id }})" title="Edit">
+                                        <i class="fas fa-edit text-sm"></i>
                                     </button>
-                                    <button class="btn btn-outline-danger" onclick="deleteSchedule({{ schedule.id }})">
-                                        <i class="fas fa-trash"></i>
+                                    <button class="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" onclick="deleteSchedule({{ schedule.id }})" title="Delete">
+                                        <i class="fas fa-trash text-sm"></i>
                                     </button>
                                 </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center text-muted">No scheduled reports yet</td>
+                            <td colspan="7" class="px-6 py-12 text-center text-slate-500">No scheduled reports yet</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -239,26 +313,33 @@
 </div>
 
 <!-- Saved Reports Modal -->
-<div class="modal fade" id="savedReportsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Saved Reports</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div id="savedReportsModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 transition-opacity" onclick="closeSavedReportsModal()"></div>
+        <div class="relative bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white flex justify-between items-center">
+                <h5 class="text-sm font-semibold text-slate-900">Saved Reports</h5>
+                <button type="button" class="text-slate-500 hover:text-slate-700" onclick="closeSavedReportsModal()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="modal-body">
-                <div class="list-group">
+            <div class="p-6">
+                <div class="space-y-2">
                     {% for report in saved_reports %}
-                    <a href="{% url 'reporting:report-viewer' report.id %}" class="list-group-item list-group-item-action">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">{{ report.name }}</h6>
-                            <small>{{ report.created_at|date:"M d, Y" }}</small>
+                    <a href="{% url 'reporting:report-viewer' report.id %}" class="block p-4 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-primary transition-all">
+                        <div class="flex justify-between items-start mb-2">
+                            <h6 class="text-sm font-semibold text-slate-900 mb-0">{{ report.name }}</h6>
+                            <small class="text-xs text-slate-500">{{ report.created_at|date:"M d, Y" }}</small>
                         </div>
-                        <p class="mb-1 small text-muted">{{ report.description|truncatewords:15 }}</p>
-                        <small class="badge bg-info">{{ report.get_report_type_display }}</small>
+                        <p class="text-xs text-slate-600 mb-2">{{ report.description|truncatewords:15 }}</p>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                            {{ report.get_report_type_display }}
+                        </span>
                     </a>
                     {% empty %}
-                    <p class="text-center text-muted py-4">No saved reports yet</p>
+                    <div class="text-center py-8">
+                        <p class="text-sm text-slate-500">No saved reports yet</p>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
@@ -269,6 +350,19 @@
 
 {% block extra_js %}
 <script>
+function openSavedReportsModal() {
+    document.getElementById('savedReportsModal').classList.remove('hidden');
+}
+
+function closeSavedReportsModal() {
+    document.getElementById('savedReportsModal').classList.add('hidden');
+}
+
+function openScheduleModal() {
+    // This would open a schedule report modal
+    window.location.href = '/reporting/schedules/create/';
+}
+
 function editSchedule(id) {
     window.location.href = `/reporting/schedules/${id}/edit/`;
 }

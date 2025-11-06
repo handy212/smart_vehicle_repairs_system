@@ -8,20 +8,23 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2><i class="fas fa-cogs me-2"></i>Operational Reports</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'reporting:report-dashboard' %}">Reports</a></li>
-                    <li class="breadcrumb-item active">Operational</li>
-                </ol>
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <a href="{% url 'dashboard' %}" class="hover:text-slate-700">Dashboard</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <a href="{% url 'reporting:report-dashboard' %}" class="hover:text-slate-700">Reports</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <span class="text-slate-700">Operational</span>
             </nav>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">
+                <i class="fas fa-cogs mr-2 text-primary"></i>
+                Operational Reports
+            </h1>
         </div>
-        <div class="col-md-4 text-end">
+        <div>
             {% include 'reporting/partials/export_buttons.html' %}
         </div>
     </div>
@@ -33,47 +36,49 @@
     {% include 'reporting/partials/kpi_cards.html' with type='operational' %}
 
     <!-- Work Order Analytics -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Work Order Status Distribution</h5>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+            <h5 class="text-sm font-semibold text-slate-900 mb-0">Work Order Status Distribution</h5>
         </div>
-        <div class="card-body">
+        <div class="p-6">
             {% include 'reporting/partials/chart_workorders.html' %}
         </div>
     </div>
 
     <!-- Technician Performance -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Technician Performance</h5>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+            <h5 class="text-sm font-semibold text-slate-900 mb-0">Technician Performance</h5>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
                         <tr>
-                            <th>Technician</th>
-                            <th>Completed Work Orders</th>
-                            <th>Avg Completion Time</th>
-                            <th>Total Labor Hours</th>
-                            <th>Revenue Generated</th>
-                            <th>Customer Rating</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Technician</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Completed Work Orders</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Avg Completion Time</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Total Labor Hours</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Revenue Generated</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Customer Rating</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="divide-y divide-slate-100 bg-white">
                         {% for tech in technician_performance %}
-                        <tr>
-                            <td><strong>{{ tech.name }}</strong></td>
-                            <td>{{ tech.completed_orders }}</td>
-                            <td>{{ tech.avg_completion_time }} hrs</td>
-                            <td>{{ tech.total_hours|floatformat:1 }}</td>
-                            <td>${{ tech.revenue|floatformat:2 }}</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <span class="me-2">{{ tech.rating|floatformat:1 }}</span>
-                                    <div>
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-semibold text-slate-900">{{ tech.name }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ tech.completed_orders }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ tech.avg_completion_time }} hrs</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ tech.total_hours|floatformat:1 }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">${{ tech.revenue|floatformat:2 }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm text-slate-700">{{ tech.rating|floatformat:1 }}</span>
+                                    <div class="flex items-center gap-0.5">
                                         {% for i in "12345" %}
-                                        <i class="fas fa-star {% if forloop.counter <= tech.rating %}text-warning{% else %}text-muted{% endif %}"></i>
+                                        <i class="fas fa-star text-xs {% if forloop.counter <= tech.rating %}text-amber-500{% else %}text-slate-300{% endif %}"></i>
                                         {% endfor %}
                                     </div>
                                 </div>
@@ -87,70 +92,58 @@
     </div>
 
     <!-- Service Bay Utilization -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Service Bay Utilization</h5>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+            <h5 class="text-sm font-semibold text-slate-900 mb-0">Service Bay Utilization</h5>
         </div>
-        <div class="card-body">
+        <div class="p-6">
             <canvas id="bayUtilizationChart"></canvas>
         </div>
     </div>
 
     <!-- Appointment Analytics -->
-    <div class="row g-4 mb-4">
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">Appointment Status</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="appointmentStatusChart"></canvas>
-                </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                <h5 class="text-sm font-semibold text-slate-900 mb-0">Appointment Status</h5>
+            </div>
+            <div class="p-6">
+                <canvas id="appointmentStatusChart"></canvas>
             </div>
         </div>
         
-        <div class="col-lg-6">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="mb-0">Peak Hours</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="peakHoursChart"></canvas>
-                </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                <h5 class="text-sm font-semibold text-slate-900 mb-0">Peak Hours</h5>
+            </div>
+            <div class="p-6">
+                <canvas id="peakHoursChart"></canvas>
             </div>
         </div>
     </div>
 
     <!-- Average Times -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">Average Processing Times</h5>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+            <h5 class="text-sm font-semibold text-slate-900 mb-0">Average Processing Times</h5>
         </div>
-        <div class="card-body">
-            <div class="row g-4">
-                <div class="col-md-3">
-                    <div class="text-center p-3 bg-light rounded">
-                        <h3 class="mb-2">{{ avg_turnaround|floatformat:1 }}</h3>
-                        <p class="text-muted mb-0 small">Avg Turnaround (hrs)</p>
-                    </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="text-center p-4 bg-slate-50 rounded-lg">
+                    <h3 class="text-2xl font-bold text-slate-900 mb-2">{{ avg_turnaround|floatformat:1 }}</h3>
+                    <p class="text-xs text-slate-500 mb-0">Avg Turnaround (hrs)</p>
                 </div>
-                <div class="col-md-3">
-                    <div class="text-center p-3 bg-light rounded">
-                        <h3 class="mb-2">{{ avg_wait_time|floatformat:1 }}</h3>
-                        <p class="text-muted mb-0 small">Avg Wait Time (min)</p>
-                    </div>
+                <div class="text-center p-4 bg-slate-50 rounded-lg">
+                    <h3 class="text-2xl font-bold text-slate-900 mb-2">{{ avg_wait_time|floatformat:1 }}</h3>
+                    <p class="text-xs text-slate-500 mb-0">Avg Wait Time (min)</p>
                 </div>
-                <div class="col-md-3">
-                    <div class="text-center p-3 bg-light rounded">
-                        <h3 class="mb-2">{{ avg_inspection|floatformat:1 }}</h3>
-                        <p class="text-muted mb-0 small">Avg Inspection (min)</p>
-                    </div>
+                <div class="text-center p-4 bg-slate-50 rounded-lg">
+                    <h3 class="text-2xl font-bold text-slate-900 mb-2">{{ avg_inspection|floatformat:1 }}</h3>
+                    <p class="text-xs text-slate-500 mb-0">Avg Inspection (min)</p>
                 </div>
-                <div class="col-md-3">
-                    <div class="text-center p-3 bg-light rounded">
-                        <h3 class="mb-2">{{ customer_satisfaction }}%</h3>
-                        <p class="text-muted mb-0 small">Customer Satisfaction</p>
-                    </div>
+                <div class="text-center p-4 bg-slate-50 rounded-lg">
+                    <h3 class="text-2xl font-bold text-slate-900 mb-2">{{ customer_satisfaction }}%</h3>
+                    <p class="text-xs text-slate-500 mb-0">Customer Satisfaction</p>
                 </div>
             </div>
         </div>

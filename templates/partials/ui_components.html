@@ -1,0 +1,69 @@
+{# Unified UI Components - Reusable partials for consistent design #}
+{# Usage: {% include 'partials/ui_components.html' %} #}
+
+{# Page Header Component #}
+{# Usage: {% include 'partials/ui_components.html' with header_title="Title" header_subtitle="Subtitle" header_actions="<button>Action</button>" %} #}
+{% comment %}
+<div class="page-header-card mb-6">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-4">
+        <div class="flex-grow-1">
+            <h1 class="page-title mb-2">{{ header_title|default:"Page Title" }}</h1>
+            {% if header_subtitle %}
+            <p class="page-subtitle mb-0">{{ header_subtitle }}</p>
+            {% endif %}
+        </div>
+        {% if header_actions %}
+        <div class="page-actions">
+            {{ header_actions|safe }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endcomment %}
+
+{# Stat Card Component #}
+{% comment %}
+<div class="card border-0 shadow-sm h-100">
+    <div class="card-body">
+        <div class="stat-card">
+            <div>
+                <div class="stat-label">{{ stat_label }}</div>
+                <div class="stat-value">{{ stat_value }}</div>
+                {% if stat_meta %}
+                <div class="stat-meta">{{ stat_meta }}</div>
+                {% endif %}
+            </div>
+            <div class="stat-icon">
+                <i class="{{ stat_icon }}"></i>
+            </div>
+        </div>
+    </div>
+</div>
+{% endcomment %}
+
+{# Filter Section Component #}
+{% comment %}
+<div class="filter-section">
+    <form method="get" class="row g-3">
+        {{ filter_content|safe }}
+    </form>
+</div>
+{% endcomment %}
+
+{# Empty State Component #}
+{# Usage: {% include 'partials/ui_components.html' with empty_icon="fas fa-inbox" empty_title="No items" empty_message="Get started by..." empty_action_url="/create" empty_action_text="Create First" %} #}
+{% comment %}
+<div class="text-center py-5">
+    <i class="{{ empty_icon|default:'fas fa-inbox' }} text-muted" style="font-size: 4rem; opacity: 0.3;"></i>
+    <h4 class="text-muted mt-3">{{ empty_title|default:"No items found" }}</h4>
+    {% if empty_message %}
+    <p class="text-muted">{{ empty_message }}</p>
+    {% endif %}
+    {% if empty_action_url %}
+    <a href="{{ empty_action_url }}" class="btn btn-primary mt-3">
+        <i class="fas fa-plus me-2"></i>{{ empty_action_text|default:"Create New" }}
+    </a>
+    {% endif %}
+</div>
+{% endcomment %}
+

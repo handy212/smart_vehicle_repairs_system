@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     
     # Local apps
     'apps.accounts',
+    'apps.branches',
     'apps.vehicles',
     'apps.customers',
     'apps.appointments',
@@ -100,6 +101,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'apps.accounts.context_processors.settings_context',
+                'apps.branches.context_processors.branch_context',
             ],
         },
     },

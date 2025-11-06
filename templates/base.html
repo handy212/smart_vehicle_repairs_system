@@ -30,7 +30,10 @@
     <meta name="apple-mobile-web-app-title" content="Vehicle Repairs">
     <link rel="apple-touch-icon" href="{% static 'icons/icon-192x192.png' %}">
     
-    <!-- Custom CSS -->
+    <!-- Tailwind CSS build -->
+    <link href="{% static 'css/tailwind.css' %}" rel="stylesheet">
+
+    <!-- Legacy custom CSS -->
     <link href="{% static 'css/custom.css' %}" rel="stylesheet">
     <link href="{% static 'css/brand-colors.css' %}" rel="stylesheet">
     
@@ -245,6 +248,7 @@
             font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
             background-color: var(--bg-body);
             color: var(--gray-900);
+            padding-top: 56px; /* Account for fixed header */
         }
         
         .navbar-brand {
@@ -333,17 +337,43 @@
             background-color: var(--primary);
         }
         
+        /* Sidebar styles - now using Tailwind classes primarily */
         .sidebar {
             position: fixed;
             top: 56px;
             left: 0;
             bottom: 0;
-            z-index: 99;
+            z-index: 30;
             min-height: calc(100vh - 56px);
             background: white;
             border-right: 1px solid var(--gray-200);
             overflow-y: auto;
             overflow-x: hidden;
+        }
+        
+        /* Ensure sidebar is visible - override Tailwind hidden class */
+        #sidebar {
+            display: block !important;
+            z-index: 30 !important;
+        }
+        
+        /* Hide sidebar on mobile */
+        @media (max-width: 767px) {
+            #sidebar {
+                display: none !important;
+            }
+        }
+        
+        /* Ensure main content respects sidebar spacing */
+        main {
+            position: relative;
+        }
+        
+        /* Prevent content from going behind sidebar */
+        @media (min-width: 768px) {
+            main {
+                margin-left: 16rem; /* 256px = w-64, matches sidebar width */
+            }
         }
         
         /* Sidebar scrollbar styling */
@@ -387,6 +417,14 @@
             margin-right: 0.5rem;
         }
         
+        .sidebar .collapse {
+            visibility: hidden;
+        }
+
+        .sidebar .collapse.show {
+            visibility: visible;
+        }
+
         .sidebar .dropdown-menu {
             background-color: var(--gray-50);
             border: 1px solid var(--gray-200);
@@ -493,6 +531,57 @@
             right: 20px;
             z-index: 9999;
         }
+
+        /* Branch switcher */
+        .branch-switcher-wrapper {
+            width: 100%;
+        }
+
+        @media (min-width: 992px) {
+            .branch-switcher-wrapper {
+                width: auto;
+                margin-left: 1.5rem;
+            }
+        }
+
+        .branch-switcher {
+            background-color: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+            min-width: 220px;
+        }
+
+        .branch-switcher .branch-label {
+            letter-spacing: 0.08em;
+        }
+
+        .branch-switcher .branch-name {
+            font-size: 1rem;
+        }
+
+        .branch-switcher-toggle {
+            white-space: nowrap;
+        }
+
+        .branch-switcher-menu {
+            width: 320px;
+            border-radius: 0.75rem;
+        }
+
+        .branch-switcher-list .list-group-item.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .branch-switcher-list .list-group-item button {
+            color: var(--primary);
+        }
+
+        .branch-manage-link {
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -502,15 +591,15 @@
     {% include 'partials/header.html' %}
     
     <!-- Main Container -->
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar (only for staff users) -->
-            {% if user.is_authenticated and user.is_staff %}
-                {% include 'partials/sidebar.html' %}
-            {% endif %}
-            
-            <!-- Main Content -->
-            <main class="{% if user.is_authenticated and user.is_staff %}col-md-9 col-lg-10 with-sidebar{% else %}col-12{% endif %} ms-sm-auto px-md-4 main-content">
+    <div class="relative">
+        <!-- Sidebar (only for staff users) -->
+        {% if user.is_authenticated and user.is_staff %}
+            {% include 'partials/sidebar.html' %}
+        {% endif %}
+        
+        <!-- Main Content -->
+        <main class="{% if user.is_authenticated and user.is_staff %}md:ml-64{% endif %} min-h-screen bg-slate-50 relative transition-all duration-300">
+            <div class="p-6">
                 <!-- Messages -->
                 {% include 'partials/messages.html' %}
                 
@@ -519,8 +608,8 @@
                 
                 <!-- Content -->
                 {% block content %}{% endblock %}
-            </main>
-        </div>
+            </div>
+        </main>
     </div>
     
     <!-- Footer -->

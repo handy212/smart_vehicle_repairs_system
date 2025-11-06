@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load crispy_forms_tags %}
 {% load widget_tweaks %}
 
 {% block title %}Create Appointment - Smart Vehicle Repairs{% endblock %}
@@ -9,117 +8,136 @@
 <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 <style>
-.select2-container--default .select2-selection--single {
-    height: 38px;
-    border: 1px solid #ced4da;
-    border-radius: 0.375rem;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 36px;
-    padding-left: 12px;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 36px;
-}
-
-.time-slots {
-    max-height: 200px;
-    overflow-y: auto;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    padding: 0.5rem;
-}
-
-.time-slot {
-    display: inline-block;
-    margin: 0.25rem;
-    padding: 0.375rem 0.75rem;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.time-slot:hover {
-    background-color: #e9ecef;
-}
-
-.time-slot.selected {
-    background-color: #007bff;
-    color: white;
-    border-color: #007bff;
-}
-
-.time-slot.unavailable {
-    background-color: #f8d7da;
-    border-color: #dc3545;
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-
-.availability-indicator {
-    padding: 0.5rem;
-    border-radius: 0.375rem;
-    margin-top: 0.5rem;
-}
-
-.availability-indicator.available {
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
-}
-
-.availability-indicator.unavailable {
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
-}
+    /* Select2 Tailwind compatibility */
+    .select2-container--default .select2-selection--single {
+        border: 1px solid rgb(203 213 225);
+        border-radius: 0.5rem;
+        height: 42px;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 42px;
+        padding-left: 12px;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 40px;
+        right: 10px;
+    }
+    
+    .select2-dropdown {
+        border: 1px solid rgb(203 213 225);
+        border-radius: 0.5rem;
+    }
+    
+    .select2-results__option {
+        padding: 8px 12px;
+    }
+    
+    .select2-results__option--highlighted {
+        background-color: rgb(59 130 246);
+    }
+    
+    .time-slots {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid rgb(203 213 225);
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+    }
+    
+    .time-slot {
+        display: inline-block;
+        margin: 0.25rem;
+        padding: 0.375rem 0.75rem;
+        border: 1px solid rgb(203 213 225);
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background-color: white;
+        color: rgb(51 65 85);
+    }
+    
+    .time-slot:hover {
+        background-color: rgb(241 245 249);
+        border-color: rgb(59 130 246);
+    }
+    
+    .time-slot.selected {
+        background-color: rgb(59 130 246);
+        color: white;
+        border-color: rgb(59 130 246);
+    }
+    
+    .time-slot.unavailable {
+        background-color: rgb(254 242 242);
+        border-color: rgb(239 68 68);
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .availability-indicator {
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .availability-indicator.available {
+        background-color: rgb(220 252 231);
+        border: 1px solid rgb(187 247 208);
+        color: rgb(22 101 52);
+    }
+    
+    .availability-indicator.unavailable {
+        background-color: rgb(254 242 242);
+        border: 1px solid rgb(252 165 165);
+        color: rgb(153 27 27);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <h1 class="h3 mb-0">
-                <i class="fas fa-plus text-primary me-2"></i>
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <div>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">
+                <i class="fas fa-plus text-primary mr-2"></i>
                 Create New Appointment
             </h1>
-            <p class="text-muted mb-0">Schedule a new customer appointment</p>
+            <p class="text-sm text-slate-500">Schedule a new customer appointment</p>
         </div>
-        <div class="col-md-6 text-end">
-            <a href="{% url 'appointments:appointment-list' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-1"></i>
-                Back to Appointments
+        <div>
+            <a href="{% url 'appointments:appointment-list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Appointments</span>
             </a>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-lg-8">
-            <!-- Main Form -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-calendar-plus me-2"></i>
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Main Form -->
+        <div class="lg:col-span-3">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-calendar-plus text-primary"></i>
                         Appointment Information
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <form method="post" id="appointmentForm">
                         {% csrf_token %}
                         
-                        <div class="row">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                             <!-- Customer Selection -->
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.customer.id_for_label }}" class="form-label">
-                                    <i class="fas fa-user me-1"></i>
-                                    Customer *
+                            <div>
+                                <label for="{{ form.customer.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    <i class="fas fa-user mr-1 text-primary"></i>
+                                    Customer <span class="text-rose-600">*</span>
                                 </label>
-                                <select class="form-select" id="{{ form.customer.id_for_label }}" name="{{ form.customer.name }}" required>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        id="{{ form.customer.id_for_label }}" name="{{ form.customer.name }}" required>
                                     <option value="">Select Customer</option>
                                     {% for customer in customers %}
                                     <option value="{{ customer.id }}" {% if form.customer.value == customer.id %}selected{% endif %}>
@@ -134,101 +152,106 @@
                                     {% endfor %}
                                 </select>
                                 {% if form.customer.errors %}
-                                <div class="text-danger small">{{ form.customer.errors }}</div>
+                                <div class="text-xs text-rose-600 mt-1">{{ form.customer.errors.0 }}</div>
                                 {% endif %}
                             </div>
                             
                             <!-- Vehicle Selection -->
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.vehicle.id_for_label }}" class="form-label">
-                                    <i class="fas fa-car me-1"></i>
-                                    Vehicle *
+                            <div>
+                                <label for="{{ form.vehicle.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    <i class="fas fa-car mr-1 text-primary"></i>
+                                    Vehicle <span class="text-rose-600">*</span>
                                 </label>
-                                <select class="form-select" id="{{ form.vehicle.id_for_label }}" name="{{ form.vehicle.name }}" required>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        id="{{ form.vehicle.id_for_label }}" name="{{ form.vehicle.name }}" required>
                                     <option value="">Select Customer First</option>
                                 </select>
                                 {% if form.vehicle.errors %}
-                                <div class="text-danger small">{{ form.vehicle.errors }}</div>
+                                <div class="text-xs text-rose-600 mt-1">{{ form.vehicle.errors.0 }}</div>
                                 {% endif %}
                             </div>
                         </div>
                         
-                        <div class="row">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                             <!-- Appointment Date -->
-                            <div class="col-md-4 mb-3">
-                                <label for="{{ form.appointment_date.id_for_label }}" class="form-label">
-                                    <i class="fas fa-calendar me-1"></i>
-                                    Date *
+                            <div>
+                                <label for="{{ form.appointment_date.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    <i class="fas fa-calendar mr-1 text-primary"></i>
+                                    Date <span class="text-rose-600">*</span>
                                 </label>
-                                <input type="date" class="form-control" id="{{ form.appointment_date.id_for_label }}" 
+                                <input type="date" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                       id="{{ form.appointment_date.id_for_label }}" 
                                        name="{{ form.appointment_date.name }}" value="{{ form.appointment_date.value|default_if_none:'' }}" required>
                                 {% if form.appointment_date.errors %}
-                                <div class="text-danger small">{{ form.appointment_date.errors }}</div>
+                                <div class="text-xs text-rose-600 mt-1">{{ form.appointment_date.errors.0 }}</div>
                                 {% endif %}
                             </div>
                             
                             <!-- Appointment Time -->
-                            <div class="col-md-4 mb-3">
-                                <label for="{{ form.appointment_time.id_for_label }}" class="form-label">
-                                    <i class="fas fa-clock me-1"></i>
-                                    Time *
+                            <div>
+                                <label for="{{ form.appointment_time.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    <i class="fas fa-clock mr-1 text-primary"></i>
+                                    Time <span class="text-rose-600">*</span>
                                 </label>
-                                <input type="time" class="form-control" id="{{ form.appointment_time.id_for_label }}" 
+                                <input type="time" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                       id="{{ form.appointment_time.id_for_label }}" 
                                        name="{{ form.appointment_time.name }}" value="{{ form.appointment_time.value|default_if_none:'' }}" required>
                                 {% if form.appointment_time.errors %}
-                                <div class="text-danger small">{{ form.appointment_time.errors }}</div>
+                                <div class="text-xs text-rose-600 mt-1">{{ form.appointment_time.errors.0 }}</div>
                                 {% endif %}
                             </div>
                             
                             <!-- Duration -->
-                            <div class="col-md-4 mb-3">
-                                <label for="{{ form.estimated_duration.id_for_label }}" class="form-label">
-                                    <i class="fas fa-hourglass-half me-1"></i>
-                                    Duration (minutes) *
+                            <div>
+                                <label for="{{ form.estimated_duration.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    <i class="fas fa-hourglass-half mr-1 text-primary"></i>
+                                    Duration (minutes) <span class="text-rose-600">*</span>
                                 </label>
-                                <input type="number" class="form-control" id="{{ form.estimated_duration.id_for_label }}" 
+                                <input type="number" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                       id="{{ form.estimated_duration.id_for_label }}" 
                                        name="{{ form.estimated_duration.name }}" value="{{ form.estimated_duration.value|default_if_none:'60' }}" 
                                        min="15" max="480" step="15" required>
                                 {% if form.estimated_duration.errors %}
-                                <div class="text-danger small">{{ form.estimated_duration.errors }}</div>
+                                <div class="text-xs text-rose-600 mt-1">{{ form.estimated_duration.errors.0 }}</div>
                                 {% endif %}
                             </div>
                         </div>
                         
-                        <div class="row">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                             <!-- Service Type -->
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.service_type.id_for_label }}" class="form-label">
-                                    <i class="fas fa-wrench me-1"></i>
-                                    Service Type *
+                            <div>
+                                <label for="{{ form.service_type.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    <i class="fas fa-wrench mr-1 text-primary"></i>
+                                    Service Type <span class="text-rose-600">*</span>
                                 </label>
-                                {{ form.service_type|add_class:"form-select" }}
+                                {{ form.service_type|add_class:"w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" }}
                                 {% if form.service_type.errors %}
-                                <div class="text-danger small">{{ form.service_type.errors }}</div>
+                                <div class="text-xs text-rose-600 mt-1">{{ form.service_type.errors.0 }}</div>
                                 {% endif %}
                             </div>
                             
                             <!-- Priority -->
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.priority.id_for_label }}" class="form-label">
-                                    <i class="fas fa-flag me-1"></i>
+                            <div>
+                                <label for="{{ form.priority.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    <i class="fas fa-flag mr-1 text-primary"></i>
                                     Priority
                                 </label>
-                                {{ form.priority|add_class:"form-select" }}
+                                {{ form.priority|add_class:"w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" }}
                                 {% if form.priority.errors %}
-                                <div class="text-danger small">{{ form.priority.errors }}</div>
+                                <div class="text-xs text-rose-600 mt-1">{{ form.priority.errors.0 }}</div>
                                 {% endif %}
                             </div>
                         </div>
                         
-                        <div class="row">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                             <!-- Service Bay -->
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.service_bay.id_for_label }}" class="form-label">
-                                    <i class="fas fa-warehouse me-1"></i>
+                            <div>
+                                <label for="{{ form.service_bay.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    <i class="fas fa-warehouse mr-1 text-primary"></i>
                                     Service Bay
                                 </label>
-                                <select class="form-select" id="{{ form.service_bay.id_for_label }}" name="{{ form.service_bay.name }}">
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        id="{{ form.service_bay.id_for_label }}" name="{{ form.service_bay.name }}">
                                     <option value="">Auto-assign</option>
                                     {% for bay in service_bays %}
                                     <option value="{{ bay.id }}" {% if form.service_bay.value == bay.id %}selected{% endif %}>
@@ -237,103 +260,111 @@
                                     {% endfor %}
                                 </select>
                                 {% if form.service_bay.errors %}
-                                <div class="text-danger small">{{ form.service_bay.errors }}</div>
+                                <div class="text-xs text-rose-600 mt-1">{{ form.service_bay.errors.0 }}</div>
                                 {% endif %}
                             </div>
                             
                             <!-- Estimated Cost -->
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.estimated_cost.id_for_label }}" class="form-label">
-                                    <i class="fas fa-dollar-sign me-1"></i>
+                            <div>
+                                <label for="{{ form.estimated_cost.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    <i class="fas fa-dollar-sign mr-1 text-primary"></i>
                                     Estimated Cost ($)
                                 </label>
-                                <input type="number" class="form-control" id="{{ form.estimated_cost.id_for_label }}" 
-                                       name="{{ form.estimated_cost.name }}" value="{{ form.estimated_cost.value|default_if_none:'' }}" 
-                                       min="0" step="0.01">
+                                <div class="flex items-center">
+                                    <span class="px-3 py-2.5 border border-r-0 border-slate-300 rounded-l-lg bg-slate-50 text-sm text-slate-700">$</span>
+                                    <input type="number" class="w-full px-3 py-2.5 border border-slate-300 rounded-r-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                           id="{{ form.estimated_cost.id_for_label }}" 
+                                           name="{{ form.estimated_cost.name }}" value="{{ form.estimated_cost.value|default_if_none:'' }}" 
+                                           min="0" step="0.01" placeholder="0.00">
+                                </div>
                                 {% if form.estimated_cost.errors %}
-                                <div class="text-danger small">{{ form.estimated_cost.errors }}</div>
+                                <div class="text-xs text-rose-600 mt-1">{{ form.estimated_cost.errors.0 }}</div>
                                 {% endif %}
                             </div>
                         </div>
                         
                         <!-- Description -->
-                        <div class="mb-3">
-                            <label for="{{ form.customer_concerns.id_for_label }}" class="form-label">
-                                <i class="fas fa-align-left me-1"></i>
+                        <div class="mb-4">
+                            <label for="{{ form.customer_concerns.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                <i class="fas fa-align-left mr-1 text-primary"></i>
                                 Description
                             </label>
-                            <textarea class="form-control" id="{{ form.customer_concerns.id_for_label }}" 
+                            <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                      id="{{ form.customer_concerns.id_for_label }}" 
                                       name="{{ form.customer_concerns.name }}" rows="3" 
                                       placeholder="Describe the service or issue...">{{ form.customer_concerns.value|default_if_none:'' }}</textarea>
                             {% if form.customer_concerns.errors %}
-                            <div class="text-danger small">{{ form.customer_concerns.errors }}</div>
+                            <div class="text-xs text-rose-600 mt-1">{{ form.customer_concerns.errors.0 }}</div>
                             {% endif %}
                         </div>
                         
                         <!-- Notes -->
-                        <div class="mb-3">
-                            <label for="{{ form.special_instructions.id_for_label }}" class="form-label">
-                                <i class="fas fa-sticky-note me-1"></i>
+                        <div class="mb-6">
+                            <label for="{{ form.special_instructions.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                <i class="fas fa-sticky-note mr-1 text-primary"></i>
                                 Internal Notes
                             </label>
-                            <textarea class="form-control" id="{{ form.special_instructions.id_for_label }}" 
+                            <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                      id="{{ form.special_instructions.id_for_label }}" 
                                       name="{{ form.special_instructions.name }}" rows="2" 
                                       placeholder="Internal notes (not visible to customer)...">{{ form.special_instructions.value|default_if_none:'' }}</textarea>
                             {% if form.special_instructions.errors %}
-                            <div class="text-danger small">{{ form.special_instructions.errors }}</div>
+                            <div class="text-xs text-rose-600 mt-1">{{ form.special_instructions.errors.0 }}</div>
                             {% endif %}
                         </div>
                         
                         <!-- Submit Buttons -->
-                        <div class="row">
-                            <div class="col-12">
-                                <hr>
-                                <button type="submit" class="btn btn-primary me-2">
-                                    <i class="fas fa-save me-1"></i>
-                                    Create Appointment
-                                </button>
-                                <a href="{% url 'appointments:appointment-list' %}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-times me-1"></i>
-                                    Cancel
-                                </a>
-                            </div>
+                        <div class="flex items-center gap-3 pt-4 border-t border-slate-200">
+                            <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                                <i class="fas fa-save"></i>
+                                <span>Create Appointment</span>
+                            </button>
+                            <a href="{% url 'appointments:appointment-list' %}" class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                                <i class="fas fa-times"></i>
+                                <span>Cancel</span>
+                            </a>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
         
-        <div class="col-lg-4">
+        <!-- Sidebar -->
+        <div class="lg:col-span-1 space-y-6">
             <!-- Available Time Slots -->
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h6 class="card-title mb-0">
-                        <i class="fas fa-clock me-2"></i>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h6 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-clock text-primary"></i>
                         Available Time Slots
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <div id="timeSlots">
-                        <p class="text-muted">Please select a date to see available time slots.</p>
+                        <p class="text-sm text-slate-500">Please select a date to see available time slots.</p>
                     </div>
                     <div id="availabilityIndicator"></div>
                 </div>
             </div>
             
             <!-- Service Bay Status -->
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="card-title mb-0">
-                        <i class="fas fa-warehouse me-2"></i>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h6 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-warehouse text-primary"></i>
                         Service Bay Status
                     </h6>
                 </div>
-                <div class="card-body">
-                    <div id="serviceBayStatus">
+                <div class="p-6">
+                    <div id="serviceBayStatus" class="space-y-3">
                         {% for bay in service_bays %}
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="fw-bold">{{ bay.name }}</span>
-                            <span class="badge bg-{% if bay.status == 'available' %}success{% elif bay.status == 'occupied' %}warning{% elif bay.status == 'maintenance' %}danger{% else %}secondary{% endif %}">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-semibold text-slate-900">{{ bay.name }}</span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold
+                                {% if bay.status == 'available' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                                {% elif bay.status == 'occupied' %}bg-amber-50 text-amber-700 border border-amber-200
+                                {% elif bay.status == 'maintenance' %}bg-rose-50 text-rose-700 border border-rose-200
+                                {% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
                                 {{ bay.get_status_display }}
                             </span>
                         </div>
@@ -355,17 +386,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize Select2
     $('#id_customer').select2({
         placeholder: 'Select Customer',
-        allowClear: true
+        allowClear: true,
+        width: '100%'
     });
     
     $('#id_vehicle').select2({
         placeholder: 'Select Vehicle',
-        allowClear: true
+        allowClear: true,
+        width: '100%'
     });
     
     $('#id_service_bay').select2({
         placeholder: 'Auto-assign',
-        allowClear: true
+        allowClear: true,
+        width: '100%'
     });
     
     // Initialize date picker
@@ -447,7 +481,7 @@ function loadAvailableTimeSlots(date) {
             const timeSlotsContainer = document.getElementById('timeSlots');
             
             if (data.slots && data.slots.length > 0) {
-                let slotsHtml = '<p class="small text-muted mb-2">Click a time slot to select:</p>';
+                let slotsHtml = '<p class="text-xs text-slate-500 mb-2">Click a time slot to select:</p>';
                 data.slots.forEach(slot => {
                     slotsHtml += `
                         <span class="time-slot" onclick="selectTimeSlot('${slot.time}')">
@@ -457,12 +491,12 @@ function loadAvailableTimeSlots(date) {
                 });
                 timeSlotsContainer.innerHTML = slotsHtml;
             } else {
-                timeSlotsContainer.innerHTML = '<p class="text-warning">No available time slots for this date.</p>';
+                timeSlotsContainer.innerHTML = '<p class="text-sm text-amber-600">No available time slots for this date.</p>';
             }
         })
         .catch(error => {
             console.error('Error loading time slots:', error);
-            document.getElementById('timeSlots').innerHTML = '<p class="text-danger">Error loading time slots.</p>';
+            document.getElementById('timeSlots').innerHTML = '<p class="text-sm text-rose-600">Error loading time slots.</p>';
         });
 }
 
@@ -510,16 +544,16 @@ function checkAvailability() {
             
             if (data.available) {
                 indicator.innerHTML = `
-                    <div class="availability-indicator available">
-                        <i class="fas fa-check me-2"></i>
-                        Time slot is available
+                    <div class="availability-indicator available flex items-center gap-2">
+                        <i class="fas fa-check"></i>
+                        <span class="text-sm">Time slot is available</span>
                     </div>
                 `;
             } else {
                 indicator.innerHTML = `
-                    <div class="availability-indicator unavailable">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Time slot conflicts with ${data.conflicts} existing appointment(s)
+                    <div class="availability-indicator unavailable flex items-center gap-2">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span class="text-sm">Time slot conflicts with ${data.conflicts} existing appointment(s)</span>
                     </div>
                 `;
             }

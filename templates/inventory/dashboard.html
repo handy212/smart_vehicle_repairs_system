@@ -5,207 +5,144 @@
 {% block title %}Inventory Dashboard{% endblock %}
 
 {% block extra_css %}
-<style>
-    .stats-card {
-        background: white;
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-        border: 1px solid var(--gray-200);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    
-    .stats-number {
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-    
-    .stats-label {
-        color: var(--gray-600);
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    
-    .alert-card {
-        border-left: 4px solid var(--warning);
-        background: rgba(245, 158, 11, 0.1);
-    }
-    
-    .critical-card {
-        border-left: 4px solid var(--danger);
-        background: rgba(239, 68, 68, 0.1);
-    }
-    
-    .inventory-item {
-        padding: 0.75rem;
-        border-bottom: 1px solid var(--gray-200);
-    }
-    
-    .inventory-item:last-child {
-        border-bottom: none;
-    }
-    
-    .stock-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-weight: 600;
-    }
-    
-    .stock-low {
-        background: var(--warning);
-        color: white;
-    }
-    
-    .stock-out {
-        background: var(--danger);
-        color: white;
-    }
-    
-    .stock-reorder {
-        background: var(--info);
-        color: white;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-            <h1 class="h3 mb-0">Inventory Dashboard</h1>
-            <p class="text-muted">Parts inventory overview and management</p>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">Inventory Dashboard</h1>
+            <p class="text-sm text-slate-500">Parts inventory overview and management</p>
         </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'inventory:part_create' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i> Add Part
+        <div class="flex items-center gap-2">
+            <a href="{% url 'inventory:part_create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                <i class="fas fa-plus"></i>
+                <span>Add Part</span>
             </a>
-            <a href="{% url 'inventory:purchase_order_create' %}" class="btn btn-outline-primary">
-                <i class="fas fa-file-invoice me-1"></i> New PO
+            <a href="{% url 'inventory:purchase_order_create' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors">
+                <i class="fas fa-file-invoice"></i>
+                <span>New PO</span>
             </a>
         </div>
     </div>
 
     <!-- Stats Cards -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="stats-number text-primary">{{ total_parts }}</div>
-                <div class="stats-label">Total Parts</div>
-            </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <div class="text-3xl font-bold text-primary mb-2">{{ total_parts }}</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Parts</div>
         </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="stats-number text-success">${{ total_value|floatformat:2 }}</div>
-                <div class="stats-label">Inventory Value</div>
-            </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <div class="text-3xl font-bold text-emerald-600 mb-2">${{ total_value|floatformat:2 }}</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Inventory Value</div>
         </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="stats-number text-warning">{{ low_stock_count }}</div>
-                <div class="stats-label">Low Stock</div>
-            </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <div class="text-3xl font-bold text-amber-600 mb-2">{{ low_stock_count }}</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Low Stock</div>
         </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="stats-number text-danger">{{ out_of_stock_count }}</div>
-                <div class="stats-label">Out of Stock</div>
-            </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <div class="text-3xl font-bold text-rose-600 mb-2">{{ out_of_stock_count }}</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Out of Stock</div>
         </div>
     </div>
 
-    <div class="row">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Alerts Column -->
-        <div class="col-md-6">
+        <div class="space-y-6">
             <!-- Reorder Alerts -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-amber-50 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-exclamation-triangle text-amber-600"></i>
                         Reorder Needed ({{ reorder_count }})
                     </h5>
                 </div>
-                <div class="card-body p-0">
+                <div class="divide-y divide-slate-100">
                     {% if reorder_needed %}
                         {% for part in reorder_needed %}
-                        <div class="inventory-item">
-                            <div class="d-flex justify-content-between align-items-center">
+                        <div class="px-6 py-3 hover:bg-slate-50 transition-colors">
+                            <div class="flex justify-between items-center">
                                 <div>
-                                    <div class="fw-medium">
-                                        <a href="{% url 'inventory:part_detail' part.pk %}" class="text-decoration-none">
+                                    <div class="text-sm font-medium">
+                                        <a href="{% url 'inventory:part_detail' part.pk %}" class="text-primary hover:text-primary/80 no-underline">
                                             {{ part.name }}
                                         </a>
                                     </div>
-                                    <small class="text-muted">{{ part.part_number }}</small>
+                                    <div class="text-xs text-slate-500 mt-0.5">{{ part.part_number }}</div>
                                 </div>
-                                <div class="text-end">
-                                    <span class="stock-badge stock-reorder">{{ part.quantity_in_stock }} {{ part.unit }}</span>
-                                    <div class="small text-muted">Reorder: {{ part.reorder_point }}</div>
+                                <div class="text-right">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">{{ part.quantity_in_stock }} {{ part.unit }}</span>
+                                    <div class="text-xs text-slate-500 mt-1">Reorder: {{ part.reorder_point }}</div>
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div class="text-center py-3 text-muted">
-                            <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
-                            <p class="mb-0">All parts are above reorder point</p>
+                        <div class="text-center py-8">
+                            <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <i class="fas fa-check-circle text-2xl text-emerald-600"></i>
+                            </div>
+                            <p class="text-sm text-slate-500 mb-0">All parts are above reorder point</p>
                         </div>
                     {% endif %}
                 </div>
                 {% if reorder_count > 10 %}
-                <div class="card-footer">
-                    <a href="{% url 'inventory:part_list' %}?stock_level=reorder" class="btn btn-sm btn-outline-primary">
-                        View All Reorder Items
+                <div class="px-6 py-4 border-t border-slate-200 bg-slate-50">
+                    <a href="{% url 'inventory:part_list' %}?stock_level=reorder" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary hover:text-primary/80">
+                        <span>View All Reorder Items</span>
+                        <i class="fas fa-arrow-right text-xs"></i>
                     </a>
                 </div>
                 {% endif %}
             </div>
 
             <!-- Low Stock -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-exclamation-circle text-danger me-2"></i>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-rose-50 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-exclamation-circle text-rose-600"></i>
                         Critical Stock ({{ low_stock_count }})
                     </h5>
                 </div>
-                <div class="card-body p-0">
+                <div class="divide-y divide-slate-100">
                     {% if low_stock_parts %}
                         {% for part in low_stock_parts %}
-                        <div class="inventory-item">
-                            <div class="d-flex justify-content-between align-items-center">
+                        <div class="px-6 py-3 hover:bg-slate-50 transition-colors">
+                            <div class="flex justify-between items-center">
                                 <div>
-                                    <div class="fw-medium">
-                                        <a href="{% url 'inventory:part_detail' part.pk %}" class="text-decoration-none">
+                                    <div class="text-sm font-medium">
+                                        <a href="{% url 'inventory:part_detail' part.pk %}" class="text-primary hover:text-primary/80 no-underline">
                                             {{ part.name }}
                                         </a>
                                     </div>
-                                    <small class="text-muted">{{ part.part_number }}</small>
+                                    <div class="text-xs text-slate-500 mt-0.5">{{ part.part_number }}</div>
                                 </div>
-                                <div class="text-end">
+                                <div class="text-right">
                                     {% if part.quantity_in_stock == 0 %}
-                                        <span class="stock-badge stock-out">OUT OF STOCK</span>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">OUT OF STOCK</span>
                                     {% else %}
-                                        <span class="stock-badge stock-low">{{ part.quantity_in_stock }} {{ part.unit }}</span>
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">{{ part.quantity_in_stock }} {{ part.unit }}</span>
                                     {% endif %}
-                                    <div class="small text-muted">Min: {{ part.minimum_stock }}</div>
+                                    <div class="text-xs text-slate-500 mt-1">Min: {{ part.minimum_stock }}</div>
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div class="text-center py-3 text-muted">
-                            <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
-                            <p class="mb-0">All parts above minimum stock</p>
+                        <div class="text-center py-8">
+                            <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <i class="fas fa-check-circle text-2xl text-emerald-600"></i>
+                            </div>
+                            <p class="text-sm text-slate-500 mb-0">All parts above minimum stock</p>
                         </div>
                     {% endif %}
                 </div>
                 {% if low_stock_count > 10 %}
-                <div class="card-footer">
-                    <a href="{% url 'inventory:part_list' %}?stock_level=low" class="btn btn-sm btn-outline-danger">
-                        View All Low Stock Items
+                <div class="px-6 py-4 border-t border-slate-200 bg-slate-50">
+                    <a href="{% url 'inventory:part_list' %}?stock_level=low" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-rose-600 hover:text-rose-700">
+                        <span>View All Low Stock Items</span>
+                        <i class="fas fa-arrow-right text-xs"></i>
                     </a>
                 </div>
                 {% endif %}
@@ -213,76 +150,77 @@
         </div>
 
         <!-- Activity Column -->
-        <div class="col-md-6">
+        <div class="space-y-6">
             <!-- Recent Transactions -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-history text-info me-2"></i>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-history text-blue-600"></i>
                         Recent Transactions
                     </h5>
                 </div>
-                <div class="card-body p-0">
+                <div class="divide-y divide-slate-100">
                     {% if recent_transactions %}
                         {% for transaction in recent_transactions %}
-                        <div class="inventory-item">
-                            <div class="d-flex justify-content-between align-items-start">
+                        <div class="px-6 py-3 hover:bg-slate-50 transition-colors">
+                            <div class="flex justify-between items-start">
                                 <div>
-                                    <div class="fw-medium">{{ transaction.part.name }}</div>
-                                    <small class="text-muted">
+                                    <div class="text-sm font-medium text-slate-900">{{ transaction.part.name }}</div>
+                                    <div class="text-xs text-slate-500 mt-0.5">
                                         {{ transaction.get_transaction_type_display }}
                                         {% if transaction.created_by %}
                                         by {{ transaction.created_by.get_full_name }}
                                         {% endif %}
-                                    </small>
+                                    </div>
                                 </div>
-                                <div class="text-end">
-                                    <div class="fw-medium 
-                                        {% if transaction.quantity > 0 %}text-success{% else %}text-danger{% endif %}">
+                                <div class="text-right">
+                                    <div class="text-sm font-semibold {% if transaction.quantity > 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">
                                         {% if transaction.quantity > 0 %}+{% endif %}{{ transaction.quantity }}
                                     </div>
-                                    <small class="text-muted">{{ transaction.created_at|date:"M d, H:i" }}</small>
+                                    <div class="text-xs text-slate-500 mt-0.5">{{ transaction.created_at|date:"M d, H:i" }}</div>
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div class="text-center py-3 text-muted">
-                            <i class="fas fa-history fa-2x mb-2"></i>
-                            <p class="mb-0">No recent transactions</p>
+                        <div class="text-center py-8">
+                            <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-slate-100 flex items-center justify-center">
+                                <i class="fas fa-history text-2xl text-slate-400"></i>
+                            </div>
+                            <p class="text-sm text-slate-500 mb-0">No recent transactions</p>
                         </div>
                     {% endif %}
                 </div>
             </div>
 
             <!-- Pending Purchase Orders -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-file-invoice text-warning me-2"></i>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-amber-50 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-file-invoice text-amber-600"></i>
                         Pending Purchase Orders
                     </h5>
                 </div>
-                <div class="card-body p-0">
+                <div class="divide-y divide-slate-100">
                     {% if pending_pos %}
                         {% for po in pending_pos %}
-                        <div class="inventory-item">
-                            <div class="d-flex justify-content-between align-items-center">
+                        <div class="px-6 py-3 hover:bg-slate-50 transition-colors">
+                            <div class="flex justify-between items-center">
                                 <div>
-                                    <div class="fw-medium">
-                                        <a href="{% url 'inventory:purchase_order_detail' po.pk %}" class="text-decoration-none">
+                                    <div class="text-sm font-medium">
+                                        <a href="{% url 'inventory:purchase_order_detail' po.pk %}" class="text-primary hover:text-primary/80 no-underline">
                                             {{ po.po_number }}
                                         </a>
                                     </div>
-                                    <small class="text-muted">{{ po.supplier.name }}</small>
+                                    <div class="text-xs text-slate-500 mt-0.5">{{ po.supplier.name }}</div>
                                 </div>
-                                <div class="text-end">
-                                    <div class="fw-medium">${{ po.total|floatformat:2 }}</div>
-                                    <span class="badge 
-                                        {% if po.status == 'draft' %}bg-secondary
-                                        {% elif po.status == 'submitted' %}bg-warning
-                                        {% elif po.status == 'confirmed' %}bg-info
-                                        {% endif %}">
+                                <div class="text-right">
+                                    <div class="text-sm font-semibold text-slate-900">${{ po.total|floatformat:2 }}</div>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold
+                                        {% if po.status == 'draft' %}bg-slate-100 text-slate-700 border border-slate-200
+                                        {% elif po.status == 'submitted' %}bg-amber-50 text-amber-700 border border-amber-200
+                                        {% elif po.status == 'confirmed' %}bg-blue-50 text-blue-700 border border-blue-200
+                                        {% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
                                         {{ po.get_status_display }}
                                     </span>
                                 </div>
@@ -290,15 +228,18 @@
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div class="text-center py-3 text-muted">
-                            <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
-                            <p class="mb-0">No pending purchase orders</p>
+                        <div class="text-center py-8">
+                            <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <i class="fas fa-check-circle text-2xl text-emerald-600"></i>
+                            </div>
+                            <p class="text-sm text-slate-500 mb-0">No pending purchase orders</p>
                         </div>
                     {% endif %}
                 </div>
-                <div class="card-footer">
-                    <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-sm btn-outline-primary">
-                        View All Purchase Orders
+                <div class="px-6 py-4 border-t border-slate-200 bg-slate-50">
+                    <a href="{% url 'inventory:purchase_order_list' %}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary hover:text-primary/80">
+                        <span>View All Purchase Orders</span>
+                        <i class="fas fa-arrow-right text-xs"></i>
                     </a>
                 </div>
             </div>
@@ -306,39 +247,25 @@
     </div>
 
     <!-- Quick Actions -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Quick Actions</h5>
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-primary w-100">
-                                <i class="fas fa-cogs me-2"></i>
-                                View All Parts
-                            </a>
-                        </div>
-                        <div class="col-md-3">
-                            <a href="{% url 'inventory:supplier_list' %}" class="btn btn-outline-primary w-100">
-                                <i class="fas fa-truck me-2"></i>
-                                Manage Suppliers
-                            </a>
-                        </div>
-                        <div class="col-md-3">
-                            <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-outline-primary w-100">
-                                <i class="fas fa-file-invoice me-2"></i>
-                                Purchase Orders
-                            </a>
-                        </div>
-                        <div class="col-md-3">
-                            <button class="btn btn-outline-secondary w-100" onclick="window.print()">
-                                <i class="fas fa-print me-2"></i>
-                                Print Report
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <h5 class="text-sm font-semibold text-slate-900 mb-4">Quick Actions</h5>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <a href="{% url 'inventory:part_list' %}" class="inline-flex items-center justify-center gap-2 px-4 py-3 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors">
+                <i class="fas fa-cogs"></i>
+                <span>View All Parts</span>
+            </a>
+            <a href="{% url 'inventory:supplier_list' %}" class="inline-flex items-center justify-center gap-2 px-4 py-3 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors">
+                <i class="fas fa-truck"></i>
+                <span>Manage Suppliers</span>
+            </a>
+            <a href="{% url 'inventory:purchase_order_list' %}" class="inline-flex items-center justify-center gap-2 px-4 py-3 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors">
+                <i class="fas fa-file-invoice"></i>
+                <span>Purchase Orders</span>
+            </a>
+            <button class="inline-flex items-center justify-center gap-2 px-4 py-3 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" onclick="window.print()">
+                <i class="fas fa-print"></i>
+                <span>Print Report</span>
+            </button>
         </div>
     </div>
 </div>

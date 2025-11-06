@@ -1,24 +1,39 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block page_title %}{{ page_title }}{% endblock %}
+{% block title %}Create Estimate{% endblock %}
 
 {% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
-    .estimate-wizard {
-        background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
-        border-radius: 1rem;
-        padding: 2rem;
-        color: white;
-        margin-bottom: 2rem;
+    /* Select2 Tailwind compatibility */
+    .select2-container--default .select2-selection--single {
+        border: 1px solid rgb(203 213 225);
+        border-radius: 0.5rem;
+        height: 42px;
     }
     
-    .step-indicator {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 2rem;
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 42px;
+        padding-left: 12px;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 40px;
+        right: 10px;
+    }
+    
+    .select2-dropdown {
+        border: 1px solid rgb(203 213 225);
+        border-radius: 0.5rem;
+    }
+    
+    .select2-results__option {
+        padding: 8px 12px;
+    }
+    
+    .select2-results__option--highlighted {
+        background-color: rgb(59 130 246);
     }
     
     .step {
@@ -53,7 +68,7 @@
     
     .step.active .step-number {
         background: white;
-        color: var(--primary-color);
+        color: rgb(59 130 246);
         box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
     
@@ -61,67 +76,22 @@
         background: #10b981;
         color: white;
     }
-    
-    .form-section {
-        background: white;
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-        border: 1px solid #e5e7eb;
-        padding: 2rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .line-items-table {
-        background: #f8fafc;
-        border-radius: 0.5rem;
-        padding: 1rem;
-    }
-    
-    .add-line-item {
-        border: 2px dashed #d1d5db;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        text-align: center;
-        background: transparent;
-        transition: all 0.3s ease;
-    }
-    
-    .add-line-item:hover {
-        border-color: #6366f1;
-        background: #f0f9ff;
-    }
-    
-    .estimate-preview {
-        background: linear-gradient(145deg, #f8fafc, #e2e8f0);
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-        position: sticky;
-        top: 2rem;
-    }
-    
-    .total-section {
-        background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, black) 100%);
-        color: white;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-top: 1rem;
-    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Wizard Header -->
-    <div class="estimate-wizard">
-        <div class="text-center mb-4">
-            <h1 class="h2 mb-2">
-                <i class="fas fa-file-alt me-2"></i>
+    <div class="bg-gradient-to-r from-primary to-primary/80 rounded-xl p-8 text-white">
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold mb-2">
+                <i class="fas fa-file-alt mr-2"></i>
                 Create New Estimate
             </h1>
-            <p class="mb-0 opacity-75">Professional estimates for your customers</p>
+            <p class="text-sm opacity-90">Professional estimates for your customers</p>
         </div>
         
-        <div class="step-indicator">
+        <div class="flex justify-center items-center flex-wrap gap-4">
             <div class="step active" id="step1">
                 <div class="step-number">1</div>
                 <span>Customer & Vehicle</span>
@@ -140,20 +110,25 @@
     <form method="post" id="estimateForm">
         {% csrf_token %}
         
-        <div class="row">
-            <div class="col-lg-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Main Form -->
+            <div class="lg:col-span-3 space-y-6">
                 <!-- Step 1: Customer & Vehicle Information -->
-                <div class="form-section" id="section1">
-                    <h4 class="mb-4">
-                        <i class="fas fa-user-tie text-primary me-2"></i>
-                        Customer & Vehicle Information
-                    </h4>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Customer *</label>
-                                <select class="form-select select2" name="customer" id="customerSelect" required>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" id="section1">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h4 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-user-tie text-primary"></i>
+                            Customer & Vehicle Information
+                        </h4>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">
+                                    Customer <span class="text-rose-600">*</span>
+                                </label>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        name="customer" id="customerSelect" required>
                                     <option value="">Select Customer</option>
                                     {% for customer in customers %}
                                     <option value="{{ customer.id }}" 
@@ -165,189 +140,201 @@
                                     </option>
                                     {% endfor %}
                                 </select>
-                                <div class="form-text">Select the customer for this estimate</div>
+                                <div class="text-xs text-slate-500 mt-1">Select the customer for this estimate</div>
                             </div>
                             
-                            <div class="mb-3">
-                                <label class="form-label">Estimate Date *</label>
-                                <input type="date" class="form-control" name="estimate_date" 
-                                       value="{% now 'Y-m-d' %}" required>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Estimate Date <span class="text-rose-600">*</span></label>
+                                <input type="date" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                       name="estimate_date" value="{% now 'Y-m-d' %}" required>
                             </div>
                             
-                            <div class="mb-3">
-                                <label class="form-label">Valid Until</label>
-                                <input type="date" class="form-control" name="valid_until"
-                                       value="{% now 'Y-m-d'|add_days:30 %}">
-                                <div class="form-text">Leave blank for no expiration</div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Valid Until</label>
+                                <input type="date" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                       name="valid_until" value="{% now 'Y-m-d'|add_days:30 %}">
+                                <div class="text-xs text-slate-500 mt-1">Leave blank for no expiration</div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Vehicle (Optional)</label>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        name="vehicle" id="vehicleSelect">
+                                    <option value="">Select Vehicle</option>
+                                </select>
+                                <div class="text-xs text-slate-500 mt-1">Choose customer's vehicle if applicable</div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Work Order (Optional)</label>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        name="work_order" id="workOrderSelect">
+                                    <option value="">Select Work Order</option>
+                                </select>
+                                <div class="text-xs text-slate-500 mt-1">Link to existing work order</div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Reference Number</label>
+                                <input type="text" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                       name="reference_number" placeholder="Optional reference">
                             </div>
                         </div>
                         
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Vehicle (Optional)</label>
-                                <select class="form-select select2" name="vehicle" id="vehicleSelect">
-                                    <option value="">Select Vehicle</option>
-                                </select>
-                                <div class="form-text">Choose customer's vehicle if applicable</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Work Order (Optional)</label>
-                                <select class="form-select select2" name="work_order" id="workOrderSelect">
-                                    <option value="">Select Work Order</option>
-                                </select>
-                                <div class="form-text">Link to existing work order</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label">Reference Number</label>
-                                <input type="text" class="form-control" name="reference_number" 
-                                       placeholder="Optional reference">
-                            </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-2">Description / Scope of Work</label>
+                            <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                      name="description" rows="3" placeholder="Brief description of the work to be performed..."></textarea>
                         </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Description / Scope of Work</label>
-                        <textarea class="form-control" name="description" rows="3" 
-                                  placeholder="Brief description of the work to be performed..."></textarea>
                     </div>
                 </div>
 
                 <!-- Step 2: Line Items -->
-                <div class="form-section" id="section2" style="display: none;">
-                    <h4 class="mb-4">
-                        <i class="fas fa-list text-primary me-2"></i>
-                        Services & Parts
-                    </h4>
-                    
-                    <div class="line-items-table">
-                        <div class="table-responsive">
-                            <table class="table table-borderless" id="lineItemsTable">
-                                <thead>
-                                    <tr class="border-bottom">
-                                        <th width="40%">Description</th>
-                                        <th width="15%">Quantity</th>
-                                        <th width="15%">Unit Price</th>
-                                        <th width="15%">Discount %</th>
-                                        <th width="15%">Total</th>
-                                        <th width="5%"></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="lineItemsBody">
-                                    <!-- Line items will be added here dynamically -->
-                                </tbody>
-                            </table>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hidden" id="section2">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h4 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-list text-primary"></i>
+                            Services & Parts
+                        </h4>
+                    </div>
+                    <div class="p-6">
+                        <div class="bg-slate-50 rounded-lg p-4 mb-4">
+                            <div class="overflow-x-auto">
+                                <table class="w-full" id="lineItemsTable">
+                                    <thead>
+                                        <tr class="border-b border-slate-200">
+                                            <th class="px-3 py-2 text-left text-xs font-semibold text-slate-700" style="width: 40%;">Description</th>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold text-slate-700" style="width: 15%;">Quantity</th>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold text-slate-700" style="width: 15%;">Unit Price</th>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold text-slate-700" style="width: 15%;">Discount %</th>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold text-slate-700" style="width: 15%;">Total</th>
+                                            <th class="px-3 py-2 text-left" style="width: 5%;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lineItemsBody">
+                                        <!-- Line items will be added here dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <button type="button" class="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 text-slate-600 rounded-lg text-sm font-medium hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors" onclick="addLineItem()">
+                                <i class="fas fa-plus"></i>
+                                <span>Add Line Item</span>
+                            </button>
                         </div>
                         
-                        <button type="button" class="btn add-line-item w-100" onclick="addLineItem()">
-                            <i class="fas fa-plus me-2"></i>Add Line Item
-                        </button>
-                    </div>
-                    
-                    <div class="row mt-4">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Notes (Internal)</label>
-                                <textarea class="form-control" name="notes" rows="3" 
-                                          placeholder="Internal notes (not visible to customer)..."></textarea>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Notes (Internal)</label>
+                                <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                          name="notes" rows="3" placeholder="Internal notes (not visible to customer)..."></textarea>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Terms & Conditions</label>
-                                <textarea class="form-control" name="terms" rows="3" 
-                                          placeholder="Terms and conditions for this estimate..."></textarea>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Terms & Conditions</label>
+                                <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                          name="terms" rows="3" placeholder="Terms and conditions for this estimate..."></textarea>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Step 3: Review -->
-                <div class="form-section" id="section3" style="display: none;">
-                    <h4 class="mb-4">
-                        <i class="fas fa-eye text-primary me-2"></i>
-                        Review & Send
-                    </h4>
-                    
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Review your estimate details below. You can email it to the customer after creation.
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hidden" id="section3">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h4 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-eye text-primary"></i>
+                            Review & Send
+                        </h4>
                     </div>
-                    
-                    <div id="estimateReview">
-                        <!-- Review content will be populated here -->
-                    </div>
-                    
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" name="send_email" id="sendEmail">
-                        <label class="form-check-label" for="sendEmail">
-                            Email estimate to customer after creation
-                        </label>
+                    <div class="p-6">
+                        <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-4">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-info-circle text-blue-600"></i>
+                                <p class="text-sm text-slate-700 mb-0">
+                                    Review your estimate details below. You can email it to the customer after creation.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div id="estimateReview">
+                            <!-- Review content will be populated here -->
+                        </div>
+                        
+                        <div class="flex items-center mt-4">
+                            <input type="checkbox" class="w-4 h-4 border-slate-300 rounded text-primary focus:ring-primary" name="send_email" id="sendEmail">
+                            <label for="sendEmail" class="ml-2 text-sm text-slate-700">
+                                Email estimate to customer after creation
+                            </label>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Navigation Buttons -->
-                <div class="d-flex justify-content-between">
-                    <button type="button" class="btn btn-outline-secondary" id="prevBtn" onclick="previousStep()" style="display: none;">
-                        <i class="fas fa-arrow-left me-2"></i>Previous
+                <div class="flex justify-between items-center">
+                    <button type="button" class="hidden inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" id="prevBtn" onclick="previousStep()">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Previous</span>
                     </button>
-                    <div class="ms-auto">
-                        <button type="button" class="btn btn-primary" id="nextBtn" onclick="nextStep()">
-                            Next <i class="fas fa-arrow-right ms-2"></i>
+                    <div class="ml-auto flex items-center gap-2">
+                        <button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" id="nextBtn" onclick="nextStep()">
+                            <span>Next</span>
+                            <i class="fas fa-arrow-right"></i>
                         </button>
-                        <button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
-                            <i class="fas fa-check me-2"></i>Create Estimate
+                        <button type="submit" class="hidden inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors" id="submitBtn">
+                            <i class="fas fa-check"></i>
+                            <span>Create Estimate</span>
                         </button>
                     </div>
                 </div>
             </div>
             
             <!-- Estimate Preview Sidebar -->
-            <div class="col-lg-4">
-                <div class="estimate-preview">
-                    <h5 class="mb-3">
-                        <i class="fas fa-eye me-2"></i>
+            <div class="lg:col-span-1">
+                <div class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-6 sticky top-6">
+                    <h5 class="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fas fa-eye text-primary"></i>
                         Estimate Preview
                     </h5>
                     
-                    <div class="mb-3">
-                        <strong>Customer:</strong>
-                        <div id="previewCustomer" class="text-muted">Not selected</div>
+                    <div class="space-y-3 mb-4">
+                        <div>
+                            <strong class="text-xs font-semibold text-slate-700">Customer:</strong>
+                            <div id="previewCustomer" class="text-xs text-slate-500 mt-1">Not selected</div>
+                        </div>
+                        
+                        <div>
+                            <strong class="text-xs font-semibold text-slate-700">Vehicle:</strong>
+                            <div id="previewVehicle" class="text-xs text-slate-500 mt-1">Not selected</div>
+                        </div>
+                        
+                        <div>
+                            <strong class="text-xs font-semibold text-slate-700">Date:</strong>
+                            <div id="previewDate" class="text-xs text-slate-500 mt-1">{% now 'M d, Y' %}</div>
+                        </div>
+                        
+                        <div>
+                            <strong class="text-xs font-semibold text-slate-700">Items:</strong>
+                            <div id="previewItems" class="text-xs text-slate-500 mt-1">No items added</div>
+                        </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <strong>Vehicle:</strong>
-                        <div id="previewVehicle" class="text-muted">Not selected</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <strong>Date:</strong>
-                        <div id="previewDate" class="text-muted">{% now 'M d, Y' %}</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <strong>Items:</strong>
-                        <div id="previewItems" class="text-muted">No items added</div>
-                    </div>
-                    
-                    <div class="total-section">
-                        <div class="d-flex justify-content-between mb-2">
+                    <div class="bg-gradient-to-r from-primary to-primary/80 rounded-lg p-4 text-white">
+                        <div class="flex justify-between items-center mb-2 text-sm">
                             <span>Subtotal:</span>
                             <span id="previewSubtotal">$0.00</span>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
+                        <div class="flex justify-between items-center mb-2 text-sm">
                             <span>Discount:</span>
                             <span id="previewDiscount">$0.00</span>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
+                        <div class="flex justify-between items-center mb-2 text-sm">
                             <span>Tax:</span>
                             <span id="previewTax">$0.00</span>
                         </div>
                         <hr class="my-2 opacity-50">
-                        <div class="d-flex justify-content-between">
+                        <div class="flex justify-between items-center">
                             <strong>Total:</strong>
-                            <strong id="previewTotal">$0.00</strong>
+                            <strong class="text-lg" id="previewTotal">$0.00</strong>
                         </div>
                     </div>
                 </div>
@@ -358,29 +345,29 @@
 
 <!-- Line Item Template -->
 <template id="lineItemTemplate">
-    <tr class="line-item">
-        <td>
-            <input type="text" class="form-control" name="line_items[][description]" 
-                   placeholder="Service or part description" required>
+    <tr class="line-item border-b border-slate-100 hover:bg-slate-50">
+        <td class="px-3 py-2">
+            <input type="text" class="w-full px-2 py-1.5 border border-slate-300 rounded text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                   name="line_items[][description]" placeholder="Service or part description" required>
         </td>
-        <td>
-            <input type="number" class="form-control quantity" name="line_items[][quantity]" 
-                   value="1" min="0.01" step="0.01" required onchange="calculateLineTotal(this)">
+        <td class="px-3 py-2">
+            <input type="number" class="w-full px-2 py-1.5 border border-slate-300 rounded text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary quantity" 
+                   name="line_items[][quantity]" value="1" min="0.01" step="0.01" required onchange="calculateLineTotal(this)">
         </td>
-        <td>
-            <input type="number" class="form-control unit-price" name="line_items[][unit_price]" 
-                   value="0.00" min="0" step="0.01" required onchange="calculateLineTotal(this)">
+        <td class="px-3 py-2">
+            <input type="number" class="w-full px-2 py-1.5 border border-slate-300 rounded text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary unit-price" 
+                   name="line_items[][unit_price]" value="0.00" min="0" step="0.01" required onchange="calculateLineTotal(this)">
         </td>
-        <td>
-            <input type="number" class="form-control discount" name="line_items[][discount_percentage]" 
-                   value="0" min="0" max="100" step="0.01" onchange="calculateLineTotal(this)">
+        <td class="px-3 py-2">
+            <input type="number" class="w-full px-2 py-1.5 border border-slate-300 rounded text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary discount" 
+                   name="line_items[][discount_percentage]" value="0" min="0" max="100" step="0.01" onchange="calculateLineTotal(this)">
         </td>
-        <td>
-            <input type="number" class="form-control line-total" name="line_items[][total]" 
-                   value="0.00" readonly>
+        <td class="px-3 py-2">
+            <input type="number" class="w-full px-2 py-1.5 border border-slate-300 rounded text-sm bg-slate-50 line-total" 
+                   name="line_items[][total]" value="0.00" readonly>
         </td>
-        <td>
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLineItem(this)">
+        <td class="px-3 py-2">
+            <button type="button" class="inline-flex items-center justify-center w-8 h-8 bg-rose-600 text-white rounded text-xs hover:bg-rose-700 transition-colors" onclick="removeLineItem(this)">
                 <i class="fas fa-times"></i>
             </button>
         </td>
@@ -389,24 +376,25 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 let currentStep = 1;
 const totalSteps = 3;
 
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
     // Initialize Select2
     $('.select2').select2({
-        theme: 'bootstrap-5',
         placeholder: 'Select an option',
-        allowClear: true
+        allowClear: true,
+        width: '100%'
     });
     
     // Add first line item
     addLineItem();
     
     // Customer change handler
-    $('#customerSelect').change(function() {
+    $('#customerSelect').on('change', function() {
         const customerId = $(this).val();
         const customerText = $(this).find('option:selected').text();
         
@@ -422,13 +410,13 @@ $(document).ready(function() {
     });
     
     // Vehicle change handler
-    $('#vehicleSelect').change(function() {
+    $('#vehicleSelect').on('change', function() {
         const vehicleText = $(this).find('option:selected').text();
         $('#previewVehicle').text(vehicleText || 'Not selected');
     });
     
     // Date change handler
-    $('input[name="estimate_date"]').change(function() {
+    $('input[name="estimate_date"]').on('change', function() {
         const date = new Date($(this).val());
         $('#previewDate').text(date.toLocaleDateString());
     });
@@ -437,13 +425,14 @@ $(document).ready(function() {
 function nextStep() {
     if (validateCurrentStep()) {
         if (currentStep < totalSteps) {
-            $(`#section${currentStep}`).hide();
-            $(`#step${currentStep}`).removeClass('active').addClass('completed');
+            document.getElementById(`section${currentStep}`).classList.add('hidden');
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+            document.getElementById(`step${currentStep}`).classList.add('completed');
             
             currentStep++;
             
-            $(`#section${currentStep}`).show();
-            $(`#step${currentStep}`).addClass('active');
+            document.getElementById(`section${currentStep}`).classList.remove('hidden');
+            document.getElementById(`step${currentStep}`).classList.add('active');
             
             updateButtons();
             
@@ -456,62 +445,73 @@ function nextStep() {
 
 function previousStep() {
     if (currentStep > 1) {
-        $(`#section${currentStep}`).hide();
-        $(`#step${currentStep}`).removeClass('active');
+        document.getElementById(`section${currentStep}`).classList.add('hidden');
+        document.getElementById(`step${currentStep}`).classList.remove('active');
         
         currentStep--;
         
-        $(`#section${currentStep}`).show();
-        $(`#step${currentStep}`).removeClass('completed').addClass('active');
+        document.getElementById(`section${currentStep}`).classList.remove('hidden');
+        document.getElementById(`step${currentStep}`).classList.remove('completed');
+        document.getElementById(`step${currentStep}`).classList.add('active');
         
         updateButtons();
     }
 }
 
 function updateButtons() {
-    $('#prevBtn').toggle(currentStep > 1);
-    $('#nextBtn').toggle(currentStep < totalSteps);
-    $('#submitBtn').toggle(currentStep === totalSteps);
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    if (currentStep > 1) {
+        prevBtn.classList.remove('hidden');
+    } else {
+        prevBtn.classList.add('hidden');
+    }
+    
+    if (currentStep < totalSteps) {
+        nextBtn.classList.remove('hidden');
+        submitBtn.classList.add('hidden');
+    } else {
+        nextBtn.classList.add('hidden');
+        submitBtn.classList.remove('hidden');
+    }
 }
 
 function validateCurrentStep() {
-    let isValid = true;
-    
     if (currentStep === 1) {
-        // Validate customer selection
-        if (!$('#customerSelect').val()) {
+        if (!document.getElementById('customerSelect').value) {
             alert('Please select a customer');
             return false;
         }
         
-        // Validate estimate date
-        if (!$('input[name="estimate_date"]').val()) {
+        if (!document.querySelector('input[name="estimate_date"]').value) {
             alert('Please select an estimate date');
             return false;
         }
     } else if (currentStep === 2) {
-        // Validate line items
-        const lineItems = $('#lineItemsBody tr');
+        const lineItems = document.querySelectorAll('#lineItemsBody tr');
         if (lineItems.length === 0) {
             alert('Please add at least one line item');
             return false;
         }
         
-        // Validate each line item
-        lineItems.each(function() {
-            const description = $(this).find('input[name*="description"]').val();
-            const quantity = $(this).find('input[name*="quantity"]').val();
-            const unitPrice = $(this).find('input[name*="unit_price"]').val();
+        let isValid = true;
+        lineItems.forEach(function(row) {
+            const description = row.querySelector('input[name*="description"]').value;
+            const quantity = row.querySelector('input[name*="quantity"]').value;
+            const unitPrice = row.querySelector('input[name*="unit_price"]').value;
             
             if (!description || !quantity || !unitPrice) {
                 alert('Please fill in all line item fields');
                 isValid = false;
-                return false;
             }
         });
+        
+        return isValid;
     }
     
-    return isValid;
+    return true;
 }
 
 function addLineItem() {
@@ -522,21 +522,21 @@ function addLineItem() {
 }
 
 function removeLineItem(button) {
-    $(button).closest('tr').remove();
+    button.closest('tr').remove();
     updatePreview();
 }
 
 function calculateLineTotal(input) {
-    const row = $(input).closest('tr');
-    const quantity = parseFloat(row.find('.quantity').val()) || 0;
-    const unitPrice = parseFloat(row.find('.unit-price').val()) || 0;
-    const discountPercent = parseFloat(row.find('.discount').val()) || 0;
+    const row = input.closest('tr');
+    const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
+    const unitPrice = parseFloat(row.querySelector('.unit-price').value) || 0;
+    const discountPercent = parseFloat(row.querySelector('.discount').value) || 0;
     
     const subtotal = quantity * unitPrice;
     const discountAmount = subtotal * (discountPercent / 100);
     const total = subtotal - discountAmount;
     
-    row.find('.line-total').val(total.toFixed(2));
+    row.querySelector('.line-total').value = total.toFixed(2);
     updatePreview();
 }
 
@@ -545,128 +545,122 @@ function updatePreview() {
     let totalDiscount = 0;
     let itemCount = 0;
     
-    $('#lineItemsBody tr').each(function() {
-        const quantity = parseFloat($(this).find('.quantity').val()) || 0;
-        const unitPrice = parseFloat($(this).find('.unit-price').val()) || 0;
-        const discountPercent = parseFloat($(this).find('.discount').val()) || 0;
+    document.querySelectorAll('#lineItemsBody tr').forEach(function(row) {
+        const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
+        const unitPrice = parseFloat(row.querySelector('.unit-price').value) || 0;
+        const discountPercent = parseFloat(row.querySelector('.discount').value) || 0;
         
         const lineSubtotal = quantity * unitPrice;
         const lineDiscount = lineSubtotal * (discountPercent / 100);
+        const lineTotal = lineSubtotal - lineDiscount;
         
         subtotal += lineSubtotal;
         totalDiscount += lineDiscount;
         itemCount++;
     });
     
-    const tax = subtotal * 0.08; // Assuming 8% tax rate
+    const tax = subtotal * 0.1; // 10% tax - adjust as needed
     const total = subtotal - totalDiscount + tax;
     
-    $('#previewItems').text(itemCount > 0 ? `${itemCount} item(s)` : 'No items added');
-    $('#previewSubtotal').text('$' + subtotal.toFixed(2));
-    $('#previewDiscount').text('$' + totalDiscount.toFixed(2));
-    $('#previewTax').text('$' + tax.toFixed(2));
-    $('#previewTotal').text('$' + total.toFixed(2));
+    document.getElementById('previewSubtotal').textContent = '$' + subtotal.toFixed(2);
+    document.getElementById('previewDiscount').textContent = '$' + totalDiscount.toFixed(2);
+    document.getElementById('previewTax').textContent = '$' + tax.toFixed(2);
+    document.getElementById('previewTotal').textContent = '$' + total.toFixed(2);
+    document.getElementById('previewItems').textContent = itemCount + ' item(s)';
 }
 
 function loadCustomerVehicles(customerId) {
-    // AJAX call to load customer vehicles
-    $.get(`/api/customers/${customerId}/vehicles/`, function(data) {
-        const vehicleSelect = $('#vehicleSelect');
-        vehicleSelect.empty().append('<option value="">Select Vehicle</option>');
-        
-        data.forEach(function(vehicle) {
-            vehicleSelect.append(`<option value="${vehicle.id}">
-                ${vehicle.year} ${vehicle.make} ${vehicle.model} - ${vehicle.license_plate}
-            </option>`);
-        });
-    }).fail(function() {
-        console.error('Failed to load customer vehicles');
-    });
+    // Load vehicles via AJAX
+    fetch(`/billing/customer-vehicles/?customer_id=${customerId}`)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('vehicleSelect');
+            select.innerHTML = '<option value="">Select Vehicle</option>';
+            if (data.vehicles) {
+                data.vehicles.forEach(vehicle => {
+                    const option = document.createElement('option');
+                    option.value = vehicle.id;
+                    option.textContent = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+                    select.appendChild(option);
+                });
+            }
+            $('#vehicleSelect').trigger('change');
+        })
+        .catch(error => console.error('Error loading vehicles:', error));
 }
 
 function loadCustomerWorkOrders(customerId) {
-    // AJAX call to load customer work orders
-    $.get(`/api/customers/${customerId}/workorders/`, function(data) {
-        const workOrderSelect = $('#workOrderSelect');
-        workOrderSelect.empty().append('<option value="">Select Work Order</option>');
-        
-        data.forEach(function(workOrder) {
-            workOrderSelect.append(`<option value="${workOrder.id}">
-                ${workOrder.work_order_number} - ${workOrder.description}
-            </option>`);
-        });
-    }).fail(function() {
-        console.error('Failed to load customer work orders');
-    });
+    // Load work orders via AJAX
+    fetch(`/billing/customer-work-orders/?customer_id=${customerId}`)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('workOrderSelect');
+            select.innerHTML = '<option value="">Select Work Order</option>';
+            if (data.work_orders) {
+                data.work_orders.forEach(wo => {
+                    const option = document.createElement('option');
+                    option.value = wo.id;
+                    option.textContent = wo.work_order_number;
+                    select.appendChild(option);
+                });
+            }
+            $('#workOrderSelect').trigger('change');
+        })
+        .catch(error => console.error('Error loading work orders:', error));
 }
 
 function generateReview() {
-    const customer = $('#customerSelect option:selected').text();
-    const vehicle = $('#vehicleSelect option:selected').text();
-    const estimateDate = $('input[name="estimate_date"]').val();
-    const validUntil = $('input[name="valid_until"]').val();
-    const description = $('textarea[name="description"]').val();
+    const review = document.getElementById('estimateReview');
+    const customer = document.getElementById('customerSelect').selectedOptions[0]?.text || 'Not selected';
+    const vehicle = document.getElementById('vehicleSelect').selectedOptions[0]?.text || 'Not selected';
+    const date = document.querySelector('input[name="estimate_date"]').value;
+    const description = document.querySelector('textarea[name="description"]').value;
     
-    let reviewHTML = `
-        <div class="card">
-            <div class="card-header">
-                <h5>Estimate Summary</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p><strong>Customer:</strong> ${customer}</p>
-                        <p><strong>Vehicle:</strong> ${vehicle || 'Not specified'}</p>
-                        <p><strong>Estimate Date:</strong> ${estimateDate}</p>
-                        ${validUntil ? `<p><strong>Valid Until:</strong> ${validUntil}</p>` : ''}
-                    </div>
-                    <div class="col-md-6">
-                        ${description ? `<p><strong>Description:</strong> ${description}</p>` : ''}
-                    </div>
+    let itemsHtml = '';
+    document.querySelectorAll('#lineItemsBody tr').forEach((row, index) => {
+        const desc = row.querySelector('input[name*="description"]').value;
+        const qty = row.querySelector('input[name*="quantity"]').value;
+        const price = row.querySelector('input[name*="unit_price"]').value;
+        const total = row.querySelector('.line-total').value;
+        itemsHtml += `
+            <div class="flex justify-between items-center py-2 border-b border-slate-200">
+                <div>
+                    <div class="text-sm font-medium text-slate-900">${desc}</div>
+                    <div class="text-xs text-slate-500">Qty: ${qty} × $${price}</div>
                 </div>
-                
-                <h6 class="mt-4">Line Items:</h6>
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Description</th>
-                                <th>Qty</th>
-                                <th>Unit Price</th>
-                                <th>Discount</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-    `;
-    
-    $('#lineItemsBody tr').each(function() {
-        const description = $(this).find('input[name*="description"]').val() || '';
-        const quantity = $(this).find('input[name*="quantity"]').val() || '0';
-        const unitPrice = $(this).find('input[name*="unit_price"]').val() || '0.00';
-        const discount = $(this).find('input[name*="discount_percentage"]').val() || '0';
-        const total = $(this).find('input[name*="total"]').val() || '0.00';
-        
-        reviewHTML += `
-            <tr>
-                <td>${description}</td>
-                <td>${quantity}</td>
-                <td>$${parseFloat(unitPrice).toFixed(2)}</td>
-                <td>${discount}%</td>
-                <td>$${parseFloat(total).toFixed(2)}</td>
-            </tr>
+                <div class="text-sm font-semibold text-slate-900">$${total}</div>
+            </div>
         `;
     });
     
-    reviewHTML += `
-                        </tbody>
-                    </table>
+    review.innerHTML = `
+        <div class="space-y-4">
+            <div>
+                <h6 class="text-sm font-semibold text-slate-700 mb-2">Customer</h6>
+                <p class="text-sm text-slate-900">${customer}</p>
+            </div>
+            <div>
+                <h6 class="text-sm font-semibold text-slate-700 mb-2">Vehicle</h6>
+                <p class="text-sm text-slate-900">${vehicle}</p>
+            </div>
+            <div>
+                <h6 class="text-sm font-semibold text-slate-700 mb-2">Estimate Date</h6>
+                <p class="text-sm text-slate-900">${date}</p>
+            </div>
+            ${description ? `
+            <div>
+                <h6 class="text-sm font-semibold text-slate-700 mb-2">Description</h6>
+                <p class="text-sm text-slate-900">${description}</p>
+            </div>
+            ` : ''}
+            <div>
+                <h6 class="text-sm font-semibold text-slate-700 mb-2">Line Items</h6>
+                <div class="bg-slate-50 rounded-lg p-4">
+                    ${itemsHtml || '<p class="text-sm text-slate-500">No items added</p>'}
                 </div>
             </div>
         </div>
     `;
-    
-    $('#estimateReview').html(reviewHTML);
 }
 </script>
 {% endblock %}

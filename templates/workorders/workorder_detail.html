@@ -6,40 +6,6 @@
 
 {% block extra_css %}
 <style>
-    .detail-section {
-        background: white;
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        border: 1px solid var(--gray-200);
-    }
-    
-    .section-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: var(--gray-800);
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    .info-item {
-        display: flex;
-        margin-bottom: 0.75rem;
-    }
-    
-    .info-label {
-        font-weight: 500;
-        color: var(--gray-600);
-        min-width: 140px;
-        margin-right: 1rem;
-    }
-    
-    .info-value {
-        color: var(--gray-800);
-    }
-    
     .status-timeline {
         position: relative;
         padding-left: 2rem;
@@ -57,7 +23,7 @@
         top: 1rem;
         width: 2px;
         height: calc(100% - 1rem);
-        background: var(--gray-300);
+        background: #cbd5e1;
     }
     
     .timeline-item::after {
@@ -74,704 +40,657 @@
     }
     
     .timeline-item.completed::after {
-        background: var(--success);
-        box-shadow: 0 0 0 2px var(--success);
-    }
-    
-    .task-card {
-        border: 1px solid var(--gray-200);
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        transition: all 0.2s ease;
-    }
-    
-    .task-card:hover {
-        border-color: var(--primary);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    
-    .task-card.completed {
-        background: var(--gray-50);
-        border-color: var(--success);
-    }
-    
-    .part-card {
-        border: 1px solid var(--gray-200);
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        background: white;
-    }
-    
-    .part-card.installed {
-        border-color: var(--success);
-        background: rgba(16, 185, 129, 0.05);
-    }
-    
-    .time-tracker {
-        background: var(--gray-50);
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-    
-    .timer-display {
-        font-size: 2rem;
-        font-weight: 600;
-        color: var(--primary);
-        text-align: center;
-        margin: 1rem 0;
-    }
-    
-    .note-card {
-        border-left: 4px solid var(--gray-300);
-        background: var(--gray-50);
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-radius: 0 0.5rem 0.5rem 0;
-    }
-    
-    .note-card.important {
-        border-left-color: var(--warning);
-        background: rgba(245, 158, 11, 0.1);
-    }
-    
-    .note-card.customer {
-        border-left-color: var(--info);
-        background: rgba(59, 130, 246, 0.1);
-    }
-    
-    .signature-pad {
-        border: 2px dashed var(--gray-300);
-        border-radius: 0.5rem;
-        background: white;
-    }
-    
-    .cost-summary {
-        background: var(--gray-50);
-        border-radius: 0.5rem;
-        padding: 1rem;
-    }
-    
-    .cost-item {
-        display: flex;
-        justify-content: between;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid var(--gray-200);
-    }
-    
-    .cost-item:last-child {
-        border-bottom: none;
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-    
-    .btn-floating {
-        position: fixed;
-        bottom: 2rem;
-        right: 2rem;
-        z-index: 1000;
-        border-radius: 50%;
-        width: 56px;
-        height: 56px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        background: #10b981;
+        box-shadow: 0 0 0 2px #10b981;
     }
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="{% url 'workorders:list' %}">Work Orders</a></li>
-                            <li class="breadcrumb-item active">{{ workorder.work_order_number }}</li>
-                        </ol>
-                    </nav>
-                    <h1 class="h3 mb-1">{{ workorder.work_order_number }}</h1>
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        {% include 'workorders/partials/status_badge.html' with status=workorder.status %}
-                        {% include 'workorders/partials/priority_badge.html' with priority=workorder.priority %}
-                        {% if workorder.is_overdue %}
-                            <span class="badge bg-danger">Overdue</span>
+{% block page_header %}
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="flex-1 min-w-0">
+            <h1 class="text-xl font-semibold text-slate-900 mb-2">{{ workorder.work_order_number }}</h1>
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+                {% include 'workorders/partials/status_badge.html' with status=workorder.status %}
+                {% include 'workorders/partials/priority_badge.html' with priority=workorder.priority %}
+                {% if workorder.is_overdue %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                        Overdue
+                    </span>
+                {% endif %}
+                {% if workorder.requires_approval %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                        Needs Approval
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            {% if can_edit %}
+            <a href="{% url 'workorders:edit' workorder.pk %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-edit"></i>
+                <span>Edit</span>
+            </a>
+            {% endif %}
+            <a href="{% url 'workorders:print' workorder.pk %}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 border border-emerald-600 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-50 transition-colors">
+                <i class="fas fa-print"></i>
+                <span>Print</span>
+            </a>
+            <div class="relative">
+                <button class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="toggleActionsMenu()">
+                    <span>Actions</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </button>
+                <div class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 z-50" id="actionsMenu">
+                    <div class="py-1">
+                        {% if workorder.status == 'draft' %}
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 status-update" href="#" data-status="inspection">
+                            <i class="fas fa-search mr-2"></i>Start Initial Inspection
+                        </a>
+                        {% elif workorder.status == 'inspection' %}
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 status-update" href="#" data-status="intake">
+                            <i class="fas fa-play mr-2"></i>Start Intake
+                        </a>
+                        {% elif workorder.status == 'intake' %}
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 status-update" href="#" data-status="diagnosis">
+                            <i class="fas fa-search mr-2"></i>Start Diagnosis
+                        </a>
+                        {% elif workorder.status == 'diagnosis' %}
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 status-update" href="#" data-status="awaiting_approval">
+                            <i class="fas fa-clipboard-check mr-2"></i>Request Approval
+                        </a>
+                        {% elif workorder.status == 'awaiting_approval' %}
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 status-update" href="#" data-status="approved">
+                            <i class="fas fa-check mr-2"></i>Mark Approved
+                        </a>
+                        {% elif workorder.status == 'approved' %}
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 status-update" href="#" data-status="in_progress">
+                            <i class="fas fa-wrench mr-2"></i>Start Work
+                        </a>
+                        {% elif workorder.status == 'in_progress' %}
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 status-update" href="#" data-status="quality_check">
+                            <i class="fas fa-clipboard-check mr-2"></i>Quality Check
+                        </a>
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 status-update" href="#" data-status="paused">
+                            <i class="fas fa-pause mr-2"></i>Pause Work
+                        </a>
+                        {% elif workorder.status == 'paused' %}
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 status-update" href="#" data-status="in_progress">
+                            <i class="fas fa-play mr-2"></i>Resume Work
+                        </a>
+                        {% elif workorder.status == 'quality_check' %}
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" href="#" id="perform-quality-check-btn">
+                            <i class="fas fa-clipboard-check mr-2"></i>Perform Quality Check
+                        </a>
+                        {% elif workorder.status == 'completed' %}
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 status-update" href="#" data-status="invoiced">
+                            <i class="fas fa-file-invoice mr-2"></i>Mark Invoiced
+                        </a>
                         {% endif %}
-                        {% if workorder.requires_approval %}
-                            <span class="badge bg-warning">Needs Approval</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="d-flex gap-2">
-                    {% if can_edit %}
-                    <a href="{% url 'workorders:edit' workorder.pk %}" class="btn btn-outline-primary">
-                        <i class="fas fa-edit me-1"></i> Edit
-                    </a>
-                    {% endif %}
-                    <a href="{% url 'workorders:print' workorder.pk %}" target="_blank" class="btn btn-outline-success">
-                        <i class="fas fa-print me-1"></i> Print
-                    </a>
-                    <div class="dropdown">
-                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            Actions
-                        </button>
-                        <ul class="dropdown-menu">
-                            {% if workorder.status == 'draft' %}
-                            <li><a class="dropdown-item status-update" href="#" data-status="inspection">
-                                <i class="fas fa-search me-2"></i>Start Initial Inspection
-                            </a></li>
-                            {% elif workorder.status == 'inspection' %}
-                            <li><a class="dropdown-item status-update" href="#" data-status="intake">
-                                <i class="fas fa-play me-2"></i>Start Intake
-                            </a></li>
-                            {% elif workorder.status == 'intake' %}
-                            <li><a class="dropdown-item status-update" href="#" data-status="diagnosis">
-                                <i class="fas fa-search me-2"></i>Start Diagnosis
-                            </a></li>
-                            {% elif workorder.status == 'diagnosis' %}
-                            <li><a class="dropdown-item status-update" href="#" data-status="awaiting_approval">
-                                <i class="fas fa-clipboard-check me-2"></i>Request Approval
-                            </a></li>
-                            {% elif workorder.status == 'awaiting_approval' %}
-                            <li><a class="dropdown-item status-update" href="#" data-status="approved">
-                                <i class="fas fa-check me-2"></i>Mark Approved
-                            </a></li>
-                            {% elif workorder.status == 'approved' %}
-                            <li><a class="dropdown-item status-update" href="#" data-status="in_progress">
-                                <i class="fas fa-wrench me-2"></i>Start Work
-                            </a></li>
-                            {% elif workorder.status == 'in_progress' %}
-                            <li><a class="dropdown-item status-update" href="#" data-status="quality_check">
-                                <i class="fas fa-clipboard-check me-2"></i>Quality Check
-                            </a></li>
-                            <li><a class="dropdown-item status-update" href="#" data-status="paused">
-                                <i class="fas fa-pause me-2"></i>Pause Work
-                            </a></li>
-                            {% elif workorder.status == 'paused' %}
-                            <li><a class="dropdown-item status-update" href="#" data-status="in_progress">
-                                <i class="fas fa-play me-2"></i>Resume Work
-                            </a></li>
-                            {% elif workorder.status == 'quality_check' %}
-                            <li><a class="dropdown-item" href="#" id="perform-quality-check-btn">
-                                <i class="fas fa-clipboard-check me-2"></i>Perform Quality Check
-                            </a></li>
-                            {% elif workorder.status == 'completed' %}
-                            <li><a class="dropdown-item status-update" href="#" data-status="invoiced">
-                                <i class="fas fa-file-invoice me-2"></i>Mark Invoiced
-                            </a></li>
-                            {% endif %}
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-warning" href="#" id="add-note-btn">
-                                <i class="fas fa-sticky-note me-2"></i>Add Note
-                            </a></li>
-                        </ul>
+                        <div class="border-t border-slate-200 my-1"></div>
+                        <a class="block px-4 py-2 text-sm text-amber-700 hover:bg-amber-50" href="#" id="add-note-btn">
+                            <i class="fas fa-sticky-note mr-2"></i>Add Note
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <div class="row">
-        <!-- Left Column -->
-        <div class="col-lg-8">
-            <!-- Basic Information -->
-            <div class="detail-section">
-                <h5 class="section-title">
-                    <i class="fas fa-info-circle text-primary"></i>
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Basic Information -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-info-circle mr-2 text-primary"></i>
                     Basic Information
-                </h5>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="info-item">
-                            <div class="info-label">Customer:</div>
-                            <div class="info-value">
-                                <strong>{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</strong>
-                                <br><small class="text-muted">{{ workorder.customer.user.email }}</small>
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Customer</div>
+                            <div class="text-sm text-slate-900">
+                                <div class="font-medium">{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</div>
+                                <div class="text-slate-500 mt-0.5">{{ workorder.customer.user.email }}</div>
                                 {% if workorder.customer.phone %}
-                                <br><small class="text-muted">{{ workorder.customer.phone }}</small>
+                                <div class="text-slate-500">{{ workorder.customer.phone }}</div>
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="info-item">
-                            <div class="info-label">Vehicle:</div>
-                            <div class="info-value">
-                                <strong>{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</strong>
-                                <br><small class="text-muted">{{ workorder.vehicle.license_plate }}</small>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Vehicle</div>
+                            <div class="text-sm text-slate-900">
+                                <div class="font-medium">{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</div>
+                                <div class="text-slate-500 mt-0.5">{{ workorder.vehicle.license_plate }}</div>
                                 {% if workorder.vehicle.vin %}
-                                <br><small class="text-muted">VIN: {{ workorder.vehicle.vin }}</small>
+                                <div class="text-slate-500">VIN: {{ workorder.vehicle.vin }}</div>
                                 {% endif %}
                             </div>
                         </div>
                         {% if workorder.odometer_in %}
-                        <div class="info-item">
-                            <div class="info-label">Odometer:</div>
-                            <div class="info-value">{{ workorder.odometer_in|floatformat:0 }} miles</div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Odometer</div>
+                            <div class="text-sm font-medium text-slate-900">{{ workorder.odometer_in|floatformat:0 }} miles</div>
                         </div>
                         {% endif %}
                     </div>
-                    <div class="col-md-6">
-                        <div class="info-item">
-                            <div class="info-label">Primary Technician:</div>
-                            <div class="info-value">
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Primary Technician</div>
+                            <div class="text-sm text-slate-900">
                                 {% if workorder.primary_technician %}
-                                    <strong>{{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}</strong>
+                                    <span class="font-medium">{{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}</span>
                                 {% else %}
-                                    <span class="text-muted">Not assigned</span>
+                                    <span class="text-slate-500">Not assigned</span>
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="info-item">
-                            <div class="info-label">Created:</div>
-                            <div class="info-value">{{ workorder.created_at|date:"M d, Y H:i" }}</div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Created</div>
+                            <div class="text-sm font-medium text-slate-900">{{ workorder.created_at|date:"M d, Y H:i" }}</div>
                         </div>
                         {% if workorder.estimated_completion %}
-                        <div class="info-item">
-                            <div class="info-label">Estimated Completion:</div>
-                            <div class="info-value">{{ workorder.estimated_completion|date:"M d, Y H:i" }}</div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Estimated Completion</div>
+                            <div class="text-sm font-medium text-slate-900">{{ workorder.estimated_completion|date:"M d, Y H:i" }}</div>
                         </div>
                         {% endif %}
                         {% if workorder.completed_at %}
-                        <div class="info-item">
-                            <div class="info-label">Completed:</div>
-                            <div class="info-value">{{ workorder.completed_at|date:"M d, Y H:i" }}</div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Completed</div>
+                            <div class="text-sm font-medium text-slate-900">{{ workorder.completed_at|date:"M d, Y H:i" }}</div>
                         </div>
                         {% endif %}
                     </div>
                 </div>
                 
                 {% if workorder.customer_concerns %}
-                <div class="mt-3">
-                    <div class="info-label">Customer Concerns:</div>
-                    <div class="info-value">{{ workorder.customer_concerns }}</div>
+                <div class="mt-6 pt-6 border-t border-slate-200">
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Customer Concerns</div>
+                    <div class="text-sm text-slate-700 whitespace-pre-line">{{ workorder.customer_concerns }}</div>
                 </div>
                 {% endif %}
                 
                 {% if workorder.diagnosis_notes %}
-                <div class="mt-3">
-                    <div class="info-label">Diagnosis Notes:</div>
-                    <div class="info-value">{{ workorder.diagnosis_notes }}</div>
+                <div class="mt-6 pt-6 border-t border-slate-200">
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Diagnosis Notes</div>
+                    <div class="text-sm text-slate-700 whitespace-pre-line">{{ workorder.diagnosis_notes }}</div>
                 </div>
                 {% endif %}
             </div>
+        </div>
 
-            <!-- Service Tasks -->
-            <div class="detail-section">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="section-title mb-0">
-                        <i class="fas fa-tasks text-primary"></i>
-                        Service Tasks
-                    </h5>
-                    <button class="btn btn-sm btn-outline-primary" id="add-task-btn">
-                        <i class="fas fa-plus me-1"></i> Add Task
-                    </button>
-                </div>
-                
+        <!-- Service Tasks -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-tasks mr-2 text-primary"></i>
+                    Service Tasks
+                </h3>
+                <button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors" id="add-task-btn">
+                    <i class="fas fa-plus"></i>
+                    Add Task
+                </button>
+            </div>
+            <div class="p-6">
                 {% for task in workorder.tasks.all %}
-                <div class="task-card {% if task.status == 'completed' %}completed{% endif %}">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div class="flex-grow-1">
-                            <h6 class="mb-1">{{ task.get_task_type_display }} - {{ task.description }}</h6>
+                <div class="border border-slate-200 rounded-lg p-4 mb-3 transition-all hover:border-primary hover:shadow-md {% if task.status == 'completed' %}bg-slate-50 border-emerald-200{% endif %}">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm font-semibold text-slate-900 mb-1">{{ task.get_task_type_display }} - {{ task.description }}</h4>
                             {% if task.detailed_notes %}
-                            <p class="text-muted mb-2 small">{{ task.detailed_notes }}</p>
+                            <p class="text-xs text-slate-500 mt-1">{{ task.detailed_notes }}</p>
                             {% endif %}
                         </div>
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="flex items-center gap-2 ml-4">
                             {% include 'workorders/partials/task_status_badge.html' with status=task.status %}
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                    <i class="fas fa-ellipsis-v"></i>
+                            <div class="relative">
+                                <button class="inline-flex items-center justify-center w-8 h-8 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors" onclick="toggleTaskMenu({{ task.id }})">
+                                    <i class="fas fa-ellipsis-v text-xs"></i>
                                 </button>
-                                <ul class="dropdown-menu">
-                                    {% if task.status == 'pending' %}
-                                    <li><a class="dropdown-item task-status-update" href="#" data-task-id="{{ task.id }}" data-status="in_progress">
-                                        <i class="fas fa-play me-2"></i>Start Task
-                                    </a></li>
-                                    {% elif task.status == 'in_progress' %}
-                                    <li><a class="dropdown-item task-status-update" href="#" data-task-id="{{ task.id }}" data-status="completed">
-                                        <i class="fas fa-check me-2"></i>Mark Complete
-                                    </a></li>
-                                    <li><a class="dropdown-item task-status-update" href="#" data-task-id="{{ task.id }}" data-status="skipped">
-                                        <i class="fas fa-forward me-2"></i>Skip Task
-                                    </a></li>
-                                    {% endif %}
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item task-edit" href="#" data-task-id="{{ task.id }}">
-                                        <i class="fas fa-edit me-2"></i>Edit Task
-                                    </a></li>
-                                    <li><a class="dropdown-item text-danger task-delete" href="#" data-task-id="{{ task.id }}">
-                                        <i class="fas fa-trash me-2"></i>Delete Task
-                                    </a></li>
-                                </ul>
+                                <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-50" id="taskMenu{{ task.id }}">
+                                    <div class="py-1">
+                                        {% if task.status == 'pending' %}
+                                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 task-status-update" href="#" data-task-id="{{ task.id }}" data-status="in_progress">
+                                            <i class="fas fa-play mr-2"></i>Start Task
+                                        </a>
+                                        {% elif task.status == 'in_progress' %}
+                                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 task-status-update" href="#" data-task-id="{{ task.id }}" data-status="completed">
+                                            <i class="fas fa-check mr-2"></i>Mark Complete
+                                        </a>
+                                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 task-status-update" href="#" data-task-id="{{ task.id }}" data-status="skipped">
+                                            <i class="fas fa-forward mr-2"></i>Skip Task
+                                        </a>
+                                        {% endif %}
+                                        <div class="border-t border-slate-200 my-1"></div>
+                                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 task-edit" href="#" data-task-id="{{ task.id }}">
+                                            <i class="fas fa-edit mr-2"></i>Edit Task
+                                        </a>
+                                        <a class="block px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 task-delete" href="#" data-task-id="{{ task.id }}">
+                                            <i class="fas fa-trash mr-2"></i>Delete Task
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="row">
-                        <div class="col-md-3">
-                            <small class="text-muted">Assigned To:</small><br>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-3 border-t border-slate-100">
+                        <div>
+                            <div class="text-xs text-slate-500 mb-1">Assigned To</div>
                             {% if task.assigned_to %}
-                                <span class="badge bg-success">{{ task.assigned_to.first_name }} {{ task.assigned_to.last_name }}</span>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    {{ task.assigned_to.first_name }} {{ task.assigned_to.last_name }}
+                                </span>
                             {% else %}
-                                <span class="text-muted">Unassigned</span>
+                                <span class="text-xs text-slate-500">Unassigned</span>
                             {% endif %}
                         </div>
-                        <div class="col-md-3">
-                            <small class="text-muted">Estimated Hours:</small><br>
-                            <strong>{{ task.estimated_hours|floatformat:1 }}h</strong>
+                        <div>
+                            <div class="text-xs text-slate-500 mb-1">Estimated Hours</div>
+                            <div class="text-sm font-semibold text-slate-900">{{ task.estimated_hours|floatformat:1 }}h</div>
                         </div>
-                        <div class="col-md-3">
-                            <small class="text-muted">Actual Hours:</small><br>
-                            <strong>{{ task.actual_hours|floatformat:1 }}h</strong>
+                        <div>
+                            <div class="text-xs text-slate-500 mb-1">Actual Hours</div>
+                            <div class="text-sm font-semibold text-slate-900">{{ task.actual_hours|floatformat:1 }}h</div>
                         </div>
-                        <div class="col-md-3">
-                            <small class="text-muted">Labor Cost:</small><br>
-                            <strong>${{ task.labor_cost|floatformat:2 }}</strong>
+                        <div>
+                            <div class="text-xs text-slate-500 mb-1">Labor Cost</div>
+                            <div class="text-sm font-semibold text-slate-900">${{ task.labor_cost|floatformat:2 }}</div>
                         </div>
                     </div>
                 </div>
                 {% empty %}
-                <div class="text-center py-4 text-muted">
-                    <i class="fas fa-tasks fa-2x mb-2"></i>
-                    <p class="mb-0">No tasks added yet</p>
-                    <button class="btn btn-primary mt-2" id="add-first-task-btn">
-                        <i class="fas fa-plus me-1"></i> Add First Task
+                <div class="text-center py-12">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+                        <i class="fas fa-tasks text-2xl text-slate-400"></i>
+                    </div>
+                    <p class="text-sm font-medium text-slate-900 mb-2">No tasks added yet</p>
+                    <p class="text-xs text-slate-500 mb-4">Add the first service task for this work order</p>
+                    <button class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors" id="add-first-task-btn">
+                        <i class="fas fa-plus"></i>
+                        Add First Task
                     </button>
                 </div>
                 {% endfor %}
             </div>
+        </div>
 
-            <!-- Diagnosis & Parts Estimate Section -->
-            {% if workorder.status == 'diagnosis' or workorder.status == 'awaiting_approval' or workorder.status == 'approved' or workorder.status == 'in_progress' or workorder.status == 'quality_check' or workorder.status == 'completed' %}
-            <div class="detail-section">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="section-title mb-0">
-                        <i class="fas fa-stethoscope text-primary"></i>
-                        Diagnosis & Parts Estimate
-                    </h5>
-                    {% if workorder.status == 'diagnosis' %}
-                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#diagnosisModal">
-                        <i class="fas fa-edit me-1"></i> Update Diagnosis
-                    </button>
-                    {% endif %}
-                </div>
-
-                <!-- Diagnosis Notes -->
-                {% if workorder.diagnosis_notes %}
-                {% else %}
+        <!-- Diagnosis & Parts Estimate Section -->
+        {% if workorder.status == 'diagnosis' or workorder.status == 'awaiting_approval' or workorder.status == 'approved' or workorder.status == 'in_progress' or workorder.status == 'quality_check' or workorder.status == 'completed' %}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-stethoscope mr-2 text-primary"></i>
+                    Diagnosis & Parts Estimate
+                </h3>
                 {% if workorder.status == 'diagnosis' %}
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    No diagnosis notes added yet. Click "Update Diagnosis" to add findings.
-                </div>
+                <button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors" onclick="openDiagnosisModal()">
+                    <i class="fas fa-edit"></i>
+                    Update Diagnosis
+                </button>
                 {% endif %}
+            </div>
+            <div class="p-6">
+                <!-- Diagnosis Notes -->
+                {% if not workorder.diagnosis_notes and workorder.status == 'diagnosis' %}
+                <div class="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                    <div class="flex items-start gap-2">
+                        <i class="fas fa-exclamation-triangle text-amber-600 mt-0.5"></i>
+                        <p class="text-sm text-amber-700">No diagnosis notes added yet. Click "Update Diagnosis" to add findings.</p>
+                    </div>
+                </div>
                 {% endif %}
 
                 <!-- Parts Needed -->
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0"><i class="fas fa-cog me-2"></i>Parts Needed</h6>
+                <div class="flex items-center justify-between mb-4">
+                    <h4 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-cog text-primary"></i>
+                        Parts Needed
+                    </h4>
                     {% if workorder.status == 'diagnosis' or workorder.status == 'awaiting_approval' %}
-                    <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#addPartModal">
-                        <i class="fas fa-plus me-1"></i> Add Part
+                    <button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors" onclick="openAddPartModal()">
+                        <i class="fas fa-plus"></i>
+                        Add Part
                     </button>
                     {% endif %}
                 </div>
 
                 {% if workorder.parts.all %}
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Part #</th>
-                                <th>Description</th>
-                                <th>Linked Task</th>
-                                <th>Qty</th>
-                                <th>Unit Cost</th>
-                                <th>Total</th>
-                                <th>Status</th>
-                                <th></th>
+                <div class="overflow-x-auto mb-4">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-slate-200 bg-slate-50">
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Part #</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Description</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Linked Task</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Qty</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Unit Cost</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Total</th>
+                                <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
+                                <th class="text-right py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wide"></th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="divide-y divide-slate-100">
                             {% for part in workorder.parts.all %}
-                            <tr>
-                                <td><span class="badge bg-secondary">{{ part.part_number }}</span></td>
-                                <td>
-                                    <strong>{{ part.part_name }}</strong>
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                                        {{ part.part_number }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="font-medium text-slate-900">{{ part.part_name }}</div>
                                     {% if part.description %}
-                                    <br><small class="text-muted">{{ part.description|truncatewords:10 }}</small>
+                                    <div class="text-xs text-slate-500 mt-0.5">{{ part.description|truncatewords:10 }}</div>
                                     {% endif %}
                                 </td>
-                                <td>
+                                <td class="py-3 px-4">
                                     {% if part.task %}
-                                    <small class="text-muted">
-                                        <i class="fas fa-link me-1"></i>{{ part.task.get_task_type_display }}
-                                    </small>
+                                    <div class="text-xs text-slate-500 flex items-center gap-1">
+                                        <i class="fas fa-link"></i>
+                                        {{ part.task.get_task_type_display }}
+                                    </div>
                                     {% else %}
-                                    <small class="text-muted">-</small>
+                                    <span class="text-xs text-slate-400">-</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ part.quantity }}</td>
-                                <td>${{ part.unit_cost|floatformat:2 }}</td>
-                                <td><strong>${{ part.total_cost|floatformat:2 }}</strong></td>
-                                <td>
-                                    <span class="badge 
-                                        {% if part.status == 'received' %}bg-success
-                                        {% elif part.status == 'ordered' %}bg-info
-                                        {% elif part.status == 'installed' %}bg-primary
-                                        {% else %}bg-warning{% endif %}">
+                                <td class="py-3 px-4 text-sm text-slate-900">{{ part.quantity }}</td>
+                                <td class="py-3 px-4 text-sm text-slate-900">${{ part.unit_cost|floatformat:2 }}</td>
+                                <td class="py-3 px-4 text-sm font-semibold text-slate-900">${{ part.total_cost|floatformat:2 }}</td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                                        {% if part.status == 'received' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                                        {% elif part.status == 'ordered' %}bg-blue-50 text-blue-700 border border-blue-200
+                                        {% elif part.status == 'installed' %}bg-primary/10 text-primary border border-primary/20
+                                        {% else %}bg-amber-50 text-amber-700 border border-amber-200{% endif %}">
                                         {{ part.get_status_display }}
                                     </span>
                                 </td>
-                                <td>
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                            <i class="fas fa-ellipsis-v"></i>
+                                <td class="py-3 px-4 text-right">
+                                    <div class="relative">
+                                        <button class="inline-flex items-center justify-center w-8 h-8 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors" onclick="togglePartMenu({{ part.id }})">
+                                            <i class="fas fa-ellipsis-v text-xs"></i>
                                         </button>
-                                        <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item" href="#" onclick="editPart({{ part.id }})">
-                                                <i class="fas fa-edit me-2"></i>Edit
-                                            </a></li>
-                                            {% if part.status == 'pending' %}
-                                            <li><a class="dropdown-item" href="#" onclick="updatePartStatus({{ part.id }}, 'ordered')">
-                                                <i class="fas fa-shopping-cart me-2"></i>Mark as Ordered
-                                            </a></li>
-                                            {% elif part.status == 'ordered' %}
-                                            <li><a class="dropdown-item" href="#" onclick="updatePartStatus({{ part.id }}, 'received')">
-                                                <i class="fas fa-check me-2"></i>Mark as Received
-                                            </a></li>
-                                            {% elif part.status == 'received' %}
-                                            <li><a class="dropdown-item" href="#" onclick="updatePartStatus({{ part.id }}, 'installed')">
-                                                <i class="fas fa-wrench me-2"></i>Mark as Installed
-                                            </a></li>
-                                            {% endif %}
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item text-danger" href="#" onclick="deletePart({{ part.id }})">
-                                                <i class="fas fa-trash me-2"></i>Delete
-                                            </a></li>
-                                        </ul>
+                                        <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-50" id="partMenu{{ part.id }}">
+                                            <div class="py-1">
+                                                <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" href="#" onclick="editPart({{ part.id }})">
+                                                    <i class="fas fa-edit mr-2"></i>Edit
+                                                </a>
+                                                {% if part.status == 'pending' %}
+                                                <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" href="#" onclick="updatePartStatus({{ part.id }}, 'ordered')">
+                                                    <i class="fas fa-shopping-cart mr-2"></i>Mark as Ordered
+                                                </a>
+                                                {% elif part.status == 'ordered' %}
+                                                <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" href="#" onclick="updatePartStatus({{ part.id }}, 'received')">
+                                                    <i class="fas fa-check mr-2"></i>Mark as Received
+                                                </a>
+                                                {% elif part.status == 'received' %}
+                                                <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" href="#" onclick="updatePartStatus({{ part.id }}, 'installed')">
+                                                    <i class="fas fa-wrench mr-2"></i>Mark as Installed
+                                                </a>
+                                                {% endif %}
+                                                <div class="border-t border-slate-200 my-1"></div>
+                                                <a class="block px-4 py-2 text-sm text-rose-600 hover:bg-rose-50" href="#" onclick="deletePart({{ part.id }})">
+                                                    <i class="fas fa-trash mr-2"></i>Delete
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
-                        <tfoot class="table-light">
+                        <tfoot class="bg-slate-50">
                             <tr>
-                                <td colspan="4" class="text-end"><strong>Estimated Parts Total:</strong></td>
-                                <td colspan="3"><strong>${{ workorder.estimated_parts_cost|floatformat:2 }}</strong></td>
+                                <td colspan="4" class="py-3 px-4 text-right">
+                                    <span class="text-sm font-semibold text-slate-700">Estimated Parts Total:</span>
+                                </td>
+                                <td colspan="4" class="py-3 px-4">
+                                    <span class="text-sm font-bold text-slate-900">${{ workorder.estimated_parts_cost|floatformat:2 }}</span>
+                                </td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
                 {% else %}
-                <div class="alert alert-secondary text-center">
-                    <i class="fas fa-box-open me-2"></i>
-                    No parts added yet. Click "Add Part" to create an estimate.
+                <div class="text-center py-8">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+                        <i class="fas fa-box-open text-2xl text-slate-400"></i>
+                    </div>
+                    <p class="text-sm font-medium text-slate-900 mb-2">No parts added yet</p>
+                    <p class="text-xs text-slate-500">Click "Add Part" to create an estimate</p>
                 </div>
                 {% endif %}
 
                 <!-- Estimate Summary -->
                 {% if workorder.parts.all or workorder.estimated_labor_cost > 0 %}
-                <div class="card mt-3">
-                    <div class="card-header bg-light">
-                        <strong><i class="fas fa-file-invoice-dollar me-2"></i>Estimate Summary</strong>
+                <div class="mt-6 p-4 rounded-lg bg-slate-50 border border-slate-200">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-file-invoice-dollar text-primary"></i>
+                        <h4 class="text-sm font-semibold text-slate-900">Estimate Summary</h4>
                     </div>
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between mb-2">
+                    <div class="space-y-2 mb-3">
+                        <div class="flex justify-between text-sm text-slate-700">
                             <span>Labor ({{ workorder.estimated_labor_hours|floatformat:1 }}h):</span>
-                            <span>${{ workorder.estimated_labor_cost|floatformat:2 }}</span>
+                            <span class="font-medium">${{ workorder.estimated_labor_cost|floatformat:2 }}</span>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
+                        <div class="flex justify-between text-sm text-slate-700">
                             <span>Parts:</span>
-                            <span>${{ workorder.estimated_parts_cost|floatformat:2 }}</span>
+                            <span class="font-medium">${{ workorder.estimated_parts_cost|floatformat:2 }}</span>
                         </div>
-                        <hr>
-                        <div class="d-flex justify-content-between">
-                            <strong>Total Estimate:</strong>
-                            <strong class="text-primary fs-5">${{ workorder.estimated_total|floatformat:2 }}</strong>
+                        <div class="border-t border-slate-200 pt-2 mt-2">
+                            <div class="flex justify-between text-sm">
+                                <span class="font-semibold text-slate-900">Total Estimate:</span>
+                                <span class="text-lg font-bold text-primary">${{ workorder.estimated_total|floatformat:2 }}</span>
+                            </div>
                         </div>
-                        
-                        {% if workorder.status == 'diagnosis' %}
-                        <div class="d-grid gap-2 mt-3">
-                            <button class="btn btn-primary" onclick="requestApproval()">
-                                <i class="fas fa-paper-plane me-2"></i>Submit Estimate for Approval
-                            </button>
-                        </div>
-                        {% elif workorder.status == 'awaiting_approval' %}
-                        <div class="alert alert-warning mt-3 mb-0">
-                            <i class="fas fa-clock me-2"></i>
-                            Waiting for customer approval...
-                        </div>
-                        {% elif workorder.status == 'approved' %}
-                        <div class="alert alert-success mt-3 mb-0">
-                            <i class="fas fa-check-circle me-2"></i>
-                            Estimate approved! Ready to start work.
-                        </div>
-                        {% endif %}
                     </div>
+                    
+                    {% if workorder.status == 'diagnosis' %}
+                    <button class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="requestApproval()">
+                        <i class="fas fa-paper-plane"></i>
+                        Submit Estimate for Approval
+                    </button>
+                    {% elif workorder.status == 'awaiting_approval' %}
+                    <div class="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                        <div class="flex items-center gap-2 text-sm text-amber-700">
+                            <i class="fas fa-clock"></i>
+                            <span>Waiting for customer approval...</span>
+                        </div>
+                    </div>
+                    {% elif workorder.status == 'approved' %}
+                    <div class="p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                        <div class="flex items-center gap-2 text-sm text-emerald-700">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Estimate approved! Ready to start work.</span>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
-            {% endif %}
+        </div>
+        {% endif %}
 
-            <!-- Quality Check Information -->
-            {% if workorder.quality_check_completed %}
-            <div class="detail-section">
-                <h5 class="section-title">
-                    <i class="fas fa-clipboard-check text-success"></i>
+        <!-- Quality Check Information -->
+        {% if workorder.quality_check_completed %}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-clipboard-check mr-2 text-emerald-600"></i>
                     Quality Check Results
-                </h5>
-                
-                <div class="card border-{{ workorder.quality_check_passed|yesno:'success,danger' }}">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <strong class="d-block mb-1">Result:</strong>
-                                    <span class="badge bg-{{ workorder.quality_check_passed|yesno:'success,danger' }} fs-6">
-                                        <i class="fas fa-{{ workorder.quality_check_passed|yesno:'check-circle,times-circle' }} me-2"></i>
-                                        {{ workorder.quality_check_passed|yesno:'PASSED,FAILED' }}
-                                    </span>
-                                </div>
-                                {% if workorder.quality_check_by %}
-                                <div class="mb-2">
-                                    <strong>Inspected By:</strong> {{ workorder.quality_check_by.get_full_name }}
-                                </div>
-                                {% endif %}
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="p-4 rounded-lg border-2 {% if workorder.quality_check_passed %}border-emerald-200 bg-emerald-50{% else %}border-rose-200 bg-rose-50{% endif %}">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Result</div>
+                            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold
+                                {% if workorder.quality_check_passed %}bg-emerald-100 text-emerald-700 border border-emerald-300
+                                {% else %}bg-rose-100 text-rose-700 border border-rose-300{% endif %}">
+                                <i class="fas fa-{% if workorder.quality_check_passed %}check-circle{% else %}times-circle{% endif %}"></i>
+                                {{ workorder.quality_check_passed|yesno:"PASSED,FAILED" }}
+                            </span>
+                            {% if workorder.quality_check_by %}
+                            <div class="mt-3">
+                                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Inspected By</div>
+                                <div class="text-sm font-medium text-slate-900">{{ workorder.quality_check_by.get_full_name }}</div>
                             </div>
-                            <div class="col-md-6">
-                                {% if workorder.quality_check_at %}
-                                <div class="mb-2">
-                                    <strong>Date & Time:</strong> {{ workorder.quality_check_at|date:"M d, Y H:i" }}
-                                </div>
-                                {% endif %}
-                            </div>
+                            {% endif %}
                         </div>
-                        
-                        {% if workorder.quality_check_notes %}
-                        <div class="mt-3">
-                            <strong class="d-block mb-2">Quality Check Notes:</strong>
-                            <div class="alert alert-light mb-0">
-                                {{ workorder.quality_check_notes|linebreaks }}
-                            </div>
+                        <div>
+                            {% if workorder.quality_check_at %}
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Date & Time</div>
+                            <div class="text-sm font-medium text-slate-900">{{ workorder.quality_check_at|date:"M d, Y H:i" }}</div>
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div>
+                    
+                    {% if workorder.quality_check_notes %}
+                    <div class="mt-4 pt-4 border-t {% if workorder.quality_check_passed %}border-emerald-200{% else %}border-rose-200{% endif %}">
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Quality Check Notes</div>
+                        <div class="text-sm text-slate-700 whitespace-pre-line">{{ workorder.quality_check_notes|linebreaks }}</div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
-            {% endif %}
+        </div>
+        {% endif %}
 
-            <!-- Recent Activity -->
-            <div class="detail-section">
-                <h5 class="section-title">
-                    <i class="fas fa-history text-primary"></i>
+        <!-- Recent Activity -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-history mr-2 text-primary"></i>
                     Recent Activity
-                </h5>
-                
+                </h3>
+            </div>
+            <div class="p-6">
                 <div class="status-timeline">
                     {% for note in recent_notes %}
                     <div class="timeline-item">
-                        <div class="d-flex justify-content-between">
-                            <strong>{{ note.get_note_type_display }}</strong>
-                            <small class="text-muted">{{ note.created_at|date:"M d, H:i" }}</small>
+                        <div class="flex justify-between items-start mb-1">
+                            <strong class="text-sm font-semibold text-slate-900">{{ note.get_note_type_display }}</strong>
+                            <small class="text-xs text-slate-500">{{ note.created_at|date:"M d, H:i" }}</small>
                         </div>
-                        <p class="mb-1">{{ note.note }}</p>
-                        <small class="text-muted">by {{ note.created_by.first_name }} {{ note.created_by.last_name }}</small>
+                        <p class="text-sm text-slate-700 mb-1">{{ note.note }}</p>
+                        <small class="text-xs text-slate-500">by {{ note.created_by.first_name }} {{ note.created_by.last_name }}</small>
                     </div>
                     {% endfor %}
                     
                     {% for log in recent_time_logs %}
                     <div class="timeline-item">
-                        <div class="d-flex justify-content-between">
-                            <strong>Time Log</strong>
-                            <small class="text-muted">{{ log.created_at|date:"M d, H:i" }}</small>
+                        <div class="flex justify-between items-start mb-1">
+                            <strong class="text-sm font-semibold text-slate-900">Time Log</strong>
+                            <small class="text-xs text-slate-500">{{ log.created_at|date:"M d, H:i" }}</small>
                         </div>
-                        <p class="mb-1">{{ log.technician.first_name }} {{ log.technician.last_name }} - {{ log.duration_hours|floatformat:1 }}h</p>
-                        <small class="text-muted">{{ log.description }}</small>
+                        <p class="text-sm text-slate-700 mb-1">{{ log.technician.first_name }} {{ log.technician.last_name }} - {{ log.duration_hours|floatformat:1 }}h</p>
+                        <small class="text-xs text-slate-500">{{ log.description }}</small>
                     </div>
                     {% endfor %}
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Right Column -->
-        <div class="col-lg-4">
-            <!-- Time Tracking -->
-            {% if can_work %}
-            <div class="detail-section">
-                <h5 class="section-title">
-                    <i class="fas fa-clock text-primary"></i>
+    <!-- Right Column -->
+    <div class="lg:col-span-1 space-y-6">
+        <!-- Time Tracking -->
+        {% if can_work %}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-clock mr-2 text-primary"></i>
                     Time Tracking
-                </h5>
-                
-                <div class="time-tracker">
-                    <div class="timer-display" id="timer-display">00:00:00</div>
-                    <div class="text-center">
-                        <button class="btn btn-success me-2" id="clock-in-btn">
-                            <i class="fas fa-play me-1"></i> Clock In
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="bg-slate-50 rounded-lg p-4">
+                    <div class="text-3xl font-bold text-primary text-center mb-4" id="timer-display">00:00:00</div>
+                    <div class="flex gap-2 mb-3">
+                        <button class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors" id="clock-in-btn">
+                            <i class="fas fa-play"></i>
+                            Clock In
                         </button>
-                        <button class="btn btn-danger" id="clock-out-btn" disabled>
-                            <i class="fas fa-stop me-1"></i> Clock Out
+                        <button class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" id="clock-out-btn" disabled>
+                            <i class="fas fa-stop"></i>
+                            Clock Out
                         </button>
                     </div>
-                    <div class="mt-3">
-                        <input type="text" class="form-control form-control-sm" id="work-description" 
-                               placeholder="What are you working on?">
-                    </div>
+                    <input type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="work-description" 
+                           placeholder="What are you working on?">
                 </div>
             </div>
-            {% endif %}
+        </div>
+        {% endif %}
 
-            <!-- Cost Summary -->
-            <div class="detail-section">
-                <h5 class="section-title">
-                    <i class="fas fa-calculator text-primary"></i>
+        <!-- Cost Summary -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-calculator mr-2 text-primary"></i>
                     Cost Summary
-                </h5>
-                
-                <div class="cost-summary">
-                    <div class="cost-item">
-                        <span>Labor Cost:</span>
-                        <span>${{ total_labor_cost|floatformat:2 }}</span>
-                    </div>
-                    <div class="cost-item">
-                        <span>Parts Cost:</span>
-                        <span>${{ total_parts_cost|floatformat:2 }}</span>
-                    </div>
-                    <div class="cost-item">
-                        <span>Estimated Hours:</span>
-                        <span>{{ total_estimated_hours|floatformat:1 }}h</span>
-                    </div>
-                    <div class="cost-item">
-                        <span>Actual Hours:</span>
-                        <span>{{ total_actual_hours|floatformat:1 }}h</span>
-                    </div>
-                    <hr>
-                    <div class="cost-item">
-                        <span><strong>Total Cost:</strong></span>
-                        <span><strong>${{ total_labor_cost|add:total_parts_cost|floatformat:2 }}</strong></span>
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="bg-slate-50 rounded-lg p-4">
+                    <div class="space-y-3">
+                        <div class="flex justify-between text-sm text-slate-700 pb-2 border-b border-slate-200">
+                            <span>Labor Cost:</span>
+                            <span class="font-medium">${{ total_labor_cost|floatformat:2 }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-slate-700 pb-2 border-b border-slate-200">
+                            <span>Parts Cost:</span>
+                            <span class="font-medium">${{ total_parts_cost|floatformat:2 }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-slate-700 pb-2 border-b border-slate-200">
+                            <span>Estimated Hours:</span>
+                            <span class="font-medium">{{ total_estimated_hours|floatformat:1 }}h</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-slate-700 pb-2 border-b border-slate-200">
+                            <span>Actual Hours:</span>
+                            <span class="font-medium">{{ total_actual_hours|floatformat:1 }}h</span>
+                        </div>
+                        <div class="flex justify-between text-base pt-2">
+                            <span class="font-semibold text-slate-900">Total Cost:</span>
+                            <span class="font-bold text-primary">${{ total_labor_cost|add:total_parts_cost|floatformat:2 }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Quick Actions -->
-            <div class="detail-section">
-                <h5 class="section-title">
-                    <i class="fas fa-bolt text-primary"></i>
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-bolt mr-2 text-primary"></i>
                     Quick Actions
-                </h5>
-                
-                <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary" id="add-photo-btn">
-                        <i class="fas fa-camera me-2"></i> Add Photo
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-2">
+                    <button class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors" id="add-photo-btn">
+                        <i class="fas fa-camera"></i>
+                        Add Photo
                     </button>
-                    <button class="btn btn-outline-success" id="customer-approval-btn">
-                        <i class="fas fa-signature me-2"></i> Get Customer Approval
+                    <button class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-emerald-600 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-50 transition-colors" id="customer-approval-btn">
+                        <i class="fas fa-signature"></i>
+                        Get Customer Approval
                     </button>
-                    <button class="btn btn-outline-info" id="send-update-btn">
-                        <i class="fas fa-envelope me-2"></i> Send Customer Update
+                    <button class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-blue-600 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors" id="send-update-btn">
+                        <i class="fas fa-envelope"></i>
+                        Send Customer Update
                     </button>
                 </div>
             </div>
@@ -780,48 +699,48 @@
 </div>
 
 <!-- Add Note Modal -->
-<div class="modal fade" id="addNoteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add Note</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="add-note-form">
-                    <div class="mb-3">
-                        <label for="note-type" class="form-label">Note Type</label>
-                        <select class="form-select" id="note-type" required>
-                            <option value="general">General</option>
-                            <option value="internal">Internal Note</option>
-                            <option value="customer">Customer Communication</option>
-                            <option value="technician">Technician Note</option>
-                            <option value="parts">Parts Note</option>
-                            <option value="quality">Quality Check Note</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="note-text" class="form-label">Note</label>
-                        <textarea class="form-control" id="note-text" rows="4" required></textarea>
-                    </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="note-important">
-                        <label class="form-check-label" for="note-important">
-                            Mark as important
-                        </label>
-                    </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="note-customer-visible">
-                        <label class="form-check-label" for="note-customer-visible">
-                            Visible to customer
-                        </label>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="save-note-btn">Save Note</button>
-            </div>
+<div class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" id="addNoteModal" onclick="if(event.target===this) closeModal('addNoteModal')">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+            <h5 class="text-lg font-semibold text-slate-900">Add Note</h5>
+            <button type="button" class="text-slate-400 hover:text-slate-600" onclick="closeModal('addNoteModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <form id="add-note-form">
+                <div class="mb-4">
+                    <label for="note-type" class="block text-xs font-semibold text-slate-700 mb-2">Note Type</label>
+                    <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="note-type" required>
+                        <option value="general">General</option>
+                        <option value="internal">Internal Note</option>
+                        <option value="customer">Customer Communication</option>
+                        <option value="technician">Technician Note</option>
+                        <option value="parts">Parts Note</option>
+                        <option value="quality">Quality Check Note</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="note-text" class="block text-xs font-semibold text-slate-700 mb-2">Note</label>
+                    <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="note-text" rows="4" required></textarea>
+                </div>
+                <div class="mb-4 flex items-center">
+                    <input type="checkbox" class="w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary" id="note-important">
+                    <label class="ml-2 text-sm text-slate-700" for="note-important">
+                        Mark as important
+                    </label>
+                </div>
+                <div class="mb-4 flex items-center">
+                    <input type="checkbox" class="w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary" id="note-customer-visible">
+                    <label class="ml-2 text-sm text-slate-700" for="note-customer-visible">
+                        Visible to customer
+                    </label>
+                </div>
+            </form>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50">
+            <button type="button" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors" onclick="closeModal('addNoteModal')">Cancel</button>
+            <button type="button" class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors" id="save-note-btn">Save Note</button>
         </div>
     </div>
 </div>
@@ -1230,8 +1149,8 @@
 
 <!-- Floating Action Button -->
 {% if can_work %}
-<button class="btn btn-primary btn-floating" id="floating-timer" title="Quick Time Track">
-    <i class="fas fa-clock"></i>
+<button class="fixed bottom-8 right-8 z-50 w-14 h-14 rounded-full bg-primary text-white shadow-lg hover:bg-primary/90 transition-all flex items-center justify-center" id="floating-timer" title="Quick Time Track">
+    <i class="fas fa-clock text-lg"></i>
 </button>
 {% endif %}
 {% endblock %}
@@ -1375,19 +1294,16 @@ window.inspectionCompleted = "{{ workorder.inspection_completed|yesno:'true,fals
     
     // Add note handler
     document.getElementById('add-note-btn')?.addEventListener('click', function() {
-        const modal = new bootstrap.Modal(document.getElementById('addNoteModal'));
-        modal.show();
+        openModal('addNoteModal');
     });
     
     // Add task handlers
     document.getElementById('add-task-btn')?.addEventListener('click', function() {
-        const modal = new bootstrap.Modal(document.getElementById('addTaskModal'));
-        modal.show();
+        openModal('addTaskModal');
     });
     
     document.getElementById('add-first-task-btn')?.addEventListener('click', function() {
-        const modal = new bootstrap.Modal(document.getElementById('addTaskModal'));
-        modal.show();
+        openModal('addTaskModal');
     });
     
     // Quality Check handler
@@ -1518,9 +1434,7 @@ window.inspectionCompleted = "{{ workorder.inspection_completed|yesno:'true,fals
     });
     
     // Reset task modal when closed
-    document.getElementById('addTaskModal')?.addEventListener('hidden.bs.modal', function() {
-        resetTaskModal();
-    });
+    // Note: Modal reset will be handled when modal is closed via closeModal function
     
     // Task status update handlers
     document.querySelectorAll('.task-status-update').forEach(button => {
@@ -1775,9 +1689,7 @@ window.inspectionCompleted = "{{ workorder.inspection_completed|yesno:'true,fals
     });
     
     // Reset modal when closed
-    document.getElementById('addPartModal')?.addEventListener('hidden.bs.modal', function() {
-        resetPartModal();
-    });
+    // Note: Modal reset will be handled when modal is closed via closeModal function
     
     // Calculate part costs dynamically
     ['quantity', 'unitCost', 'markupPercentage'].forEach(id => {
@@ -2164,5 +2076,66 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
+// Modal helper functions
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+    }
+}
+
+// Menu toggle functions
+function toggleActionsMenu() {
+    const menu = document.getElementById('actionsMenu');
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
+function toggleTaskMenu(taskId) {
+    const menu = document.getElementById('taskMenu' + taskId);
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
+function togglePartMenu(partId) {
+    const menu = document.getElementById('partMenu' + partId);
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
+function openDiagnosisModal() {
+    openModal('diagnosisModal');
+}
+
+function openAddPartModal() {
+    openModal('addPartModal');
+}
+
+// Close modals when clicking outside
+document.addEventListener('click', function(event) {
+    // Close dropdown menus when clicking outside
+    if (!event.target.closest('.relative')) {
+        document.querySelectorAll('[id^="taskMenu"], [id^="partMenu"], #actionsMenu').forEach(menu => {
+            if (!menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        });
+    }
+});
 </script>
 {% endblock %}

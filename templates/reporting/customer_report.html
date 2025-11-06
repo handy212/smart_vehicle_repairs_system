@@ -8,60 +8,61 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2><i class="fas fa-users me-2"></i>Customer Reports</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'reporting:report-dashboard' %}">Reports</a></li>
-                    <li class="breadcrumb-item active">Customers</li>
-                </ol>
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <a href="{% url 'dashboard' %}" class="hover:text-slate-700">Dashboard</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <a href="{% url 'reporting:report-dashboard' %}" class="hover:text-slate-700">Reports</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <span class="text-slate-700">Customers</span>
             </nav>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">
+                <i class="fas fa-users mr-2 text-primary"></i>
+                Customer Reports
+            </h1>
         </div>
-        <div class="col-md-4 text-end">
-            <button class="btn btn-primary" onclick="window.print()">
-                <i class="fas fa-print me-2"></i>Print Report
+        <div class="flex items-center gap-2">
+            <button class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="window.print()">
+                <i class="fas fa-print"></i>
+                <span>Print Report</span>
             </button>
-            <button class="btn btn-success" onclick="exportToExcel()">
-                <i class="fas fa-file-excel me-2"></i>Export
+            <button class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors" onclick="exportToExcel()">
+                <i class="fas fa-file-excel"></i>
+                <span>Export</span>
             </button>
         </div>
     </div>
 
     <!-- KPI Cards -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-6">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Total Customers</h6>
-                            <h3 class="mb-0">{{ total_customers }}</h3>
-                            <small class="text-white-50">All registered customers</small>
-                        </div>
-                        <div class="fs-1 opacity-50">
-                            <i class="fas fa-users"></i>
-                        </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div class="bg-primary text-white rounded-xl shadow-sm overflow-hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-xs font-semibold text-white/70 uppercase tracking-wide mb-1">Total Customers</p>
+                        <h3 class="text-2xl font-bold text-white mb-1">{{ total_customers }}</h3>
+                        <small class="text-xs text-white/70">All registered customers</small>
+                    </div>
+                    <div class="text-4xl opacity-50">
+                        <i class="fas fa-users"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Active Customers</h6>
-                            <h3 class="mb-0">{{ active_customers }}</h3>
-                            <small class="text-white-50">Currently active accounts</small>
-                        </div>
-                        <div class="fs-1 opacity-50">
-                            <i class="fas fa-user-check"></i>
-                        </div>
+        <div class="bg-emerald-600 text-white rounded-xl shadow-sm overflow-hidden">
+            <div class="p-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-xs font-semibold text-white/70 uppercase tracking-wide mb-1">Active Customers</p>
+                        <h3 class="text-2xl font-bold text-white mb-1">{{ active_customers }}</h3>
+                        <small class="text-xs text-white/70">Currently active accounts</small>
+                    </div>
+                    <div class="text-4xl opacity-50">
+                        <i class="fas fa-user-check"></i>
                     </div>
                 </div>
             </div>
@@ -69,48 +70,59 @@
     </div>
 
     <!-- Top Customers by Lifetime Value -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>Top 20 Customers by Lifetime Value</h5>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+            <h5 class="text-sm font-semibold text-slate-900 mb-0 flex items-center gap-2">
+                <i class="fas fa-trophy"></i>
+                <span>Top 20 Customers by Lifetime Value</span>
+            </h5>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
                         <tr>
-                            <th>#</th>
-                            <th>Customer Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Total Spent</th>
-                            <th>Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">#</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Customer Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Phone</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Total Spent</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="divide-y divide-slate-100 bg-white">
                         {% for customer in top_customers %}
-                        <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td>
-                                <a href="{% url 'customers:customer-detail' customer.pk %}" class="text-decoration-none">
-                                    <strong>{{ customer.user.get_full_name|default:customer.user.username }}</strong>
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ forloop.counter }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a href="{% url 'customers:customer-detail' customer.pk %}" class="text-sm font-semibold text-primary hover:text-primary/80 transition-colors">
+                                    {{ customer.user.get_full_name|default:customer.user.username }}
                                 </a>
                             </td>
-                            <td>{{ customer.user.email }}</td>
-                            <td>{{ customer.phone|default:"N/A" }}</td>
-                            <td class="fw-bold text-success">${{ customer.lifetime_value|floatformat:2|default:"0.00" }}</td>
-                            <td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ customer.user.email }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{{ customer.phone|default:"N/A" }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-sm font-semibold text-emerald-600">${{ customer.lifetime_value|floatformat:2|default:"0.00" }}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
                                 {% if customer.is_active %}
-                                    <span class="badge bg-success">Active</span>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        Active
+                                    </span>
                                 {% else %}
-                                    <span class="badge bg-secondary">Inactive</span>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                        Inactive
+                                    </span>
                                 {% endif %}
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                <i class="fas fa-inbox fs-1 mb-2 d-block"></i>
-                                No customer data available yet.
+                            <td colspan="6" class="px-6 py-12 text-center">
+                                <div class="flex flex-col items-center">
+                                    <i class="fas fa-inbox text-4xl text-slate-400 mb-3"></i>
+                                    <p class="text-sm text-slate-500">No customer data available yet.</p>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}

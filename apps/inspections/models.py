@@ -119,6 +119,16 @@ class VehicleInspection(models.Model):
     # Auto-generated inspection number
     inspection_number = models.CharField(max_length=20, unique=True, editable=False)
     
+    # Branch assignment
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        related_name='inspections',
+        null=True,  # Allow null for migration
+        blank=True,
+        help_text="Branch where this inspection was performed"
+    )
+    
     # References
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='inspections')
     work_order = models.ForeignKey(
@@ -192,18 +202,9 @@ class VehicleInspection(models.Model):
         return f"{self.inspection_number} - {self.vehicle}"
     
     def save(self, *args, **kwargs):
-        # Auto-generate inspection number if not set
-        if not self.inspection_number:
-            last_inspection = VehicleInspection.objects.order_by('-id').first()
-            if last_inspection and last_inspection.inspection_number:
-                try:
-                    last_number = int(last_inspection.inspection_number.replace('INS', ''))
-                    new_number = last_number + 1
-                except (ValueError, AttributeError):
-                    new_number = 1
-            else:
-                new_number = 1
-            self.inspection_number = f'INS{new_number:06d}'
+        # Auto-generate inspection number using branch sequence
+        if not self.inspection_number and self.branch:
+            self.inspection_number = self.branch.get_next_inspection_number()
         
         # Auto-set completed_at when status changes to completed
         if self.status == 'completed' and not self.completed_at:

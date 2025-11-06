@@ -1,63 +1,23 @@
-{% comment %}
-Reusable stats card component
-Usage: {% include 'dashboard/partials/stats_card.html' with title="Customers" value=total_customers icon="fas fa-users" color="primary" link="customers:customer-list" trend="+5%" %}
-{% endcomment %}
+{# Standardized Dashboard Stat Card Component using Tailwind CSS #}
+{# Usage: {% include 'dashboard/partials/stats_card.html' with title="Customers" value=total_customers icon="fas fa-users" color="primary" link="customers:customer-list" trend="+5%" subtitle="This month" %} #}
 
-<div class="col-md-{{ col_size|default:"3" }}">
-    <div class="card h-100 border-0 shadow-sm hover-shadow-lg transition-shadow">
-        {% if link %}
-        <a href="{% url link %}" class="text-decoration-none">
-        {% endif %}
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div>
-                        <h6 class="text-muted text-uppercase small mb-1">{{ title }}</h6>
-                        <h2 class="mb-0 fw-bold">{{ value|default:"0" }}</h2>
+<div class="bg-white rounded-lg border border-slate-200 p-4 h-full w-full hover:border-primary/50 transition-all hover:shadow-md">
+    <div class="flex items-center justify-between gap-3">
+        <div class="flex-1 min-w-0">
+            <div class="text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">{{ title|default:"Label" }}</div>
+            <div class="text-2xl font-bold text-slate-900 mb-1">{{ value|default:"0" }}</div>
                         {% if trend %}
-                        <small class="{% if '+' in trend %}text-success{% else %}text-danger{% endif %}">
-                            <i class="fas fa-arrow-{% if '+' in trend %}up{% else %}down{% endif %} me-1"></i>
-                            {{ trend }}
-                        </small>
+            <div class="flex items-center gap-1 text-xs {% if '+' in trend %}text-emerald-600{% else %}text-rose-600{% endif %}">
+                <i class="fas fa-arrow-{% if '+' in trend %}up{% else %}down{% endif %} text-[10px]"></i>
+                <span>{{ trend }}</span>
+            </div>
                         {% endif %}
-                    </div>
-                    <div class="rounded-circle p-3 bg-{{ color|default:'primary' }}-subtle">
-                        <i class="{{ icon|default:'fas fa-chart-bar' }} fa-2x text-{{ color|default:'primary' }}"></i>
-                    </div>
-                </div>
                 {% if subtitle %}
-                <p class="text-muted small mb-0">
-                    <i class="fas fa-info-circle me-1"></i>{{ subtitle }}
-                </p>
+            <div class="text-xs text-slate-500 mt-1">{{ subtitle }}</div>
                 {% endif %}
             </div>
-        {% if link %}
-        </a>
-        {% endif %}
+        <div class="w-12 h-12 rounded-lg flex items-center justify-center text-xl flex-shrink-0" style="background: color-mix(in srgb, var(--{{ color|default:'primary' }}) 10%, #ffffff); color: var(--{{ color|default:'primary' }});">
+            <i class="{{ icon|default:'fas fa-chart-bar' }}"></i>
+        </div>
     </div>
 </div>
-
-<style>
-.hover-shadow-lg:hover {
-    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
-    transform: translateY(-2px);
-    transition: all 0.3s ease;
-}
-.transition-shadow {
-    transition: all 0.3s ease;
-}
-.bg-primary-subtle {
-    background-color: rgba(79, 70, 229, 0.1) !important;
-}
-.bg-success-subtle {
-    background-color: rgba(16, 185, 129, 0.1) !important;
-}
-.bg-warning-subtle {
-    background-color: rgba(245, 158, 11, 0.1) !important;
-}
-.bg-danger-subtle {
-    background-color: rgba(239, 68, 68, 0.1) !important;
-}
-.bg-info-subtle {
-    background-color: rgba(59, 130, 246, 0.1) !important;
-}
-</style>

@@ -6,235 +6,58 @@
 
 {% block extra_css %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 <style>
-    .form-section {
-        background: white;
+    /* Select2 Tailwind compatibility */
+    .select2-container--default .select2-selection--single {
+        border: 1px solid rgb(203 213 225);
         border-radius: 0.5rem;
-        border: 1px solid var(--gray-200);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        margin-bottom: 1.5rem;
+        height: 42px;
     }
     
-    .section-header {
-        background: var(--gray-50);
-        border-bottom: 1px solid var(--gray-200);
-        padding: 1rem 1.5rem;
-        border-radius: 0.5rem 0.5rem 0 0;
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 42px;
+        padding-left: 12px;
     }
     
-    .section-title {
-        margin: 0;
-        font-size: 1.125rem;
-        font-weight: 600;
-        color: var(--gray-900);
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 40px;
+        right: 10px;
     }
     
-    .section-body {
-        padding: 1.5rem;
-    }
-    
-    .items-table {
-        background: white;
+    .select2-dropdown {
+        border: 1px solid rgb(203 213 225);
         border-radius: 0.5rem;
-        border: 1px solid var(--gray-200);
-        overflow: hidden;
     }
     
-    .items-table th {
-        background: var(--gray-50);
-        border-bottom: 2px solid var(--gray-200);
-        font-weight: 600;
-        color: var(--gray-700);
-        padding: 1rem 0.75rem;
+    .select2-results__option {
+        padding: 8px 12px;
     }
     
-    .items-table td {
-        padding: 0.75rem;
-        vertical-align: middle;
-        border-bottom: 1px solid var(--gray-200);
-    }
-    
-    .item-row {
-        transition: all 0.2s ease;
-    }
-    
-    .item-row:hover {
-        background: var(--gray-50);
-    }
-    
-    .add-item-btn {
-        background: var(--primary);
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 0.375rem;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }
-    
-    .add-item-btn:hover {
-        background: var(--primary-dark);
-        transform: translateY(-1px);
-    }
-    
-    .remove-item-btn {
-        background: var(--danger);
-        color: white;
-        border: none;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-size: 0.75rem;
-    }
-    
-    .remove-item-btn:hover {
-        background: var(--danger-dark);
-    }
-    
-    .total-section {
-        background: var(--gray-50);
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-        border: 1px solid var(--gray-200);
-    }
-    
-    .total-row {
-        display: flex;
-        justify-content: between;
-        align-items: center;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid var(--gray-300);
-    }
-    
-    .total-row:last-child {
-        border-bottom: none;
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--success);
-    }
-    
-    .total-label {
-        font-weight: 600;
-        color: var(--gray-700);
-    }
-    
-    .total-value {
-        font-weight: 600;
-        font-family: 'Courier New', monospace;
-    }
-    
-    .supplier-info {
-        background: var(--gray-50);
-        border-radius: 0.375rem;
-        padding: 1rem;
-        border: 1px solid var(--gray-200);
-    }
-    
-    .supplier-rating {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        margin-top: 0.5rem;
-    }
-    
-    .star {
-        color: #ffc107;
-        font-size: 1rem;
-    }
-    
-    .star.empty {
-        color: var(--gray-300);
-    }
-    
-    .form-help {
-        font-size: 0.875rem;
-        color: var(--gray-600);
-        margin-top: 0.25rem;
-    }
-    
-    .required-indicator {
-        color: var(--danger);
-        margin-left: 0.25rem;
-    }
-    
-    .po-preview {
-        background: white;
-        border: 1px solid var(--gray-200);
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-    
-    .po-header-preview {
-        text-align: center;
-        border-bottom: 2px solid var(--primary);
-        padding-bottom: 1rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .template-selector {
-        background: #f8f9ff;
-        border: 2px dashed #6366f1;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        text-align: center;
-        margin-bottom: 1rem;
-    }
-    
-    .template-btn {
-        background: white;
-        border: 1px solid var(--gray-300);
-        border-radius: 0.375rem;
-        padding: 0.5rem 1rem;
-        margin: 0.25rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    
-    .template-btn:hover {
-        border-color: var(--primary);
-        background: var(--primary);
-        color: white;
-    }
-    
-    .auto-fill-section {
-        background: #f0f9ff;
-        border: 1px solid #0ea5e9;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-    
-    .calculation-helper {
-        position: sticky;
-        top: 20px;
-        background: white;
-        border: 1px solid var(--gray-200);
-        border-radius: 0.5rem;
-        padding: 1rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    .select2-results__option--highlighted {
+        background-color: rgb(59 130 246);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="flex flex-wrap justify-between items-center gap-4">
         <div>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'inventory:purchase_order_list' %}">Purchase Orders</a></li>
-                    <li class="breadcrumb-item active">Create</li>
-                </ol>
+            <nav class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <a href="{% url 'inventory:dashboard' %}" class="hover:text-slate-700">Inventory</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <a href="{% url 'inventory:purchase_order_list' %}" class="hover:text-slate-700">Purchase Orders</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <span class="text-slate-700">Create</span>
             </nav>
-            <h1 class="h3 mb-0">Create Purchase Order</h1>
-            <p class="text-muted">Create a new purchase order for inventory procurement</p>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">Create Purchase Order</h1>
+            <p class="text-sm text-slate-500">Create a new purchase order for inventory procurement</p>
         </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Back to Orders
+        <div class="flex items-center gap-2">
+            <a href="{% url 'inventory:purchase_order_list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Orders</span>
             </a>
         </div>
     </div>
@@ -242,201 +65,158 @@
     <form method="post" id="po-form">
         {% csrf_token %}
         
-        <div class="row">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <!-- Main Form -->
-            <div class="col-lg-8">
-                <!-- Quick Templates -->
-                <div class="template-selector">
-                    <h6 class="mb-2">
-                        <i class="fas fa-magic me-2"></i>Quick Start Templates
-                    </h6>
-                    <p class="text-muted small mb-3">Choose a template to auto-fill common purchase order scenarios</p>
-                    <div>
-                        <button type="button" class="template-btn" onclick="loadTemplate('restock')">
-                            <i class="fas fa-boxes me-1"></i> Restock Low Inventory
-                        </button>
-                        <button type="button" class="template-btn" onclick="loadTemplate('seasonal')">
-                            <i class="fas fa-calendar me-1"></i> Seasonal Order
-                        </button>
-                        <button type="button" class="template-btn" onclick="loadTemplate('emergency')">
-                            <i class="fas fa-exclamation me-1"></i> Emergency Order
-                        </button>
-                        <button type="button" class="template-btn" onclick="loadTemplate('bulk')">
-                            <i class="fas fa-warehouse me-1"></i> Bulk Purchase
-                        </button>
-                    </div>
-                </div>
-
+            <div class="lg:col-span-3 space-y-6">
                 <!-- Basic Information -->
-                <div class="form-section">
-                    <div class="section-header">
-                        <h3 class="section-title">Purchase Order Details</h3>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h3 class="text-sm font-semibold text-slate-900 mb-0">Purchase Order Details</h3>
                     </div>
-                    <div class="section-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="supplier" class="form-label">
-                                    Supplier <span class="required-indicator">*</span>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="supplier" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    Supplier <span class="text-rose-600">*</span>
                                 </label>
-                                <select name="supplier" id="supplier" class="form-select" required>
+                                <select name="supplier" id="supplier" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" required>
                                     <option value="">Select Supplier...</option>
                                     {% for supplier in suppliers %}
-                                    <option value="{{ supplier.id }}">{{ supplier.name }}</option>
+                                    <option value="{{ supplier.id }}" {% if initial_supplier_id and initial_supplier_id == supplier.id|stringformat:"s" %}selected{% endif %}>{{ supplier.name }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
                             
-                            <div class="col-md-3">
-                                <label for="order_date" class="form-label">
-                                    Order Date <span class="required-indicator">*</span>
+                            <div>
+                                <label for="order_date" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    Order Date <span class="text-rose-600">*</span>
                                 </label>
-                                <input type="date" name="order_date" id="order_date" class="form-control" 
+                                <input type="date" name="order_date" id="order_date" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
                                        value="{% now 'Y-m-d' %}" required>
                             </div>
                             
-                            <div class="col-md-3">
-                                <label for="expected_delivery_date" class="form-label">
+                            <div>
+                                <label for="expected_delivery_date" class="block text-xs font-semibold text-slate-700 mb-2">
                                     Expected Delivery
                                 </label>
-                                <input type="date" name="expected_delivery_date" id="expected_delivery_date" class="form-control">
-                                <div class="form-help">When you expect to receive the order</div>
+                                <input type="date" name="expected_delivery_date" id="expected_delivery_date" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                                <div class="text-xs text-slate-500 mt-1">When you expect to receive the order</div>
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="shipping_cost" class="form-label">Shipping Cost</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" name="shipping_cost" id="shipping_cost" class="form-control" 
+                            <div>
+                                <label for="shipping_cost" class="block text-xs font-semibold text-slate-700 mb-2">Shipping Cost</label>
+                                <div class="flex items-center">
+                                    <span class="px-3 py-2.5 border border-r-0 border-slate-300 rounded-l-lg bg-slate-50 text-sm text-slate-700">$</span>
+                                    <input type="number" name="shipping_cost" id="shipping_cost" class="w-full px-3 py-2.5 border border-slate-300 rounded-r-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
                                            value="0" step="0.01" min="0">
                                 </div>
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="tax_amount" class="form-label">Tax Amount</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" name="tax_amount" id="tax_amount" class="form-control" 
+                            <div>
+                                <label for="tax_amount" class="block text-xs font-semibold text-slate-700 mb-2">Tax Amount</label>
+                                <div class="flex items-center">
+                                    <span class="px-3 py-2.5 border border-r-0 border-slate-300 rounded-l-lg bg-slate-50 text-sm text-slate-700">$</span>
+                                    <input type="number" name="tax_amount" id="tax_amount" class="w-full px-3 py-2.5 border border-slate-300 rounded-r-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
                                            value="0" step="0.01" min="0">
                                 </div>
                             </div>
-                            
-                            <div class="col-12">
-                                <label for="notes" class="form-label">Notes</label>
-                                <textarea name="notes" id="notes" class="form-control" rows="2" 
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label for="notes" class="block text-xs font-semibold text-slate-700 mb-2">Notes</label>
+                                <textarea name="notes" id="notes" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" rows="2" 
                                           placeholder="Special instructions or additional information"></textarea>
                             </div>
                             
-                            <div class="col-12">
-                                <label for="internal_notes" class="form-label">Internal Notes</label>
-                                <textarea name="internal_notes" id="internal_notes" class="form-control" rows="2" 
+                            <div>
+                                <label for="internal_notes" class="block text-xs font-semibold text-slate-700 mb-2">Internal Notes</label>
+                                <textarea name="internal_notes" id="internal_notes" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" rows="2" 
                                           placeholder="Internal notes (not visible to supplier)"></textarea>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Auto-Fill Low Stock -->
-                <div class="auto-fill-section" id="auto-fill-section" style="display: none;">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h6 class="mb-1">
-                                <i class="fas fa-lightbulb me-2"></i>Auto-Fill Low Stock Items
-                            </h6>
-                            <p class="text-muted small mb-0">
-                                Automatically add parts that are at or below their reorder point
-                            </p>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <button type="button" class="btn btn-info btn-sm" onclick="autoFillLowStock()">
-                                <i class="fas fa-plus me-1"></i> Add Low Stock Items
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm ms-2" onclick="toggleAutoFill()">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Order Items -->
-                <div class="form-section">
-                    <div class="section-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h3 class="section-title">Order Items</h3>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-outline-info btn-sm" onclick="toggleAutoFill()">
-                                    <i class="fas fa-magic me-1"></i> Auto-Fill
-                                </button>
-                                <button type="button" class="add-item-btn btn-sm" onclick="addOrderItem()">
-                                    <i class="fas fa-plus me-1"></i> Add Item
-                                </button>
-                            </div>
-                        </div>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white flex justify-between items-center">
+                        <h3 class="text-sm font-semibold text-slate-900 mb-0">Order Items</h3>
+                        <button type="button" class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors" onclick="addOrderItem()">
+                            <i class="fas fa-plus"></i>
+                            <span>Add Item</span>
+                        </button>
                     </div>
-                    <div class="section-body">
-                        <div class="table-responsive">
-                            <table class="table items-table" id="items-table">
-                                <thead>
+                    <div class="p-6">
+                        <div class="overflow-x-auto">
+                            <table class="w-full divide-y divide-slate-200" id="items-table">
+                                <thead class="bg-slate-50">
                                     <tr>
-                                        <th style="width: 35%;">Part</th>
-                                        <th style="width: 15%;">Quantity</th>
-                                        <th style="width: 15%;">Unit Price</th>
-                                        <th style="width: 15%;">Total</th>
-                                        <th style="width: 10%;">Stock</th>
-                                        <th style="width: 10%;">Actions</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider" style="width: 35%;">Part</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider" style="width: 15%;">Quantity</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider" style="width: 15%;">Unit Price</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider" style="width: 15%;">Total</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider" style="width: 10%;">Stock</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider" style="width: 10%;">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody id="items-tbody">
+                                <tbody id="items-tbody" class="bg-white divide-y divide-slate-100">
                                     <!-- Items will be added here dynamically -->
                                 </tbody>
                             </table>
                         </div>
                         
-                        <div class="text-center py-4" id="no-items-message">
-                            <i class="fas fa-box-open fa-3x text-muted mb-2"></i>
-                            <p class="text-muted">No items added yet</p>
-                            <button type="button" class="add-item-btn" onclick="addOrderItem()">
-                                <i class="fas fa-plus me-1"></i> Add First Item
+                        <div class="text-center py-12" id="no-items-message">
+                            <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+                                <i class="fas fa-box-open text-3xl text-slate-400"></i>
+                            </div>
+                            <p class="text-sm text-slate-500 mb-4">No items added yet</p>
+                            <button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="addOrderItem()">
+                                <i class="fas fa-plus"></i>
+                                <span>Add First Item</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Delivery Information -->
-                <div class="form-section">
-                    <div class="section-header">
-                        <h3 class="section-title">Delivery Information</h3>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h3 class="text-sm font-semibold text-slate-900 mb-0">Delivery Information</h3>
                     </div>
-                    <div class="section-body">
-                        <div class="row g-3">
-                            <div class="col-md-12">
-                                <label for="{{ form.delivery_address.id_for_label }}" class="form-label">
+                    <div class="p-6">
+                        <div class="space-y-4">
+                            <div>
+                                <label for="{{ form.delivery_address.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
                                     Delivery Address
                                 </label>
-                                {{ form.delivery_address|add_class:"form-control" }}
-                                <div class="form-help">Where should this order be delivered?</div>
+                                {{ form.delivery_address|add_class:"w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" }}
+                                <div class="text-xs text-slate-500 mt-1">Where should this order be delivered?</div>
                                 {% if form.delivery_address.errors %}
-                                <div class="invalid-feedback d-block">{{ form.delivery_address.errors.0 }}</div>
+                                <div class="text-xs text-rose-600 mt-1">{{ form.delivery_address.errors.0 }}</div>
                                 {% endif %}
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="{{ form.contact_person.id_for_label }}" class="form-label">
-                                    Contact Person
-                                </label>
-                                {{ form.contact_person|add_class:"form-control" }}
-                                {% if form.contact_person.errors %}
-                                <div class="invalid-feedback d-block">{{ form.contact_person.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="{{ form.contact_phone.id_for_label }}" class="form-label">
-                                    Contact Phone
-                                </label>
-                                {{ form.contact_phone|add_class:"form-control" }}
-                                {% if form.contact_phone.errors %}
-                                <div class="invalid-feedback d-block">{{ form.contact_phone.errors.0 }}</div>
-                                {% endif %}
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="{{ form.contact_person.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                        Contact Person
+                                    </label>
+                                    {{ form.contact_person|add_class:"w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" }}
+                                    {% if form.contact_person.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.contact_person.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div>
+                                    <label for="{{ form.contact_phone.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                        Contact Phone
+                                    </label>
+                                    {{ form.contact_phone|add_class:"w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" }}
+                                    {% if form.contact_phone.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.contact_phone.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -444,15 +224,15 @@
             </div>
 
             <!-- Sidebar -->
-            <div class="col-lg-4">
+            <div class="space-y-6">
                 <!-- Supplier Information -->
-                <div id="supplier-info" style="display: none;">
-                    <div class="form-section">
-                        <div class="section-header">
-                            <h3 class="section-title">Supplier Information</h3>
+                <div id="supplier-info" class="hidden">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                            <h3 class="text-sm font-semibold text-slate-900 mb-0">Supplier Information</h3>
                         </div>
-                        <div class="section-body">
-                            <div class="supplier-info" id="supplier-details">
+                        <div class="p-6">
+                            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200" id="supplier-details">
                                 <!-- Supplier details will be loaded here -->
                             </div>
                         </div>
@@ -460,82 +240,59 @@
                 </div>
 
                 <!-- Order Totals -->
-                <div class="calculation-helper">
-                    <h5 class="mb-3">Order Summary</h5>
-                    <div class="total-section">
-                        <div class="total-row">
-                            <span class="total-label">Subtotal:</span>
-                            <span class="total-value" id="subtotal">$0.00</span>
+                <div class="sticky top-6 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <h5 class="text-sm font-semibold text-slate-900 mb-4">Order Summary</h5>
+                    <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 space-y-3">
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+                            <span class="text-xs font-semibold text-slate-700">Subtotal:</span>
+                            <span class="text-sm font-semibold font-mono text-slate-900" id="subtotal">$0.00</span>
                         </div>
-                        <div class="total-row">
-                            <span class="total-label">Tax Rate:</span>
-                            <div class="input-group input-group-sm">
-                                <input type="number" class="form-control" id="tax-rate" 
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+                            <span class="text-xs font-semibold text-slate-700">Tax Rate:</span>
+                            <div class="flex items-center gap-1">
+                                <input type="number" class="w-20 px-2 py-1 border border-slate-300 rounded text-xs text-center" id="tax-rate" 
                                        value="0" min="0" max="100" step="0.01">
-                                <span class="input-group-text">%</span>
+                                <span class="text-xs text-slate-500">%</span>
                             </div>
                         </div>
-                        <div class="total-row">
-                            <span class="total-label">Tax Amount:</span>
-                            <span class="total-value" id="tax-amount">$0.00</span>
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+                            <span class="text-xs font-semibold text-slate-700">Tax Amount:</span>
+                            <span class="text-sm font-semibold font-mono text-slate-900" id="tax-amount">$0.00</span>
                         </div>
-                        <div class="total-row">
-                            <span class="total-label">Shipping:</span>
-                            <input type="number" class="form-control form-control-sm" id="shipping-cost" 
+                        <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+                            <span class="text-xs font-semibold text-slate-700">Shipping:</span>
+                            <input type="number" class="w-24 px-2 py-1 border border-slate-300 rounded text-xs text-center" id="shipping-cost-display" 
                                    value="0" min="0" step="0.01">
                         </div>
-                        <div class="total-row">
-                            <span class="total-label">Total Amount:</span>
-                            <span class="total-value text-success" id="total-amount">$0.00</span>
+                        <div class="flex justify-between items-center pt-2">
+                            <span class="text-sm font-bold text-slate-900">Total Amount:</span>
+                            <span class="text-lg font-bold font-mono text-emerald-600" id="total-amount">$0.00</span>
                         </div>
                     </div>
                     
-                    <div class="mt-3">
-                        <small class="text-muted">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Items: <span id="item-count">0</span>
-                        </small>
-                    </div>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="form-section">
-                    <div class="section-header">
-                        <h3 class="section-title">Quick Actions</h3>
-                    </div>
-                    <div class="section-body">
-                        <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-outline-primary" onclick="previewPO()">
-                                <i class="fas fa-eye me-2"></i>Preview Order
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="saveDraft()">
-                                <i class="fas fa-save me-2"></i>Save as Draft
-                            </button>
-                            <button type="button" class="btn btn-outline-info" onclick="duplicateFromExisting()">
-                                <i class="fas fa-copy me-2"></i>Copy from Existing
-                            </button>
-                            <button type="button" class="btn btn-outline-danger" onclick="clearForm()">
-                                <i class="fas fa-trash me-2"></i>Clear Form
-                            </button>
+                    <div class="mt-4 text-center">
+                        <div class="text-xs text-slate-500 flex items-center justify-center gap-1">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Items: <span id="item-count" class="font-semibold">0</span></span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Form Actions -->
-                <div class="form-section">
-                    <div class="section-body">
-                        <div class="d-grid gap-2">
-                            <button type="submit" name="action" value="create_draft" class="btn btn-secondary btn-lg">
-                                <i class="fas fa-save me-2"></i>Save as Draft
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-6">
+                        <div class="space-y-3">
+                            <button type="submit" name="action" value="create_draft" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors">
+                                <i class="fas fa-save"></i>
+                                <span>Save as Draft</span>
                             </button>
-                            <button type="submit" name="action" value="create_pending" class="btn btn-primary btn-lg">
-                                <i class="fas fa-paper-plane me-2"></i>Create & Submit for Approval
+                            <button type="submit" name="action" value="create_pending" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                                <i class="fas fa-paper-plane"></i>
+                                <span>Create Purchase Order</span>
                             </button>
-                            <button type="submit" name="action" value="create_approved" class="btn btn-success btn-lg">
-                                <i class="fas fa-check me-2"></i>Create & Approve
-                            </button>
-                            <a href="{% url 'inventory:purchase_order_list' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times me-2"></i>Cancel
+                            <a href="{% url 'inventory:purchase_order_list' %}" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                                <i class="fas fa-times"></i>
+                                <span>Cancel</span>
                             </a>
                         </div>
                     </div>
@@ -546,31 +303,34 @@
 </div>
 
 <!-- Item Selection Modal -->
-<div class="modal fade" id="itemSelectionModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add Order Item</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div id="itemSelectionModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 transition-opacity" onclick="closeItemModal()"></div>
+        <div class="relative bg-white rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white flex justify-between items-center">
+                <h5 class="text-sm font-semibold text-slate-900">Add Order Item</h5>
+                <button type="button" class="text-slate-500 hover:text-slate-700" onclick="closeItemModal()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="part-search" class="form-label">Search Parts</label>
-                    <input type="text" class="form-control" id="part-search" 
+            <div class="p-6">
+                <div class="mb-4">
+                    <label for="part-search" class="block text-xs font-semibold text-slate-700 mb-2">Search Parts</label>
+                    <input type="text" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="part-search" 
                            placeholder="Search by name, part number, or brand...">
                 </div>
                 
-                <div class="table-responsive">
-                    <table class="table table-hover" id="parts-table">
-                        <thead>
+                <div class="overflow-x-auto">
+                    <table class="w-full divide-y divide-slate-200" id="parts-table">
+                        <thead class="bg-slate-50">
                             <tr>
-                                <th>Part</th>
-                                <th>Stock</th>
-                                <th>Unit Price</th>
-                                <th>Action</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Part</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Stock</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Unit Price</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="parts-tbody">
+                        <tbody id="parts-tbody" class="bg-white divide-y divide-slate-100">
                             <!-- Parts will be loaded here -->
                         </tbody>
                     </table>
@@ -580,28 +340,6 @@
     </div>
 </div>
 
-<!-- PO Preview Modal -->
-<div class="modal fade" id="poPreviewModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Purchase Order Preview</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="po-preview" id="po-preview-content">
-                    <!-- Preview content will be generated here -->
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="printPreview()">
-                    <i class="fas fa-print me-1"></i> Print Preview
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -614,24 +352,20 @@ const orderItems = [];
 // Initialize form
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Select2
-    $('#id_supplier').select2({
-        theme: 'bootstrap-5',
+    $('#supplier').select2({
         placeholder: 'Select a supplier...',
         allowClear: true
     });
     
     // Load supplier info when supplier changes
-    $('#id_supplier').on('change', function() {
+    $('#supplier').on('change', function() {
         const supplierId = this.value;
         if (supplierId) {
             loadSupplierInfo(supplierId);
         } else {
-            document.getElementById('supplier-info').style.display = 'none';
+            document.getElementById('supplier-info').classList.add('hidden');
         }
     });
-    
-    // Auto-generate PO number happens on backend
-    // Note: PO number is automatically generated when the purchase order is saved
     
     // Set default order date to today
     const today = new Date().toISOString().split('T')[0];
@@ -639,10 +373,52 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add calculation event listeners
     document.getElementById('tax-rate').addEventListener('input', calculateTotals);
-    document.getElementById('shipping-cost').addEventListener('input', calculateTotals);
+    document.getElementById('shipping-cost').addEventListener('input', function() {
+        document.getElementById('shipping-cost-display').value = this.value;
+        calculateTotals();
+    });
+    document.getElementById('shipping-cost-display').addEventListener('input', function() {
+        document.getElementById('shipping-cost').value = this.value;
+        calculateTotals();
+    });
     
     updateItemsDisplay();
+    
+    // Auto-load supplier info if supplier is pre-selected from URL
+    {% if initial_supplier_id %}
+    const initialSupplierId = '{{ initial_supplier_id }}';
+    if (initialSupplierId) {
+        $('#supplier').val(initialSupplierId).trigger('change');
+    }
+    {% endif %}
 });
+
+// Toast notification function
+function showToast(type, message) {
+    // Create toast notification
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-emerald-600' : type === 'danger' ? 'bg-rose-600' : type === 'info' ? 'bg-blue-600' : 'bg-slate-600';
+    toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2`;
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+function closeItemModal() {
+    document.getElementById('itemSelectionModal').classList.add('hidden');
+}
+
 
 // Note: PO number is auto-generated on the backend
 
@@ -653,22 +429,22 @@ function loadSupplierInfo(supplierId) {
         .then(data => {
             const supplierDetails = document.getElementById('supplier-details');
             supplierDetails.innerHTML = `
-                <h6 class="fw-bold mb-2">${data.name}</h6>
-                <p class="text-muted small mb-2">${data.supplier_code}</p>
-                ${data.contact_person ? `<p class="small mb-1"><i class="fas fa-user me-2"></i>${data.contact_person}</p>` : ''}
-                ${data.email ? `<p class="small mb-1"><i class="fas fa-envelope me-2"></i>${data.email}</p>` : ''}
-                ${data.phone ? `<p class="small mb-1"><i class="fas fa-phone me-2"></i>${data.phone}</p>` : ''}
-                ${data.address ? `<p class="small mb-0"><i class="fas fa-map-marker-alt me-2"></i>${data.address}</p>` : ''}
+                <h6 class="text-sm font-semibold text-slate-900 mb-2">${data.name}</h6>
+                <p class="text-xs text-slate-500 mb-2">${data.supplier_code}</p>
+                ${data.contact_person ? `<p class="text-xs text-slate-600 mb-1 flex items-center gap-1"><i class="fas fa-user"></i><span>${data.contact_person}</span></p>` : ''}
+                ${data.email ? `<p class="text-xs text-slate-600 mb-1 flex items-center gap-1"><i class="fas fa-envelope"></i><span>${data.email}</span></p>` : ''}
+                ${data.phone ? `<p class="text-xs text-slate-600 mb-1 flex items-center gap-1"><i class="fas fa-phone"></i><span>${data.phone}</span></p>` : ''}
+                ${data.address ? `<p class="text-xs text-slate-600 mb-0 flex items-center gap-1"><i class="fas fa-map-marker-alt"></i><span>${data.address}</span></p>` : ''}
                 ${data.rating ? `
-                    <div class="supplier-rating">
+                    <div class="flex items-center gap-1 mt-3">
                         ${Array.from({length: 5}, (_, i) => 
-                            `<i class="fas fa-star star ${i >= data.rating ? 'empty' : ''}"></i>`
+                            `<i class="fas fa-star text-xs ${i >= data.rating ? 'text-slate-300' : 'text-amber-500'}"></i>`
                         ).join('')}
-                        <span class="ms-2 small">(${data.rating}/5)</span>
+                        <span class="text-xs text-slate-500 ml-2">(${data.rating}/5)</span>
                     </div>
                 ` : ''}
             `;
-            document.getElementById('supplier-info').style.display = 'block';
+            document.getElementById('supplier-info').classList.remove('hidden');
         })
         .catch(error => console.error('Error loading supplier info:', error));
 }
@@ -681,8 +457,7 @@ function addOrderItem(partId = null) {
     } else {
         // Show part selection modal
         loadPartsForSelection();
-        const modal = new bootstrap.Modal(document.getElementById('itemSelectionModal'));
-        modal.show();
+        document.getElementById('itemSelectionModal').classList.remove('hidden');
     }
 }
 
@@ -698,24 +473,28 @@ function loadPartsForSelection() {
             const parts = data.results || data.parts || data;
             parts.forEach(part => {
                 const row = document.createElement('tr');
+                row.className = 'hover:bg-slate-50 transition-colors';
                 row.innerHTML = `
-                    <td>
+                    <td class="px-4 py-3">
                         <div>
-                            <strong>${part.name}</strong><br>
-                            <small class="text-muted">${part.part_number}</small>
-                            ${part.brand ? `<br><small class="text-muted">${part.brand}</small>` : ''}
+                            <div class="text-sm font-semibold text-slate-900">${part.name}</div>
+                            <div class="text-xs text-slate-500">${part.part_number}</div>
+                            ${part.brand ? `<div class="text-xs text-slate-500">${part.brand}</div>` : ''}
                         </div>
                     </td>
-                    <td>
-                        <span class="badge ${part.quantity_in_stock <= part.reorder_point ? 'bg-danger' : 'bg-success'}">
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${part.quantity_in_stock <= part.reorder_point ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">
                             ${part.quantity_in_stock}
                         </span>
-                        ${part.quantity_in_stock <= part.reorder_point ? '<br><small class="text-danger">Low Stock</small>' : ''}
+                        ${part.quantity_in_stock <= part.reorder_point ? '<div class="text-xs text-rose-600 mt-1">Low Stock</div>' : ''}
                     </td>
-                    <td>$${parseFloat(part.cost_price || 0).toFixed(2)}</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary" onclick="addItemToPO(${part.id})">
-                            <i class="fas fa-plus"></i> Add
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <span class="text-sm text-slate-900">$${parseFloat(part.cost_price || 0).toFixed(2)}</span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <button class="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors" onclick="addItemToPO(${part.id})">
+                            <i class="fas fa-plus"></i>
+                            <span>Add</span>
                         </button>
                     </td>
                 `;
@@ -746,8 +525,7 @@ function addItemToPO(partId) {
             calculateTotals();
             
             // Close modal if open
-            const modal = bootstrap.Modal.getInstance(document.getElementById('itemSelectionModal'));
-            if (modal) modal.hide();
+            closeItemModal();
         })
         .catch(error => console.error('Error adding item:', error));
 }
@@ -759,43 +537,43 @@ function updateItemsDisplay() {
     
     if (orderItems.length === 0) {
         tbody.innerHTML = '';
-        noItemsMessage.style.display = 'block';
+        noItemsMessage.classList.remove('hidden');
         return;
     }
     
-    noItemsMessage.style.display = 'none';
+    noItemsMessage.classList.add('hidden');
     
     tbody.innerHTML = orderItems.map(item => `
-        <tr class="item-row">
-            <td>
+        <tr class="hover:bg-slate-50 transition-colors">
+            <td class="px-4 py-3">
                 <div>
-                    <strong>${item.part_name}</strong><br>
-                    <small class="text-muted">${item.part_number}</small>
+                    <div class="text-sm font-semibold text-slate-900">${item.part_name}</div>
+                    <div class="text-xs text-slate-500">${item.part_number}</div>
                 </div>
             </td>
-            <td>
-                <input type="number" class="form-control form-control-sm" 
+            <td class="px-4 py-3 whitespace-nowrap">
+                <input type="number" class="w-20 px-2 py-1.5 border border-slate-300 rounded-lg text-sm text-center" 
                        value="${item.quantity}" min="1" 
                        onchange="updateItemQuantity(${item.id}, this.value)">
             </td>
-            <td>
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text">$</span>
-                    <input type="number" class="form-control" 
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div class="flex items-center">
+                    <span class="px-2 py-1.5 border border-r-0 border-slate-300 rounded-l-lg bg-slate-50 text-sm text-slate-700">$</span>
+                    <input type="number" class="w-24 px-2 py-1.5 border border-slate-300 rounded-r-lg text-sm text-center" 
                            value="${item.unit_price}" min="0" step="0.01"
                            onchange="updateItemPrice(${item.id}, this.value)">
                 </div>
             </td>
-            <td>
-                <strong>$${(item.quantity * item.unit_price).toFixed(2)}</strong>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <span class="text-sm font-semibold text-slate-900">$${(item.quantity * item.unit_price).toFixed(2)}</span>
             </td>
-            <td>
-                <span class="badge ${item.current_stock <= item.reorder_point ? 'bg-danger' : 'bg-success'}">
+            <td class="px-4 py-3 whitespace-nowrap">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${item.current_stock <= item.reorder_point ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">
                     ${item.current_stock}
                 </span>
             </td>
-            <td>
-                <button class="remove-item-btn" onclick="removeItem(${item.id})">
+            <td class="px-4 py-3 whitespace-nowrap">
+                <button class="inline-flex items-center justify-center w-8 h-8 bg-rose-600 text-white rounded-lg text-xs hover:bg-rose-700 transition-colors" onclick="removeItem(${item.id})">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -845,145 +623,11 @@ function calculateTotals() {
     document.getElementById('tax-amount').textContent = `$${taxAmount.toFixed(2)}`;
     document.getElementById('total-amount').textContent = `$${total.toFixed(2)}`;
     document.getElementById('item-count').textContent = orderItems.length;
-}
-
-// Template functions
-function loadTemplate(templateType) {
-    // This would load predefined templates
-    console.log(`Loading ${templateType} template...`);
-    // Implementation would depend on backend API
-}
-
-// Auto-fill functions
-function toggleAutoFill() {
-    const section = document.getElementById('auto-fill-section');
-    section.style.display = section.style.display === 'none' ? 'block' : 'none';
-}
-
-function autoFillLowStock() {
-    const supplierId = document.getElementById('supplier').value;
-    if (!supplierId) {
-        alert('Please select a supplier first');
-        return;
-    }
     
-    fetch(`/inventory/parts/low-stock/?supplier=${supplierId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.parts && data.parts.length > 0) {
-                data.parts.forEach(part => {
-                    // Check if item already exists
-                    const existingItem = orderItems.find(item => item.part_id === part.id);
-                    if (!existingItem) {
-                        addItemToPO(part.id);
-                    }
-                });
-                toggleAutoFill();
-            } else {
-                alert('No low stock items found for this supplier');
-            }
-        })
-        .catch(error => {
-            console.error('Error loading low stock items:', error);
-            alert('Error loading low stock items');
-        });
+    // Update tax amount field
+    document.getElementById('tax_amount').value = taxAmount.toFixed(2);
 }
 
-// Preview functions
-function previewPO() {
-    // Generate preview content
-    const previewContent = generatePOPreview();
-    document.getElementById('po-preview-content').innerHTML = previewContent;
-    
-    const modal = new bootstrap.Modal(document.getElementById('poPreviewModal'));
-    modal.show();
-}
-
-function generatePOPreview() {
-    const supplier = document.getElementById('supplier').selectedOptions[0]?.text || 'Not selected';
-    const orderDate = document.getElementById('order_date').value;
-    
-    return `
-        <div class="po-header-preview">
-            <h3>PURCHASE ORDER</h3>
-            <p class="lead">PO Number will be auto-generated</p>
-        </div>
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <h6>Supplier:</h6>
-                <p>${supplier}</p>
-            </div>
-            <div class="col-md-6">
-                <h6>Order Date:</h6>
-                <p>${orderDate}</p>
-            </div>
-        </div>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Part</th>
-                    <th>Quantity</th>
-                    <th>Unit Price</th>
-                    <th>Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${orderItems.map(item => `
-                    <tr>
-                        <td>${item.part_name}<br><small>${item.part_number}</small></td>
-                        <td>${item.quantity}</td>
-                        <td>$${item.unit_price.toFixed(2)}</td>
-                        <td>$${(item.quantity * item.unit_price).toFixed(2)}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-        <div class="text-end">
-            <h5>Total: <span id="preview-total">$${orderItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0).toFixed(2)}</span></h5>
-        </div>
-    `;
-}
-
-function printPreview() {
-    const printContent = document.getElementById('po-preview-content').innerHTML;
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>Purchase Order Preview</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 20px; }
-                    table { width: 100%; border-collapse: collapse; }
-                    th, td { border: 1px solid #ddd; padding: 8px; }
-                    th { background-color: #f5f5f5; }
-                </style>
-            </head>
-            <body>${printContent}</body>
-        </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-}
-
-// Utility functions
-function saveDraft() {
-    document.querySelector('button[name="action"][value="create_draft"]').click();
-}
-
-function duplicateFromExisting() {
-    // This would open a modal to select an existing PO to duplicate
-    alert('This feature would allow you to duplicate an existing purchase order.');
-}
-
-function clearForm() {
-    if (confirm('Clear all form data? This cannot be undone.')) {
-        document.getElementById('po-form').reset();
-        orderItems.length = 0;
-        updateItemsDisplay();
-        calculateTotals();
-        // PO number will be auto-generated on backend
-    }
-}
 
 // Form submission
 document.getElementById('po-form').addEventListener('submit', function(e) {
@@ -1028,7 +672,11 @@ document.getElementById('part-search').addEventListener('input', function() {
     
     rows.forEach(row => {
         const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchTerm) ? '' : 'none';
+        if (text.includes(searchTerm)) {
+            row.classList.remove('hidden');
+        } else {
+            row.classList.add('hidden');
+        }
     });
 });
 </script>

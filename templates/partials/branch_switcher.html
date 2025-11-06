@@ -1,0 +1,56 @@
+{% if user.is_authenticated and user.is_staff and branch_accessible_branches %}
+<div class="branch-switcher d-flex align-items-center me-lg-3 mb-2 mb-lg-0">
+    <div class="branch-current text-start me-2">
+        <span class="branch-label d-block text-uppercase text-muted fw-semibold small">Branch</span>
+        <span class="branch-name fw-semibold">{{ branch_active_branch.name|default:"Select branch" }}</span>
+        {% if branch_active_branch and branch_active_branch.city %}
+            <span class="branch-meta text-muted small d-block">{{ branch_active_branch.city }}{% if branch_active_branch.country %}, {{ branch_active_branch.country }}{% endif %}</span>
+        {% endif %}
+    </div>
+    {% if branch_can_select_branch %}
+    <div class="dropdown">
+        <button class="btn btn-outline-primary btn-sm px-3 branch-switcher-toggle" type="button" id="branchSwitcherDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-code-branch me-1"></i>
+            Switch
+        </button>
+        <div class="dropdown-menu dropdown-menu-end shadow branch-switcher-menu" aria-labelledby="branchSwitcherDropdown">
+            <div class="px-3 py-2 border-bottom">
+                <p class="mb-0 text-muted small">Choose a branch to make it active for this session.</p>
+            </div>
+            <form method="post" action="{% url 'branches:switch' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <ul class="list-group list-group-flush branch-switcher-list">
+                    {% for branch in branch_accessible_branches %}
+                    <li class="list-group-item d-flex justify-content-between align-items-start {% if branch.id == branch_active_branch_id %}active{% endif %}">
+                        <div>
+                            <span class="fw-semibold">{{ branch.name }}</span>
+                            <span class="d-block text-muted small">{{ branch.city|default:"" }}{% if branch.city and branch.country %}, {% endif %}{{ branch.country|default:"" }}</span>
+                        </div>
+                        {% if branch.id == branch_active_branch_id %}
+                            <span class="badge bg-primary rounded-pill">Active</span>
+                        {% else %}
+                            <button class="btn btn-link btn-sm text-decoration-none" name="branch_id" value="{{ branch.id }}" type="submit">
+                                <span>Set</span>
+                            </button>
+                        {% endif %}
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-center text-muted small">No other branches available.</li>
+                    {% endfor %}
+                </ul>
+            </form>
+            <div class="px-3 py-2 border-top bg-light">
+                <a class="btn btn-outline-secondary w-100 btn-sm" href="{% url 'branches:manage' %}">
+                    <i class="fas fa-gear me-1"></i> Manage branches
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <a class="btn btn-outline-secondary btn-sm branch-manage-link" href="{% url 'branches:manage' %}">
+        <i class="fas fa-gear me-1"></i> Manage
+    </a>
+    {% endif %}
+</div>
+{% endif %}

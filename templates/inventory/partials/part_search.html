@@ -24,45 +24,46 @@ Props:
             {% endif %}
         {% endfor %}
         
-        <div class="search-input-container">
-            <div class="input-group input-group-lg">
-                <span class="input-group-text search-icon">
+        <div class="relative">
+            <div class="flex">
+                <div class="flex-1 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-slate-400"></i>
+                    </div>
+                    <input type="text" 
+                           class="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-l-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                           id="{{ input_id }}"
+                           name="search" 
+                           value="{{ request.GET.search|default:'' }}"
+                           placeholder="{{ placeholder|default:'Search parts by name, number, brand...' }}"
+                           autocomplete="off">
+                </div>
+                <button class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-r-lg text-sm font-medium hover:bg-primary/90 transition-colors" type="submit">
                     <i class="fas fa-search"></i>
-                </span>
-                <input type="text" 
-                       class="form-control search-input" 
-                       id="{{ input_id }}"
-                       name="search" 
-                       value="{{ request.GET.search|default:'' }}"
-                       placeholder="{{ placeholder|default:'Search parts by name, number, brand...' }}"
-                       autocomplete="off"
-                       data-bs-toggle="dropdown"
-                       aria-expanded="false">
-                <button class="btn btn-primary search-btn" type="submit">
-                    <i class="fas fa-search me-1"></i>
-                    Search
+                    <span>Search</span>
                 </button>
                 
                 {% if show_filters %}
-                <button class="btn btn-outline-secondary dropdown-toggle" 
-                        type="button" 
-                        data-bs-toggle="dropdown" 
-                        aria-expanded="false"
-                        title="Advanced Filters">
-                    <i class="fas fa-filter"></i>
-                </button>
+                <div class="relative">
+                    <button class="inline-flex items-center justify-center w-12 h-full border border-l-0 border-slate-300 text-slate-600 rounded-r-lg hover:bg-slate-50 transition-colors" 
+                            type="button" 
+                            onclick="toggleFiltersMenu()"
+                            title="Advanced Filters">
+                        <i class="fas fa-filter"></i>
+                    </button>
+                </div>
                 {% endif %}
             </div>
             
             <!-- Search Suggestions Dropdown -->
             {% if show_suggestions %}
-            <ul class="dropdown-menu search-suggestions" id="{{ input_id }}-suggestions">
-                <li class="dropdown-header">Quick Searches</li>
-                <li><a class="dropdown-item" href="#" data-search="low stock">Low Stock Items</a></li>
-                <li><a class="dropdown-item" href="#" data-search="out of stock">Out of Stock</a></li>
-                <li><a class="dropdown-item" href="#" data-search="needs reorder">Needs Reorder</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li class="dropdown-header">Recent Searches</li>
+            <ul class="hidden absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 max-h-80 overflow-y-auto" id="{{ input_id }}-suggestions">
+                <li class="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-200">Quick Searches</li>
+                <li><a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer" href="#" data-search="low stock" onclick="event.preventDefault(); document.getElementById('{{ input_id }}').value='low stock'; document.getElementById('{{ form_id }}').submit();">Low Stock Items</a></li>
+                <li><a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer" href="#" data-search="out of stock" onclick="event.preventDefault(); document.getElementById('{{ input_id }}').value='out of stock'; document.getElementById('{{ form_id }}').submit();">Out of Stock</a></li>
+                <li><a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer" href="#" data-search="needs reorder" onclick="event.preventDefault(); document.getElementById('{{ input_id }}').value='needs reorder'; document.getElementById('{{ form_id }}').submit();">Needs Reorder</a></li>
+                <li><hr class="my-1 border-slate-200"></li>
+                <li class="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Recent Searches</li>
                 <li id="recent-searches-container">
                     <!-- Recent searches will be populated here -->
                 </li>
@@ -71,20 +72,20 @@ Props:
             
             <!-- Advanced Filters Dropdown -->
             {% if show_filters %}
-            <ul class="dropdown-menu dropdown-menu-end advanced-filters">
-                <li class="dropdown-header">Filter Options</li>
-                <li>
-                    <div class="dropdown-item-text">
-                        <div class="mb-2">
-                            <label class="form-label small">Category</label>
-                            <select class="form-select form-select-sm" name="category">
+            <div class="hidden absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-slate-200 z-50" id="filtersMenu">
+                <div class="p-4">
+                    <div class="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide border-b border-slate-200 mb-4">Filter Options</div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-2">Category</label>
+                            <select class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" name="category">
                                 <option value="">All Categories</option>
                                 <!-- Categories will be populated via JavaScript -->
                             </select>
                         </div>
-                        <div class="mb-2">
-                            <label class="form-label small">Stock Status</label>
-                            <select class="form-select form-select-sm" name="stock_status">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-2">Stock Status</label>
+                            <select class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" name="stock_status">
                                 <option value="">All Stock Levels</option>
                                 <option value="in_stock" {% if request.GET.stock_status == 'in_stock' %}selected{% endif %}>In Stock</option>
                                 <option value="low_stock" {% if request.GET.stock_status == 'low_stock' %}selected{% endif %}>Low Stock</option>
@@ -92,66 +93,67 @@ Props:
                                 <option value="needs_reorder" {% if request.GET.stock_status == 'needs_reorder' %}selected{% endif %}>Needs Reorder</option>
                             </select>
                         </div>
-                        <div class="mb-2">
-                            <label class="form-label small">Supplier</label>
-                            <select class="form-select form-select-sm" name="supplier">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-2">Supplier</label>
+                            <select class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" name="supplier">
                                 <option value="">All Suppliers</option>
                                 <!-- Suppliers will be populated via JavaScript -->
                             </select>
                         </div>
-                        <div class="mb-2">
-                            <label class="form-label small">Price Range</label>
-                            <div class="row g-1">
-                                <div class="col-6">
-                                    <input type="number" class="form-control form-control-sm" 
-                                           name="price_min" placeholder="Min" 
-                                           value="{{ request.GET.price_min }}">
-                                </div>
-                                <div class="col-6">
-                                    <input type="number" class="form-control form-control-sm" 
-                                           name="price_max" placeholder="Max"
-                                           value="{{ request.GET.price_max }}">
-                                </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-2">Price Range</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="number" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                                       name="price_min" placeholder="Min" 
+                                       value="{{ request.GET.price_min }}">
+                                <input type="number" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                                       name="price_max" placeholder="Max"
+                                       value="{{ request.GET.price_max }}">
                             </div>
                         </div>
-                        <div class="d-flex gap-2 mt-3">
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-filter me-1"></i>Apply Filters
+                        <div class="flex items-center gap-2 pt-2">
+                            <button type="submit" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                                <i class="fas fa-filter"></i>
+                                <span>Apply Filters</span>
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
-                                <i class="fas fa-times me-1"></i>Clear
+                            <button type="button" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" onclick="clearFilters()">
+                                <i class="fas fa-times"></i>
+                                <span>Clear</span>
                             </button>
                         </div>
                     </div>
-                </li>
-            </ul>
+                </div>
+            </div>
             {% endif %}
         </div>
         
         <!-- Active Filters Display -->
-        <div class="active-filters" id="active-filters" style="display: none;">
-            <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
-                <small class="text-muted">Active filters:</small>
-                <div id="filter-tags"></div>
-                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">
-                    <i class="fas fa-times me-1"></i>Clear All
+        <div class="hidden mt-3" id="active-filters">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs text-slate-500">Active filters:</span>
+                <div id="filter-tags" class="flex flex-wrap gap-2"></div>
+                <button type="button" class="inline-flex items-center gap-1 px-3 py-1 border border-slate-300 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-50 transition-colors" onclick="clearAllFilters()">
+                    <i class="fas fa-times"></i>
+                    <span>Clear All</span>
                 </button>
             </div>
         </div>
         
         <!-- Search Results Summary -->
-        <div class="search-results-summary" id="search-results-summary" style="display: none;">
-            <div class="d-flex justify-content-between align-items-center mt-2 p-2 bg-light rounded">
-                <small class="text-muted">
-                    <span id="results-count">0</span> parts found
+        <div class="hidden mt-3" id="search-results-summary">
+            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                <span class="text-xs text-slate-600">
+                    <span id="results-count" class="font-semibold">0</span> parts found
                     <span id="search-term-display"></span>
-                </small>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="saveSearch()">
-                        <i class="fas fa-bookmark me-1"></i>Save Search
+                </span>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="inline-flex items-center gap-1 px-3 py-1 border border-primary text-primary rounded-lg text-xs font-medium hover:bg-primary/10 transition-colors" onclick="saveSearch()">
+                        <i class="fas fa-bookmark"></i>
+                        <span>Save Search</span>
                     </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSearch()">
-                        <i class="fas fa-times me-1"></i>Clear
+                    <button type="button" class="inline-flex items-center gap-1 px-3 py-1 border border-slate-300 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-50 transition-colors" onclick="clearSearch()">
+                        <i class="fas fa-times"></i>
+                        <span>Clear</span>
                     </button>
                 </div>
             </div>
@@ -160,101 +162,31 @@ Props:
 </div>
 
 <!-- Quick Action Buttons -->
-<div class="search-quick-actions mt-2" style="display: none;" id="search-quick-actions">
-    <div class="d-flex flex-wrap gap-2">
-        <button class="btn btn-sm btn-outline-primary" onclick="bulkSelectResults()">
-            <i class="fas fa-check-square me-1"></i>Select All Results
+<div class="hidden mt-3" id="search-quick-actions">
+    <div class="flex flex-wrap gap-2">
+        <button class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors" onclick="bulkSelectResults()">
+            <i class="fas fa-check-square"></i>
+            <span>Select All Results</span>
         </button>
-        <button class="btn btn-sm btn-outline-success" onclick="exportResults()">
-            <i class="fas fa-download me-1"></i>Export Results
+        <button class="inline-flex items-center gap-2 px-4 py-2 border border-emerald-600 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-50 transition-colors" onclick="exportResults()">
+            <i class="fas fa-download"></i>
+            <span>Export Results</span>
         </button>
-        <button class="btn btn-sm btn-outline-info" onclick="createPOFromResults()">
-            <i class="fas fa-shopping-cart me-1"></i>Create Purchase Order
+        <button class="inline-flex items-center gap-2 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors" onclick="createPOFromResults()">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Create Purchase Order</span>
         </button>
     </div>
 </div>
 
-<!-- CSS Styles -->
+<!-- CSS Styles (minimal) -->
 <style>
-    .part-search-container {
-        position: relative;
-        margin-bottom: 1rem;
-    }
-    
-    .search-input-container {
-        position: relative;
-    }
-    
-    .search-input {
-        border-radius: 0.5rem 0 0 0.5rem;
-        font-size: 1rem;
-        padding: 0.75rem 1rem;
-        border-right: none;
-    }
-    
-    .search-input:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-        z-index: 10;
-    }
-    
-    .search-icon {
-        background: white;
-        border-right: none;
-        color: #6c757d;
-    }
-    
-    .search-btn {
-        border-radius: 0;
-        border-left: none;
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-    }
-    
-    .search-suggestions {
-        width: 100%;
-        max-height: 300px;
-        overflow-y: auto;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        border-radius: 0.375rem;
-        margin-top: 0.25rem;
-    }
-    
-    .search-suggestions .dropdown-item {
-        padding: 0.5rem 1rem;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-    }
-    
-    .search-suggestions .dropdown-item:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .search-suggestions .dropdown-item.active {
-        background-color: #e7f3ff;
-        color: #0d6efd;
-    }
-    
-    .advanced-filters {
-        min-width: 300px;
-        padding: 1rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-    
-    .advanced-filters .dropdown-item-text {
-        padding: 0;
-    }
-    
-    .active-filters {
-        animation: slideDown 0.3s ease;
-    }
-    
     .filter-tag {
         display: inline-flex;
         align-items: center;
         padding: 0.25rem 0.5rem;
-        background: #e7f3ff;
-        color: #0d6efd;
+        background: #eff6ff;
+        color: #2563eb;
         border-radius: 0.25rem;
         font-size: 0.75rem;
         font-weight: 500;
@@ -271,41 +203,6 @@ Props:
         opacity: 1;
     }
     
-    .search-results-summary {
-        animation: slideDown 0.3s ease;
-    }
-    
-    .search-quick-actions {
-        animation: slideDown 0.3s ease;
-    }
-    
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .input-group-lg .form-control {
-            font-size: 0.9rem;
-        }
-        
-        .search-btn {
-            padding: 0.75rem 1rem;
-        }
-        
-        .advanced-filters {
-            min-width: 280px;
-        }
-    }
-    
-    /* Loading state */
     .search-input.loading {
         background-image: url("data:image/svg+xml,%3csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M10 2a8 8 0 018 8' stroke='%236c757d' stroke-width='2' fill='none'/%3e%3c/svg%3e");
         background-repeat: no-repeat;
@@ -389,10 +286,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Click outside to hide suggestions
+        // Click outside to hide suggestions and filters
         document.addEventListener('click', function(e) {
             if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
                 hideSuggestions();
+            }
+            const filtersMenu = document.getElementById('filtersMenu');
+            if (filtersMenu && !e.target.closest('.relative') && !filtersMenu.contains(e.target)) {
+                filtersMenu.classList.add('hidden');
             }
         });
     }
@@ -471,14 +372,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function showSuggestions() {
-        suggestionsContainer.classList.add('show');
+        suggestionsContainer.classList.remove('hidden');
         searchInput.setAttribute('aria-expanded', 'true');
     }
     
     function hideSuggestions() {
-        suggestionsContainer.classList.remove('show');
+        suggestionsContainer.classList.add('hidden');
         searchInput.setAttribute('aria-expanded', 'false');
         currentSuggestionIndex = -1;
+    }
+    
+    function toggleFiltersMenu() {
+        const menu = document.getElementById('filtersMenu');
+        if (menu) {
+            menu.classList.toggle('hidden');
+        }
     }
     
     function loadRecentSearches() {
@@ -565,9 +473,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <i class="fas fa-times remove-filter" onclick="removeFilter('${filter.key}')"></i>
                 </span>`
             ).join('');
-            activeFilters.style.display = 'block';
+            activeFilters.classList.remove('hidden');
         } else {
-            activeFilters.style.display = 'none';
+            activeFilters.classList.add('hidden');
         }
     }
     
@@ -579,8 +487,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (searchTerm) {
             termDisplay.textContent = `for "${searchTerm}"`;
-            summary.style.display = 'block';
-            quickActions.style.display = 'block';
+            summary.classList.remove('hidden');
+            quickActions.classList.remove('hidden');
         }
     }
 });

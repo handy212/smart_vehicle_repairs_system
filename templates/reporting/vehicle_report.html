@@ -8,97 +8,101 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2><i class="fas fa-car me-2"></i>Vehicle Reports</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'reporting:report-dashboard' %}">Reports</a></li>
-                    <li class="breadcrumb-item active">Vehicles</li>
-                </ol>
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <a href="{% url 'dashboard' %}" class="hover:text-slate-700">Dashboard</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <a href="{% url 'reporting:report-dashboard' %}" class="hover:text-slate-700">Reports</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <span class="text-slate-700">Vehicles</span>
             </nav>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">
+                <i class="fas fa-car mr-2 text-primary"></i>
+                Vehicle Reports
+            </h1>
         </div>
-        <div class="col-md-4 text-end">
-            <button class="btn btn-primary" onclick="window.print()">
-                <i class="fas fa-print me-2"></i>Print Report
+        <div class="flex items-center gap-2">
+            <button class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="window.print()">
+                <i class="fas fa-print"></i>
+                <span>Print Report</span>
             </button>
-            <button class="btn btn-success" onclick="exportToExcel()">
-                <i class="fas fa-file-excel me-2"></i>Export
+            <button class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors" onclick="exportToExcel()">
+                <i class="fas fa-file-excel"></i>
+                <span>Export</span>
             </button>
         </div>
     </div>
 
     <!-- KPI Card -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-12">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-white-50 mb-1">Total Vehicles in System</h6>
-                            <h3 class="mb-0">{{ total_vehicles }}</h3>
-                            <small class="text-white-50">All registered vehicles</small>
-                        </div>
-                        <div class="fs-1 opacity-50">
-                            <i class="fas fa-car"></i>
-                        </div>
-                    </div>
+    <div class="bg-primary text-white rounded-xl shadow-sm overflow-hidden">
+        <div class="p-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-semibold text-white/70 uppercase tracking-wide mb-1">Total Vehicles in System</p>
+                    <h3 class="text-2xl font-bold text-white mb-1">{{ total_vehicles }}</h3>
+                    <small class="text-xs text-white/70">All registered vehicles</small>
+                </div>
+                <div class="text-4xl opacity-50">
+                    <i class="fas fa-car"></i>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Vehicles by Make -->
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Top 10 Vehicle Makes</h5>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+            <h5 class="text-sm font-semibold text-slate-900 mb-0 flex items-center gap-2">
+                <i class="fas fa-chart-bar"></i>
+                <span>Top 10 Vehicle Makes</span>
+            </h5>
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Make</th>
-                                    <th>Number of Vehicles</th>
-                                    <th>Percentage</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in vehicles_by_make %}
-                                <tr>
-                                    <td>{{ forloop.counter }}</td>
-                                    <td><strong>{{ item.make }}</strong></td>
-                                    <td>{{ item.count }}</td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <span class="me-2">{% widthratio item.count total_vehicles 100 %}%</span>
-                                            <div class="progress flex-grow-1" style="height: 8px; width: 100px;">
-                                                <div class="progress-bar bg-primary" 
-                                                     style="width: {% widthratio item.count total_vehicles 100 %}%">
-                                                </div>
-                                            </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">#</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Make</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Number of Vehicles</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 bg-white">
+                            {% for item in vehicles_by_make %}
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-700">{{ forloop.counter }}</td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <div class="text-sm font-semibold text-slate-900">{{ item.make }}</div>
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm text-slate-700">{{ item.count }}</td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-sm text-slate-700">{% widthratio item.count total_vehicles 100 %}%</span>
+                                        <div class="w-24 bg-slate-200 rounded-full h-2">
+                                            <div class="bg-primary h-2 rounded-full" style="width: {% widthratio item.count total_vehicles 100 %}%"></div>
                                         </div>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">
-                                        <i class="fas fa-inbox fs-1 mb-2 d-block"></i>
-                                        No vehicle data available yet.
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="px-4 py-12 text-center">
+                                    <div class="flex flex-col items-center">
+                                        <i class="fas fa-inbox text-4xl text-slate-400 mb-3"></i>
+                                        <p class="text-sm text-slate-500">No vehicle data available yet.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                <div class="col-md-6">
+                <div>
                     <canvas id="vehiclesMakeChart" height="300"></canvas>
                 </div>
             </div>
@@ -131,8 +135,8 @@
                 datasets: [{
                     label: 'Number of Vehicles',
                     data: makeCounts,
-                    backgroundColor: 'rgba(13, 110, 253, 0.8)',
-                    borderColor: 'rgba(13, 110, 253, 1)',
+                    backgroundColor: 'rgba(79, 70, 229, 0.8)',
+                    borderColor: 'rgba(79, 70, 229, 1)',
                     borderWidth: 2
                 }]
             },

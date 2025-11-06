@@ -1,0 +1,16 @@
+{# Standardized Empty State Component using Tailwind CSS #}
+{# Usage: {% include 'partials/empty_state.html' with icon="fas fa-inbox" title="No items" message="Get started by..." action_url="/create" action_text="Create First" %} #}
+
+<div class="text-center py-12">
+    <i class="{{ icon|default:'fas fa-inbox' }} text-slate-300" style="font-size: 4rem; opacity: 0.5;"></i>
+    <h4 class="text-slate-600 mt-4 text-lg font-semibold">{{ title|default:"No items found" }}</h4>
+    {% if message %}
+    <p class="text-slate-500 mt-2">{{ message }}</p>
+    {% endif %}
+    {% if action_url %}
+    <a href="{{ action_url }}" class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors">
+        <i class="fas fa-plus"></i>
+        {{ action_text|default:"Create New" }}
+    </a>
+    {% endif %}
+</div>

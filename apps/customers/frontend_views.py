@@ -16,7 +16,7 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 
 from .models import Customer
-from .forms import CustomerForm
+from .forms import CustomerForm, CustomerImportForm
 
 
 class CustomerListView(LoginRequiredMixin, ListView):
@@ -27,6 +27,17 @@ class CustomerListView(LoginRequiredMixin, ListView):
     template_name = 'customers/customer_list.html'
     context_object_name = 'customers'
     paginate_by = 20
+
+    def get_paginate_by(self, queryset):
+        """Allow dynamic pagination sizes"""
+        per_page = self.request.GET.get('per_page', self.paginate_by)
+        try:
+            per_page = int(per_page)
+            if per_page in [10, 20, 50, 100]:
+                return per_page
+        except (ValueError, TypeError):
+            pass
+        return self.paginate_by
     
     def get_queryset(self):
         queryset = Customer.objects.select_related('user').prefetch_related(
@@ -99,6 +110,18 @@ class CustomerListView(LoginRequiredMixin, ListView):
             'date_to': self.request.GET.get('date_to', ''),
             'sort': self.request.GET.get('sort', '-created_at'),
             'customer_statuses': Customer.STATUS_CHOICES,
+            'customer_types': Customer.CUSTOMER_TYPE_CHOICES,
+            'sort_options': [
+                ('-created_at', 'Newest First'),
+                ('created_at', 'Oldest First'),
+                ('user__last_name', 'Last Name A-Z'),
+                ('-user__last_name', 'Last Name Z-A'),
+                ('customer_since', 'Customer Since (Earliest)'),
+                ('-customer_since', 'Customer Since (Latest)'),
+                ('customer_number', 'Customer # (Ascending)'),
+                ('-customer_number', 'Customer # (Descending)')
+            ],
+            'per_page': self.get_paginate_by(self.object_list),
         })
         
         return context
@@ -339,6 +362,142 @@ def export_customers(request):
         ])
     
     return response
+
+
+@login_required
+def import_customers(request):
+    """
+    Import customers from CSV file
+    """
+    import csv
+    from django.contrib.auth import get_user_model
+    from django.db import transaction
+    
+    User = get_user_model()
+    
+    # Check permissions (optional - adjust based on your requirements)
+    if request.method == 'POST':
+        form = CustomerImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            csv_file = form.cleaned_data['csv_file']
+            
+            try:
+                imported_count = 0
+                skipped_count = 0
+                error_rows = []
+                
+                # Read CSV file
+                decoded_file = csv_file.read().decode('utf-8').splitlines()
+                reader = csv.DictReader(decoded_file)
+                
+                # Required headers
+                required_headers = ['first_name', 'last_name', 'email', 'phone']
+                
+                # Check if required headers exist
+                if not all(header in reader.fieldnames for header in required_headers):
+                    messages.error(request, f'CSV file must contain these columns: {", ".join(required_headers)}')
+                    return redirect('customers:customer-import')
+                
+                # Process each row
+                for row_num, row in enumerate(reader, start=2):
+                    try:
+                        first_name = row.get('first_name', '').strip()
+                        last_name = row.get('last_name', '').strip()
+                        email = row.get('email', '').strip().lower()
+                        phone = row.get('phone', '').strip()
+                        
+                        # Validate required fields
+                        if not first_name or not last_name or not email:
+                            error_rows.append(f"Row {row_num}: Missing required fields (first_name, last_name, or email)")
+                            skipped_count += 1
+                            continue
+                        
+                        # Check if user with this email already exists
+                        if User.objects.filter(email=email).exists():
+                            error_rows.append(f"Row {row_num}: Email {email} already exists")
+                            skipped_count += 1
+                            continue
+                        
+                        # Create user and customer in a transaction
+                        with transaction.atomic():
+                            # Create user
+                            username = email  # Use email as username
+                            user = User.objects.create_user(
+                                username=username,
+                                email=email,
+                                first_name=first_name,
+                                last_name=last_name,
+                                phone=phone,
+                                role='customer'
+                            )
+                            
+                            # Create customer
+                            customer = Customer.objects.create(
+                                user=user,
+                                company_name=row.get('company_name', '').strip() or None,
+                                customer_type=row.get('customer_type', 'individual').strip() or 'individual',
+                                status=row.get('status', 'active').strip() or 'active',
+                                service_address=row.get('service_address', '').strip() or None,
+                                service_city=row.get('service_city', '').strip() or None,
+                                service_state=row.get('service_state', '').strip() or None,
+                                service_zip_code=row.get('service_zip_code', '').strip() or None,
+                                billing_address=row.get('billing_address', '').strip() or None,
+                                billing_city=row.get('billing_city', '').strip() or None,
+                                billing_state=row.get('billing_state', '').strip() or None,
+                                billing_zip_code=row.get('billing_zip_code', '').strip() or None,
+                                payment_terms=row.get('payment_terms', 'due_on_receipt').strip() or 'due_on_receipt',
+                                preferred_contact_method=row.get('preferred_contact_method', 'email').strip() or 'email',
+                            )
+                            
+                            imported_count += 1
+                            
+                    except Exception as e:
+                        error_rows.append(f"Row {row_num}: {str(e)}")
+                        skipped_count += 1
+                
+                # Show results
+                if imported_count > 0:
+                    messages.success(request, f'Successfully imported {imported_count} customers.')
+                if skipped_count > 0:
+                    messages.warning(request, f'Skipped {skipped_count} rows (duplicates or errors).')
+                if error_rows:
+                    # Store errors in session for display (limit to 50)
+                    request.session['import_errors'] = error_rows[:50]
+                    if len(error_rows) > 50:
+                        messages.warning(request, f'Showing first 50 errors. Total errors: {len(error_rows)}')
+                
+                return redirect('customers:customer-list')
+                
+            except Exception as e:
+                messages.error(request, f'Error processing file: {str(e)}')
+                return redirect('customers:customer-import')
+        else:
+            # Form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+            return redirect('customers:customer-import')
+    
+    # GET request - show import form
+    form = CustomerImportForm()
+    
+    # Define required and optional headers for the template
+    required_headers = ['first_name', 'last_name', 'email', 'phone']
+    optional_headers = [
+        'company_name', 'customer_type', 'status', 'service_address', 
+        'service_city', 'service_state', 'service_zip_code',
+        'billing_address', 'billing_city', 'billing_state', 'billing_zip_code',
+        'payment_terms', 'preferred_contact_method'
+    ]
+    
+    context = {
+        'form': form,
+        'required_headers': required_headers,
+        'optional_headers': optional_headers,
+        'import_errors': request.session.pop('import_errors', [])
+    }
+    
+    return render(request, 'customers/customer_import.html', context)
 
 
 @login_required

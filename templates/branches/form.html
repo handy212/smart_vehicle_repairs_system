@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Branch • {{ block.super }}{% endblock %}
+
+{% block page_header %}
+<div class="bg-white border-b border-gray-200">
+    <div class="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-semibold text-gray-900">{% if form.instance.pk %}Edit Branch{% else %}New Branch{% endif %}</h1>
+            <a href="{% url 'branches:manage' %}" class="inline-flex items-center rounded-md border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:border-indigo-300 hover:text-indigo-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Back</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div class="px-6 py-6">
+            <form method="post" class="space-y-8" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
+                <fieldset class="space-y-4">
+                    <legend class="text-sm font-semibold text-gray-700">Basic Information</legend>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.name.label }}</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.code.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.code.label }}</label>
+                            {{ form.code }}
+                            {% if form.code.errors %}<p class="mt-1 text-sm text-red-600">{{ form.code.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.description.label }}</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}<p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>{% endif %}
+                    </div>
+                </fieldset>
+
+                <fieldset class="space-y-4">
+                    <legend class="text-sm font-semibold text-gray-700">Contact</legend>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <label for="{{ form.phone.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.phone.label }}</label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}<p class="mt-1 text-sm text-red-600">{{ form.phone.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.email.label }}</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}<p class="mt-1 text-sm text-red-600">{{ form.email.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <label for="{{ form.fax.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.fax.label }}</label>
+                        {{ form.fax }}
+                        {% if form.fax.errors %}<p class="mt-1 text-sm text-red-600">{{ form.fax.errors.0 }}</p>{% endif %}
+                    </div>
+                </fieldset>
+
+                <fieldset class="space-y-4">
+                    <legend class="text-sm font-semibold text-gray-700">Address</legend>
+                    <div>
+                        <label for="{{ form.address.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.address.label }}</label>
+                        {{ form.address }}
+                        {% if form.address.errors %}<p class="mt-1 text-sm text-red-600">{{ form.address.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <label for="{{ form.city.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.city.label }}</label>
+                            {{ form.city }}
+                            {% if form.city.errors %}<p class="mt-1 text-sm text-red-600">{{ form.city.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.state.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.state.label }}</label>
+                            {{ form.state }}
+                            {% if form.state.errors %}<p class="mt-1 text-sm text-red-600">{{ form.state.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <label for="{{ form.zip_code.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.zip_code.label }}</label>
+                            {{ form.zip_code }}
+                            {% if form.zip_code.errors %}<p class="mt-1 text-sm text-red-600">{{ form.zip_code.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.country.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.country.label }}</label>
+                            {{ form.country }}
+                            {% if form.country.errors %}<p class="mt-1 text-sm text-red-600">{{ form.country.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="space-y-4">
+                    <legend class="text-sm font-semibold text-gray-700">Operations</legend>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <label for="{{ form.opening_time.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.opening_time.label }}</label>
+                            {{ form.opening_time }}
+                            {% if form.opening_time.errors %}<p class="mt-1 text-sm text-red-600">{{ form.opening_time.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.closing_time.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.closing_time.label }}</label>
+                            {{ form.closing_time }}
+                            {% if form.closing_time.errors %}<p class="mt-1 text-sm text-red-600">{{ form.closing_time.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <label for="{{ form.timezone.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.timezone.label }}</label>
+                        {{ form.timezone }}
+                        {% if form.timezone.errors %}<p class="mt-1 text-sm text-red-600">{{ form.timezone.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div class="flex flex-col gap-3 md:flex-row md:items-center">
+                        <div>
+                            <label for="{{ form.is_active.id_for_label }}" class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                {{ form.is_active }}
+                                <span>{{ form.is_active.label }}</span>
+                            </label>
+                            {% if form.is_active.errors %}<p class="mt-1 text-sm text-red-600">{{ form.is_active.errors.0 }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.is_headquarters.id_for_label }}" class="inline-flex items-center gap-2 text-sm text-gray-700">
+                                {{ form.is_headquarters }}
+                                <span>{{ form.is_headquarters.label }}</span>
+                            </label>
+                            {% if form.is_headquarters.errors %}<p class="mt-1 text-sm text-red-600">{{ form.is_headquarters.errors.0 }}</p>{% endif %}
+                        </div>
+                    </div>
+                </fieldset>
+
+                <div class="flex flex-col-reverse gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                    <a href="{% url 'branches:manage' %}" class="inline-flex items-center justify-center rounded-md border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:border-indigo-300 hover:text-indigo-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Cancel</a>
+                    <div class="flex flex-wrap gap-2">
+                        {% if form.instance.pk %}
+                        <a href="{% url 'branches:delete' form.instance.pk %}" class="inline-flex items-center justify-center rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:border-red-300 hover:bg-red-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600">Delete</a>
+                        <button type="submit" class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Save Changes</button>
+                        {% else %}
+                        <button type="submit" class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Create Branch</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

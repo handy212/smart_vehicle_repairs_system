@@ -76,6 +76,7 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     
     # API endpoints (without namespace to avoid conflicts with frontend)
+    path('api/branches/', include(('apps.branches.urls', 'api_branches'))),
     path('api/customers/', include(('apps.customers.urls', 'api_customers'))),
     path('api/vehicles/', include(('apps.vehicles.urls', 'api_vehicles'))),
     path('api/appointments/', include(('apps.appointments.urls', 'api_appointments'))),
@@ -88,6 +89,7 @@ urlpatterns = [
     path('api/documents/', include(('apps.documents.urls', 'api_documents'))),
     
     # Frontend app routes (namespaced)
+    path('branches/', include('apps.branches.frontend_urls', namespace='branches')),
     # Phase 3: Customer Management - IMPLEMENTED
     path('customers/', include('apps.customers.frontend_urls', namespace='customers')),
     

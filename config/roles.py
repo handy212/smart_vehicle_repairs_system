@@ -22,7 +22,7 @@ class Admin(AbstractUserRole):
 
 
 class Manager(AbstractUserRole):
-    """Workshop/Branch manager"""
+    """Workshop/Branch manager - can access multiple branches"""
     available_permissions = {
         'view_reports': True,
         'manage_inventory': True,
@@ -33,6 +33,8 @@ class Manager(AbstractUserRole):
         'manage_vehicles': True,
         'manage_technicians': True,
         'approve_estimates': True,
+        'view_branch_data': True,  # Can view data from assigned branches
+        'manage_branch_staff': True,  # Can manage staff at assigned branches
     }
 
 

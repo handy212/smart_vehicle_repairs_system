@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice {{ invoice.invoice_number }} - Smart Vehicle Repairs</title>
-    
-    <!-- Bootstrap CSS for styling -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
         @media print {
@@ -16,7 +15,6 @@
                 -webkit-print-color-adjust: exact; 
                 print-color-adjust: exact;
             }
-            .table th { background-color: #f8f9fa !important; }
         }
         
         body {
@@ -24,123 +22,6 @@
             font-size: 14px;
             line-height: 1.4;
         }
-        
-        .invoice-header {
-            border-bottom: 3px solid #007bff;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-        }
-        
-        .company-logo {
-            max-height: 80px;
-            max-width: 200px;
-        }
-        
-        .company-info h1 {
-            color: #007bff;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-        
-        .company-info p {
-            margin-bottom: 0.25rem;
-            color: #6c757d;
-        }
-        
-        .invoice-title {
-            font-size: 3rem;
-            font-weight: 300;
-            color: #6c757d;
-            text-align: right;
-        }
-        
-        .invoice-meta {
-            text-align: right;
-            font-size: 1.1rem;
-        }
-        
-        .invoice-meta strong {
-            color: #495057;
-        }
-        
-        .section-title {
-            color: #495057;
-            font-weight: 600;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .bill-to, .vehicle-info {
-            background-color: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 0.375rem;
-            border-left: 4px solid #007bff;
-        }
-        
-        .line-items-table {
-            margin: 2rem 0;
-        }
-        
-        .line-items-table th {
-            background-color: #007bff;
-            color: white;
-            font-weight: 600;
-            border: none;
-        }
-        
-        .line-items-table td {
-            border-bottom: 1px solid #dee2e6;
-            vertical-align: top;
-            padding: 0.75rem;
-        }
-        
-        .totals-section {
-            background-color: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 0.375rem;
-            border: 1px solid #dee2e6;
-        }
-        
-        .total-line {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #007bff;
-            border-top: 2px solid #007bff;
-            padding-top: 0.5rem;
-        }
-        
-        .payment-terms {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 0.375rem;
-            padding: 1rem;
-            margin-top: 2rem;
-        }
-        
-        .footer-note {
-            text-align: center;
-            color: #6c757d;
-            font-size: 0.9rem;
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid #dee2e6;
-        }
-        
-        .status-badge {
-            font-size: 1.2rem;
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .status-paid { background-color: #d4edda; color: #155724; }
-        .status-partial { background-color: #fff3cd; color: #856404; }
-        .status-overdue { background-color: #f8d7da; color: #721c24; }
-        .status-draft { background-color: #e2e3e5; color: #383d41; }
-        .status-sent { background-color: #d1ecf1; color: #0c5460; }
         
         .watermark {
             position: absolute;
@@ -155,8 +36,8 @@
         }
     </style>
 </head>
-<body>
-    <div class="container-fluid">
+<body class="bg-white">
+    <div class="max-w-4xl mx-auto px-6 py-8">
         <!-- Watermark for certain statuses -->
         {% if invoice.status == 'draft' %}
         <div class="watermark">DRAFT</div>
@@ -167,57 +48,65 @@
         {% endif %}
 
         <!-- Print Controls -->
-        <div class="no-print mb-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <button onclick="window.print()" class="btn btn-primary">
-                    <i class="fas fa-print me-2"></i>Print Invoice
+        <div class="no-print mb-6">
+            <div class="flex justify-between items-center">
+                <button onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-print"></i>
+                    <span>Print Invoice</span>
                 </button>
-                <div>
-                    <button onclick="window.close()" class="btn btn-secondary me-2">
-                        <i class="fas fa-times me-2"></i>Close
+                <div class="flex items-center gap-2">
+                    <button onclick="window.close()" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                        <i class="fas fa-times"></i>
+                        <span>Close</span>
                     </button>
-                    <a href="{% url 'billing:invoice_detail' invoice.id %}" class="btn btn-outline-primary">
-                        <i class="fas fa-arrow-left me-2"></i>Back to Invoice
+                    <a href="{% url 'billing:invoice_detail' invoice.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Back to Invoice</span>
                     </a>
                 </div>
             </div>
         </div>
 
         <!-- Invoice Header -->
-        <div class="invoice-header">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <div class="company-info">
+        <div class="border-b-4 border-primary mb-8 pb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <div>
                         <!-- Company Logo (if available) -->
-                        <!--<img src="{% load static %}{% static 'images/logo.png' %}" alt="Smart Vehicle Repairs" class="company-logo mb-3">-->
+                        <!--<img src="{% load static %}{% static 'images/logo.png' %}" alt="Smart Vehicle Repairs" class="max-h-20 max-w-48 mb-4">-->
                         
-                        <h1>Smart Vehicle Repairs</h1>
-                        <p><strong>123 Auto Repair Lane</strong></p>
-                        <p>Garage City, GH 12345</p>
-                        <p><strong>Phone:</strong> (555) 123-4567</p>
-                        <p><strong>Email:</strong> info@smartvehiclerepairs.com</p>
-                        <p><strong>Website:</strong> www.smartvehiclerepairs.com</p>
+                        <h1 class="text-3xl font-bold text-primary mb-2">Smart Vehicle Repairs</h1>
+                        <p class="text-sm text-slate-600 mb-1"><strong>123 Auto Repair Lane</strong></p>
+                        <p class="text-sm text-slate-600 mb-1">Garage City, GH 12345</p>
+                        <p class="text-sm text-slate-600 mb-1"><strong>Phone:</strong> (555) 123-4567</p>
+                        <p class="text-sm text-slate-600 mb-1"><strong>Email:</strong> info@smartvehiclerepairs.com</p>
+                        <p class="text-sm text-slate-600 mb-0"><strong>Website:</strong> www.smartvehiclerepairs.com</p>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="invoice-title">INVOICE</div>
-                    <div class="invoice-meta">
-                        <div class="mb-2">
-                            <strong>Invoice #:</strong> {{ invoice.invoice_number }}
+                <div class="text-right">
+                    <div class="text-5xl font-light text-slate-500 mb-4">INVOICE</div>
+                    <div class="text-base space-y-2">
+                        <div>
+                            <strong class="text-slate-700">Invoice #:</strong> {{ invoice.invoice_number }}
                         </div>
-                        <div class="mb-2">
-                            <strong>Date:</strong> {{ invoice.invoice_date|date:"F d, Y" }}
+                        <div>
+                            <strong class="text-slate-700">Date:</strong> {{ invoice.invoice_date|date:"F d, Y" }}
                         </div>
-                        <div class="mb-2">
-                            <strong>Due Date:</strong> {{ invoice.due_date|date:"F d, Y" }}
+                        <div>
+                            <strong class="text-slate-700">Due Date:</strong> {{ invoice.due_date|date:"F d, Y" }}
                         </div>
                         {% if invoice.work_order %}
-                        <div class="mb-2">
-                            <strong>Work Order:</strong> {{ invoice.work_order.work_order_number }}
+                        <div>
+                            <strong class="text-slate-700">Work Order:</strong> {{ invoice.work_order.work_order_number }}
                         </div>
                         {% endif %}
-                        <div class="mt-3">
-                            <span class="status-badge status-{{ invoice.status }}">
+                        <div class="mt-4">
+                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-semibold uppercase
+                                {% if invoice.status == 'paid' %}bg-emerald-100 text-emerald-800
+                                {% elif invoice.status == 'partial' %}bg-amber-100 text-amber-800
+                                {% elif invoice.status == 'overdue' %}bg-rose-100 text-rose-800
+                                {% elif invoice.status == 'draft' %}bg-slate-100 text-slate-800
+                                {% else %}bg-blue-100 text-blue-800{% endif %}">
                                 {{ invoice.get_status_display }}
                             </span>
                         </div>
@@ -227,46 +116,46 @@
         </div>
 
         <!-- Customer and Vehicle Information -->
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <h4 class="section-title">Bill To</h4>
-                <div class="bill-to">
-                    <h5>{{ invoice.customer.get_full_name }}</h5>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+                <h4 class="text-base font-semibold text-slate-700 border-b-2 border-primary pb-2 mb-4">Bill To</h4>
+                <div class="bg-slate-50 p-6 rounded-lg border-l-4 border-primary">
+                    <h5 class="text-base font-semibold text-slate-900 mb-2">{{ invoice.customer.get_full_name }}</h5>
                     {% if invoice.customer.company %}
-                    <p><strong>{{ invoice.customer.company }}</strong></p>
+                    <p class="text-sm text-slate-700 mb-2"><strong>{{ invoice.customer.company }}</strong></p>
                     {% endif %}
                     {% if invoice.customer.address %}
-                    <p>{{ invoice.customer.address }}</p>
+                    <p class="text-sm text-slate-600 mb-1">{{ invoice.customer.address }}</p>
                     {% if invoice.customer.city or invoice.customer.state or invoice.customer.zip_code %}
-                    <p>
+                    <p class="text-sm text-slate-600 mb-1">
                         {% if invoice.customer.city %}{{ invoice.customer.city }}{% endif %}{% if invoice.customer.city and invoice.customer.state %}, {% endif %}{% if invoice.customer.state %}{{ invoice.customer.state }}{% endif %}{% if invoice.customer.zip_code %} {{ invoice.customer.zip_code }}{% endif %}
                     </p>
                     {% endif %}
                     {% endif %}
                     {% if invoice.customer.phone %}
-                    <p><strong>Phone:</strong> {{ invoice.customer.phone }}</p>
+                    <p class="text-sm text-slate-600 mb-1"><strong>Phone:</strong> {{ invoice.customer.phone }}</p>
                     {% endif %}
                     {% if invoice.customer.email %}
-                    <p><strong>Email:</strong> {{ invoice.customer.email }}</p>
+                    <p class="text-sm text-slate-600 mb-0"><strong>Email:</strong> {{ invoice.customer.email }}</p>
                     {% endif %}
                 </div>
             </div>
-            <div class="col-md-6">
-                <h4 class="section-title">Vehicle Information</h4>
-                <div class="vehicle-info">
-                    <h5>{{ invoice.vehicle.year }} {{ invoice.vehicle.make }} {{ invoice.vehicle.model }}</h5>
-                    <p><strong>VIN:</strong> {{ invoice.vehicle.vin }}</p>
+            <div>
+                <h4 class="text-base font-semibold text-slate-700 border-b-2 border-primary pb-2 mb-4">Vehicle Information</h4>
+                <div class="bg-slate-50 p-6 rounded-lg border-l-4 border-primary">
+                    <h5 class="text-base font-semibold text-slate-900 mb-2">{{ invoice.vehicle.year }} {{ invoice.vehicle.make }} {{ invoice.vehicle.model }}</h5>
+                    <p class="text-sm text-slate-600 mb-1"><strong>VIN:</strong> {{ invoice.vehicle.vin }}</p>
                     {% if invoice.vehicle.license_plate %}
-                    <p><strong>License Plate:</strong> {{ invoice.vehicle.license_plate }}</p>
+                    <p class="text-sm text-slate-600 mb-1"><strong>License Plate:</strong> {{ invoice.vehicle.license_plate }}</p>
                     {% endif %}
                     {% if invoice.vehicle.color %}
-                    <p><strong>Color:</strong> {{ invoice.vehicle.color }}</p>
+                    <p class="text-sm text-slate-600 mb-1"><strong>Color:</strong> {{ invoice.vehicle.color }}</p>
                     {% endif %}
                     {% if invoice.vehicle.engine %}
-                    <p><strong>Engine:</strong> {{ invoice.vehicle.engine }}</p>
+                    <p class="text-sm text-slate-600 mb-1"><strong>Engine:</strong> {{ invoice.vehicle.engine }}</p>
                     {% endif %}
                     {% if invoice.vehicle.mileage %}
-                    <p><strong>Mileage:</strong> {{ invoice.vehicle.mileage|floatformat:0 }} miles</p>
+                    <p class="text-sm text-slate-600 mb-0"><strong>Mileage:</strong> {{ invoice.vehicle.mileage|floatformat:0 }} miles</p>
                     {% endif %}
                 </div>
             </div>
@@ -274,64 +163,64 @@
 
         <!-- Service Description -->
         {% if invoice.description %}
-        <div class="mb-4">
-            <h4 class="section-title">Service Description</h4>
-            <div class="bg-light p-3 rounded">
-                <p class="mb-0">{{ invoice.description|linebreaks }}</p>
+        <div class="mb-8">
+            <h4 class="text-base font-semibold text-slate-700 border-b-2 border-primary pb-2 mb-4">Service Description</h4>
+            <div class="bg-slate-50 p-4 rounded-lg">
+                <p class="text-sm text-slate-700 mb-0">{{ invoice.description|linebreaks }}</p>
             </div>
         </div>
         {% endif %}
 
         <!-- Line Items -->
-        <div class="line-items-section">
-            <h4 class="section-title">Services & Parts</h4>
-            <table class="table table-bordered line-items-table">
+        <div class="mb-8">
+            <h4 class="text-base font-semibold text-slate-700 border-b-2 border-primary pb-2 mb-4">Services & Parts</h4>
+            <table class="w-full border-collapse">
                 <thead>
-                    <tr>
-                        <th width="50%">Description</th>
-                        <th width="10%" class="text-center">Qty</th>
-                        <th width="15%" class="text-end">Unit Price</th>
-                        <th width="15%" class="text-end">Total</th>
+                    <tr class="bg-primary text-white">
+                        <th class="text-left p-3 font-semibold" style="width: 50%;">Description</th>
+                        <th class="text-center p-3 font-semibold" style="width: 10%;">Qty</th>
+                        <th class="text-right p-3 font-semibold" style="width: 15%;">Unit Price</th>
+                        <th class="text-right p-3 font-semibold" style="width: 15%;">Total</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% if invoice.work_order %}
                         <!-- Service Tasks from Work Order -->
                         {% for task in invoice.work_order.service_tasks.all %}
-                        <tr>
-                            <td>
-                                <strong>{{ task.description }}</strong>
+                        <tr class="border-b border-slate-200">
+                            <td class="p-3">
+                                <strong class="text-sm text-slate-900">{{ task.description }}</strong>
                                 {% if task.notes %}
-                                <br><small class="text-muted">{{ task.notes }}</small>
+                                <br><small class="text-xs text-slate-500">{{ task.notes }}</small>
                                 {% endif %}
                             </td>
-                            <td class="text-center">{{ task.hours|floatformat:1 }} hrs</td>
-                            <td class="text-end">${{ task.labor_rate|floatformat:2 }}</td>
-                            <td class="text-end">${{ task.total_price|floatformat:2 }}</td>
+                            <td class="p-3 text-center text-sm text-slate-700">{{ task.hours|floatformat:1 }} hrs</td>
+                            <td class="p-3 text-right text-sm text-slate-700">${{ task.labor_rate|floatformat:2 }}</td>
+                            <td class="p-3 text-right text-sm font-semibold text-slate-900">${{ task.total_price|floatformat:2 }}</td>
                         </tr>
                         {% endfor %}
                         
                         <!-- Parts from Work Order -->
                         {% for part in invoice.work_order.parts.all %}
-                        <tr>
-                            <td>
-                                <strong>{{ part.part.name }}</strong>
+                        <tr class="border-b border-slate-200">
+                            <td class="p-3">
+                                <strong class="text-sm text-slate-900">{{ part.part.name }}</strong>
                                 {% if part.part.part_number %}
-                                <br><small class="text-muted">Part #: {{ part.part.part_number }}</small>
+                                <br><small class="text-xs text-slate-500">Part #: {{ part.part.part_number }}</small>
                                 {% endif %}
                                 {% if part.part.brand %}
-                                <br><small class="text-muted">Brand: {{ part.part.brand }}</small>
+                                <br><small class="text-xs text-slate-500">Brand: {{ part.part.brand }}</small>
                                 {% endif %}
                             </td>
-                            <td class="text-center">{{ part.quantity }}</td>
-                            <td class="text-end">${{ part.unit_price|floatformat:2 }}</td>
-                            <td class="text-end">${{ part.total_price|floatformat:2 }}</td>
+                            <td class="p-3 text-center text-sm text-slate-700">{{ part.quantity }}</td>
+                            <td class="p-3 text-right text-sm text-slate-700">${{ part.unit_price|floatformat:2 }}</td>
+                            <td class="p-3 text-right text-sm font-semibold text-slate-900">${{ part.total_price|floatformat:2 }}</td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <!-- Manual line items would go here if not linked to work order -->
                         <tr>
-                            <td colspan="4" class="text-center text-muted py-4">
+                            <td colspan="4" class="p-4 text-center text-slate-500 italic">
                                 <em>Line items will be detailed when work order is linked</em>
                             </td>
                         </tr>
@@ -341,85 +230,85 @@
         </div>
 
         <!-- Invoice Totals -->
-        <div class="row">
-            <div class="col-md-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
                 <!-- Customer Notes -->
                 {% if invoice.customer_notes %}
-                <div class="mb-4">
-                    <h5 class="section-title">Notes</h5>
-                    <div class="bg-light p-3 rounded">
-                        {{ invoice.customer_notes|linebreaks }}
+                <div>
+                    <h5 class="text-base font-semibold text-slate-700 border-b-2 border-primary pb-2 mb-4">Notes</h5>
+                    <div class="bg-slate-50 p-4 rounded-lg">
+                        <div class="text-sm text-slate-700">{{ invoice.customer_notes|linebreaks }}</div>
                     </div>
                 </div>
                 {% endif %}
             </div>
-            <div class="col-md-6">
-                <div class="totals-section">
-                    <table class="table table-borderless mb-0">
-                        <tbody>
+            <div>
+                <div class="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                    <table class="w-full">
+                        <tbody class="space-y-2">
                             {% if invoice.labor_subtotal > 0 %}
                             <tr>
-                                <td>Labor Subtotal:</td>
-                                <td class="text-end">${{ invoice.labor_subtotal|floatformat:2 }}</td>
+                                <td class="text-sm text-slate-700 py-1">Labor Subtotal:</td>
+                                <td class="text-sm text-slate-700 text-right py-1">${{ invoice.labor_subtotal|floatformat:2 }}</td>
                             </tr>
                             {% endif %}
                             {% if invoice.parts_subtotal > 0 %}
                             <tr>
-                                <td>Parts Subtotal:</td>
-                                <td class="text-end">${{ invoice.parts_subtotal|floatformat:2 }}</td>
+                                <td class="text-sm text-slate-700 py-1">Parts Subtotal:</td>
+                                <td class="text-sm text-slate-700 text-right py-1">${{ invoice.parts_subtotal|floatformat:2 }}</td>
                             </tr>
                             {% endif %}
                             {% if invoice.sublet_subtotal > 0 %}
                             <tr>
-                                <td>Sublet/Outsource:</td>
-                                <td class="text-end">${{ invoice.sublet_subtotal|floatformat:2 }}</td>
+                                <td class="text-sm text-slate-700 py-1">Sublet/Outsource:</td>
+                                <td class="text-sm text-slate-700 text-right py-1">${{ invoice.sublet_subtotal|floatformat:2 }}</td>
                             </tr>
                             {% endif %}
                             <tr>
-                                <td><strong>Subtotal:</strong></td>
-                                <td class="text-end"><strong>${{ invoice.subtotal|floatformat:2 }}</strong></td>
+                                <td class="text-sm font-semibold text-slate-900 py-2"><strong>Subtotal:</strong></td>
+                                <td class="text-sm font-semibold text-slate-900 text-right py-2"><strong>${{ invoice.subtotal|floatformat:2 }}</strong></td>
                             </tr>
                             {% if invoice.discount_amount > 0 %}
                             <tr>
-                                <td>
+                                <td class="text-sm text-slate-700 py-1">
                                     Discount {% if invoice.discount_percentage > 0 %}({{ invoice.discount_percentage }}%){% endif %}:
                                     {% if invoice.discount_reason %}
-                                    <br><small class="text-muted">{{ invoice.discount_reason }}</small>
+                                    <br><small class="text-xs text-slate-500">{{ invoice.discount_reason }}</small>
                                     {% endif %}
                                 </td>
-                                <td class="text-end text-success">-${{ invoice.discount_amount|floatformat:2 }}</td>
+                                <td class="text-sm text-emerald-600 text-right py-1">-${{ invoice.discount_amount|floatformat:2 }}</td>
                             </tr>
                             {% endif %}
                             {% if invoice.tax_amount > 0 %}
                             <tr>
-                                <td>Tax:</td>
-                                <td class="text-end">${{ invoice.tax_amount|floatformat:2 }}</td>
+                                <td class="text-sm text-slate-700 py-1">Tax:</td>
+                                <td class="text-sm text-slate-700 text-right py-1">${{ invoice.tax_amount|floatformat:2 }}</td>
                             </tr>
                             {% endif %}
                             {% if invoice.shop_supplies_fee > 0 %}
                             <tr>
-                                <td>Shop Supplies Fee:</td>
-                                <td class="text-end">${{ invoice.shop_supplies_fee|floatformat:2 }}</td>
+                                <td class="text-sm text-slate-700 py-1">Shop Supplies Fee:</td>
+                                <td class="text-sm text-slate-700 text-right py-1">${{ invoice.shop_supplies_fee|floatformat:2 }}</td>
                             </tr>
                             {% endif %}
                             {% if invoice.environmental_fee > 0 %}
                             <tr>
-                                <td>Environmental Fee:</td>
-                                <td class="text-end">${{ invoice.environmental_fee|floatformat:2 }}</td>
+                                <td class="text-sm text-slate-700 py-1">Environmental Fee:</td>
+                                <td class="text-sm text-slate-700 text-right py-1">${{ invoice.environmental_fee|floatformat:2 }}</td>
                             </tr>
                             {% endif %}
-                            <tr class="total-line">
-                                <td><strong>TOTAL AMOUNT:</strong></td>
-                                <td class="text-end"><strong>${{ invoice.total|floatformat:2 }}</strong></td>
+                            <tr class="border-t-2 border-primary pt-2">
+                                <td class="text-lg font-bold text-primary py-2"><strong>TOTAL AMOUNT:</strong></td>
+                                <td class="text-lg font-bold text-primary text-right py-2"><strong>${{ invoice.total|floatformat:2 }}</strong></td>
                             </tr>
                             {% if invoice.amount_paid > 0 %}
                             <tr>
-                                <td>Amount Paid:</td>
-                                <td class="text-end text-success">${{ invoice.amount_paid|floatformat:2 }}</td>
+                                <td class="text-sm text-slate-700 py-1">Amount Paid:</td>
+                                <td class="text-sm text-emerald-600 text-right py-1">${{ invoice.amount_paid|floatformat:2 }}</td>
                             </tr>
-                            <tr class="{% if invoice.amount_due > 0 %}text-danger{% else %}text-success{% endif %}">
-                                <td><strong>BALANCE DUE:</strong></td>
-                                <td class="text-end"><strong>${{ invoice.amount_due|floatformat:2 }}</strong></td>
+                            <tr class="{% if invoice.amount_due > 0 %}text-rose-600{% else %}text-emerald-600{% endif %}">
+                                <td class="text-base font-bold py-2"><strong>BALANCE DUE:</strong></td>
+                                <td class="text-base font-bold text-right py-2"><strong>${{ invoice.amount_due|floatformat:2 }}</strong></td>
                             </tr>
                             {% endif %}
                         </tbody>
@@ -430,32 +319,30 @@
 
         <!-- Payment Terms and Notes -->
         {% if invoice.terms %}
-        <div class="payment-terms">
-            <h5><i class="fas fa-info-circle me-2"></i>Payment Terms</h5>
-            <p class="mb-0">{{ invoice.terms }}</p>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-8">
+            <h5 class="text-sm font-semibold text-amber-900 mb-2 flex items-center gap-2">
+                <i class="fas fa-info-circle"></i>
+                Payment Terms
+            </h5>
+            <p class="text-sm text-amber-800 mb-0">{{ invoice.terms }}</p>
         </div>
         {% endif %}
 
         <!-- Footer -->
-        <div class="footer-note">
-            <p><strong>Thank you for choosing Smart Vehicle Repairs!</strong></p>
-            <p>
+        <div class="text-center text-slate-500 text-sm mt-12 pt-8 border-t border-slate-200">
+            <p class="font-semibold text-slate-700 mb-2"><strong>Thank you for choosing Smart Vehicle Repairs!</strong></p>
+            <p class="mb-2">
                 For questions about this invoice, please contact us at (555) 123-4567 or 
-                <a href="mailto:billing@smartvehiclerepairs.com">billing@smartvehiclerepairs.com</a>
+                <a href="mailto:billing@smartvehiclerepairs.com" class="text-primary hover:underline">billing@smartvehiclerepairs.com</a>
             </p>
-            <p class="mt-3">
-                <small>
-                    Invoice generated on {{ "now"|date:"F d, Y \a\t g:i A" }} | 
-                    Payment terms apply as of invoice date | 
-                    All prices in USD
-                </small>
+            <p class="mt-4 text-xs">
+                Invoice generated on {% now "F d, Y \a\t g:i A" %} | 
+                Payment terms apply as of invoice date | 
+                All prices in USD
             </p>
         </div>
     </div>
 
-    <!-- Font Awesome for icons -->
-    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js"></script>
-    
     <!-- Auto-print functionality -->
     <script>
         // Auto-print when opened with print parameter

@@ -1,6 +1,6 @@
 {% load static %}
-<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top" style="z-index: 1000;">
-    <div class="container-fluid">
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-b border-slate-200 fixed top-0 left-0 right-0 z-50" style="height: 56px;">
+    <div class="container-fluid h-full">
         <!-- Brand -->
         <a class="navbar-brand d-flex align-items-center" href="{% if user.is_authenticated %}{% if user.role == 'customer' %}{% url 'portal:home' %}{% else %}{% url 'dashboard' %}{% endif %}{% else %}/{% endif %}">
             {% if LOGO_PATH %}
@@ -60,6 +60,9 @@
                             {% endif %}
                         </ul>
                     </div>
+                </div>
+                <div class="branch-switcher-wrapper d-lg-flex justify-content-lg-end mt-3 mt-lg-0">
+                    {% include 'partials/branch_switcher.html' %}
                 </div>
             {% endif %}
             

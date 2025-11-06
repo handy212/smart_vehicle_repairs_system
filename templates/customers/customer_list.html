@@ -1,361 +1,441 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block title %}Customers • {{ block.super }}{% endblock %}
 
-{% block title %}Customers - Smart Vehicle Repairs{% endblock %}
-{% block page_title %}Customer Management{% endblock %}
-
-
+{% block page_header %}
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h1 class="text-xl font-semibold text-slate-900">
+                <i class="fas fa-users mr-2 text-primary"></i>
+                Customers
+            </h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'customers:customer-import' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-file-import"></i>
+                <span>Import</span>
+            </a>
+            <a href="{% url 'customers:customer-export' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-file-export"></i>
+                <span>Export</span>
+            </a>
+            <a href="{% url 'customers:customer-create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                <i class="fas fa-plus"></i>
+                <span>New Customer</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="page-header-card shadow-sm mb-4">
-        <div class="row align-items-center g-3">
-            <div class="col-lg-8">
-                <div class="d-inline-flex align-items-center gap-3">
-                    <span class="badge bg-white text-primary fw-semibold text-uppercase px-3 py-2 shadow-sm">Customers</span>
-                </div>
-                <h1 class="page-title mt-3 mb-2">Customer Directory</h1>
-                <p class="page-subtitle">Manage relationships, track account health, and move quickly on follow-ups.</p>
-            </div>
-            <div class="col-lg-4 text-lg-end">
-                <div class="page-actions d-flex justify-content-lg-end gap-2 flex-wrap">
-                    <a href="{% url 'customers:customer-export' %}" class="btn btn-light">
-                        <i class="fas fa-file-arrow-down me-2"></i> Export CSV
-                    </a>
-                    <a href="{% url 'customers:customer-create' %}" class="btn btn-contrast">
-                        <i class="fas fa-plus me-2"></i> Add Customer
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-xxl-3 col-sm-6">
-            <div class="stat-card shadow-sm h-100">
-                <div class="stat-icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div>
-                    <p class="stat-label">Total Customers</p>
-                    <p class="stat-value">{{ total_customers|default:0 }}</p>
-                    <p class="stat-meta">{{ active_customers|default:0 }} active accounts</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-xxl-3 col-sm-6">
-            <div class="stat-card is-success shadow-sm h-100">
-                <div class="stat-icon">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <div>
-                    <p class="stat-label">Active Customers</p>
-                    <p class="stat-value">{{ active_customers|default:0 }}</p>
-                    <p class="stat-meta">Active rate {{ active_rate|default:0|floatformat:1 }}%</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-xxl-3 col-sm-6">
-            <div class="stat-card is-neutral shadow-sm h-100">
-                <div class="stat-icon">
-                    <i class="fas fa-user-clock"></i>
-                </div>
-                <div>
-                    <p class="stat-label">Inactive Queue</p>
-                    <p class="stat-value">{{ inactive_customers|default:0 }}</p>
-                    <p class="stat-meta">Ready for follow-up</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-xxl-3 col-sm-6">
-            <div class="stat-card is-warning shadow-sm h-100">
-                <div class="stat-icon">
-                    <i class="fas fa-user-plus"></i>
-                </div>
-                <div>
-                    <p class="stat-label">New This Month</p>
-                    <p class="stat-value">{{ new_this_month|default:0 }}</p>
-                    <p class="stat-meta">Avg {{ average_vehicle_count|default:0|floatformat:1 }} vehicles / customer</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="filter-section">
-        <form method="get" id="filterForm">
-            <div class="row g-3 align-items-end">
-                <div class="col-12 col-lg-4 col-xl-4">
-                    <label class="form-label">Search</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-transparent text-muted"><i class="fas fa-search"></i></span>
-                        <input type="text" name="search" class="form-control" placeholder="Name, email, phone..." value="{{ request.GET.search }}">
+<!-- Quick Stats -->
+<style>
+    .stat-cards-grid {
+        display: grid !important;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (min-width: 640px) {
+        .stat-cards-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+    }
+    @media (min-width: 1024px) {
+        .stat-cards-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        }
+    }
+</style>
+<div class="stat-cards-grid">
+    {% url 'customers:customer-list' as customer_list_url %}
+    <a href="{{ customer_list_url }}" class="block h-full w-full">
+        {% include 'partials/stat_card.html' with label="Total" value=total_customers|default:0 icon="fas fa-users" color="primary" %}
+    </a>
+    <a href="{{ customer_list_url }}?status=active" class="block h-full w-full">
+        {% include 'partials/stat_card.html' with label="Active" value=active_customers|default:0 icon="fas fa-check-circle" color="success" %}
+    </a>
+    <a href="{{ customer_list_url }}?status=inactive" class="block h-full w-full">
+        {% include 'partials/stat_card.html' with label="Inactive" value=inactive_customers|default:0 icon="fas fa-ban" color="secondary" %}
+    </a>
+    <a href="{{ customer_list_url }}" class="block h-full w-full">
+        {% include 'partials/stat_card.html' with label="New This Month" value=new_this_month|default:0 icon="fas fa-user-plus" color="info" %}
+    </a>
                     </div>
+
+<!-- Search and Filters -->
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6 overflow-hidden">
+    <!-- Quick Search Bar -->
+    <div class="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+        <form method="get" id="quickSearchForm" class="flex items-center gap-3">
+            <div class="flex-1 relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input 
+                    type="text" 
+                    name="search" 
+                    value="{{ search }}" 
+                    placeholder="Search customers by name, email, phone, company..." 
+                    class="w-full pl-11 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                    id="quickSearchInput"
+                />
                 </div>
-                <div class="col-6 col-lg-2 col-xl-2">
-                    <label class="form-label">Type</label>
-                    <select name="customer_type" class="form-select">
+            <button 
+                type="button" 
+                id="filterToggle" 
+                class="px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors flex items-center gap-2"
+            >
+                    <i class="fas fa-sliders-h"></i>
+                <span>Filters</span>
+                {% if request.GET.status or request.GET.customer_type or request.GET.date_from or request.GET.date_to or request.GET.sort %}
+                    <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-white text-xs font-semibold">
+                        {% if request.GET.status %}+{% endif %}{% if request.GET.customer_type %}+{% endif %}{% if request.GET.date_from %}+{% endif %}{% if request.GET.date_to %}+{% endif %}{% if request.GET.sort %}+{% endif %}
+                    </span>
+                {% endif %}
+            </button>
+        </form>
+        </div>
+
+    <!-- Active Filters (if any) -->
+    {% if request.GET.search or request.GET.status or request.GET.customer_type or request.GET.date_from or request.GET.date_to or request.GET.sort %}
+    <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center flex-wrap gap-2">
+        <span class="text-xs font-medium text-slate-500">Active filters:</span>
+        {% if request.GET.search %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            <i class="fas fa-search text-[10px]"></i>
+            Search: "{{ request.GET.search }}"
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'search' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        {% if request.GET.status %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            Status: {{ request.GET.status|title }}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'status' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        {% if request.GET.customer_type %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            Type: {{ request.GET.customer_type|title }}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'customer_type' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        {% if request.GET.date_from %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            From: {{ request.GET.date_from }}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'date_from' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        {% if request.GET.date_to %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            To: {{ request.GET.date_to }}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'date_to' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        {% if request.GET.sort %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            Sort: {{ request.GET.sort }}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        <a href="{% url 'customers:customer-list' %}" class="ml-auto text-xs font-medium text-slate-600 hover:text-primary transition-colors">
+            <i class="fas fa-times-circle mr-1"></i>Clear all
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- Advanced Filters (Collapsible) -->
+    <div id="filterContent" class="hidden">
+        <form method="get" id="filterForm" class="p-4 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                        <i class="fas fa-tag mr-1.5 text-primary"></i>Customer Type
+                    </label>
+                    <select name="customer_type" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
                         <option value="">All Types</option>
-                        <option value="individual" {% if request.GET.customer_type == 'individual' %}selected{% endif %}>Individual</option>
-                        <option value="business" {% if request.GET.customer_type == 'business' %}selected{% endif %}>Business</option>
-                        <option value="fleet" {% if request.GET.customer_type == 'fleet' %}selected{% endif %}>Fleet</option>
+                        {% for value, label in customer_types %}
+                            <option value="{{ value }}" {% if customer_type_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
-                <div class="col-6 col-lg-2 col-xl-2">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select">
-                        <option value="">All Statuses</option>
-                        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
-                        <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
-                        <option value="suspended" {% if request.GET.status == 'suspended' %}selected{% endif %}>Suspended</option>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                        <i class="fas fa-check-circle mr-1.5 text-primary"></i>Status
+                    </label>
+                    <select name="status" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                        <option value="">All Status</option>
+                        {% for value, label in customer_statuses %}
+                            <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
-                <div class="col-6 col-lg-2 col-xl-2">
-                    <label class="form-label">Sort By</label>
-                    <select name="sort" class="form-select">
-                        <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Newest First</option>
-                        <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>Oldest First</option>
-                        <option value="user__first_name" {% if request.GET.sort == 'user__first_name' %}selected{% endif %}>Name A-Z</option>
-                        <option value="-user__first_name" {% if request.GET.sort == '-user__first_name' %}selected{% endif %}>Name Z-A</option>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                        <i class="fas fa-sort mr-1.5 text-primary"></i>Sort By
+                    </label>
+                    <select name="sort" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                        {% for value, label in sort_options %}
+                            <option value="{{ value }}" {% if sort == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
-                <div class="col-6 col-lg-2 col-xl-2">
-                    <label class="form-label">Customer Since</label>
-                    <input type="date" name="date_from" class="form-control" value="{{ request.GET.date_from }}">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                        <i class="fas fa-calendar-alt mr-1.5 text-primary"></i>Date From
+                    </label>
+                    <input type="date" name="date_from" value="{{ date_from }}" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
                 </div>
-                <div class="col-6 col-lg-2 col-xl-2">
-                    <label class="form-label">To</label>
-                    <input type="date" name="date_to" class="form-control" value="{{ request.GET.date_to }}">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                        <i class="fas fa-calendar-check mr-1.5 text-primary"></i>Date To
+                    </label>
+                    <input type="date" name="date_to" value="{{ date_to }}" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
                 </div>
-                <div class="col-12 col-lg-4 col-xl-4">
-                    <div class="filter-actions justify-content-lg-end">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-sliders-h me-2"></i>Apply Filters
-                        </button>
-                        <a href="{% url 'customers:customer-list' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-undo me-2"></i>Reset
-                        </a>
-                    </div>
-                </div>
+            </div>
+            <div class="flex items-center justify-between pt-3 border-t border-slate-200">
+                <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-all shadow-sm hover:shadow-md">
+                    <i class="fas fa-filter"></i>
+                    Apply Filters
+                </button>
+                <a href="{% url 'customers:customer-list' %}" class="text-sm font-medium text-slate-600 hover:text-primary transition-colors">
+                    <i class="fas fa-redo mr-1.5"></i>Reset
+                </a>
             </div>
         </form>
     </div>
+</div>
 
-    <!-- Customers Table -->
-    <div class="card">
-        <div class="card-header bg-white">
-            <div class="card-toolbar w-100">
-                <div>
-                    <h5 class="mb-1">Customer List</h5>
-                    {% if customers.paginator.count > 0 %}
-                        <div class="table-meta">Showing {{ customers.start_index }}-{{ customers.end_index }} of {{ customers.paginator.count }}</div>
-                    {% else %}
-                        <div class="table-meta">No customers yet</div>
-                    {% endif %}
-                </div>
-                <div class="ms-auto view-toggle" role="group">
-                    <input type="radio" class="btn-check" name="viewToggle" id="viewToggleTable" data-view-target="table" autocomplete="off" checked>
-                    <label class="btn btn-outline-secondary active" for="viewToggleTable"><i class="fas fa-table me-1"></i>Table</label>
-                    <input type="radio" class="btn-check" name="viewToggle" id="viewToggleCards" data-view-target="card" autocomplete="off">
-                    <label class="btn btn-outline-secondary" for="viewToggleCards"><i class="fas fa-th-large me-1"></i>Cards</label>
-                </div>
-            </div>
+<!-- Bulk Actions Toolbar -->
+<div id="bulkActionsToolbar" class="hidden bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 mb-4">
+    <div class="flex items-center justify-between">
+        <span class="text-sm font-medium text-primary">
+            <span id="selectedCount">0</span> selected
+        </span>
+        <div class="flex items-center gap-2">
+            <button type="button" id="bulkExportBtn" class="px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 rounded-lg transition-colors">
+                Export
+            </button>
+            <button type="button" id="bulkDeleteBtn" class="px-3 py-1.5 text-xs font-medium text-danger hover:bg-danger/20 rounded-lg transition-colors">
+                Delete
+            </button>
         </div>
-        <div class="card-body p-0">
-            <!-- Table View -->
-            <div id="tableView" class="table-responsive">
-                <table class="table table-modern table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th class="ps-3" style="width: 48px;">
-                                <div class="form-check mb-0">
-                                    <input class="form-check-input" type="checkbox" id="selectAll">
-                                </div>
-                            </th>
-                            <th>Customer</th>
-                            <th>Type</th>
-                            <th>Contact</th>
-                            <th>Vehicles</th>
-                            <th>Status</th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for customer in customers %}
-                        <tr>
-                            <td class="ps-3">
-                                <div class="form-check mb-0">
-                                    <input type="checkbox" class="form-check-input customer-checkbox" value="{{ customer.id }}">
-                                </div>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-initials me-3">
-                                        {{ customer.user.first_name.0|upper }}{{ customer.user.last_name.0|upper }}
-                                    </div>
-                                    <div>
-                                        <div class="fw-bold">{{ customer.user.get_full_name }}</div>
-                                        <small class="text-muted">{{ customer.user.email }}</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge-soft badge-soft-primary">{{ customer.get_customer_type_display }}</span>
-                            </td>
-                            <td>
-                                <div class="small">
-                                    <div><i class="fas fa-phone text-muted me-1"></i> {{ customer.user.phone|default:"N/A" }}</div>
-                                    <div><i class="fas fa-map-marker-alt text-muted me-1"></i> {{ customer.service_city|default:"N/A" }}</div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge-soft badge-soft-info">{{ customer.vehicles.count }} vehicle{{ customer.vehicles.count|pluralize }}</span>
-                            </td>
-                            <td>
-                                {% if customer.status == 'active' %}
-                                    <span class="badge-soft badge-soft-success">Active</span>
-                                {% elif customer.status == 'inactive' %}
-                                    <span class="badge-soft badge-soft-muted">Inactive</span>
-                                {% else %}
-                                    <span class="badge-soft badge-soft-danger">{{ customer.get_status_display }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end table-actions">
-                                <a href="{% url 'customers:customer-detail' customer.id %}" class="btn btn-sm btn-outline-primary" title="View Details">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{% url 'customers:customer-edit' customer.id %}" class="btn btn-sm btn-outline-secondary" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <button class="btn btn-sm btn-outline-danger js-delete-trigger" type="button" title="Delete" data-customer-id="{{ customer.id }}" data-customer-name="{{ customer.user.get_full_name|escape }}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center py-5">
-                                <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                                <p class="text-muted">No customers found</p>
-                                <a href="{% url 'customers:customer-create' %}" class="btn btn-primary">Add Your First Customer</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Card View (Hidden by default) -->
-            <div id="cardView" class="row g-3 p-3 d-none">
-                {% for customer in customers %}
-                <div class="col-md-6 col-lg-4">
-                    <div class="card customer-card h-100">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-3">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar-initials">
-                                        {{ customer.user.first_name.0|upper }}{{ customer.user.last_name.0|upper }}
-                                    </div>
-                                    <div>
-                                        <h6 class="mb-1">{{ customer.user.get_full_name }}</h6>
-                                        <span class="badge-soft badge-soft-primary">{{ customer.get_customer_type_display }}</span>
-                                    </div>
-                                </div>
-                                {% if customer.status == 'active' %}
-                                    <span class="badge-soft badge-soft-success">Active</span>
-                                {% elif customer.status == 'inactive' %}
-                                    <span class="badge-soft badge-soft-muted">Inactive</span>
-                                {% else %}
-                                    <span class="badge-soft badge-soft-danger">{{ customer.get_status_display }}</span>
-                                {% endif %}
-                            </div>
-
-                            <div class="small mb-3">
-                                <div class="mb-2"><i class="fas fa-envelope text-muted me-2"></i> {{ customer.user.email }}</div>
-                                <div class="mb-2"><i class="fas fa-phone text-muted me-2"></i> {{ customer.user.phone|default:"N/A" }}</div>
-                                <div class="mb-2"><i class="fas fa-map-marker-alt text-muted me-2"></i> {{ customer.service_city|default:"N/A" }}</div>
-                                {% if customer.company_name %}
-                                <div class="mb-2"><i class="fas fa-building text-muted me-2"></i> {{ customer.company_name }}</div>
-                                {% endif %}
-                            </div>
-
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="text-muted small">{{ customer.vehicles.count }} vehicle{{ customer.vehicles.count|pluralize }}</div>
-                                <div class="d-flex gap-2">
-                                    <a href="{% url 'customers:customer-detail' customer.id %}" class="btn btn-sm btn-outline-primary">View</a>
-                                    <button class="btn btn-sm btn-outline-danger js-delete-trigger" type="button" data-customer-id="{{ customer.id }}" data-customer-name="{{ customer.user.get_full_name|escape }}">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="col-12">
-                    <div class="text-center py-5">
-                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No customers found</p>
-                        <a href="{% url 'customers:customer-create' %}" class="btn btn-primary">Add Your First Customer</a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        
-        <!-- Pagination -->
-        {% if customers.has_other_pages %}
-        <div class="card-footer bg-white">
-            <nav>
-                <ul class="pagination pagination-sm mb-0 justify-content-center">
-                    {% if customers.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ customers.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
-                    </li>
-                    {% endif %}
-                    
-                    {% for num in customers.paginator.page_range %}
-                        {% if customers.number == num %}
-                        <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
-                        {% elif num > customers.number|add:'-3' and num < customers.number|add:'3' %}
-                        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">{{ num }}</a></li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if customers.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ customers.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        </div>
-        {% endif %}
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i> Confirm Deletion</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+<!-- Customer List Table -->
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <!-- Table Header -->
+    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+            <div>
+                    <h3 class="text-sm font-semibold text-slate-900">Customer Directory</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                {% if customers.paginator.count > 0 %}
+                            Showing <span class="font-medium text-slate-700">{{ customers.start_index }}</span>–<span class="font-medium text-slate-700">{{ customers.end_index }}</span> of <span class="font-medium text-slate-700">{{ customers.paginator.count }}</span> customers
+                {% else %}
+                            No customers found
+                {% endif %}
+                    </p>
+                </div>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete customer <strong id="customerName"></strong>?</p>
-                <p class="text-danger mb-0"><i class="fas fa-info-circle me-1"></i> This action cannot be undone.</p>
+            <div class="flex items-center gap-3">
+                <label class="text-xs font-medium text-slate-600">Rows per page:</label>
+                <select id="perPageSelect" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                    <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+                    <option value="20" {% if per_page == 20 or not per_page %}selected{% endif %}>20</option>
+                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                </select>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="post" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Delete Customer</button>
-                </form>
+        </div>
+    </div>
+
+    <!-- Table -->
+        <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-slate-50/50">
+                <tr>
+                    <th class="px-6 py-3.5 text-left">
+                        <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0 cursor-pointer">
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Customer</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Contact</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Phone</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Type</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Created</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-right">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</span>
+                        </th>
+                    </tr>
+                </thead>
+            <tbody class="divide-y divide-slate-100 bg-white">
+                    {% for customer in customers %}
+                <tr class="hover:bg-slate-50/50 transition-colors group">
+                    <td class="px-6 py-4">
+                        <input type="checkbox" class="customer-checkbox h-4 w-4 rounded border-slate-300 text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0 cursor-pointer" value="{{ customer.id }}">
+                        </td>
+                    <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                            <div class="h-12 w-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center text-primary font-semibold text-sm border border-primary/20">
+                                    {% if customer.company_name %}
+                                        {{ customer.company_name|slice:":2"|upper }}
+                                    {% else %}
+                                        {{ customer.user.first_name.0|upper }}{{ customer.user.last_name.0|upper }}
+                                    {% endif %}
+                                </div>
+                            <div class="min-w-0">
+                                <div class="font-semibold text-slate-900 text-sm">{{ customer.company_name|default:customer.user.get_full_name }}</div>
+                                <div class="text-xs text-slate-500 mt-0.5">{{ customer.customer_number }}</div>
+                                </div>
+                            </div>
+                        </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-slate-900">{{ customer.user.get_full_name }}</div>
+                        <div class="text-xs text-slate-500 mt-0.5 truncate max-w-[200px]">{{ customer.user.email }}</div>
+                        </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm text-slate-600">{{ customer.user.phone|default:"N/A" }}</div>
+                        </td>
+                    <td class="px-6 py-4">
+                        {% if customer.status == 'active' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Active
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Inactive
+                            </span>
+                            {% endif %}
+                        </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            {{ customer.get_customer_type_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm text-slate-600">{{ customer.created_at|date:"d M Y" }}</div>
+                        </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center justify-end gap-1">
+                            <a href="{% url 'customers:customer-detail' customer.id %}" class="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-all group-hover:bg-slate-100" title="View details">
+                                <i class="fas fa-eye text-sm"></i>
+                                </a>
+                            <a href="{% url 'customers:customer-edit' customer.id %}" class="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-all group-hover:bg-slate-100" title="Edit customer">
+                                <i class="fas fa-edit text-sm"></i>
+                                </a>
+                            <button type="button" class="p-2 text-slate-500 hover:text-danger hover:bg-rose-50 rounded-lg transition-all group-hover:bg-slate-100" title="Delete customer" data-delete-customer data-customer-id="{{ customer.id }}" data-customer-name="{{ customer.user.get_full_name|escape }}">
+                                <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                    <td colspan="8" class="px-6 py-16 text-center">
+                        {% url 'customers:customer-create' as create_url %}
+                        {% include 'partials/empty_state.html' with icon="fas fa-users" title="No customers found" message="Get started by adding your first customer" action_url=create_url action_text="Add Customer" %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    <!-- Pagination -->
+    {% if customers.has_other_pages %}
+    <div class="px-6 py-4 border-t border-slate-200 bg-slate-50/50">
+        <div class="flex items-center justify-between">
+            <div class="text-sm text-slate-600">
+                Page <span class="font-semibold text-slate-900">{{ customers.number }}</span> of <span class="font-semibold text-slate-900">{{ customers.paginator.num_pages }}</span>
             </div>
+            <div class="flex items-center gap-2">
+            {% if customers.has_previous %}
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1" class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-primary transition-all" title="First page">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ customers.previous_page_number }}" class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-primary transition-all" title="Previous">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                {% else %}
+                    <span class="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <i class="fas fa-angle-double-left"></i>
+                    </span>
+                    <span class="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <i class="fas fa-chevron-left"></i>
+                    </span>
+                {% endif %}
+            {% if customers.has_next %}
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ customers.next_page_number }}" class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-primary transition-all" title="Next">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ customers.paginator.num_pages }}" class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-primary transition-all" title="Last page">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                {% else %}
+                    <span class="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <i class="fas fa-chevron-right"></i>
+                    </span>
+                    <span class="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <i class="fas fa-angle-double-right"></i>
+                    </span>
+            {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 px-4">
+    <div class="w-full max-w-md rounded-xl bg-white shadow-xl">
+        <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+            <h3 class="text-base font-semibold text-slate-900">Delete Customer</h3>
+            <button type="button" class="text-slate-400 hover:text-slate-600" data-delete-modal-close>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="px-6 py-4 text-sm text-slate-600">
+            <p>Are you sure you want to delete <strong id="customerName" class="text-slate-900"></strong>?</p>
+            <p class="mt-2 text-xs text-rose-600">This action cannot be undone.</p>
+        </div>
+        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50">
+            <button type="button" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-white transition-colors" data-delete-modal-close>Cancel</button>
+            <form id="deleteForm" method="post" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-500 transition-colors">
+                    Delete
+                </button>
+            </form>
         </div>
     </div>
 </div>
@@ -364,49 +444,138 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+    // Filter toggle
+    const filterToggle = document.getElementById('filterToggle');
+    const filterContent = document.getElementById('filterContent');
+    
+    if (filterToggle && filterContent) {
+        {% if request.GET.status or request.GET.customer_type or request.GET.date_from or request.GET.date_to or request.GET.sort %}
+        filterContent.classList.remove('hidden');
+        {% endif %}
+        
+        filterToggle.addEventListener('click', function() {
+            const isHidden = filterContent.classList.contains('hidden');
+            filterContent.classList.toggle('hidden', !isHidden);
+        });
+    }
+
+    // Select all
         const selectAll = document.getElementById('selectAll');
         if (selectAll) {
             selectAll.addEventListener('change', function() {
                 document.querySelectorAll('.customer-checkbox').forEach(cb => {
-                    cb.checked = selectAll.checked;
+                cb.checked = this.checked;
                 });
+            updateSelectionState();
             });
         }
 
-        document.querySelectorAll('[data-view-target]').forEach(toggle => {
-            toggle.addEventListener('change', function() {
-                if (!this.checked) {
-                    return;
-                }
-                const target = this.getAttribute('data-view-target');
-                const tableView = document.getElementById('tableView');
-                const cardView = document.getElementById('cardView');
-                if (tableView && cardView) {
-                    tableView.classList.toggle('d-none', target !== 'table');
-                    cardView.classList.toggle('d-none', target !== 'card');
-                }
-                document.querySelectorAll('.view-toggle label.btn').forEach(label => label.classList.remove('active'));
-                const activeLabel = document.querySelector(`label[for="${this.id}"]`);
-                activeLabel?.classList.add('active');
-            });
-        });
+    // Individual checkboxes
+    document.querySelectorAll('.customer-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateSelectionState);
+    });
 
-        document.querySelectorAll('#filterForm select').forEach(select => {
-            select.addEventListener('change', () => document.getElementById('filterForm').submit());
+    // Per page select
+    const perPageSelect = document.getElementById('perPageSelect');
+    if (perPageSelect) {
+        perPageSelect.addEventListener('change', function() {
+            const params = new URLSearchParams(window.location.search);
+            params.set('per_page', this.value);
+            params.delete('page');
+            window.location.href = `?${params.toString()}`;
         });
+    }
 
-        document.querySelectorAll('.js-delete-trigger').forEach(button => {
-            button.addEventListener('click', () => {
-                confirmDelete(button.dataset.customerId, button.dataset.customerName);
-            });
+    // Bulk actions
+    document.getElementById('bulkExportBtn')?.addEventListener('click', function() {
+        const selected = getSelectedCustomerIds();
+        if (selected.length) {
+            alert('Bulk export coming soon.');
+        }
+    });
+
+    document.getElementById('bulkDeleteBtn')?.addEventListener('click', function() {
+        const selected = getSelectedCustomerIds();
+        if (selected.length && confirm(`Delete ${selected.length} customer(s)?`)) {
+            alert('Bulk delete coming soon.');
+        }
+    });
+
+    // Delete modal
+    document.querySelectorAll('[data-delete-customer]').forEach(button => {
+        button.addEventListener('click', function() {
+            const customerName = this.dataset.customerName;
+            const customerId = this.dataset.customerId;
+            document.getElementById('customerName').textContent = customerName;
+            document.getElementById('deleteForm').action = `/customers/${customerId}/delete/`;
+            document.getElementById('deleteModal').classList.remove('hidden');
+            document.getElementById('deleteModal').classList.add('flex');
         });
     });
 
-    function confirmDelete(customerId, customerName) {
-        document.getElementById('customerName').textContent = customerName;
-        const deleteForm = document.getElementById('deleteForm');
-        deleteForm.action = `/customers/${customerId}/delete/`;
-        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    document.querySelectorAll('[data-delete-modal-close]').forEach(button => {
+        button.addEventListener('click', function() {
+            document.getElementById('deleteModal').classList.add('hidden');
+            document.getElementById('deleteModal').classList.remove('flex');
+        });
+            });
+
+    // Quick search auto-submit
+    const quickSearchInput = document.getElementById('quickSearchInput');
+    const quickSearchForm = document.getElementById('quickSearchForm');
+    if (quickSearchInput && quickSearchForm) {
+        let debounceHandle;
+        quickSearchInput.addEventListener('input', function() {
+            clearTimeout(debounceHandle);
+            debounceHandle = setTimeout(() => {
+                if (this.value.length >= 3 || this.value.length === 0) {
+                    quickSearchForm.submit();
+                }
+            }, 500);
+        });
+        
+        quickSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                quickSearchForm.submit();
+                }
+            });
+        }
+
+    // Auto-submit advanced filters
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+        const filterSelects = filterForm.querySelectorAll('select');
+        filterSelects.forEach(select => {
+            select.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
     }
+    });
+
+function getSelectedCustomerIds() {
+    return Array.from(document.querySelectorAll('.customer-checkbox:checked')).map(cb => cb.value);
+}
+
+function updateSelectionState() {
+    const selected = getSelectedCustomerIds();
+    const toolbar = document.getElementById('bulkActionsToolbar');
+    const countLabel = document.getElementById('selectedCount');
+    
+    if (toolbar) {
+        toolbar.classList.toggle('hidden', selected.length === 0);
+    }
+    if (countLabel) {
+        countLabel.textContent = selected.length;
+    }
+    
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.customer-checkbox');
+    if (selectAll && checkboxes.length) {
+        selectAll.checked = selected.length === checkboxes.length;
+        selectAll.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
+    }
+}
 </script>
 {% endblock %}

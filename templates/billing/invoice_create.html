@@ -1,72 +1,64 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block page_title %}{{ page_title }}{% endblock %}
+{% block title %}Create Invoice{% endblock %}
 
 {% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
-    .form-section {
-        border: 1px solid #e3e6f0;
-        border-radius: 8px;
-        margin-bottom: 1.5rem;
+    /* Select2 Tailwind compatibility */
+    .select2-container--default .select2-selection--single {
+        border: 1px solid rgb(203 213 225);
+        border-radius: 0.5rem;
+        height: 42px;
     }
-    .section-header {
-        background-color: #f8f9fc;
-        border-bottom: 1px solid #e3e6f0;
-        padding: 1rem 1.5rem;
-        font-weight: 600;
-        color: #5a5c69;
+    
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 42px;
+        padding-left: 12px;
     }
-    .required-field::after {
-        content: " *";
-        color: #dc3545;
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 40px;
+        right: 10px;
     }
-    .vehicle-info {
-        background-color: #f8f9fa;
-        border-radius: 6px;
-        padding: 1rem;
-        margin-top: 1rem;
+    
+    .select2-dropdown {
+        border: 1px solid rgb(203 213 225);
+        border-radius: 0.5rem;
     }
-    .work-order-preview {
-        background-color: #e7f3ff;
-        border-left: 4px solid #007bff;
-        padding: 1rem;
-        margin-top: 1rem;
+    
+    .select2-results__option {
+        padding: 8px 12px;
     }
-    .amount-preview {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: #28a745;
+    
+    .select2-results__option--highlighted {
+        background-color: rgb(59 130 246);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="space-y-6">
     <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="{% url 'billing:dashboard' %}">Billing</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="{% url 'billing:invoice_list' %}">Invoices</a>
-                    </li>
-                    <li class="breadcrumb-item active">Create New</li>
-                </ol>
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <a href="{% url 'billing:dashboard' %}" class="hover:text-slate-700">Billing</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <a href="{% url 'billing:invoice_list' %}" class="hover:text-slate-700">Invoices</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <span class="text-slate-700">Create New</span>
             </nav>
-            <h1 class="h3 mb-0 text-gray-800">
-                <i class="fas fa-plus me-2"></i>{{ page_title }}
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">
+                <i class="fas fa-plus mr-2 text-primary"></i>Create Invoice
             </h1>
-            <p class="text-muted">Create a new invoice for completed work</p>
+            <p class="text-sm text-slate-500">Create a new invoice for completed work</p>
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Back to Invoices
+        <div>
+            <a href="{% url 'billing:invoice_list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Invoices</span>
             </a>
         </div>
     </div>
@@ -74,72 +66,72 @@
     <form method="post" id="invoiceForm" novalidate>
         {% csrf_token %}
         
-        <div class="row">
-            <div class="col-md-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Main Form -->
+            <div class="lg:col-span-3 space-y-6">
                 <!-- Customer & Vehicle Selection -->
-                <div class="form-section">
-                    <div class="section-header">
-                        <i class="fas fa-user-car me-2"></i>Customer & Vehicle Selection
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-user-car text-primary"></i>
+                            Customer & Vehicle Selection
+                        </h3>
                     </div>
-                    <div class="p-4">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="customer_id" class="form-label required-field">Customer</label>
-                                    <select class="form-select" id="customer_id" name="customer_id" required>
-                                        <option value="">Select a customer...</option>
-                                        {% for customer in customers %}
-                                        <option value="{{ customer.id }}" 
-                                                data-email="{{ customer.email }}"
-                                                data-phone="{{ customer.phone }}"
-                                                data-address="{{ customer.service_address }}">
-                                            {{ customer.full_name }}
-                                        </option>
-                                        {% endfor %}
-                                    </select>
-                                    <div class="invalid-feedback">
-                                        Please select a customer.
-                                    </div>
-                                </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="customer_id" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    Customer <span class="text-rose-600">*</span>
+                                </label>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        id="customer_id" name="customer_id" required>
+                                    <option value="">Select a customer...</option>
+                                    {% for customer in customers %}
+                                    <option value="{{ customer.id }}" 
+                                            data-email="{{ customer.email }}"
+                                            data-phone="{{ customer.phone }}"
+                                            data-address="{{ customer.service_address }}">
+                                        {{ customer.full_name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="vehicle_id" class="form-label required-field">Vehicle</label>
-                                    <select class="form-select" id="vehicle_id" name="vehicle_id" required disabled>
-                                        <option value="">Select customer first...</option>
-                                    </select>
-                                    <div class="invalid-feedback">
-                                        Please select a vehicle.
-                                    </div>
-                                </div>
+                            <div>
+                                <label for="vehicle_id" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    Vehicle <span class="text-rose-600">*</span>
+                                </label>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        id="vehicle_id" name="vehicle_id" required disabled>
+                                    <option value="">Select customer first...</option>
+                                </select>
                             </div>
                         </div>
 
                         <!-- Customer Info Preview -->
-                        <div id="customerPreview" class="vehicle-info d-none">
-                            <h6 class="mb-2">Customer Information</h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div id="customerEmail" class="mb-1"></div>
-                                    <div id="customerPhone" class="mb-1"></div>
+                        <div id="customerPreview" class="hidden bg-slate-50 rounded-lg p-4 mt-4">
+                            <h6 class="text-sm font-semibold text-slate-900 mb-3">Customer Information</h6>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <div id="customerEmail" class="text-xs text-slate-600 mb-1"></div>
+                                    <div id="customerPhone" class="text-xs text-slate-600 mb-1"></div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div id="customerAddress"></div>
+                                <div>
+                                    <div id="customerAddress" class="text-xs text-slate-600"></div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Vehicle Info Preview -->
-                        <div id="vehiclePreview" class="vehicle-info d-none">
-                            <h6 class="mb-2">Selected Vehicle</h6>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div id="vehicleDetails" class="fw-bold"></div>
-                                    <div id="vehicleVin" class="text-muted"></div>
+                        <div id="vehiclePreview" class="hidden bg-slate-50 rounded-lg p-4 mt-4">
+                            <h6 class="text-sm font-semibold text-slate-900 mb-3">Selected Vehicle</h6>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <div id="vehicleDetails" class="text-sm font-semibold text-slate-900"></div>
+                                    <div id="vehicleVin" class="text-xs text-slate-500 mt-1"></div>
                                 </div>
-                                <div class="col-md-6">
-                                    <div id="vehiclePlate"></div>
-                                    <div id="vehicleColor"></div>
+                                <div>
+                                    <div id="vehiclePlate" class="text-sm text-slate-900"></div>
+                                    <div id="vehicleColor" class="text-xs text-slate-500 mt-1"></div>
                                 </div>
                             </div>
                         </div>
@@ -147,47 +139,48 @@
                 </div>
 
                 <!-- Work Order Selection (Optional) -->
-                <div class="form-section">
-                    <div class="section-header">
-                        <i class="fas fa-wrench me-2"></i>Work Order (Optional)
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-wrench text-primary"></i>
+                            Work Order (Optional)
+                        </h3>
                     </div>
-                    <div class="p-4">
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="mb-3">
-                                    <label for="work_order_id" class="form-label">Work Order</label>
-                                    <select class="form-select" id="work_order_id" name="work_order_id">
-                                        <option value="">Create invoice without work order...</option>
-                                        {% for wo in work_orders %}
-                                        <option value="{{ wo.id }}"
-                                                data-customer="{{ wo.customer.id }}"
-                                                data-vehicle="{{ wo.vehicle.id }}"
-                                                data-description="{{ wo.description }}"
-                                                data-completed="{{ wo.completed_at|date:'Y-m-d' }}">
-                                            {{ wo.work_order_number }} - {{ wo.customer.full_name }} 
-                                            ({{ wo.vehicle.year }} {{ wo.vehicle.make }} {{ wo.vehicle.model }})
-                                        </option>
-                                        {% endfor %}
-                                    </select>
-                                    <div class="form-text">
-                                        Link this invoice to a completed work order to automatically calculate totals
-                                    </div>
-                                </div>
+                    <div class="p-6">
+                        <div>
+                            <label for="work_order_id" class="block text-xs font-semibold text-slate-700 mb-2">Work Order</label>
+                            <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                    id="work_order_id" name="work_order_id">
+                                <option value="">Create invoice without work order...</option>
+                                {% for wo in work_orders %}
+                                <option value="{{ wo.id }}"
+                                        data-customer="{{ wo.customer.id }}"
+                                        data-vehicle="{{ wo.vehicle.id }}"
+                                        data-description="{{ wo.description }}"
+                                        data-completed="{{ wo.completed_at|date:'Y-m-d' }}">
+                                    {{ wo.work_order_number }} - {{ wo.customer.full_name }} 
+                                    ({{ wo.vehicle.year }} {{ wo.vehicle.make }} {{ wo.vehicle.model }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="text-xs text-slate-500 mt-1">
+                                Link this invoice to a completed work order to automatically calculate totals
                             </div>
                         </div>
 
                         <!-- Work Order Preview -->
-                        <div id="workOrderPreview" class="work-order-preview d-none">
-                            <h6 class="mb-2">
-                                <i class="fas fa-info-circle me-2"></i>Work Order Details
+                        <div id="workOrderPreview" class="hidden bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mt-4">
+                            <h6 class="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                                <i class="fas fa-info-circle text-blue-600"></i>
+                                Work Order Details
                             </h6>
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <div id="woDescription" class="mb-2"></div>
-                                    <div id="woCompleted" class="text-muted"></div>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div class="sm:col-span-2">
+                                    <div id="woDescription" class="text-sm text-slate-900 mb-2"></div>
+                                    <div id="woCompleted" class="text-xs text-slate-500"></div>
                                 </div>
-                                <div class="col-md-4 text-end">
-                                    <div class="amount-preview" id="woEstimatedTotal">
+                                <div class="text-right">
+                                    <div class="text-lg font-semibold text-emerald-600" id="woEstimatedTotal">
                                         Calculating...
                                     </div>
                                 </div>
@@ -197,138 +190,142 @@
                 </div>
 
                 <!-- Invoice Details -->
-                <div class="form-section">
-                    <div class="section-header">
-                        <i class="fas fa-file-invoice me-2"></i>Invoice Details
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-file-invoice text-primary"></i>
+                            Invoice Details
+                        </h3>
                     </div>
-                    <div class="p-4">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="invoice_date" class="form-label">Invoice Date</label>
-                                    <input type="date" class="form-control" id="invoice_date" name="invoice_date" 
-                                           value="{% now 'Y-m-d' %}" required>
-                                </div>
+                    <div class="p-6 space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="invoice_date" class="block text-xs font-semibold text-slate-700 mb-2">Invoice Date</label>
+                                <input type="date" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                       id="invoice_date" name="invoice_date" value="{% now 'Y-m-d' %}" required>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="due_date" class="form-label">Due Date</label>
-                                    <input type="date" class="form-control" id="due_date" name="due_date" required>
-                                </div>
+                            <div>
+                                <label for="due_date" class="block text-xs font-semibold text-slate-700 mb-2">Due Date</label>
+                                <input type="date" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                       id="due_date" name="due_date" required>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control" id="description" name="description" rows="3"
-                                      placeholder="Brief description of services provided..."></textarea>
+                        <div>
+                            <label for="description" class="block text-xs font-semibold text-slate-700 mb-2">Description</label>
+                            <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                      id="description" name="description" rows="3" placeholder="Brief description of services provided..."></textarea>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="terms" class="form-label">Payment Terms</label>
-                                    <select class="form-select" id="terms" name="terms">
-                                        <option value="Net 15">Net 15</option>
-                                        <option value="Net 30" selected>Net 30</option>
-                                        <option value="Net 45">Net 45</option>
-                                        <option value="Net 60">Net 60</option>
-                                        <option value="Due on Receipt">Due on Receipt</option>
-                                        <option value="COD">Cash on Delivery</option>
-                                    </select>
-                                </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="terms" class="block text-xs font-semibold text-slate-700 mb-2">Payment Terms</label>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        id="terms" name="terms">
+                                    <option value="Net 15">Net 15</option>
+                                    <option value="Net 30" selected>Net 30</option>
+                                    <option value="Net 45">Net 45</option>
+                                    <option value="Net 60">Net 60</option>
+                                    <option value="Due on Receipt">Due on Receipt</option>
+                                    <option value="COD">Cash on Delivery</option>
+                                </select>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="status" class="form-label">Initial Status</label>
-                                    <select class="form-select" id="status" name="status">
-                                        <option value="draft" selected>Draft</option>
-                                        <option value="sent">Send to Customer</option>
-                                    </select>
-                                </div>
+                            <div>
+                                <label for="status" class="block text-xs font-semibold text-slate-700 mb-2">Initial Status</label>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        id="status" name="status">
+                                    <option value="draft" selected>Draft</option>
+                                    <option value="sent">Send to Customer</option>
+                                </select>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="customer_notes" class="form-label">Customer Notes</label>
-                            <textarea class="form-control" id="customer_notes" name="customer_notes" rows="3"
-                                      placeholder="Notes visible to customer (optional)..."></textarea>
+                        <div>
+                            <label for="customer_notes" class="block text-xs font-semibold text-slate-700 mb-2">Customer Notes</label>
+                            <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                      id="customer_notes" name="customer_notes" rows="3" placeholder="Notes visible to customer (optional)..."></textarea>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="notes" class="form-label">Internal Notes</label>
-                            <textarea class="form-control" id="notes" name="notes" rows="2"
-                                      placeholder="Internal notes (not visible to customer)..."></textarea>
+                        <div>
+                            <label for="notes" class="block text-xs font-semibold text-slate-700 mb-2">Internal Notes</label>
+                            <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                      id="notes" name="notes" rows="2" placeholder="Internal notes (not visible to customer)..."></textarea>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Sidebar -->
-            <div class="col-md-4">
+            <div class="space-y-6">
                 <!-- Quick Actions -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-bolt me-2"></i>Quick Actions
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-bolt text-primary"></i>
+                            Quick Actions
                         </h5>
                     </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary" name="action" value="save_draft">
-                                <i class="fas fa-save me-2"></i>Save as Draft
+                    <div class="p-6">
+                        <div class="space-y-3">
+                            <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors" name="action" value="save_draft">
+                                <i class="fas fa-save"></i>
+                                <span>Save as Draft</span>
                             </button>
-                            <button type="submit" class="btn btn-success" name="action" value="save_and_send">
-                                <i class="fas fa-paper-plane me-2"></i>Save & Send to Customer
+                            <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" name="action" value="save_and_send">
+                                <i class="fas fa-paper-plane"></i>
+                                <span>Save & Send to Customer</span>
                             </button>
-                            <button type="button" class="btn btn-outline-info" id="previewBtn">
-                                <i class="fas fa-eye me-2"></i>Preview Invoice
+                            <button type="button" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-blue-300 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors" id="previewBtn">
+                                <i class="fas fa-eye"></i>
+                                <span>Preview Invoice</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Invoice Summary -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-calculator me-2"></i>Invoice Summary
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-calculator text-primary"></i>
+                            Invoice Summary
                         </h5>
                     </div>
-                    <div class="card-body">
+                    <div class="p-6">
                         <div id="invoiceSummary">
-                            <div class="text-center text-muted py-4">
-                                <i class="fas fa-calculator fa-3x mb-3"></i>
-                                <p>Select work order to see totals</p>
+                            <div class="text-center py-8">
+                                <i class="fas fa-calculator text-4xl text-slate-400 mb-3"></i>
+                                <p class="text-sm text-slate-500">Select work order to see totals</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Help & Tips -->
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-lightbulb me-2"></i>Tips
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-lightbulb text-primary"></i>
+                            Tips
                         </h5>
                     </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled mb-0">
-                            <li class="mb-2">
-                                <i class="fas fa-check text-success me-2"></i>
-                                Link to work order for automatic totals
+                    <div class="p-6">
+                        <ul class="space-y-2">
+                            <li class="flex items-start gap-2">
+                                <i class="fas fa-check text-emerald-600 mt-0.5"></i>
+                                <span class="text-xs text-slate-700">Link to work order for automatic totals</span>
                             </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check text-success me-2"></i>
-                                Save as draft to review before sending
+                            <li class="flex items-start gap-2">
+                                <i class="fas fa-check text-emerald-600 mt-0.5"></i>
+                                <span class="text-xs text-slate-700">Save as draft to review before sending</span>
                             </li>
-                            <li class="mb-2">
-                                <i class="fas fa-check text-success me-2"></i>
-                                Customer notes are visible on invoice
+                            <li class="flex items-start gap-2">
+                                <i class="fas fa-check text-emerald-600 mt-0.5"></i>
+                                <span class="text-xs text-slate-700">Customer notes are visible on invoice</span>
                             </li>
-                            <li class="mb-0">
-                                <i class="fas fa-check text-success me-2"></i>
-                                Use payment terms to set expectations
+                            <li class="flex items-start gap-2">
+                                <i class="fas fa-check text-emerald-600 mt-0.5"></i>
+                                <span class="text-xs text-slate-700">Use payment terms to set expectations</span>
                             </li>
                         </ul>
                     </div>
@@ -339,22 +336,26 @@
 </div>
 
 <!-- Invoice Preview Modal -->
-<div class="modal fade" id="invoicePreviewModal" tabindex="-1">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Invoice Preview</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div id="invoicePreviewModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 transition-opacity" onclick="closePreviewModal()"></div>
+        <div class="relative bg-white rounded-xl shadow-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                <h5 class="text-sm font-semibold text-slate-900">Invoice Preview</h5>
+                <button type="button" class="text-slate-500 hover:text-slate-700" onclick="closePreviewModal()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="modal-body">
+            <div class="p-6">
                 <div id="invoicePreviewContent">
                     <!-- Preview content will be loaded here -->
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="createFromPreview">
-                    <i class="fas fa-check me-2"></i>Create Invoice
+            <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" onclick="closePreviewModal()">Close</button>
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" id="createFromPreview">
+                    <i class="fas fa-check"></i>
+                    <span>Create Invoice</span>
                 </button>
             </div>
         </div>
@@ -370,7 +371,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize Select2
     $('#customer_id, #work_order_id').select2({
-        theme: 'bootstrap-5',
+        placeholder: 'Select...',
+        allowClear: true,
         width: '100%'
     });
 
@@ -379,22 +381,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const dueDate = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
     document.getElementById('due_date').value = dueDate.toISOString().split('T')[0];
 
-    // Customer selection handler (using Select2 events)
+    // Customer selection handler
     $('#customer_id').on('change', function() {
         const customerId = this.value;
         const selectedOption = this.selectedOptions[0];
         
-        console.log('Customer selected:', customerId);
-        
         if (customerId) {
-            // Show customer preview
             showCustomerPreview(selectedOption);
-            
-            // Load vehicles for customer
-            console.log('Loading vehicles for customer:', customerId);
             loadCustomerVehicles(customerId);
         } else {
-            console.log('No customer selected, clearing vehicle dropdown');
             hideCustomerPreview();
             hideVehiclePreview();
             clearVehicleSelect();
@@ -402,33 +397,28 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Vehicle selection handler
-    // Vehicle selection handler (using Select2 events)
     $('#vehicle_id').on('change', function() {
         const vehicleId = this.value;
         
         if (vehicleId) {
             const selectedOption = this.selectedOptions[0];
             showVehiclePreview(selectedOption);
-            // Filter work orders for this vehicle
             filterWorkOrdersByVehicle(vehicleId);
         } else {
             hideVehiclePreview();
         }
     });
 
-    // Work order selection handler (using Select2 events)
+    // Work order selection handler
     $('#work_order_id').on('change', function() {
         const workOrderId = this.value;
         const selectedOption = this.selectedOptions[0];
         
         if (workOrderId) {
-            // Auto-select customer and vehicle
             const customerId = selectedOption.getAttribute('data-customer');
             const vehicleId = selectedOption.getAttribute('data-vehicle');
             
             $('#customer_id').val(customerId).trigger('change');
-            // Vehicle will be loaded and selected automatically
-            
             showWorkOrderPreview(selectedOption);
             loadWorkOrderSummary(workOrderId);
         } else {
@@ -450,218 +440,200 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('previewBtn').addEventListener('click', function() {
         generateInvoicePreview();
     });
-
-    // Functions
-    function showCustomerPreview(option) {
-        const email = option.getAttribute('data-email');
-        const phone = option.getAttribute('data-phone');
-        const address = option.getAttribute('data-address');
-        
-        document.getElementById('customerEmail').innerHTML = email ? 
-            `<i class="fas fa-envelope me-2"></i>${email}` : '';
-        document.getElementById('customerPhone').innerHTML = phone ? 
-            `<i class="fas fa-phone me-2"></i>${phone}` : '';
-        document.getElementById('customerAddress').innerHTML = address ? 
-            `<i class="fas fa-map-marker-alt me-2"></i>${address}` : '';
-        
-        document.getElementById('customerPreview').classList.remove('d-none');
-    }
-
-    function hideCustomerPreview() {
-        document.getElementById('customerPreview').classList.add('d-none');
-    }
-
-    function loadCustomerVehicles(customerId) {
-        console.log('loadCustomerVehicles called with ID:', customerId);
-        
-        // Enable vehicle select
-        const vehicleSelect = document.getElementById('vehicle_id');
-        vehicleSelect.disabled = false;
-        vehicleSelect.innerHTML = '<option value="">Loading vehicles...</option>';
-        
-        // Get CSRF token
-        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-        console.log('CSRF token found:', csrftoken ? 'Yes' : 'No');
-        
-        const ajaxUrl = `{% url 'billing:customer_vehicles' %}?customer_id=${customerId}`;
-        console.log('AJAX URL:', ajaxUrl);
-        
-        // Fetch vehicles via AJAX
-        fetch(ajaxUrl, {
-            method: 'GET',
-            headers: {
-                'X-CSRFToken': csrftoken,
-                'Content-Type': 'application/json',
-            },
-            credentials: 'same-origin'
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Vehicle data received:', data);
-                vehicleSelect.innerHTML = '<option value="">Select a vehicle...</option>';
-                if (data.vehicles && data.vehicles.length > 0) {
-                    console.log(`Found ${data.vehicles.length} vehicles`);
-                    data.vehicles.forEach(vehicle => {
-                        const option = document.createElement('option');
-                        option.value = vehicle.id;
-                        option.textContent = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
-                        option.setAttribute('data-vin', vehicle.vin);
-                        vehicleSelect.appendChild(option);
-                        console.log(`Added vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}`);
-                    });
-                } else {
-                    console.log('No vehicles found for customer');
-                    vehicleSelect.innerHTML = '<option value="">No vehicles found</option>';
-                }
-            })
-            .catch(error => {
-                console.error('Error loading vehicles:', error);
-                console.error('Error details:', error.message);
-                vehicleSelect.innerHTML = '<option value="">Error loading vehicles</option>';
-            });
-    }
-
-    function clearVehicleSelect() {
-        console.log('clearVehicleSelect called');
-        const vehicleSelect = document.getElementById('vehicle_id');
-        vehicleSelect.disabled = true;
-        vehicleSelect.innerHTML = '<option value="">Select customer first...</option>';
-        console.log('Vehicle select cleared and disabled');
-    }
-
-    function showVehiclePreview(option) {
-        const text = option.textContent;
-        const vin = option.getAttribute('data-vin');
-        
-        document.getElementById('vehicleDetails').textContent = text;
-        document.getElementById('vehicleVin').textContent = `VIN: ${vin}`;
-        
-        document.getElementById('vehiclePreview').classList.remove('d-none');
-    }
-
-    function hideVehiclePreview() {
-        document.getElementById('vehiclePreview').classList.add('d-none');
-    }
-
-    function showWorkOrderPreview(option) {
-        const description = option.getAttribute('data-description');
-        const completed = option.getAttribute('data-completed');
-        
-        document.getElementById('woDescription').textContent = description;
-        document.getElementById('woCompleted').textContent = `Completed: ${completed}`;
-        
-        document.getElementById('workOrderPreview').classList.remove('d-none');
-    }
-
-    function hideWorkOrderPreview() {
-        document.getElementById('workOrderPreview').classList.add('d-none');
-    }
-
-    function loadWorkOrderSummary(workOrderId) {
-        // This would typically fetch work order totals via AJAX
-        // For now, show placeholder
-        document.getElementById('woEstimatedTotal').textContent = 'Calculating...';
-        
-        // Simulate API call
-        setTimeout(() => {
-            document.getElementById('woEstimatedTotal').textContent = '$1,250.00';
-            updateInvoiceSummary({
-                labor: 750.00,
-                parts: 400.00,
-                subtotal: 1150.00,
-                tax: 100.00,
-                total: 1250.00
-            });
-        }, 1000);
-    }
-
-    function updateInvoiceSummary(totals) {
-        const summaryHtml = `
-            <div class="d-flex justify-content-between mb-2">
-                <span>Labor:</span>
-                <span>$${totals.labor.toFixed(2)}</span>
-            </div>
-            <div class="d-flex justify-content-between mb-2">
-                <span>Parts:</span>
-                <span>$${totals.parts.toFixed(2)}</span>
-            </div>
-            <div class="d-flex justify-content-between mb-2">
-                <span>Subtotal:</span>
-                <span>$${totals.subtotal.toFixed(2)}</span>
-            </div>
-            <div class="d-flex justify-content-between mb-2">
-                <span>Tax:</span>
-                <span>$${totals.tax.toFixed(2)}</span>
-            </div>
-            <hr>
-            <div class="d-flex justify-content-between">
-                <strong>Total:</strong>
-                <strong class="text-success">$${totals.total.toFixed(2)}</strong>
-            </div>
-        `;
-        
-        document.getElementById('invoiceSummary').innerHTML = summaryHtml;
-    }
-
-    function clearInvoiceSummary() {
-        document.getElementById('invoiceSummary').innerHTML = `
-            <div class="text-center text-muted py-4">
-                <i class="fas fa-calculator fa-3x mb-3"></i>
-                <p>Select work order to see totals</p>
-            </div>
-        `;
-    }
-
-    function filterWorkOrdersByVehicle(vehicleId) {
-        // Filter work order options to only show those for selected vehicle
-        const workOrderSelect = document.getElementById('work_order_id');
-        const options = workOrderSelect.querySelectorAll('option');
-        
-        options.forEach(option => {
-            if (option.value === '') {
-                option.style.display = 'block';
-                return;
-            }
-            
-            const optionVehicleId = option.getAttribute('data-vehicle');
-            option.style.display = optionVehicleId === vehicleId ? 'block' : 'none';
-        });
-        
-        // Refresh Select2
-        $('#work_order_id').select2({
-            theme: 'bootstrap-5',
-            width: '100%'
-        });
-    }
-
-    function generateInvoicePreview() {
-        // This would generate a preview of the invoice
-        const modal = new bootstrap.Modal(document.getElementById('invoicePreviewModal'));
-        
-        document.getElementById('invoicePreviewContent').innerHTML = `
-            <div class="text-center py-5">
-                <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
-                <p>Generating preview...</p>
-            </div>
-        `;
-        
-        modal.show();
-        
-        // Simulate preview generation
-        setTimeout(() => {
-            document.getElementById('invoicePreviewContent').innerHTML = `
-                <div class="invoice-preview">
-                    <h4>Invoice Preview</h4>
-                    <p>Preview functionality would be implemented here...</p>
-                </div>
-            `;
-        }, 1500);
-    }
 });
+
+function closePreviewModal() {
+    document.getElementById('invoicePreviewModal').classList.add('hidden');
+}
+
+function showCustomerPreview(option) {
+    const email = option.getAttribute('data-email');
+    const phone = option.getAttribute('data-phone');
+    const address = option.getAttribute('data-address');
+    
+    document.getElementById('customerEmail').innerHTML = email ? 
+        `<i class="fas fa-envelope mr-2"></i>${email}` : '';
+    document.getElementById('customerPhone').innerHTML = phone ? 
+        `<i class="fas fa-phone mr-2"></i>${phone}` : '';
+    document.getElementById('customerAddress').innerHTML = address ? 
+        `<i class="fas fa-map-marker-alt mr-2"></i>${address}` : '';
+    
+    document.getElementById('customerPreview').classList.remove('hidden');
+}
+
+function hideCustomerPreview() {
+    document.getElementById('customerPreview').classList.add('hidden');
+}
+
+function loadCustomerVehicles(customerId) {
+    const vehicleSelect = document.getElementById('vehicle_id');
+    vehicleSelect.disabled = false;
+    vehicleSelect.innerHTML = '<option value="">Loading vehicles...</option>';
+    
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const ajaxUrl = `{% url 'billing:customer_vehicles' %}?customer_id=${customerId}`;
+    
+    fetch(ajaxUrl, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': csrftoken,
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin'
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            vehicleSelect.innerHTML = '<option value="">Select a vehicle...</option>';
+            if (data.vehicles && data.vehicles.length > 0) {
+                data.vehicles.forEach(vehicle => {
+                    const option = document.createElement('option');
+                    option.value = vehicle.id;
+                    option.textContent = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+                    option.setAttribute('data-vin', vehicle.vin);
+                    vehicleSelect.appendChild(option);
+                });
+            } else {
+                vehicleSelect.innerHTML = '<option value="">No vehicles found</option>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading vehicles:', error);
+            vehicleSelect.innerHTML = '<option value="">Error loading vehicles</option>';
+        });
+}
+
+function clearVehicleSelect() {
+    const vehicleSelect = document.getElementById('vehicle_id');
+    vehicleSelect.disabled = true;
+    vehicleSelect.innerHTML = '<option value="">Select customer first...</option>';
+}
+
+function showVehiclePreview(option) {
+    const text = option.textContent;
+    const vin = option.getAttribute('data-vin');
+    
+    document.getElementById('vehicleDetails').textContent = text;
+    document.getElementById('vehicleVin').textContent = `VIN: ${vin}`;
+    
+    document.getElementById('vehiclePreview').classList.remove('hidden');
+}
+
+function hideVehiclePreview() {
+    document.getElementById('vehiclePreview').classList.add('hidden');
+}
+
+function showWorkOrderPreview(option) {
+    const description = option.getAttribute('data-description');
+    const completed = option.getAttribute('data-completed');
+    
+    document.getElementById('woDescription').textContent = description;
+    document.getElementById('woCompleted').textContent = `Completed: ${completed}`;
+    
+    document.getElementById('workOrderPreview').classList.remove('hidden');
+}
+
+function hideWorkOrderPreview() {
+    document.getElementById('workOrderPreview').classList.add('hidden');
+}
+
+function loadWorkOrderSummary(workOrderId) {
+    document.getElementById('woEstimatedTotal').textContent = 'Calculating...';
+    
+    setTimeout(() => {
+        document.getElementById('woEstimatedTotal').textContent = '$1,250.00';
+        updateInvoiceSummary({
+            labor: 750.00,
+            parts: 400.00,
+            subtotal: 1150.00,
+            tax: 100.00,
+            total: 1250.00
+        });
+    }, 1000);
+}
+
+function updateInvoiceSummary(totals) {
+    const summaryHtml = `
+        <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+                <span class="text-slate-600">Labor:</span>
+                <span class="text-slate-900 font-medium">$${totals.labor.toFixed(2)}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+                <span class="text-slate-600">Parts:</span>
+                <span class="text-slate-900 font-medium">$${totals.parts.toFixed(2)}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+                <span class="text-slate-600">Subtotal:</span>
+                <span class="text-slate-900 font-medium">$${totals.subtotal.toFixed(2)}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+                <span class="text-slate-600">Tax:</span>
+                <span class="text-slate-900 font-medium">$${totals.tax.toFixed(2)}</span>
+            </div>
+            <hr class="border-slate-200 my-3">
+            <div class="flex justify-between">
+                <strong class="text-slate-900">Total:</strong>
+                <strong class="text-emerald-600 text-lg">$${totals.total.toFixed(2)}</strong>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('invoiceSummary').innerHTML = summaryHtml;
+}
+
+function clearInvoiceSummary() {
+    document.getElementById('invoiceSummary').innerHTML = `
+        <div class="text-center py-8">
+            <i class="fas fa-calculator text-4xl text-slate-400 mb-3"></i>
+            <p class="text-sm text-slate-500">Select work order to see totals</p>
+        </div>
+    `;
+}
+
+function filterWorkOrdersByVehicle(vehicleId) {
+    const workOrderSelect = document.getElementById('work_order_id');
+    const options = workOrderSelect.querySelectorAll('option');
+    
+    options.forEach(option => {
+        if (option.value === '') {
+            option.style.display = 'block';
+            return;
+        }
+        
+        const optionVehicleId = option.getAttribute('data-vehicle');
+        option.style.display = optionVehicleId === vehicleId ? 'block' : 'none';
+    });
+    
+    $('#work_order_id').select2({
+        placeholder: 'Select...',
+        allowClear: true,
+        width: '100%'
+    });
+}
+
+function generateInvoicePreview() {
+    document.getElementById('invoicePreviewModal').classList.remove('hidden');
+    
+    document.getElementById('invoicePreviewContent').innerHTML = `
+        <div class="text-center py-12">
+            <i class="fas fa-spinner fa-spin text-4xl text-primary mb-3"></i>
+            <p class="text-sm text-slate-500">Generating preview...</p>
+        </div>
+    `;
+    
+    setTimeout(() => {
+        document.getElementById('invoicePreviewContent').innerHTML = `
+            <div class="p-6">
+                <h4 class="text-lg font-semibold text-slate-900 mb-4">Invoice Preview</h4>
+                <p class="text-sm text-slate-600">Preview functionality would be implemented here...</p>
+            </div>
+        `;
+    }, 1500);
+}
 </script>
 {% endblock %}

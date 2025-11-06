@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Branch Management • {{ block.super }}{% endblock %}
+
+{% block page_header %}
+<div class="bg-white border-b border-gray-200">
+    <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-900">Branches</h1>
+                <p class="mt-1 text-sm text-gray-600">Review locations, set an active branch, and keep staffing details up to date.</p>
+            </div>
+            {% if user.role == 'admin' %}
+            <a href="{% url 'branches:create' %}" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">New Branch</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    {% if branch_management_branches %}
+        {% if branch_active_branch %}
+        <div class="mb-6 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <span>
+                    <span class="font-medium text-indigo-900">Active branch:</span>
+                    {{ branch_active_branch.name }}
+                    {% if branch_active_branch.is_headquarters %}
+                    <span class="ml-2 inline-flex items-center rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-indigo-600 ring-1 ring-indigo-200">HQ</span>
+                    {% endif %}
+                </span>
+                <span class="text-xs text-indigo-700">{{ branch_active_branch.full_address }}</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-left text-sm text-gray-700">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-sm font-semibold uppercase tracking-wide text-gray-600">Branch</th>
+                            <th scope="col" class="px-6 py-3 text-sm font-semibold uppercase tracking-wide text-gray-600">Location</th>
+                            <th scope="col" class="px-6 py-3 text-sm font-semibold uppercase tracking-wide text-gray-600">Phone</th>
+                            <th scope="col" class="px-6 py-3 text-center text-sm font-semibold uppercase tracking-wide text-gray-600">Managers</th>
+                            <th scope="col" class="px-6 py-3 text-center text-sm font-semibold uppercase tracking-wide text-gray-600">Staff</th>
+                            <th scope="col" class="px-6 py-3 text-center text-sm font-semibold uppercase tracking-wide text-gray-600">Status</th>
+                            <th scope="col" class="px-6 py-3 text-right text-sm font-semibold uppercase tracking-wide text-gray-600">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for branch in branch_management_branches %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="whitespace-nowrap px-6 py-4">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="font-medium text-gray-900">{{ branch.name }}</span>
+                                    {% if branch.id == branch_active_branch_id %}
+                                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-600 ring-1 ring-indigo-200">Active</span>
+                                    {% endif %}
+                                    {% if branch.is_headquarters %}
+                                    <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600 ring-1 ring-emerald-200">HQ</span>
+                                    {% endif %}
+                                </div>
+                                <p class="mt-1 text-xs uppercase tracking-wide text-gray-500">{{ branch.code }}</p>
+                            </td>
+                            <td class="max-w-xs px-6 py-4 text-sm text-gray-600">{{ branch.full_address }}</td>
+                            <td class="whitespace-nowrap px-6 py-4">
+                                {% if branch.phone %}
+                                <a href="tel:{{ branch.phone }}" class="font-medium text-indigo-600 hover:text-indigo-700">{{ branch.phone }}</a>
+                                {% else %}
+                                <span class="text-gray-400">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-center text-sm font-medium text-gray-900">{{ branch.manager_total }}</td>
+                            <td class="px-6 py-4 text-center text-sm font-medium text-gray-900">{{ branch.staff_total }}</td>
+                            <td class="px-6 py-4 text-center">
+                                {% if branch.is_active %}
+                                <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-600 ring-1 ring-emerald-200">Operational</span>
+                                {% else %}
+                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 ring-1 ring-gray-300">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-wrap justify-end gap-2">
+                                    {% if branch.id != branch_active_branch_id and branch.is_active %}
+                                    <form method="post" action="{% url 'branches:switch' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="branch_id" value="{{ branch.id }}">
+                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                        <button type="submit" class="inline-flex items-center rounded-md border border-indigo-200 bg-white px-3 py-2 text-xs font-medium text-indigo-600 shadow-sm hover:border-indigo-300 hover:text-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Set Active</button>
+                                    </form>
+                                    {% endif %}
+                                    <a href="{% url 'branches:detail' branch.id %}" class="inline-flex items-center rounded-md border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">View</a>
+                                    {% if user.role == 'admin' or user.role == 'manager' %}
+                                    <a href="{% url 'branches:edit' branch.id %}" class="inline-flex items-center rounded-md border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Edit</a>
+                                    {% endif %}
+                                    {% if user.role == 'admin' %}
+                                    <a href="{% url 'branches:delete' branch.id %}" class="inline-flex items-center rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600 shadow-sm hover:border-red-300 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600">Delete</a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <div class="rounded-lg border border-amber-100 bg-amber-50 px-4 py-6 text-sm text-amber-800">
+            <p class="font-medium text-amber-900">No branches available for your account.</p>
+            <p class="mt-2 text-amber-700">Please contact an administrator to grant you access to a branch.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

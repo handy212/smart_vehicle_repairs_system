@@ -5,109 +5,88 @@
 
 {% block extra_css %}
 <style>
-.appointment-header {
-    background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, black) 100%);
-    color: white;
-    border-radius: 0.5rem;
-    padding: 2rem;
-    margin-bottom: 2rem;
-}
-
-.status-badge-large {
-    font-size: 1rem;
-    padding: 0.5rem 1rem;
-}
-
-.timeline {
-    position: relative;
-    padding-left: 2rem;
-}
-
-.timeline::before {
-    content: '';
-    position: absolute;
-    left: 0.75rem;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: #dee2e6;
-}
-
-.timeline-item {
-    position: relative;
-    margin-bottom: 1.5rem;
-}
-
-.timeline-item::before {
-    content: '';
-    position: absolute;
-    left: -1.9rem;
-    top: 0.25rem;
-    width: 0.75rem;
-    height: 0.75rem;
-    border-radius: 50%;
-    background: #007bff;
-    border: 2px solid white;
-    box-shadow: 0 0 0 2px #dee2e6;
-}
-
-.timeline-item.completed::before {
-    background: #28a745;
-}
-
-.timeline-item.cancelled::before {
-    background: #dc3545;
-}
-
-.info-card {
-    border: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin-bottom: 1.5rem;
-}
-
-.info-card .card-header {
-    background: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.reminder-badge {
-    font-size: 0.8rem;
-    margin-right: 0.5rem;
-}
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.75rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: rgb(203 213 225);
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -1.9rem;
+        top: 0.25rem;
+        width: 0.75rem;
+        height: 0.75rem;
+        border-radius: 50%;
+        background: rgb(59 130 246);
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px rgb(203 213 225);
+    }
+    
+    .timeline-item.completed::before {
+        background: rgb(34 197 94);
+    }
+    
+    .timeline-item.cancelled::before {
+        background: rgb(239 68 68);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="appointment-header">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="h2 mb-2">
-                    <i class="fas fa-calendar-check me-2"></i>
+    <div class="bg-gradient-to-r from-primary to-primary/80 rounded-xl p-6 text-white">
+        <div class="flex flex-wrap justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-semibold mb-2">
+                    <i class="fas fa-calendar-check mr-2"></i>
                     {{ appointment.appointment_number }}
                 </h1>
-                <p class="mb-0 opacity-75">
+                <p class="text-sm opacity-90">
                     {{ appointment.get_service_type_display }} • 
                     {{ appointment.appointment_date|date:"M d, Y" }} at {{ appointment.appointment_time|time:"g:i A" }}
                 </p>
             </div>
-            <div class="col-md-4 text-end">
-                <span class="badge status-badge-large bg-{% if appointment.status == 'pending' %}warning{% elif appointment.status == 'confirmed' %}success{% elif appointment.status == 'in_progress' %}primary{% elif appointment.status == 'completed' %}secondary{% elif appointment.status == 'cancelled' %}danger{% elif appointment.status == 'no_show' %}danger{% elif appointment.status == 'rescheduled' %}warning{% endif %}">
+            <div>
+                <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold
+                    {% if appointment.status == 'pending' %}bg-amber-500 text-white
+                    {% elif appointment.status == 'confirmed' %}bg-emerald-500 text-white
+                    {% elif appointment.status == 'in_progress' %}bg-blue-500 text-white
+                    {% elif appointment.status == 'completed' %}bg-slate-500 text-white
+                    {% elif appointment.status == 'cancelled' %}bg-rose-500 text-white
+                    {% elif appointment.status == 'no_show' %}bg-rose-500 text-white
+                    {% elif appointment.status == 'rescheduled' %}bg-amber-500 text-white
+                    {% else %}bg-slate-500 text-white{% endif %}">
                     {% if appointment.status == 'pending' %}
-                        <i class="fas fa-clock me-1"></i>
+                        <i class="fas fa-clock"></i>
                     {% elif appointment.status == 'confirmed' %}
-                        <i class="fas fa-check me-1"></i>
+                        <i class="fas fa-check"></i>
                     {% elif appointment.status == 'in_progress' %}
-                        <i class="fas fa-play me-1"></i>
+                        <i class="fas fa-play"></i>
                     {% elif appointment.status == 'completed' %}
-                        <i class="fas fa-check-circle me-1"></i>
+                        <i class="fas fa-check-circle"></i>
                     {% elif appointment.status == 'cancelled' %}
-                        <i class="fas fa-times me-1"></i>
+                        <i class="fas fa-times"></i>
                     {% elif appointment.status == 'no_show' %}
-                        <i class="fas fa-user-times me-1"></i>
+                        <i class="fas fa-user-times"></i>
                     {% elif appointment.status == 'rescheduled' %}
-                        <i class="fas fa-calendar-alt me-1"></i>
+                        <i class="fas fa-calendar-alt"></i>
                     {% endif %}
                     {{ appointment.get_status_display }}
                 </span>
@@ -115,209 +94,272 @@
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Main Content -->
+        <div class="lg:col-span-3 space-y-6">
             <!-- Appointment Details -->
-            <div class="card info-card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-info-circle text-primary"></i>
                         Appointment Details
                     </h5>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-muted mb-3">Customer Information</h6>
-                            <p><strong>Name:</strong> 
-                                {% if appointment.customer.user %}
-                                    {{ appointment.customer.user.first_name }} {{ appointment.customer.user.last_name }}
-                                {% elif appointment.customer.company_name %}
-                                    {{ appointment.customer.company_name }}
-                                {% else %}
-                                    {{ appointment.customer }}
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h6 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Customer Information</h6>
+                            <div class="space-y-2">
+                                <p class="text-sm">
+                                    <span class="font-semibold text-slate-700">Name:</span> 
+                                    <span class="text-slate-900">
+                                        {% if appointment.customer.user %}
+                                            {{ appointment.customer.user.first_name }} {{ appointment.customer.user.last_name }}
+                                        {% elif appointment.customer.company_name %}
+                                            {{ appointment.customer.company_name }}
+                                        {% else %}
+                                            {{ appointment.customer }}
+                                        {% endif %}
+                                    </span>
+                                </p>
+                                <p class="text-sm">
+                                    <span class="font-semibold text-slate-700">Customer Type:</span> 
+                                    <span class="text-slate-900">{{ appointment.customer.get_customer_type_display }}</span>
+                                </p>
+                                {% if appointment.customer.user.email %}
+                                <p class="text-sm">
+                                    <span class="font-semibold text-slate-700">Email:</span> 
+                                    <a href="mailto:{{ appointment.customer.user.email }}" class="text-primary hover:underline">{{ appointment.customer.user.email }}</a>
+                                </p>
                                 {% endif %}
-                            </p>
-                            <p><strong>Customer Type:</strong> {{ appointment.customer.get_customer_type_display }}</p>
-                            {% if appointment.customer.user.email %}
-                            <p><strong>Email:</strong> 
-                                <a href="mailto:{{ appointment.customer.user.email }}">{{ appointment.customer.user.email }}</a>
-                            </p>
-                            {% endif %}
-                            {% if appointment.customer.user.phone %}
-                            <p><strong>Phone:</strong> 
-                                <a href="tel:{{ appointment.customer.user.phone }}">{{ appointment.customer.user.phone }}</a>
-                            </p>
-                            {% endif %}
+                                {% if appointment.customer.user.phone %}
+                                <p class="text-sm">
+                                    <span class="font-semibold text-slate-700">Phone:</span> 
+                                    <a href="tel:{{ appointment.customer.user.phone }}" class="text-primary hover:underline">{{ appointment.customer.user.phone }}</a>
+                                </p>
+                                {% endif %}
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <h6 class="text-muted mb-3">Vehicle Information</h6>
-                            <p><strong>Vehicle:</strong> {{ appointment.vehicle.year }} {{ appointment.vehicle.make }} {{ appointment.vehicle.model }}</p>
-                            <p><strong>VIN:</strong> {{ appointment.vehicle.vin }}</p>
-                            <p><strong>License Plate:</strong> {{ appointment.vehicle.license_plate }}</p>
-                            <p><strong>Current Mileage:</strong> {{ appointment.vehicle.current_mileage|default:"Not recorded" }} {{ appointment.vehicle.get_mileage_unit_display|lower }}</p>
-                            {% if appointment.vehicle.exterior_color %}
-                            <p><strong>Color:</strong> {{ appointment.vehicle.exterior_color }}</p>
-                            {% endif %}
+                        <div>
+                            <h6 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Vehicle Information</h6>
+                            <div class="space-y-2">
+                                <p class="text-sm">
+                                    <span class="font-semibold text-slate-700">Vehicle:</span> 
+                                    <span class="text-slate-900">{{ appointment.vehicle.year }} {{ appointment.vehicle.make }} {{ appointment.vehicle.model }}</span>
+                                </p>
+                                <p class="text-sm">
+                                    <span class="font-semibold text-slate-700">VIN:</span> 
+                                    <span class="text-slate-900 font-mono">{{ appointment.vehicle.vin }}</span>
+                                </p>
+                                <p class="text-sm">
+                                    <span class="font-semibold text-slate-700">License Plate:</span> 
+                                    <span class="text-slate-900">{{ appointment.vehicle.license_plate }}</span>
+                                </p>
+                                <p class="text-sm">
+                                    <span class="font-semibold text-slate-700">Current Mileage:</span> 
+                                    <span class="text-slate-900">{{ appointment.vehicle.current_mileage|default:"Not recorded" }} {{ appointment.vehicle.get_mileage_unit_display|lower }}</span>
+                                </p>
+                                {% if appointment.vehicle.exterior_color %}
+                                <p class="text-sm">
+                                    <span class="font-semibold text-slate-700">Color:</span> 
+                                    <span class="text-slate-900">{{ appointment.vehicle.exterior_color }}</span>
+                                </p>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Service Details -->
-            <div class="card info-card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-wrench me-2"></i>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-wrench text-primary"></i>
                         Service Details
                     </h5>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Service Type:</strong> {{ appointment.get_service_type_display }}</p>
-                            <p><strong>Priority:</strong> 
-                                <span class="badge bg-{% if appointment.priority == 'urgent' %}danger{% elif appointment.priority == 'high' %}warning{% elif appointment.priority == 'low' %}info{% else %}secondary{% endif %}">
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="space-y-2">
+                            <p class="text-sm">
+                                <span class="font-semibold text-slate-700">Service Type:</span> 
+                                <span class="text-slate-900">{{ appointment.get_service_type_display }}</span>
+                            </p>
+                            <p class="text-sm">
+                                <span class="font-semibold text-slate-700">Priority:</span> 
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold
+                                    {% if appointment.priority == 'urgent' %}bg-rose-50 text-rose-700 border border-rose-200
+                                    {% elif appointment.priority == 'high' %}bg-amber-50 text-amber-700 border border-amber-200
+                                    {% elif appointment.priority == 'low' %}bg-blue-50 text-blue-700 border border-blue-200
+                                    {% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
                                     {{ appointment.get_priority_display }}
                                 </span>
                             </p>
-                            <p><strong>Duration:</strong> {{ appointment.estimated_duration }} minutes</p>
+                            <p class="text-sm">
+                                <span class="font-semibold text-slate-700">Duration:</span> 
+                                <span class="text-slate-900">{{ appointment.estimated_duration }} minutes</span>
+                            </p>
                             {% if appointment.service_bay %}
-                            <p><strong>Service Bay:</strong> {{ appointment.service_bay.name }} ({{ appointment.service_bay.get_bay_type_display }})</p>
+                            <p class="text-sm">
+                                <span class="font-semibold text-slate-700">Service Bay:</span> 
+                                <span class="text-slate-900">{{ appointment.service_bay.name }} ({{ appointment.service_bay.get_bay_type_display }})</span>
+                            </p>
                             {% endif %}
                         </div>
-                        <div class="col-md-6">
+                        <div class="space-y-2">
                             {% if appointment.estimated_cost %}
-                            <p><strong>Estimated Cost:</strong> <span class="text-success fw-bold">${{ appointment.estimated_cost|floatformat:2 }}</span></p>
+                            <p class="text-sm">
+                                <span class="font-semibold text-slate-700">Estimated Cost:</span> 
+                                <span class="text-emerald-600 font-bold">${{ appointment.estimated_cost|floatformat:2 }}</span>
+                            </p>
                             {% endif %}
                             {% if appointment.created_by %}
-                            <p><strong>Created By:</strong> {{ appointment.created_by.get_full_name|default:appointment.created_by.username }}</p>
+                            <p class="text-sm">
+                                <span class="font-semibold text-slate-700">Created By:</span> 
+                                <span class="text-slate-900">{{ appointment.created_by.get_full_name|default:appointment.created_by.username }}</span>
+                            </p>
                             {% endif %}
-                            <p><strong>Created:</strong> {{ appointment.created_at|date:"M d, Y g:i A" }}</p>
+                            <p class="text-sm">
+                                <span class="font-semibold text-slate-700">Created:</span> 
+                                <span class="text-slate-900">{{ appointment.created_at|date:"M d, Y g:i A" }}</span>
+                            </p>
                             {% if appointment.updated_at != appointment.created_at %}
-                            <p><strong>Last Updated:</strong> {{ appointment.updated_at|date:"M d, Y g:i A" }}</p>
+                            <p class="text-sm">
+                                <span class="font-semibold text-slate-700">Last Updated:</span> 
+                                <span class="text-slate-900">{{ appointment.updated_at|date:"M d, Y g:i A" }}</span>
+                            </p>
                             {% endif %}
                         </div>
                     </div>
                     
                     {% if appointment.customer_concerns %}
-                    <div class="mb-3">
-                        <h6 class="text-muted">Description</h6>
-                        <p>{{ appointment.customer_concerns|linebreaks }}</p>
+                    <div class="mb-4 pt-4 border-t border-slate-200">
+                        <h6 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Description</h6>
+                        <p class="text-sm text-slate-700 whitespace-pre-line">{{ appointment.customer_concerns }}</p>
                     </div>
                     {% endif %}
                     
                     {% if appointment.special_instructions %}
-                    <div class="mb-3">
-                        <h6 class="text-muted">Internal Notes</h6>
-                        <p class="text-muted">{{ appointment.special_instructions|linebreaks }}</p>
+                    <div class="pt-4 border-t border-slate-200">
+                        <h6 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Internal Notes</h6>
+                        <p class="text-sm text-slate-500 whitespace-pre-line">{{ appointment.special_instructions }}</p>
                     </div>
                     {% endif %}
                 </div>
             </div>
 
             <!-- Actions -->
-            <div class="card info-card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-cogs me-2"></i>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-cogs text-primary"></i>
                         Actions
                     </h5>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <a href="{% url 'appointments:appointment-edit' appointment.pk %}" class="btn btn-primary me-2">
-                                <i class="fas fa-edit me-1"></i>
-                                Edit Appointment
-                            </a>
-                            
-                            {% if appointment.status == 'pending' %}
-                            <button class="btn btn-success me-2" onclick="updateStatus('confirmed')">
-                                <i class="fas fa-check me-1"></i>
-                                Confirm
-                            </button>
-                            {% endif %}
-                            
-                            {% if appointment.status == 'confirmed' %}
-                            <button class="btn btn-info me-2" onclick="updateStatus('in_progress')">
-                                <i class="fas fa-play me-1"></i>
-                                Start Service
-                            </button>
-                            {% endif %}
-                            
-                            {% if appointment.status == 'in_progress' %}
-                            <button class="btn btn-secondary me-2" onclick="updateStatus('completed')">
-                                <i class="fas fa-check-circle me-1"></i>
-                                Complete
-                            </button>
-                            {% endif %}
-                            
-                            {% if appointment.status in 'pending,confirmed' %}
-                            <button class="btn btn-warning me-2" onclick="showRescheduleModal()">
-                                <i class="fas fa-calendar-alt me-1"></i>
-                                Reschedule
-                            </button>
-                            <button class="btn btn-outline-danger me-2" onclick="updateStatus('cancelled')">
-                                <i class="fas fa-times me-1"></i>
-                                Cancel
-                            </button>
-                            {% endif %}
-                            
-                            <a href="{% url 'appointments:appointment-list' %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left me-1"></i>
-                                Back to List
-                            </a>
-                        </div>
+                <div class="p-6">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <a href="{% url 'appointments:appointment-edit' appointment.pk %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                            <i class="fas fa-edit"></i>
+                            <span>Edit Appointment</span>
+                        </a>
+                        
+                        {% if appointment.status == 'pending' %}
+                        <button class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors" onclick="updateStatus('confirmed')">
+                            <i class="fas fa-check"></i>
+                            <span>Confirm</span>
+                        </button>
+                        {% endif %}
+                        
+                        {% if appointment.status == 'confirmed' %}
+                        <button class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors" onclick="updateStatus('in_progress')">
+                            <i class="fas fa-play"></i>
+                            <span>Start Service</span>
+                        </button>
+                        {% endif %}
+                        
+                        {% if appointment.status == 'in_progress' %}
+                        <button class="inline-flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors" onclick="updateStatus('completed')">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Complete</span>
+                        </button>
+                        {% endif %}
+                        
+                        {% if appointment.status in 'pending,confirmed' %}
+                        <button class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition-colors" onclick="showRescheduleModal()">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Reschedule</span>
+                        </button>
+                        <button class="inline-flex items-center gap-2 px-4 py-2 border border-rose-300 text-rose-700 rounded-lg text-sm font-medium hover:bg-rose-50 transition-colors" onclick="updateStatus('cancelled')">
+                            <i class="fas fa-times"></i>
+                            <span>Cancel</span>
+                        </button>
+                        {% endif %}
+                        
+                        <a href="{% url 'appointments:appointment-list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Back to List</span>
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
         
-        <div class="col-md-4">
+        <!-- Sidebar -->
+        <div class="lg:col-span-1 space-y-6">
             <!-- Quick Stats -->
-            <div class="card info-card">
-                <div class="card-header">
-                    <h6 class="card-title mb-0">
-                        <i class="fas fa-chart-pie me-2"></i>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h6 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-chart-pie text-primary"></i>
                         Quick Stats
                     </h6>
                 </div>
-                <div class="card-body">
-                    <p><strong>Days Until Appointment:</strong> 
+                <div class="p-6 space-y-3">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 mb-1">Days Until Appointment:</p>
                         {% now "Y-m-d" as today %}
                         {% if appointment.appointment_date|date:"Y-m-d" == today %}
-                            <span class="badge bg-info">Today</span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">Today</span>
                         {% elif appointment.appointment_date < today %}
-                            <span class="badge bg-danger">Past Due</span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">Past Due</span>
                         {% else %}
-                            {{ appointment.appointment_date|timeuntil }} from now
+                            <p class="text-sm text-slate-900">{{ appointment.appointment_date|timeuntil }} from now</p>
                         {% endif %}
-                    </p>
+                    </div>
                     
-                    <p><strong>Customer's Appointments:</strong> {{ appointment.customer.appointments.count }}</p>
-                    <p><strong>Vehicle's Service History:</strong> {{ appointment.vehicle.appointments.count }}</p>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 mb-1">Customer's Appointments:</p>
+                        <p class="text-sm font-semibold text-slate-900">{{ appointment.customer.appointments.count }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 mb-1">Vehicle's Service History:</p>
+                        <p class="text-sm font-semibold text-slate-900">{{ appointment.vehicle.appointments.count }}</p>
+                    </div>
                 </div>
             </div>
 
             <!-- Reminders -->
             {% if appointment.reminders.exists %}
-            <div class="card info-card">
-                <div class="card-header">
-                    <h6 class="card-title mb-0">
-                        <i class="fas fa-bell me-2"></i>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h6 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-bell text-primary"></i>
                         Reminders
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="p-6 space-y-3">
                     {% for reminder in appointment.reminders.all %}
-                    <div class="mb-2">
-                        <span class="reminder-badge badge bg-{% if reminder.status == 'sent' %}success{% elif reminder.status == 'failed' %}danger{% else %}secondary{% endif %}">
+                    <div>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold mr-2
+                            {% if reminder.status == 'sent' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                            {% elif reminder.status == 'failed' %}bg-rose-50 text-rose-700 border border-rose-200
+                            {% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
                             {{ reminder.get_reminder_method_display }}
                         </span>
-                        <small class="text-muted">
+                        <span class="text-xs text-slate-500">
                             {{ reminder.scheduled_datetime|date:"M d, g:i A" }}
-                        </small>
+                        </span>
                     </div>
                     {% endfor %}
                 </div>
@@ -325,34 +367,34 @@
             {% endif %}
 
             <!-- Timeline -->
-            <div class="card info-card">
-                <div class="card-header">
-                    <h6 class="card-title mb-0">
-                        <i class="fas fa-history me-2"></i>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h6 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-history text-primary"></i>
                         Timeline
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <div class="timeline">
                         <div class="timeline-item completed">
-                            <div class="fw-bold">Appointment Created</div>
-                            <small class="text-muted">{{ appointment.created_at|date:"M d, Y g:i A" }}</small>
+                            <div class="text-sm font-semibold text-slate-900">Appointment Created</div>
+                            <div class="text-xs text-slate-500 mt-1">{{ appointment.created_at|date:"M d, Y g:i A" }}</div>
                             {% if appointment.created_by %}
-                            <br><small class="text-muted">by {{ appointment.created_by.get_full_name|default:appointment.created_by.username }}</small>
+                            <div class="text-xs text-slate-500 mt-1">by {{ appointment.created_by.get_full_name|default:appointment.created_by.username }}</div>
                             {% endif %}
                         </div>
                         
                         {% if appointment.status != 'pending' %}
                         <div class="timeline-item {% if appointment.status == 'cancelled' %}cancelled{% else %}completed{% endif %}">
-                            <div class="fw-bold">Status: {{ appointment.get_status_display }}</div>
-                            <small class="text-muted">{{ appointment.updated_at|date:"M d, Y g:i A" }}</small>
+                            <div class="text-sm font-semibold text-slate-900">Status: {{ appointment.get_status_display }}</div>
+                            <div class="text-xs text-slate-500 mt-1">{{ appointment.updated_at|date:"M d, Y g:i A" }}</div>
                         </div>
                         {% endif %}
                         
                         {% if appointment.status == 'completed' %}
                         <div class="timeline-item completed">
-                            <div class="fw-bold">Service Completed</div>
-                            <small class="text-muted">{{ appointment.updated_at|date:"M d, Y g:i A" }}</small>
+                            <div class="text-sm font-semibold text-slate-900">Service Completed</div>
+                            <div class="text-xs text-slate-500 mt-1">{{ appointment.updated_at|date:"M d, Y g:i A" }}</div>
                         </div>
                         {% endif %}
                     </div>
@@ -363,20 +405,23 @@
 </div>
 
 <!-- Status Update Modal -->
-<div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="statusModalLabel">Update Appointment Status</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div id="statusModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 transition-opacity" onclick="closeStatusModal()"></div>
+        <div class="relative bg-white rounded-xl shadow-lg max-w-md w-full">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white flex justify-between items-center">
+                <h5 class="text-sm font-semibold text-slate-900">Update Appointment Status</h5>
+                <button type="button" class="text-slate-500 hover:text-slate-700" onclick="closeStatusModal()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to update the appointment status?</p>
+            <div class="p-6">
+                <p class="text-sm text-slate-700 mb-4">Are you sure you want to update the appointment status?</p>
                 <div id="statusDetails"></div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirmStatusUpdate">Confirm</button>
+            <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" onclick="closeStatusModal()">Cancel</button>
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" id="confirmStatusUpdate">Confirm</button>
             </div>
         </div>
     </div>
@@ -399,10 +444,16 @@ function updateStatus(newStatus) {
     };
     
     document.getElementById('statusDetails').innerHTML = 
-        `<div class="alert alert-info">${statusMessages[newStatus] || 'This will update the appointment status.'}</div>`;
+        `<div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800">${statusMessages[newStatus] || 'This will update the appointment status.'}</p>
+        </div>`;
     
-    const modal = new bootstrap.Modal(document.getElementById('statusModal'));
-    modal.show();
+    document.getElementById('statusModal').classList.remove('hidden');
+}
+
+function closeStatusModal() {
+    document.getElementById('statusModal').classList.add('hidden');
+    pendingStatusUpdate = null;
 }
 
 document.getElementById('confirmStatusUpdate').addEventListener('click', function() {
@@ -426,8 +477,7 @@ document.getElementById('confirmStatusUpdate').addEventListener('click', functio
         alert('An error occurred while updating the appointment');
     });
     
-    bootstrap.Modal.getInstance(document.getElementById('statusModal')).hide();
-    pendingStatusUpdate = null;
+    closeStatusModal();
 });
 
 function showRescheduleModal() {

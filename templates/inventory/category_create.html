@@ -4,418 +4,92 @@
 {% block title %}Create Category - Inventory{% endblock %}
 
 {% block extra_css %}
-<style>
-    .form-section {
-        background: #fff;
-        border-radius: 0.5rem;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        margin-bottom: 1.5rem;
-    }
-    
-    .form-section-header {
-        background: var(--success);
-        color: white;
-        padding: 1rem 1.5rem;
-        border-radius: 0.5rem 0.5rem 0 0;
-        margin: 0;
-    }
-    
-    .form-section-header h5 {
-        margin: 0;
-        font-weight: 600;
-    }
-    
-    .form-section-body {
-        padding: 1.5rem;
-    }
-    
-    .required {
-        color: #dc3545;
-    }
-    
-    .form-label {
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-    
-    .form-control:focus, .form-select:focus {
-        border-color: var(--success);
-        box-shadow: 0 0 0 0.2rem rgba(var(--success), 0.25);
-    }
-    
-
-    .category-preview {
-        background: #f8f9fa;
-        border: 1px dashed #dee2e6;
-        border-radius: 0.375rem;
-        padding: 1rem;
-        text-align: center;
-        color: #6c757d;
-    }
-    
-    .category-icon {
-        width: 60px;
-        height: 60px;
-        background: var(--success);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.5rem;
-        margin: 0 auto 1rem;
-    }
-    
-    .hierarchy-indicator {
-        background: color-mix(in srgb, var(--success) 10%, white);
-        border-left: 4px solid var(--success);
-        padding: 0.75rem 1rem;
-        border-radius: 0.25rem;
-        margin: 1rem 0;
-    }
-    
-    .status-toggle {
-        position: relative;
-        display: inline-block;
-        width: 60px;
-        height: 30px;
-    }
-    
-    .status-toggle input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-    }
-    
-    .slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: #ccc;
-        transition: .4s;
-        border-radius: 30px;
-    }
-    
-    .slider:before {
-        position: absolute;
-        content: "";
-        height: 22px;
-        width: 22px;
-        left: 4px;
-        bottom: 4px;
-        background-color: white;
-        transition: .4s;
-        border-radius: 50%;
-    }
-    
-    input:checked + .slider {
-        background-color: #28a745;
-    }
-    
-    input:checked + .slider:before {
-        transform: translateX(30px);
-    }
-    
-    .category-suggestions {
-        background: #f8f9fa;
-        border-radius: 0.375rem;
-        padding: 1rem;
-    }
-    
-    .suggestion-item {
-        cursor: pointer;
-        padding: 0.5rem;
-        border-radius: 0.25rem;
-        transition: background-color 0.2s;
-    }
-    
-    .suggestion-item:hover {
-        background-color: #e9ecef;
-    }
-    
-    .getting-started {
-        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-        border: 1px solid #e1bee7;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="flex flex-wrap justify-between items-center gap-4">
         <div>
-            <h1 class="h3 mb-1">Create New Category</h1>
-            <p class="text-muted mb-0">Organize your inventory with a new category</p>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">Create New Category</h1>
+            <p class="text-sm text-slate-500 mb-0">Organize your inventory with a new category</p>
         </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Back to Categories
+        <div class="flex items-center gap-2">
+            <a href="{% url 'inventory:category_list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Categories</span>
             </a>
-            <a href="{% url 'inventory:part_create' %}" class="btn btn-outline-primary">
-                <i class="fas fa-plus me-1"></i> Add Part Instead
+            <a href="{% url 'inventory:part_create' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors">
+                <i class="fas fa-plus"></i>
+                <span>Add Part Instead</span>
             </a>
         </div>
     </div>
-
-    <!-- Getting Started Guide -->
-    {% if not categories %}
-        <div class="getting-started mb-4">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h5><i class="fas fa-lightbulb me-2 text-warning"></i>Getting Started</h5>
-                    <p class="mb-2">This is your first category! Categories help organize your parts and make them easier to find. Start with broad categories like "Engine", "Brakes", or "Electrical".</p>
-                    <small class="text-muted">You can always create subcategories later to further organize your parts.</small>
-                </div>
-                <div class="col-md-4 text-center">
-                    <i class="fas fa-tags fa-3x text-primary opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    {% endif %}
 
     <!-- Form -->
     <form method="post">
         {% csrf_token %}
         
-        <div class="row">
-            <div class="col-lg-8">
-                <!-- Basic Information -->
-                <div class="form-section">
-                    <div class="form-section-header">
-                        <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
-                    </div>
-                    <div class="form-section-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="id_name" class="form-label">
-                                    Category Name <span class="required">*</span>
-                                </label>
-                                <input type="text" 
-                                       name="name" 
-                                       id="id_name" 
-                                       class="form-control" 
-                                       required
-                                       placeholder="e.g., Engine, Brakes, Electrical">
-                                <div class="form-text">Choose a clear, descriptive name for this category</div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="id_parent" class="form-label">Parent Category</label>
-                                <select name="parent_id" id="id_parent" class="form-select">
-                                    <option value="">None (Top-level category)</option>
-                                    {% for category in categories %}
-                                        <option value="{{ category.id }}">{{ category.name }}</option>
-                                    {% endfor %}
-                                </select>
-                                <div class="form-text">Select a parent category to create a hierarchy</div>
-                            </div>
-                            
-                            <div class="col-12">
-                                <label for="id_description" class="form-label">Description</label>
-                                <textarea name="description" 
-                                          id="id_description" 
-                                          class="form-control" 
-                                          rows="3" 
-                                          placeholder="Describe what types of parts belong in this category..."></textarea>
-                                <div class="form-text">Provide a helpful description of what parts belong in this category</div>
-                            </div>
-                        </div>
-                    </div>
+        <div class="max-w-3xl mx-auto">
+            <!-- Basic Information -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-info-circle text-primary"></i>
+                        Category Information
+                    </h5>
                 </div>
-
-                <!-- Status & Settings -->
-                <div class="form-section">
-                    <div class="form-section-header">
-                        <h5><i class="fas fa-cog me-2"></i>Status & Settings</h5>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label for="id_name" class="block text-xs font-semibold text-slate-700 mb-2">
+                            Category Name <span class="text-rose-600">*</span>
+                        </label>
+                        <input type="text" 
+                               name="name" 
+                               id="id_name" 
+                               class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                               required
+                               placeholder="e.g., Engine, Brakes, Electrical">
                     </div>
-                    <div class="form-section-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Category Status</label>
-                                <div class="d-flex align-items-center">
-                                    <label class="status-toggle me-3">
-                                        <input type="checkbox" name="is_active" checked>
-                                        <span class="slider"></span>
-                                    </label>
-                                    <div>
-                                        <div class="fw-semibold">
-                                            <span id="statusText">Active</span>
-                                        </div>
-                                        <small class="text-muted" id="statusDescription">
-                                            Category will be visible and can be used for parts
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label class="form-label">Category Type</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="category_type" id="regular" value="regular" checked>
-                                    <label class="form-check-label" for="regular">
-                                        <strong>Regular Category</strong>
-                                        <div class="small text-muted">For organizing physical parts and components</div>
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="category_type" id="service" value="service">
-                                    <label class="form-check-label" for="service">
-                                        <strong>Service Category</strong>
-                                        <div class="small text-muted">For labor items and services</div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div id="hierarchyPreview" class="hierarchy-indicator" style="display: none;">
-                            <strong><i class="fas fa-sitemap me-2"></i>Category Hierarchy:</strong>
-                            <span id="parentName" class="text-muted"></span> 
-                            <i class="fas fa-chevron-right mx-2"></i> 
-                            <strong id="currentName">New Category</strong>
-                        </div>
+                    
+                    <div>
+                        <label for="id_parent" class="block text-xs font-semibold text-slate-700 mb-2">Parent Category (Optional)</label>
+                        <select name="parent_id" id="id_parent" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                            <option value="">None (Top-level category)</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="id_description" class="block text-xs font-semibold text-slate-700 mb-2">Description (Optional)</label>
+                        <textarea name="description" 
+                                  id="id_description" 
+                                  class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                                  rows="3" 
+                                  placeholder="Describe what types of parts belong in this category..."></textarea>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" name="is_active" id="id_is_active" class="w-4 h-4 border-slate-300 rounded text-primary focus:ring-primary" checked>
+                            <span class="text-sm text-slate-700">Active (Category will be visible and can be used for parts)</span>
+                        </label>
                     </div>
                 </div>
             </div>
             
-            <div class="col-lg-4">
-                <!-- Category Preview -->
-                <div class="form-section">
-                    <div class="form-section-header">
-                        <h5><i class="fas fa-eye me-2"></i>Preview</h5>
-                    </div>
-                    <div class="form-section-body">
-                        <div class="category-preview">
-                            <div class="category-icon">
-                                <i class="fas fa-tag"></i>
-                            </div>
-                            <h6 id="previewName">New Category</h6>
-                            <p id="previewDescription" class="small mb-2">No description provided</p>
-                            <div class="d-flex justify-content-center gap-2">
-                                <span class="badge bg-primary">0 parts</span>
-                                <span class="badge bg-success" id="previewStatus">Active</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Category Suggestions -->
-                {% if not categories %}
-                    <div class="form-section">
-                        <div class="form-section-header">
-                            <h5><i class="fas fa-lightbulb me-2"></i>Suggestions</h5>
-                        </div>
-                        <div class="form-section-body">
-                            <div class="category-suggestions">
-                                <h6 class="mb-3">Popular Categories:</h6>
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <div class="suggestion-item" onclick="fillSuggestion('Engine', 'Engine parts and components')">
-                                            <i class="fas fa-cog me-2"></i>Engine
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="suggestion-item" onclick="fillSuggestion('Brakes', 'Brake system components')">
-                                            <i class="fas fa-stop-circle me-2"></i>Brakes
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="suggestion-item" onclick="fillSuggestion('Electrical', 'Electrical components and accessories')">
-                                            <i class="fas fa-bolt me-2"></i>Electrical
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="suggestion-item" onclick="fillSuggestion('Suspension', 'Suspension and steering parts')">
-                                            <i class="fas fa-car me-2"></i>Suspension
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="suggestion-item" onclick="fillSuggestion('Filters', 'Oil, air, fuel, and cabin filters')">
-                                            <i class="fas fa-filter me-2"></i>Filters
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="suggestion-item" onclick="fillSuggestion('Fluids', 'Motor oil, coolant, brake fluid, etc.')">
-                                            <i class="fas fa-tint me-2"></i>Fluids
-                                        </div>
-                                    </div>
-                                </div>
-                                <small class="text-muted mt-2 d-block">Click any suggestion to auto-fill the form</small>
-                            </div>
-                        </div>
-                    </div>
-                {% else %}
-                    <!-- Existing Categories -->
-                    <div class="form-section">
-                        <div class="form-section-header">
-                            <h5><i class="fas fa-list me-2"></i>Existing Categories</h5>
-                        </div>
-                        <div class="form-section-body">
-                            <div class="small">
-                                {% for category in categories %}
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span>{{ category.name }}</span>
-                                        <span class="badge bg-light text-dark">{{ category.parts.count }} parts</span>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
-
-                <!-- Quick Tips -->
-                <div class="form-section">
-                    <div class="form-section-header">
-                        <h5><i class="fas fa-info me-2"></i>Quick Tips</h5>
-                    </div>
-                    <div class="form-section-body">
-                        <div class="small">
-                            <div class="mb-2">
-                                <i class="fas fa-check text-success me-2"></i>
-                                <strong>Use clear names</strong> - Choose descriptive names that are easy to understand
-                            </div>
-                            <div class="mb-2">
-                                <i class="fas fa-check text-success me-2"></i>
-                                <strong>Start broad</strong> - Create main categories first, then add subcategories
-                            </div>
-                            <div class="mb-2">
-                                <i class="fas fa-check text-success me-2"></i>
-                                <strong>Add descriptions</strong> - Help team members understand what belongs where
-                            </div>
-                            <div class="mb-0">
-                                <i class="fas fa-check text-success me-2"></i>
-                                <strong>Plan hierarchy</strong> - Think about how categories relate to each other
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Submit Buttons -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <!-- Empty space for symmetry -->
-                    </div>
-                    <div class="d-flex gap-2">
-                        <a href="{% url 'inventory:category_list' %}" class="btn btn-secondary">
-                            <i class="fas fa-times me-2"></i>Cancel
-                        </a>
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-plus me-2"></i>Create Category
-                        </button>
-                        <button type="submit" name="create_and_add_part" class="btn btn-outline-success">
-                            <i class="fas fa-plus me-2"></i>Create & Add Part
-                        </button>
-                    </div>
-                </div>
+            <!-- Submit Buttons -->
+            <div class="flex justify-end gap-3 mt-6">
+                <a href="{% url 'inventory:category_list' %}" class="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                    <i class="fas fa-times"></i>
+                    <span>Cancel</span>
+                </a>
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-plus"></i>
+                    <span>Create Category</span>
+                </button>
             </div>
         </div>
     </form>
@@ -424,85 +98,12 @@
 
 {% block extra_js %}
 <script>
-    // Live preview updates
-    document.getElementById('id_name').addEventListener('input', function() {
-        const value = this.value || 'New Category';
-        document.getElementById('previewName').textContent = value;
-        document.getElementById('currentName').textContent = value;
-    });
-    
-    document.getElementById('id_description').addEventListener('input', function() {
-        const preview = document.getElementById('previewDescription');
-        if (this.value.trim()) {
-            preview.textContent = this.value.length > 100 ? this.value.substring(0, 100) + '...' : this.value;
-        } else {
-            preview.textContent = 'No description provided';
-        }
-    });
-    
-    // Parent category selection
-    document.getElementById('id_parent').addEventListener('change', function() {
-        const hierarchyPreview = document.getElementById('hierarchyPreview');
-        const parentName = document.getElementById('parentName');
-        
-        if (this.value) {
-            const selectedOption = this.options[this.selectedIndex];
-            parentName.textContent = selectedOption.text;
-            hierarchyPreview.style.display = 'block';
-        } else {
-            hierarchyPreview.style.display = 'none';
-        }
-    });
-    
-    // Status toggle updates
-    document.querySelector('input[name="is_active"]').addEventListener('change', function() {
-        const statusText = document.getElementById('statusText');
-        const statusDescription = document.getElementById('statusDescription');
-        const previewStatus = document.getElementById('previewStatus');
-        
-        if (this.checked) {
-            statusText.textContent = 'Active';
-            statusDescription.textContent = 'Category will be visible and can be used for parts';
-            previewStatus.textContent = 'Active';
-            previewStatus.className = 'badge bg-success';
-        } else {
-            statusText.textContent = 'Inactive';
-            statusDescription.textContent = 'Category will be hidden from normal operations';
-            previewStatus.textContent = 'Inactive';
-            previewStatus.className = 'badge bg-secondary';
-        }
-    });
-    
-    // Suggestion filling
-    function fillSuggestion(name, description) {
-        document.getElementById('id_name').value = name;
-        document.getElementById('id_description').value = description;
-        
-        // Trigger events to update preview
-        document.getElementById('id_name').dispatchEvent(new Event('input'));
-        document.getElementById('id_description').dispatchEvent(new Event('input'));
-    }
-    
     // Form validation
     document.querySelector('form').addEventListener('submit', function(e) {
         const name = document.getElementById('id_name').value.trim();
         if (!name) {
             e.preventDefault();
             alert('Category name is required');
-            document.getElementById('id_name').focus();
-            return;
-        }
-        
-        // Check for duplicate names (client-side basic check)
-        const existingCategories = [
-            {% for category in categories %}
-                '{{ category.name|escapejs }}'.toLowerCase(),
-            {% endfor %}
-        ];
-        
-        if (existingCategories.includes(name.toLowerCase())) {
-            e.preventDefault();
-            alert('A category with this name already exists. Please choose a different name.');
             document.getElementById('id_name').focus();
             return;
         }

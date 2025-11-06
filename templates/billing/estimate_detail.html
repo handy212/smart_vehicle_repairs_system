@@ -1,94 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block page_title %}{{ page_title }}{% endblock %}
+{% block title %}Estimate {{ estimate.estimate_number }}{% endblock %}
 
 {% block extra_css %}
 <style>
-    .estimate-header {
-        background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
-        border-radius: 1rem;
-        padding: 2rem;
-        color: white;
-        margin-bottom: 2rem;
-    }
-    
-    .status-badge {
-        font-size: 0.875rem;
-        font-weight: 600;
-        padding: 0.5rem 1rem;
-        border-radius: 2rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        border: 2px solid rgba(255,255,255,0.3);
-    }
-    
-    .status-draft { background-color: rgba(107, 114, 128, 0.2); }
-    .status-sent { background-color: rgba(59, 130, 246, 0.2); }
-    .status-viewed { background-color: rgba(245, 158, 11, 0.2); }
-    .status-accepted { background-color: rgba(16, 185, 129, 0.2); }
-    .status-rejected { background-color: rgba(239, 68, 68, 0.2); }
-    .status-expired { background-color: rgba(107, 114, 128, 0.2); }
-    
-    .info-card {
-        background: white;
-        border-radius: 0.75rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
-        border: 1px solid #e5e7eb;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    
-    .info-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-    }
-    
-    .line-items-table {
-        background: #f8fafc;
-        border-radius: 0.75rem;
-        overflow: hidden;
-    }
-    
-    .line-items-table .table {
-        margin-bottom: 0;
-    }
-    
-    .line-items-table thead th {
-        background: #e2e8f0;
-        border: none;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.05em;
-        color: #4a5568;
-        padding: 1rem;
-    }
-    
-    .line-items-table tbody td {
-        border: none;
-        padding: 1rem;
-        border-bottom: 1px solid #e2e8f0;
-    }
-    
-    .line-items-table tbody tr:last-child td {
-        border-bottom: none;
-    }
-    
-    .totals-section {
-        background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, black) 100%);
-        color: white;
-        border-radius: 0.75rem;
-        padding: 1.5rem;
-    }
-    
-    .action-buttons {
-        position: sticky;
-        top: 2rem;
-        z-index: 10;
-    }
-    
     .activity-timeline {
         position: relative;
         padding-left: 2rem;
@@ -118,388 +34,404 @@
         width: 12px;
         height: 12px;
         border-radius: 50%;
-        background: #6366f1;
+        background: rgb(59 130 246);
         border: 3px solid white;
         box-shadow: 0 0 0 3px #e2e8f0;
-    }
-    
-    .estimate-actions {
-        background: linear-gradient(145deg, #f8fafc, #e2e8f0);
-        border-radius: 0.75rem;
-        padding: 1.5rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-{% csrf_token %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Estimate Header -->
-    <div class="estimate-header">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <div class="d-flex align-items-center mb-2">
-                    <h1 class="h2 mb-0 me-3">
-                        <i class="fas fa-file-alt me-2"></i>
+    <div class="bg-gradient-to-r from-primary to-primary/80 rounded-xl p-6 text-white">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2">
+                <div class="flex items-center gap-3 mb-4">
+                    <h1 class="text-2xl font-bold mb-0">
+                        <i class="fas fa-file-alt mr-2"></i>
                         {{ estimate.estimate_number }}
                     </h1>
-                    <span class="status-badge status-{{ estimate.status }}">
+                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border-2 border-white/30
+                        {% if estimate.status == 'draft' %}bg-slate-500/20
+                        {% elif estimate.status == 'sent' %}bg-blue-500/20
+                        {% elif estimate.status == 'viewed' %}bg-amber-500/20
+                        {% elif estimate.status == 'accepted' %}bg-emerald-500/20
+                        {% elif estimate.status == 'rejected' %}bg-rose-500/20
+                        {% else %}bg-slate-500/20{% endif %}">
                         {{ estimate.get_status_display }}
                     </span>
                 </div>
-                <div class="row">
-                    <div class="col-sm-6">
-                        <p class="mb-1 opacity-75">
-                            <i class="fas fa-user me-2"></i>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm opacity-90 mb-2 flex items-center gap-2">
+                            <i class="fas fa-user"></i>
                             {{ estimate.customer.user.first_name }} {{ estimate.customer.user.last_name }}
                         </p>
                         {% if estimate.vehicle %}
-                        <p class="mb-1 opacity-75">
-                            <i class="fas fa-car me-2"></i>
+                        <p class="text-sm opacity-90 mb-2 flex items-center gap-2">
+                            <i class="fas fa-car"></i>
                             {{ estimate.vehicle.year }} {{ estimate.vehicle.make }} {{ estimate.vehicle.model }}
                         </p>
                         {% endif %}
                     </div>
-                    <div class="col-sm-6">
-                        <p class="mb-1 opacity-75">
-                            <i class="fas fa-calendar me-2"></i>
+                    <div>
+                        <p class="text-sm opacity-90 mb-2 flex items-center gap-2">
+                            <i class="fas fa-calendar"></i>
                             Created: {{ estimate.estimate_date|date:"M d, Y" }}
                         </p>
                         {% if estimate.valid_until %}
-                        <p class="mb-1 opacity-75">
-                            <i class="fas fa-clock me-2"></i>
+                        <p class="text-sm opacity-90 mb-2 flex items-center gap-2">
+                            <i class="fas fa-clock"></i>
                             Valid Until: {{ estimate.valid_until|date:"M d, Y" }}
                             {% if estimate.valid_until < today %}
-                            <span class="badge bg-danger ms-2">Expired</span>
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-500/30 border border-rose-300/50">Expired</span>
                             {% endif %}
                         </p>
                         {% endif %}
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 text-end">
-                <h2 class="mb-0">${{ estimate.total|floatformat:2 }}</h2>
-                <p class="mb-0 opacity-75">Total Amount</p>
+            <div class="text-right">
+                <h2 class="text-3xl font-bold mb-2">${{ estimate.total|floatformat:2 }}</h2>
+                <p class="text-sm opacity-90">Total Amount</p>
             </div>
         </div>
     </div>
 
-    <div class="row">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Main Content -->
-        <div class="col-lg-8">
+        <div class="lg:col-span-3 space-y-6">
             <!-- Customer & Vehicle Information -->
-            <div class="info-card">
-                <h5 class="mb-3">
-                    <i class="fas fa-info-circle text-primary me-2"></i>
-                    Estimate Information
-                </h5>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6 class="text-muted mb-2">Customer Details</h6>
-                        <p class="mb-1">
-                            <strong>{{ estimate.customer.user.first_name }} {{ estimate.customer.user.last_name }}</strong>
-                        </p>
-                        {% if estimate.customer.company_name %}
-                        <p class="mb-1">{{ estimate.customer.company_name }}</p>
-                        {% endif %}
-                        <p class="mb-1">
-                            <i class="fas fa-envelope me-2"></i>
-                            {{ estimate.customer.user.email }}
-                        </p>
-                        {% if estimate.customer.user.phone %}
-                        <p class="mb-1">
-                            <i class="fas fa-phone me-2"></i>
-                            {{ estimate.customer.user.phone }}
-                        </p>
-                        {% endif %}
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-info-circle text-primary"></i>
+                        Estimate Information
+                    </h5>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <h6 class="text-xs font-semibold text-slate-500 mb-3">Customer Details</h6>
+                            <div class="space-y-2">
+                                <p class="text-sm font-semibold text-slate-900">
+                                    {{ estimate.customer.user.first_name }} {{ estimate.customer.user.last_name }}
+                                </p>
+                                {% if estimate.customer.company_name %}
+                                <p class="text-sm text-slate-700">{{ estimate.customer.company_name }}</p>
+                                {% endif %}
+                                <p class="text-sm text-slate-600 flex items-center gap-2">
+                                    <i class="fas fa-envelope text-slate-400"></i>
+                                    {{ estimate.customer.user.email }}
+                                </p>
+                                {% if estimate.customer.user.phone %}
+                                <p class="text-sm text-slate-600 flex items-center gap-2">
+                                    <i class="fas fa-phone text-slate-400"></i>
+                                    {{ estimate.customer.user.phone }}
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            {% if estimate.vehicle %}
+                            <h6 class="text-xs font-semibold text-slate-500 mb-3">Vehicle Details</h6>
+                            <div class="space-y-2">
+                                <p class="text-sm font-semibold text-slate-900">
+                                    {{ estimate.vehicle.year }} {{ estimate.vehicle.make }} {{ estimate.vehicle.model }}
+                                </p>
+                                <p class="text-sm text-slate-600 flex items-center gap-2">
+                                    <i class="fas fa-id-card text-slate-400"></i>
+                                    {{ estimate.vehicle.license_plate }}
+                                </p>
+                                {% if estimate.vehicle.vin %}
+                                <p class="text-sm text-slate-600 flex items-center gap-2">
+                                    <i class="fas fa-barcode text-slate-400"></i>
+                                    VIN: {{ estimate.vehicle.vin }}
+                                </p>
+                                {% endif %}
+                                {% if estimate.vehicle.mileage %}
+                                <p class="text-sm text-slate-600 flex items-center gap-2">
+                                    <i class="fas fa-tachometer-alt text-slate-400"></i>
+                                    {{ estimate.vehicle.mileage|floatformat:0 }} miles
+                                </p>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <h6 class="text-xs font-semibold text-slate-500 mb-3">Vehicle</h6>
+                            <p class="text-sm text-slate-500">No vehicle specified</p>
+                            {% endif %}
+                        </div>
                     </div>
                     
-                    <div class="col-md-6">
-                        {% if estimate.vehicle %}
-                        <h6 class="text-muted mb-2">Vehicle Details</h6>
-                        <p class="mb-1">
-                            <strong>{{ estimate.vehicle.year }} {{ estimate.vehicle.make }} {{ estimate.vehicle.model }}</strong>
-                        </p>
-                        <p class="mb-1">
-                            <i class="fas fa-id-card me-2"></i>
-                            {{ estimate.vehicle.license_plate }}
-                        </p>
-                        {% if estimate.vehicle.vin %}
-                        <p class="mb-1">
-                            <i class="fas fa-barcode me-2"></i>
-                            VIN: {{ estimate.vehicle.vin }}
-                        </p>
-                        {% endif %}
-                        {% if estimate.vehicle.mileage %}
-                        <p class="mb-1">
-                            <i class="fas fa-tachometer-alt me-2"></i>
-                            {{ estimate.vehicle.mileage|floatformat:0 }} miles
-                        </p>
-                        {% endif %}
-                        {% else %}
-                        <h6 class="text-muted mb-2">Vehicle</h6>
-                        <p class="text-muted">No vehicle specified</p>
-                        {% endif %}
+                    {% if estimate.description %}
+                    <div class="mt-4 pt-4 border-t border-slate-200">
+                        <h6 class="text-xs font-semibold text-slate-500 mb-2">Description</h6>
+                        <p class="text-sm text-slate-700">{{ estimate.description|linebreaks }}</p>
                     </div>
+                    {% endif %}
                 </div>
-                
-                {% if estimate.description %}
-                <div class="mt-3 pt-3 border-top">
-                    <h6 class="text-muted mb-2">Description</h6>
-                    <p class="mb-0">{{ estimate.description|linebreaks }}</p>
-                </div>
-                {% endif %}
             </div>
 
             <!-- Line Items -->
-            <div class="info-card">
-                <h5 class="mb-3">
-                    <i class="fas fa-list text-primary me-2"></i>
-                    Line Items
-                </h5>
-                
-                {% if estimate.line_items.all %}
-                <div class="line-items-table">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Description</th>
-                                <th width="10%">Qty</th>
-                                <th width="15%">Unit Price</th>
-                                <th width="10%">Discount</th>
-                                <th width="15%">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in estimate.line_items.all %}
-                            <tr>
-                                <td>
-                                    <div class="fw-medium">{{ item.description }}</div>
-                                    {% if item.notes %}
-                                    <small class="text-muted">{{ item.notes }}</small>
-                                    {% endif %}
-                                </td>
-                                <td>{{ item.quantity|floatformat:2 }}</td>
-                                <td>${{ item.unit_price|floatformat:2 }}</td>
-                                <td>
-                                    {% if item.discount_percentage > 0 %}
-                                    {{ item.discount_percentage }}%
-                                    <br><small class="text-success">-${{ item.discount_amount|floatformat:2 }}</small>
-                                    {% else %}
-                                    -
-                                    {% endif %}
-                                </td>
-                                <td class="fw-bold">${{ item.total|floatformat:2 }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-list text-primary"></i>
+                        Line Items
+                    </h5>
                 </div>
-                {% else %}
-                <div class="text-center py-4">
-                    <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
-                    <p class="text-muted">No line items added to this estimate.</p>
+                <div class="p-6">
+                    {% if estimate.line_items.all %}
+                    <div class="bg-slate-50 rounded-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="bg-slate-100">
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Description</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider" style="width: 10%;">Qty</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider" style="width: 15%;">Unit Price</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider" style="width: 10%;">Discount</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider" style="width: 15%;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-200">
+                                    {% for item in estimate.line_items.all %}
+                                    <tr class="hover:bg-slate-50 transition-colors">
+                                        <td class="px-4 py-3">
+                                            <div class="text-sm font-medium text-slate-900">{{ item.description }}</div>
+                                            {% if item.notes %}
+                                            <div class="text-xs text-slate-500 mt-1">{{ item.notes }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="px-4 py-3 text-sm text-slate-900">{{ item.quantity|floatformat:2 }}</td>
+                                        <td class="px-4 py-3 text-sm text-slate-900">${{ item.unit_price|floatformat:2 }}</td>
+                                        <td class="px-4 py-3 text-sm">
+                                            {% if item.discount_percentage > 0 %}
+                                            <div>{{ item.discount_percentage }}%</div>
+                                            <div class="text-xs text-emerald-600">-${{ item.discount_amount|floatformat:2 }}</div>
+                                            {% else %}
+                                            <span class="text-slate-400">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="px-4 py-3 text-sm font-semibold text-slate-900">${{ item.total|floatformat:2 }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-12">
+                        <i class="fas fa-inbox text-4xl text-slate-400 mb-3"></i>
+                        <p class="text-sm text-slate-500">No line items added to this estimate.</p>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
 
             <!-- Notes and Terms -->
             {% if estimate.notes or estimate.terms %}
-            <div class="info-card">
-                <h5 class="mb-3">
-                    <i class="fas fa-sticky-note text-primary me-2"></i>
-                    Additional Information
-                </h5>
-                
-                <div class="row">
-                    {% if estimate.notes %}
-                    <div class="col-md-6">
-                        <h6 class="text-muted mb-2">Internal Notes</h6>
-                        <p>{{ estimate.notes|linebreaks }}</p>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-sticky-note text-primary"></i>
+                        Additional Information
+                    </h5>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {% if estimate.notes %}
+                        <div>
+                            <h6 class="text-xs font-semibold text-slate-500 mb-2">Internal Notes</h6>
+                            <p class="text-sm text-slate-700">{{ estimate.notes|linebreaks }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if estimate.terms %}
+                        <div>
+                            <h6 class="text-xs font-semibold text-slate-500 mb-2">Terms & Conditions</h6>
+                            <p class="text-sm text-slate-700">{{ estimate.terms|linebreaks }}</p>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
-                    
-                    {% if estimate.terms %}
-                    <div class="col-md-6">
-                        <h6 class="text-muted mb-2">Terms & Conditions</h6>
-                        <p>{{ estimate.terms|linebreaks }}</p>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
             {% endif %}
         </div>
 
         <!-- Sidebar -->
-        <div class="col-lg-4">
+        <div class="space-y-6">
             <!-- Action Buttons -->
-            <div class="action-buttons">
-                <div class="estimate-actions">
-                    <h6 class="mb-3">
-                        <i class="fas fa-tools me-2"></i>
+            <div class="sticky top-6">
+                <div class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-6">
+                    <h6 class="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                        <i class="fas fa-tools text-primary"></i>
                         Actions
                     </h6>
                     
-                    <div class="d-grid gap-2">
+                    <div class="space-y-2">
                         {% if estimate.status == 'approved' %}
-                        <button class="btn btn-success" onclick="convertToInvoice()">
-                            <i class="fas fa-file-invoice me-2"></i>Convert to Invoice
+                        <button class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors" onclick="convertToInvoice()">
+                            <i class="fas fa-file-invoice"></i>
+                            <span>Convert to Invoice</span>
                         </button>
                         {% endif %}
                         
-                        <button class="btn btn-primary" onclick="emailEstimate()">
-                            <i class="fas fa-envelope me-2"></i>Email to Customer
+                        <button class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="emailEstimate()">
+                            <i class="fas fa-envelope"></i>
+                            <span>Email to Customer</span>
                         </button>
                         
-                        <button class="btn btn-outline-secondary" onclick="printEstimate()">
-                            <i class="fas fa-print me-2"></i>Print Estimate
+                        <button class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" onclick="printEstimate()">
+                            <i class="fas fa-print"></i>
+                            <span>Print Estimate</span>
                         </button>
                         
-                        <div class="dropdown">
-                            <button class="btn btn-outline-primary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-cog me-2"></i>More Actions
+                        <div class="relative">
+                            <button class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors" onclick="toggleMoreActions()">
+                                <i class="fas fa-cog"></i>
+                                <span>More Actions</span>
+                                <i class="fas fa-chevron-down text-xs"></i>
                             </button>
-                            <ul class="dropdown-menu w-100">
-                                <li>
-                                    <a class="dropdown-item" href="#" onclick="duplicateEstimate()">
-                                        <i class="fas fa-copy me-2"></i>Duplicate Estimate
+                            <div id="moreActionsMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+                                <div class="py-1">
+                                    <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" href="#" onclick="duplicateEstimate()">
+                                        <i class="fas fa-copy mr-2"></i>Duplicate Estimate
                                     </a>
-                                </li>
-                                {% if estimate.status == 'approved' %}
-                                <li>
-                                    <a class="dropdown-item" href="#" onclick="convertToInvoice()">
-                                        <i class="fas fa-file-invoice me-2"></i>Convert to Invoice
+                                    {% if estimate.status == 'approved' %}
+                                    <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" href="#" onclick="convertToInvoice()">
+                                        <i class="fas fa-file-invoice mr-2"></i>Convert to Invoice
                                     </a>
-                                </li>
-                                {% elif estimate.status == 'converted' %}
-                                <li>
-                                    <a class="dropdown-item disabled" href="#">
-                                        <i class="fas fa-check-circle me-2 text-success"></i>Already Converted
+                                    {% elif estimate.status == 'converted' %}
+                                    <span class="block px-4 py-2 text-sm text-slate-400 cursor-not-allowed">
+                                        <i class="fas fa-check-circle text-emerald-600 mr-2"></i>Already Converted
+                                    </span>
+                                    {% endif %}
+                                    <hr class="my-1 border-slate-200">
+                                    <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" href="{% url 'billing:estimate_create' %}">
+                                        <i class="fas fa-edit mr-2"></i>Edit Estimate
                                     </a>
-                                </li>
-                                {% endif %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item" href="{% url 'billing:estimate_create' %}">
-                                        <i class="fas fa-edit me-2"></i>Edit Estimate
+                                    <a class="block px-4 py-2 text-sm text-rose-700 hover:bg-rose-50" href="#" onclick="deleteEstimate()">
+                                        <i class="fas fa-trash mr-2"></i>Delete Estimate
                                     </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item text-danger" href="#" onclick="deleteEstimate()">
-                                        <i class="fas fa-trash me-2"></i>Delete Estimate
-                                    </a>
-                                </li>
-                            </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Totals Summary -->
-            <div class="totals-section mt-3">
-                <h6 class="mb-3">
-                    <i class="fas fa-calculator me-2"></i>
+            <div class="bg-gradient-to-r from-primary to-primary/80 rounded-xl p-6 text-white">
+                <h6 class="text-sm font-semibold mb-4 flex items-center gap-2">
+                    <i class="fas fa-calculator"></i>
                     Summary
                 </h6>
                 
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Subtotal:</span>
-                    <span>${{ estimate.subtotal|floatformat:2 }}</span>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span>Subtotal:</span>
+                        <span>${{ estimate.subtotal|floatformat:2 }}</span>
+                    </div>
+                    
+                    {% if estimate.total_discount > 0 %}
+                    <div class="flex justify-between text-sm">
+                        <span>Discount:</span>
+                        <span class="text-emerald-300">-${{ estimate.total_discount|floatformat:2 }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="flex justify-between text-sm">
+                        <span>Tax ({{ estimate.tax_rate|floatformat:1 }}%):</span>
+                        <span>${{ estimate.tax_amount|floatformat:2 }}</span>
+                    </div>
+                    
+                    <hr class="my-3 opacity-50">
+                    
+                    <div class="flex justify-between items-center">
+                        <h5 class="text-lg font-semibold mb-0">Total:</h5>
+                        <h4 class="text-2xl font-bold mb-0">${{ estimate.total|floatformat:2 }}</h4>
+                    </div>
+                    
+                    {% if estimate.valid_until %}
+                    <div class="mt-4 pt-4 border-t border-white/25">
+                        <div class="text-xs opacity-90 flex items-center gap-1">
+                            <i class="fas fa-clock"></i>
+                            Valid until {{ estimate.valid_until|date:"M d, Y" }}
+                            {% if estimate.valid_until < today %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-500/30 border border-rose-300/50">Expired</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
-                
-                {% if estimate.total_discount > 0 %}
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Discount:</span>
-                    <span class="text-success">-${{ estimate.total_discount|floatformat:2 }}</span>
-                </div>
-                {% endif %}
-                
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Tax ({{ estimate.tax_rate|floatformat:1 }}%):</span>
-                    <span>${{ estimate.tax_amount|floatformat:2 }}</span>
-                </div>
-                
-                <hr class="my-3 opacity-50">
-                
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Total:</h5>
-                    <h4 class="mb-0">${{ estimate.total|floatformat:2 }}</h4>
-                </div>
-                
-                {% if estimate.valid_until %}
-                <div class="mt-3 pt-3 border-top border-light border-opacity-25">
-                    <small class="opacity-75">
-                        <i class="fas fa-clock me-1"></i>
-                        Valid until {{ estimate.valid_until|date:"M d, Y" }}
-                        {% if estimate.valid_until < today %}
-                        <span class="badge bg-danger ms-2">Expired</span>
-                        {% endif %}
-                    </small>
-                </div>
-                {% endif %}
             </div>
 
             <!-- Activity Timeline -->
-            <div class="info-card mt-3">
-                <h6 class="mb-3">
-                    <i class="fas fa-history text-primary me-2"></i>
-                    Activity Timeline
-                </h6>
-                
-                <div class="activity-timeline">
-                    <div class="timeline-item">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h6 class="mb-1">Estimate Created</h6>
-                                <small class="text-muted">{{ estimate.created_at|date:"M d, Y g:i A" }}</small>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h6 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                        <i class="fas fa-history text-primary"></i>
+                        Activity Timeline
+                    </h6>
+                </div>
+                <div class="p-6">
+                    <div class="activity-timeline">
+                        <div class="timeline-item">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h6 class="text-sm font-semibold text-slate-900 mb-1">Estimate Created</h6>
+                                    <small class="text-xs text-slate-500">{{ estimate.created_at|date:"M d, Y g:i A" }}</small>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    {% if estimate.status == 'sent' %}
-                    <div class="timeline-item">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h6 class="mb-1">Sent to Customer</h6>
-                                <small class="text-muted">{{ estimate.updated_at|date:"M d, Y g:i A" }}</small>
+                        
+                        {% if estimate.status == 'sent' %}
+                        <div class="timeline-item">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h6 class="text-sm font-semibold text-slate-900 mb-1">Sent to Customer</h6>
+                                    <small class="text-xs text-slate-500">{{ estimate.updated_at|date:"M d, Y g:i A" }}</small>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if estimate.status == 'viewed' %}
-                    <div class="timeline-item">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h6 class="mb-1">Viewed by Customer</h6>
-                                <small class="text-muted">{{ estimate.updated_at|date:"M d, Y g:i A" }}</small>
+                        {% endif %}
+                        
+                        {% if estimate.status == 'viewed' %}
+                        <div class="timeline-item">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h6 class="text-sm font-semibold text-slate-900 mb-1">Viewed by Customer</h6>
+                                    <small class="text-xs text-slate-500">{{ estimate.updated_at|date:"M d, Y g:i A" }}</small>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if estimate.status == 'accepted' %}
-                    <div class="timeline-item">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h6 class="mb-1">Accepted by Customer</h6>
-                                <small class="text-muted">{{ estimate.updated_at|date:"M d, Y g:i A" }}</small>
+                        {% endif %}
+                        
+                        {% if estimate.status == 'accepted' %}
+                        <div class="timeline-item">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h6 class="text-sm font-semibold text-slate-900 mb-1">Accepted by Customer</h6>
+                                    <small class="text-xs text-slate-500">{{ estimate.updated_at|date:"M d, Y g:i A" }}</small>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    {% endif %}
-                    
-                    {% if estimate.status == 'rejected' %}
-                    <div class="timeline-item">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h6 class="mb-1">Rejected by Customer</h6>
-                                <small class="text-muted">{{ estimate.updated_at|date:"M d, Y g:i A" }}</small>
+                        {% endif %}
+                        
+                        {% if estimate.status == 'rejected' %}
+                        <div class="timeline-item">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h6 class="text-sm font-semibold text-slate-900 mb-1">Rejected by Customer</h6>
+                                    <small class="text-xs text-slate-500">{{ estimate.updated_at|date:"M d, Y g:i A" }}</small>
+                                </div>
                             </div>
                         </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -507,26 +439,32 @@
 </div>
 
 <!-- Email Modal -->
-<div class="modal fade" id="emailModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Email Estimate</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div id="emailModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 transition-opacity" onclick="closeEmailModal()"></div>
+        <div class="relative bg-white rounded-xl shadow-lg max-w-lg w-full">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                <h5 class="text-sm font-semibold text-slate-900">Email Estimate</h5>
+                <button type="button" class="text-slate-500 hover:text-slate-700" onclick="closeEmailModal()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="modal-body">
-                <form id="emailForm">
-                    <div class="mb-3">
-                        <label class="form-label">To:</label>
-                        <input type="email" class="form-control" value="{{ estimate.customer.user.email }}" readonly>
+            <div class="p-6">
+                <form id="emailForm" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-2">To:</label>
+                        <input type="email" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-slate-50" 
+                               value="{{ estimate.customer.user.email }}" readonly>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Subject:</label>
-                        <input type="text" class="form-control" value="Estimate {{ estimate.estimate_number }}">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-2">Subject:</label>
+                        <input type="text" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                               value="Estimate {{ estimate.estimate_number }}">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Message:</label>
-                        <textarea class="form-control" rows="4" placeholder="Dear {{ estimate.customer.user.first_name }},
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-2">Message:</label>
+                        <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                  rows="4" placeholder="Dear {{ estimate.customer.user.first_name }},
 
 Please find attached your estimate for the requested services.
 
@@ -534,10 +472,11 @@ Thank you for your business!"></textarea>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="sendEmail()">
-                    <i class="fas fa-paper-plane me-2"></i>Send Email
+            <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" onclick="closeEmailModal()">Cancel</button>
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="sendEmail()">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Send Email</span>
                 </button>
             </div>
         </div>
@@ -547,33 +486,55 @@ Thank you for your business!"></textarea>
 
 {% block extra_js %}
 <script>
+let currentOpenMenu = null;
+
+function toggleMoreActions() {
+    const menu = document.getElementById('moreActionsMenu');
+    if (currentOpenMenu && currentOpenMenu !== menu) {
+        currentOpenMenu.classList.add('hidden');
+    }
+    menu.classList.toggle('hidden');
+    currentOpenMenu = menu.classList.contains('hidden') ? null : menu;
+}
+
+function closeEmailModal() {
+    document.getElementById('emailModal').classList.add('hidden');
+}
+
+// Close menus when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.relative')) {
+        if (currentOpenMenu) {
+            currentOpenMenu.classList.add('hidden');
+            currentOpenMenu = null;
+        }
+    }
+});
+
 function emailEstimate() {
-    $('#emailModal').modal('show');
+    document.getElementById('emailModal').classList.remove('hidden');
 }
 
 function sendEmail() {
-    // Implementation for sending email
     console.log('Sending email...');
-    $('#emailModal').modal('hide');
+    closeEmailModal();
     
-    // Show success message
     const toast = document.createElement('div');
-    toast.className = 'toast align-items-center text-white bg-success border-0';
+    toast.className = 'fixed top-4 right-4 bg-emerald-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2';
     toast.innerHTML = `
-        <div class="d-flex">
-            <div class="toast-body">
-                <i class="fas fa-check me-2"></i>Estimate emailed successfully!
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
+        <i class="fas fa-check"></i>
+        <span>Estimate emailed successfully!</span>
     `;
-    
     document.body.appendChild(toast);
-    new bootstrap.Toast(toast).show();
     
     setTimeout(() => {
-        document.body.removeChild(toast);
-    }, 5000);
+        toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
 }
 
 function printEstimate() {
@@ -582,19 +543,16 @@ function printEstimate() {
 
 function duplicateEstimate() {
     if (confirm('Create a duplicate of this estimate?')) {
-        // Implementation for duplicating estimate
         console.log('Duplicating estimate...');
     }
 }
 
 function convertToInvoice() {
     if (confirm('Convert this estimate to an invoice? This will mark the estimate as converted and create a new invoice.')) {
-        // Create a form and submit it as POST
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/billing/estimates/{{ estimate.id }}/convert-to-invoice/`;
         
-        // Add CSRF token
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
         if (csrfToken) {
             const csrfInput = document.createElement('input');
@@ -611,7 +569,6 @@ function convertToInvoice() {
 
 function deleteEstimate() {
     if (confirm('Are you sure you want to delete this estimate? This action cannot be undone.')) {
-        // Implementation for deleting estimate
         console.log('Deleting estimate...');
     }
 }

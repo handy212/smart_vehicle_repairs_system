@@ -4,15 +4,16 @@
 {% block title %}Add New Part - Inventory{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="flex flex-wrap justify-between items-center gap-4">
         <div>
-            <h1 class="h3 mb-1">Add New Part</h1>
-            <p class="text-muted mb-0">Create a new inventory part</p>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">Add New Part</h1>
+            <p class="text-sm text-slate-500 mb-0">Create a new inventory part</p>
         </div>
-        <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Back to Parts
+        <a href="{% url 'inventory:part_list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Parts</span>
         </a>
     </div>
 
@@ -20,153 +21,166 @@
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         
-        <div class="row">
-            <div class="col-lg-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="lg:col-span-3 space-y-6">
                 <!-- Basic Information -->
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-info-circle text-primary"></i>
+                            Basic Information
+                        </h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="id_name" class="form-label">Part Name <span class="text-danger">*</span></label>
-                                <input type="text" name="name" id="id_name" class="form-control" required>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="id_name" class="block text-xs font-semibold text-slate-700 mb-2">Part Name <span class="text-rose-600">*</span></label>
+                                <input type="text" name="name" id="id_name" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" required>
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="id_part_number" class="form-label">Part Number <span class="text-danger">*</span></label>
-                                <input type="text" name="part_number" id="id_part_number" class="form-control" required>
-                                <small class="text-muted">Unique identifier</small>
+                            <div>
+                                <label for="id_part_number" class="block text-xs font-semibold text-slate-700 mb-2">Part Number <span class="text-rose-600">*</span></label>
+                                <input type="text" name="part_number" id="id_part_number" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" required>
+                                <div class="text-xs text-slate-500 mt-1">Unique identifier</div>
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="id_category" class="form-label">Category</label>
-                                <select name="category" id="id_category" class="form-select">
+                            <div>
+                                <label for="id_category" class="block text-xs font-semibold text-slate-700 mb-2">Category <span class="text-rose-600">*</span></label>
+                                <select name="category" id="id_category" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" required>
                                     <option value="">--- Select Category ---</option>
                                     {% for category in categories %}
                                     <option value="{{ category.id }}">{{ category.name }}</option>
                                     {% endfor %}
                                 </select>
+                                <div class="text-xs text-slate-500 mt-1">Select a category for this part</div>
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="id_unit" class="form-label">Unit</label>
-                                <select name="unit" id="id_unit" class="form-select">
+                            <div>
+                                <label for="id_unit" class="block text-xs font-semibold text-slate-700 mb-2">Unit</label>
+                                <select name="unit" id="id_unit" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
                                     {% for value, label in UNIT_CHOICES %}
                                     <option value="{{ value }}" {% if value == 'piece' %}selected{% endif %}>{{ label }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="id_manufacturer" class="form-label">Manufacturer</label>
-                                <input type="text" name="manufacturer" id="id_manufacturer" class="form-control">
+                            <div>
+                                <label for="id_manufacturer" class="block text-xs font-semibold text-slate-700 mb-2">Manufacturer</label>
+                                <input type="text" name="manufacturer" id="id_manufacturer" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="id_manufacturer_part_number" class="form-label">Manufacturer Part #</label>
-                                <input type="text" name="manufacturer_part_number" id="id_manufacturer_part_number" class="form-control">
+                            <div>
+                                <label for="id_manufacturer_part_number" class="block text-xs font-semibold text-slate-700 mb-2">Manufacturer Part #</label>
+                                <input type="text" name="manufacturer_part_number" id="id_manufacturer_part_number" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
                             </div>
                             
-                            <div class="col-12">
-                                <label for="id_description" class="form-label">Description</label>
-                                <textarea name="description" id="id_description" class="form-control" rows="3"></textarea>
+                            <div class="sm:col-span-2">
+                                <label for="id_description" class="block text-xs font-semibold text-slate-700 mb-2">Description</label>
+                                <textarea name="description" id="id_description" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" rows="3"></textarea>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Stock Information -->
-                <div class="card mb-4">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="fas fa-boxes me-2"></i>Stock Information</h5>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-boxes text-emerald-600"></i>
+                            Stock Information
+                        </h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <label for="id_quantity_in_stock" class="form-label">Initial Stock</label>
-                                <input type="number" name="quantity_in_stock" id="id_quantity_in_stock" class="form-control" value="0" min="0">
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                                <label for="id_quantity_in_stock" class="block text-xs font-semibold text-slate-700 mb-2">Initial Stock</label>
+                                <input type="number" name="quantity_in_stock" id="id_quantity_in_stock" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" value="0" min="0">
                             </div>
                             
-                            <div class="col-md-3">
-                                <label for="id_minimum_stock" class="form-label">Minimum Stock</label>
-                                <input type="number" name="minimum_stock" id="id_minimum_stock" class="form-control" value="5" min="0">
+                            <div>
+                                <label for="id_minimum_stock" class="block text-xs font-semibold text-slate-700 mb-2">Minimum Stock</label>
+                                <input type="number" name="minimum_stock" id="id_minimum_stock" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" value="5" min="0">
                             </div>
                             
-                            <div class="col-md-3">
-                                <label for="id_reorder_point" class="form-label">Reorder Point</label>
-                                <input type="number" name="reorder_point" id="id_reorder_point" class="form-control" value="10" min="0">
+                            <div>
+                                <label for="id_reorder_point" class="block text-xs font-semibold text-slate-700 mb-2">Reorder Point</label>
+                                <input type="number" name="reorder_point" id="id_reorder_point" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" value="10" min="0">
                             </div>
                             
-                            <div class="col-md-3">
-                                <label for="id_reorder_quantity" class="form-label">Reorder Quantity</label>
-                                <input type="number" name="reorder_quantity" id="id_reorder_quantity" class="form-control" value="20" min="0">
+                            <div>
+                                <label for="id_reorder_quantity" class="block text-xs font-semibold text-slate-700 mb-2">Reorder Quantity</label>
+                                <input type="number" name="reorder_quantity" id="id_reorder_quantity" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" value="20" min="0">
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="id_maximum_stock" class="form-label">Maximum Stock (Optional)</label>
-                                <input type="number" name="maximum_stock" id="id_maximum_stock" class="form-control" min="0">
+                            <div>
+                                <label for="id_maximum_stock" class="block text-xs font-semibold text-slate-700 mb-2">Maximum Stock (Optional)</label>
+                                <input type="number" name="maximum_stock" id="id_maximum_stock" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" min="0">
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="id_bin_location" class="form-label">Bin Location</label>
-                                <input type="text" name="bin_location" id="id_bin_location" class="form-control" placeholder="e.g., A-12">
+                            <div>
+                                <label for="id_bin_location" class="block text-xs font-semibold text-slate-700 mb-2">Bin Location</label>
+                                <input type="text" name="bin_location" id="id_bin_location" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="e.g., A-12">
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="id_shelf" class="form-label">Shelf</label>
-                                <input type="text" name="shelf" id="id_shelf" class="form-control" placeholder="e.g., Shelf 3">
+                            <div>
+                                <label for="id_shelf" class="block text-xs font-semibold text-slate-700 mb-2">Shelf</label>
+                                <input type="text" name="shelf" id="id_shelf" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="e.g., Shelf 3">
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Pricing Information -->
-                <div class="card mb-4">
-                    <div class="card-header bg-warning">
-                        <h5 class="mb-0"><i class="fas fa-dollar-sign me-2"></i>Pricing Information</h5>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-amber-50 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-dollar-sign text-amber-600"></i>
+                            Pricing Information
+                        </h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="id_cost_price" class="form-label">Cost Price <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" name="cost_price" id="id_cost_price" class="form-control" step="0.01" min="0.01" required>
+                    <div class="p-6 space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="id_cost_price" class="block text-xs font-semibold text-slate-700 mb-2">Cost Price <span class="text-rose-600">*</span></label>
+                                <div class="flex">
+                                    <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-300 bg-slate-50 text-slate-700 text-sm">$</span>
+                                    <input type="number" name="cost_price" id="id_cost_price" class="flex-1 px-3 py-2.5 border border-slate-300 rounded-r-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" step="0.01" min="0.01" required>
                                 </div>
-                                <small class="text-muted">What you pay for this part</small>
+                                <div class="text-xs text-slate-500 mt-1">What you pay for this part</div>
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="id_selling_price" class="form-label">Selling Price <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" name="selling_price" id="id_selling_price" class="form-control" step="0.01" min="0.01" required>
+                            <div>
+                                <label for="id_selling_price" class="block text-xs font-semibold text-slate-700 mb-2">Selling Price <span class="text-rose-600">*</span></label>
+                                <div class="flex">
+                                    <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-300 bg-slate-50 text-slate-700 text-sm">$</span>
+                                    <input type="number" name="selling_price" id="id_selling_price" class="flex-1 px-3 py-2.5 border border-slate-300 rounded-r-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" step="0.01" min="0.01" required>
                                 </div>
-                                <small class="text-muted">What you charge customers</small>
+                                <div class="text-xs text-slate-500 mt-1">What you charge customers</div>
                             </div>
-                            
-                            <div class="col-12">
-                                <div class="alert alert-info" id="pricing-info" style="display: none;">
-                                    <strong>Markup:</strong> <span id="markup-display">$0.00 (0%)</span> | 
-                                    <strong>Margin:</strong> <span id="margin-display">0%</span>
-                                </div>
+                        </div>
+                        
+                        <div class="hidden p-3 bg-blue-50 border border-blue-200 rounded-lg" id="pricing-info">
+                            <div class="text-sm text-blue-700">
+                                <strong>Markup:</strong> <span id="markup-display">$0.00 (0%)</span> | 
+                                <strong>Margin:</strong> <span id="margin-display">0%</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Supplier Information -->
-                <div class="card mb-4">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="fas fa-truck me-2"></i>Supplier Information</h5>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-truck text-blue-600"></i>
+                            Supplier Information
+                        </h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="id_preferred_supplier" class="form-label">Preferred Supplier</label>
-                                <select name="preferred_supplier" id="id_preferred_supplier" class="form-select">
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="id_preferred_supplier" class="block text-xs font-semibold text-slate-700 mb-2">Preferred Supplier</label>
+                                <select name="preferred_supplier" id="id_preferred_supplier" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
                                     <option value="">--- Select Supplier ---</option>
                                     {% for supplier in suppliers %}
                                     <option value="{{ supplier.id }}">{{ supplier.name }}</option>
@@ -174,91 +188,99 @@
                                 </select>
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="id_suppliers" class="form-label">Additional Suppliers</label>
-                                <select name="suppliers" id="id_suppliers" class="form-select" multiple size="5">
+                            <div>
+                                <label for="id_suppliers" class="block text-xs font-semibold text-slate-700 mb-2">Additional Suppliers</label>
+                                <select name="suppliers" id="id_suppliers" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" multiple size="5">
                                     {% for supplier in suppliers %}
                                     <option value="{{ supplier.id }}">{{ supplier.name }}</option>
                                     {% endfor %}
                                 </select>
-                                <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
+                                <div class="text-xs text-slate-500 mt-1">Hold Ctrl/Cmd to select multiple</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Additional Information -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Additional Information</h5>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-plus-circle text-primary"></i>
+                            Additional Information
+                        </h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="id_warranty_months" class="form-label">Warranty (Months)</label>
-                                <input type="number" name="warranty_months" id="id_warranty_months" class="form-control" min="0">
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="id_warranty_months" class="block text-xs font-semibold text-slate-700 mb-2">Warranty (Months)</label>
+                                <input type="number" name="warranty_months" id="id_warranty_months" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" min="0">
                             </div>
                             
-                            <div class="col-md-6">
-                                <label for="id_weight" class="form-label">Weight (lbs)</label>
-                                <input type="number" name="weight" id="id_weight" class="form-control" step="0.01" min="0">
+                            <div>
+                                <label for="id_weight" class="block text-xs font-semibold text-slate-700 mb-2">Weight (lbs)</label>
+                                <input type="number" name="weight" id="id_weight" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" step="0.01" min="0">
                             </div>
-                            
-                            <div class="col-12">
-                                <label for="id_image" class="form-label">Part Image</label>
-                                <input type="file" name="image" id="id_image" class="form-control" accept="image/*">
-                                <small class="text-muted">Upload an image of the part (optional)</small>
-                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="id_image" class="block text-xs font-semibold text-slate-700 mb-2">Part Image</label>
+                            <input type="file" name="image" id="id_image" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20" accept="image/*">
+                            <div class="text-xs text-slate-500 mt-1">Upload an image of the part (optional)</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Sidebar -->
-            <div class="col-lg-4">
+            <div class="space-y-6">
                 <!-- Actions -->
-                <div class="card mb-4">
-                    <div class="card-body">
-                        <button type="submit" class="btn btn-primary w-100 mb-2">
-                            <i class="fas fa-save me-1"></i> Create Part
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <div class="space-y-3">
+                        <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                            <i class="fas fa-save"></i>
+                            <span>Create Part</span>
                         </button>
-                        <a href="{% url 'inventory:part_list' %}" class="btn btn-outline-secondary w-100">
-                            <i class="fas fa-times me-1"></i> Cancel
+                        <a href="{% url 'inventory:part_list' %}" class="block w-full text-center inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                            <i class="fas fa-times"></i>
+                            <span>Cancel</span>
                         </a>
                     </div>
                 </div>
 
                 <!-- Status Checkboxes -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h6 class="mb-0">Status Flags</h6>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h6 class="text-sm font-semibold text-slate-900 mb-0">Status Flags</h6>
                     </div>
-                    <div class="card-body">
-                        <div class="form-check mb-2">
-                            <input type="checkbox" name="is_active" id="id_is_active" class="form-check-input" checked>
-                            <label for="id_is_active" class="form-check-label">Active</label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input type="checkbox" name="is_taxable" id="id_is_taxable" class="form-check-input" checked>
-                            <label for="id_is_taxable" class="form-check-label">Taxable</label>
-                        </div>
-                        <div class="form-check">
-                            <input type="checkbox" name="is_core" id="id_is_core" class="form-check-input">
-                            <label for="id_is_core" class="form-check-label">Core Exchange Required</label>
-                        </div>
+                    <div class="p-6 space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" name="is_active" id="id_is_active" class="w-4 h-4 border-slate-300 rounded text-primary focus:ring-primary" checked>
+                            <span class="text-sm text-slate-700">Active</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" name="is_taxable" id="id_is_taxable" class="w-4 h-4 border-slate-300 rounded text-primary focus:ring-primary" checked>
+                            <span class="text-sm text-slate-700">Taxable</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" name="is_core" id="id_is_core" class="w-4 h-4 border-slate-300 rounded text-primary focus:ring-primary">
+                            <span class="text-sm text-slate-700">Core Exchange Required</span>
+                        </label>
                     </div>
                 </div>
 
                 <!-- Help -->
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-question-circle me-1"></i> Help</h6>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h6 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-question-circle text-primary"></i>
+                            Help
+                        </h6>
                     </div>
-                    <div class="card-body">
-                        <p class="small mb-2"><strong>Required fields are marked with *</strong></p>
-                        <p class="small mb-2">• Part Number must be unique</p>
-                        <p class="small mb-2">• Reorder point should be higher than minimum stock</p>
-                        <p class="small mb-0">• Selling price should be higher than cost price</p>
+                    <div class="p-6 space-y-2">
+                        <p class="text-xs text-slate-600"><strong>Required fields are marked with *</strong></p>
+                        <p class="text-xs text-slate-600">• Part Number must be unique</p>
+                        <p class="text-xs text-slate-600">• Reorder point should be higher than minimum stock</p>
+                        <p class="text-xs text-slate-600 mb-0">• Selling price should be higher than cost price</p>
                     </div>
                 </div>
             </div>
@@ -277,15 +299,37 @@ function updatePricing() {
         const markupPct = ((markup / cost) * 100).toFixed(2);
         const margin = ((markup / selling) * 100).toFixed(2);
         
-        document.getElementById('pricing-info').style.display = 'block';
+        document.getElementById('pricing-info').classList.remove('hidden');
         document.getElementById('markup-display').textContent = `$${markup.toFixed(2)} (${markupPct}%)`;
         document.getElementById('margin-display').textContent = `${margin}%`;
     } else {
-        document.getElementById('pricing-info').style.display = 'none';
+        document.getElementById('pricing-info').classList.add('hidden');
     }
 }
 
 document.getElementById('id_cost_price').addEventListener('input', updatePricing);
 document.getElementById('id_selling_price').addEventListener('input', updatePricing);
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const category = document.getElementById('id_category').value;
+    if (!category) {
+        e.preventDefault();
+        alert('Please select a category for this part. Category is required.');
+        document.getElementById('id_category').focus();
+        document.getElementById('id_category').classList.add('border-rose-500');
+        return false;
+    }
+    
+    // Remove error styling if category is selected
+    document.getElementById('id_category').classList.remove('border-rose-500');
+});
+
+// Remove error styling when category is selected
+document.getElementById('id_category').addEventListener('change', function() {
+    if (this.value) {
+        this.classList.remove('border-rose-500');
+    }
+});
 </script>
 {% endblock %}

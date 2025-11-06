@@ -518,9 +518,21 @@ class InventoryTransaction(models.Model):
         
         # Update part quantity if this is a new transaction
         if not self.pk:
-            self.part.quantity_in_stock += self.quantity
-            self.balance_after = self.part.quantity_in_stock
-            self.part.save()
+            # For adjustment-type transactions, balance_after is set explicitly in the view
+            # to handle negative stock prevention. In this case, use balance_after directly.
+            # For other transactions, calculate from current stock + quantity
+            adjustment_types = ['adjustment', 'damage', 'count', 'return']
+            if self.transaction_type in adjustment_types and self.balance_after >= 0:
+                # balance_after was calculated and set explicitly in adjust_stock view
+                # Update stock to match the explicitly set balance
+                self.part.quantity_in_stock = self.balance_after
+                self.part.save()
+            else:
+                # Calculate balance normally (for purchase, sale, transfer transactions)
+                new_stock = max(0, self.part.quantity_in_stock + self.quantity)
+                self.part.quantity_in_stock = new_stock
+                self.balance_after = new_stock
+                self.part.save()
         
         super().save(*args, **kwargs)
 

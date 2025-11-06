@@ -41,4 +41,5 @@ urlpatterns = [
     
     # SMS Templates
     path('sms-templates/', admin_views.sms_templates, name='sms_templates'),
+    
 ]

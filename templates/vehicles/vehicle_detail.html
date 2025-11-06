@@ -1,452 +1,564 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - Vehicle Details{% endblock %}
+{% block title %}{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} • {{ block.super }}{% endblock %}
 
-{% block content %}
-<div class="container-fluid">
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'vehicles:vehicle-list' %}">Vehicles</a></li>
-            <li class="breadcrumb-item active">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</li>
-        </ol>
-    </nav>
-
-    <div class="page-header-card profile-header-card shadow-sm mb-4">
-        <div class="row align-items-center g-4">
-            <div class="col-lg-8">
-                <div class="d-flex align-items-center gap-4">
-                    <div class="vehicle-avatar">
-                        {% if vehicle.image %}
-                            <img src="{{ vehicle.image.url }}" alt="{{ vehicle.display_name }}" onerror="this.remove(); this.parentNode.textContent='{{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}';">
-                        {% else %}
-                            {{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}
-                        {% endif %}
-                    </div>
-                    <div>
-                        <span class="badge-soft badge-soft-primary fw-semibold text-uppercase px-3 py-2">Vehicle Profile</span>
-                        <h1 class="page-title mt-3 mb-1">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h1>
-                        {% if vehicle.trim %}
-                            <p class="page-subtitle mb-2">{{ vehicle.trim }}</p>
-                        {% endif %}
-                        <div class="d-flex flex-wrap gap-3 small text-white-50">
-                            <span><i class="fas fa-user me-2"></i>{{ vehicle.owner.user.get_full_name }}</span>
-                            <span><i class="fas fa-barcode me-2"></i>{{ vehicle.vin }}</span>
-                            <span><i class="fas fa-id-card me-2"></i>{{ vehicle.license_plate }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4 text-lg-end">
-                <div class="d-flex flex-column align-items-lg-end gap-3">
-                    <div>
-                        {% if vehicle.status == 'active' %}
-                            <span class="badge-soft badge-soft-success">Active</span>
-                        {% elif vehicle.status == 'in_service' %}
-                            <span class="badge-soft badge-soft-warning">In Service</span>
-                        {% elif vehicle.status == 'sold' %}
-                            <span class="badge-soft badge-soft-info">Sold</span>
-                        {% elif vehicle.status == 'totaled' %}
-                            <span class="badge-soft badge-soft-danger">Totaled</span>
-                        {% else %}
-                            <span class="badge-soft badge-soft-muted">{{ vehicle.get_status_display }}</span>
-                        {% endif %}
-                    </div>
-                    <div class="page-actions d-flex flex-wrap justify-content-lg-end gap-2">
-                        <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" class="btn btn-light">
-                            <i class="fas fa-edit me-2"></i>Edit Vehicle
-                        </a>
-                        <a href="{% url 'vehicles:vehicle-service-history' vehicle.id %}" class="btn btn-contrast">
-                            <i class="fas fa-history me-2"></i>Service History
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-4">
-        <!-- Left Column - Main Details -->
-        <div class="col-lg-8">
-            <!-- Basic Information -->
-            <div class="info-card">
-                <h6><i class="fas fa-info-circle me-2"></i>Basic Information</h6>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Year:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.year }}</div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Make:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.make }}</div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Model:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.model }}</div>
-                        </div>
-                        {% if vehicle.trim %}
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Trim:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.trim }}</div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>VIN:</strong></div>
-                            <div class="col-sm-8"><code>{{ vehicle.vin }}</code></div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>License Plate:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.license_plate }}</div>
-                        </div>
-                        {% if vehicle.license_plate_state %}
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>State:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.license_plate_state }}</div>
-                        </div>
-                        {% endif %}
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Age:</strong></div>
-                            <div class="col-sm-8">{{ vehicle_age }} years</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Appearance & Details -->
-            <div class="info-card">
-                <h6><i class="fas fa-palette me-2"></i>Appearance & Details</h6>
-                <div class="row">
-                    <div class="col-md-6">
-                        {% if vehicle.exterior_color %}
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Exterior Color:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.exterior_color }}</div>
-                        </div>
-                        {% endif %}
-                        {% if vehicle.interior_color %}
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Interior Color:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.interior_color }}</div>
-                        </div>
-                        {% endif %}
-                        {% if vehicle.condition_rating %}
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Condition:</strong></div>
-                            <div class="col-sm-8">
-                                <div class="d-flex align-items-center">
-                                    {{ vehicle.get_condition_rating_display }}
-                                    <div class="ms-2">
-                                        {% for i in "12345" %}
-                                            {% if forloop.counter <= vehicle.condition_rating %}
-                                                <i class="fas fa-star text-warning"></i>
-                                            {% else %}
-                                                <i class="far fa-star text-muted"></i>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Current Mileage:</strong></div>
-                            <div class="col-sm-8">
-                                <strong>{{ vehicle.current_mileage|floatformat:0 }}</strong> {{ vehicle.mileage_unit }}
-                            </div>
-                        </div>
-                        {% if vehicle.tire_size %}
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Tire Size:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.tire_size }}</div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Engine & Transmission -->
-            <div class="info-card">
-                <h6><i class="fas fa-cogs me-2"></i>Engine & Transmission</h6>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Engine Type:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.get_engine_type_display }}</div>
-                        </div>
-                        {% if vehicle.engine_size %}
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Engine Size:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.engine_size }}</div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Transmission:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.get_transmission_type_display }}</div>
-                        </div>
-                        {% if vehicle.fuel_tank_capacity %}
-                        <div class="row mb-3">
-                            <div class="col-sm-4"><strong>Fuel Capacity:</strong></div>
-                            <div class="col-sm-8">{{ vehicle.fuel_tank_capacity }} gallons</div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Service History -->
-            <div class="info-card">
-                <h6><i class="fas fa-wrench me-2"></i>Recent Service History</h6>
-                {% if recent_work_orders %}
-                    <div class="timeline-modern">
-                        {% for work_order in recent_work_orders %}
-                        <article class="timeline-card">
-                            <span class="timeline-marker {% if work_order.status == 'completed' %}is-success{% elif work_order.status == 'in_progress' %}is-warning{% elif work_order.status == 'cancelled' %}is-danger{% else %}is-info{% endif %}"></span>
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <h5 class="mb-1">Work Order #{{ work_order.work_order_number }}</h5>
-                                    <div class="timeline-meta">
-                                        {{ work_order.created_at|date:"M d, Y" }}
-                                        {% with tech=work_order.primary_technician|default:work_order.technician %}
-                                            {% if tech %}
-                                                &middot; {% if tech.user %}{{ tech.user.get_full_name }}{% else %}{{ tech.get_full_name|default:tech }}{% endif %}
-                                            {% endif %}
-                                        {% endwith %}
-                                    </div>
-                                </div>
-                                {% if work_order.actual_total %}
-                                <span class="badge-soft badge-soft-success">${{ work_order.actual_total|floatformat:2 }}</span>
-                                {% endif %}
-                            </div>
-                            {% if work_order.description %}
-                            <p class="text-muted mb-2">{{ work_order.description|truncatewords:20 }}</p>
-                            {% endif %}
-                            <div class="timeline-meta">Mileage {{ work_order.mileage_at_service|default:vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</div>
-                        </article>
-                        {% endfor %}
-                    </div>
-                    <div class="text-center mt-3">
-                        <a href="{% url 'vehicles:vehicle-service-history' vehicle.id %}" class="btn btn-outline-primary">
-                            View Complete History
-                        </a>
-                    </div>
+{% block page_header %}
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="flex items-start gap-4 flex-1">
+            <div class="w-full max-w-md rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0 overflow-hidden" style="height: 318px;">
+                {% if vehicle.image %}
+                    <img src="{{ vehicle.image.url }}" alt="{{ vehicle.display_name }}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.parentElement.innerHTML='<span>{{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}</span>';">
                 {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-wrench fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No service history available</p>
-                    </div>
+                    <span>{{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}</span>
                 {% endif %}
             </div>
-
-            <!-- Mileage History Chart -->
-            {% if mileage_history %}
-            <div class="info-card">
-                <h6><i class="fas fa-chart-line me-2"></i>Mileage History</h6>
-                <canvas id="mileageChart" class="mileage-chart"></canvas>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Right Column - Stats & Media -->
-        <div class="col-lg-4">
-            <!-- Quick Stats -->
-            <div class="info-card">
-                <h6><i class="fas fa-chart-bar me-2"></i>Quick Stats</h6>
-                <div class="stat-item">
-                    <div class="stat-value">${{ total_spent|floatformat:2 }}</div>
-                    <div class="stat-label">Total Spent</div>
+            
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-2">
+                    {% if vehicle.status == 'active' %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Active
+                    </span>
+                    {% elif vehicle.status == 'in_service' %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>In Service
+                    </span>
+                    {% elif vehicle.status == 'sold' %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Sold
+                    </span>
+                    {% elif vehicle.status == 'totaled' %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Totaled
+                    </span>
+                    {% endif %}
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value">{{ work_order_count }}</div>
-                    <div class="stat-label">Work Orders</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">{{ vehicle_age }}</div>
-                    <div class="stat-label">Years Old</div>
-                </div>
-            </div>
-
-            <!-- Recent Photos -->
-            {% if recent_photos %}
-            <div class="info-card">
-                <h6><i class="fas fa-images me-2"></i>Recent Photos</h6>
-                <div class="photo-grid">
-                    {% for photo in recent_photos %}
-                    <div class="photo-item" onclick="viewPhoto('{{ photo.image.url }}')">
-                        <img src="{{ photo.image.url }}" alt="{{ photo.description }}" class="img-fluid">
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Documents -->
-            {% if recent_documents %}
-            <div class="info-card">
-                <h6><i class="fas fa-file-alt me-2"></i>Recent Documents</h6>
-                {% for document in recent_documents %}
-                <div class="document-item">
-                    <div class="me-3">
-                        <i class="fas fa-file-pdf text-danger fa-lg"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <div class="fw-bold">{{ document.name }}</div>
-                        <small class="text-muted">{{ document.uploaded_at|date:"M d, Y" }}</small>
-                    </div>
-                    <div>
-                        <a href="{{ document.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-download"></i>
-                        </a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- Warranty Information -->
-            {% if vehicle.warranty_type or vehicle.warranty_expiry_date or vehicle.warranty_coverage %}
-            <div class="info-card">
-                <h6><i class="fas fa-shield-alt me-2"></i>Warranty Information</h6>
-                {% if vehicle.warranty_type %}
-                <div class="row mb-2">
-                    <div class="col-sm-5"><strong>Warranty Type:</strong></div>
-                    <div class="col-sm-7">{{ vehicle.warranty_type }}</div>
-                </div>
+                <h1 class="text-2xl font-bold text-slate-900 mb-1">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h1>
+                {% if vehicle.trim %}
+                    <p class="text-sm text-slate-600 mb-3">{{ vehicle.trim }}</p>
                 {% endif %}
-                {% if vehicle.warranty_expiry_date %}
-                <div class="row mb-2">
-                    <div class="col-sm-5"><strong>Expires:</strong></div>
-                    <div class="col-sm-7">{{ vehicle.warranty_expiry_date|date:"M d, Y" }}</div>
-                </div>
-                {% endif %}
-                {% if vehicle.warranty_coverage %}
-                <div class="row mb-2">
-                    <div class="col-sm-5"><strong>Coverage:</strong></div>
-                    <div class="col-sm-7">{{ vehicle.warranty_coverage|linebreaks }}</div>
-                </div>
-                {% endif %}
-            </div>
-            {% endif %}
-            <!-- Notes -->
-            {% if vehicle.notes %}
-            <div class="info-card">
-                <h6><i class="fas fa-sticky-note me-2"></i>Notes</h6>
-                <p class="mb-0">{{ vehicle.notes|linebreaks }}</p>
-            </div>
-            {% endif %}
-
-            <!-- Quick Actions -->
-            <div class="info-card">
-                <h6><i class="fas fa-tools me-2"></i>Quick Actions</h6>
-                <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary" type="button" disabled>
-                        <i class="fas fa-plus me-2"></i>New Work Order
-                    </button>
-                    <button class="btn btn-outline-success" type="button" disabled>
-                        <i class="fas fa-calendar me-2"></i>Schedule Service
-                    </button>
-                    <button class="btn btn-outline-info" type="button" onclick="uploadPhoto()">
-                        <i class="fas fa-camera me-2"></i>Upload Photo
-                    </button>
-                    <button class="btn btn-outline-secondary" type="button" onclick="uploadDocument()">
-                        <i class="fas fa-file-upload me-2"></i>Upload Document
-                    </button>
+                <div class="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                    <span class="flex items-center gap-1.5">
+                        <i class="fas fa-user text-slate-400"></i>
+                        {{ vehicle.owner.user.get_full_name }}
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <i class="fas fa-barcode text-slate-400"></i>
+                        {{ vehicle.vin }}
+                    </span>
+                    <span class="flex items-center gap-1.5">
+                        <i class="fas fa-id-card text-slate-400"></i>
+                        {{ vehicle.license_plate }}
+                    </span>
                 </div>
             </div>
         </div>
-    </div>
-</div>
-
-<!-- Photo Viewer Modal -->
-<div class="modal fade" id="photoModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Vehicle Photo</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <img id="modalPhoto" src="" alt="" class="img-fluid">
-            </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-edit"></i>
+                <span>Edit</span>
+            </a>
+            <a href="{% url 'vehicles:vehicle-service-history' vehicle.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                <i class="fas fa-history"></i>
+                <span>Service History</span>
+            </a>
         </div>
     </div>
 </div>
 {% endblock %}
 
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column - Main Details -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Basic Information -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-info-circle mr-2 text-primary"></i>
+                    Basic Information
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Year</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.year }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Make</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.make }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Model</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.model }}</div>
+                        </div>
+                        {% if vehicle.trim %}
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Trim</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.trim }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">VIN</div>
+                            <div class="text-sm font-medium text-slate-900 font-mono">{{ vehicle.vin }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">License Plate</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.license_plate }}</div>
+                        </div>
+                        {% if vehicle.license_plate_state %}
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">State</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.license_plate_state }}</div>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Age</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle_age }} years</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Appearance & Details -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-palette mr-2 text-primary"></i>
+                    Appearance & Details
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        {% if vehicle.exterior_color %}
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Exterior Color</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.exterior_color }}</div>
+                        </div>
+                        {% endif %}
+                        {% if vehicle.interior_color %}
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Interior Color</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.interior_color }}</div>
+                        </div>
+                        {% endif %}
+                        {% if vehicle.condition_rating %}
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Condition</div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium text-slate-900">{{ vehicle.get_condition_rating_display }}</span>
+                                <div class="flex items-center gap-0.5">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= vehicle.condition_rating %}
+                                        <i class="fas fa-star text-amber-400 text-xs"></i>
+                                        {% else %}
+                                        <i class="far fa-star text-slate-300 text-xs"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Current Mileage</div>
+                            <div class="text-sm font-semibold text-slate-900">{{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</div>
+                        </div>
+                        {% if vehicle.tire_size %}
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Tire Size</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.tire_size }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Engine & Transmission -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-cogs mr-2 text-primary"></i>
+                    Engine & Transmission
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Engine Type</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.get_engine_type_display }}</div>
+                        </div>
+                        {% if vehicle.engine_size %}
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Engine Size</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.engine_size }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Transmission</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.get_transmission_type_display }}</div>
+                        </div>
+                        {% if vehicle.fuel_tank_capacity %}
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Fuel Capacity</div>
+                            <div class="text-sm font-medium text-slate-900">{{ vehicle.fuel_tank_capacity }} gallons</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Service History -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-wrench mr-2 text-primary"></i>
+                    Recent Service History
+                </h3>
+            </div>
+            <div class="p-6">
+                {% if recent_work_orders %}
+                <div class="space-y-4">
+                    {% for work_order in recent_work_orders %}
+                    <div class="relative pl-8 pb-6 border-l-2 border-slate-200 last:border-l-0 last:pb-0">
+                        <div class="absolute left-0 top-0 w-4 h-4 rounded-full border-2 border-white -ml-[9px]
+                            {% if work_order.status == 'completed' %}bg-emerald-500
+                            {% elif work_order.status == 'in_progress' %}bg-amber-500
+                            {% elif work_order.status == 'cancelled' %}bg-rose-500
+                            {% else %}bg-blue-500{% endif %}"></div>
+                        <div class="flex items-start justify-between gap-4 mb-2">
+                            <div class="flex-1">
+                                <h4 class="text-sm font-semibold text-slate-900 mb-1">Work Order #{{ work_order.work_order_number }}</h4>
+                                <div class="text-xs text-slate-500">
+                                    {{ work_order.created_at|date:"M d, Y" }}
+                                    {% with tech=work_order.primary_technician|default:work_order.technician %}
+                                        {% if tech %}
+                                            &middot; {% if tech.user %}{{ tech.user.get_full_name }}{% else %}{{ tech.get_full_name|default:tech }}{% endif %}
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
+                            </div>
+                            {% if work_order.actual_total %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                ${{ work_order.actual_total|floatformat:2 }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        {% if work_order.description %}
+                        <p class="text-sm text-slate-600 mb-2">{{ work_order.description|truncatewords:20 }}</p>
+                        {% endif %}
+                        <div class="text-xs text-slate-500">
+                            Mileage {{ work_order.mileage_at_service|default:vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="mt-6 text-center">
+                    <a href="{% url 'vehicles:vehicle-service-history' vehicle.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/5 transition-colors">
+                        View Complete History
+                    </a>
+                </div>
+                {% else %}
+                <div class="text-center py-12">
+                    <i class="fas fa-wrench text-5xl text-slate-300 mb-4"></i>
+                    <p class="text-sm text-slate-500">No service history available</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Mileage History Chart -->
+        {% if mileage_history %}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-chart-line mr-2 text-primary"></i>
+                    Mileage History
+                </h3>
+            </div>
+            <div class="p-6">
+                <canvas id="mileageChart" height="80"></canvas>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Column - Sidebar -->
+    <div class="space-y-6">
+        <!-- Quick Stats -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-chart-bar mr-2 text-primary"></i>
+                    Quick Stats
+                </h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <div class="text-2xl font-bold text-slate-900 mb-1">${{ total_spent|floatformat:2 }}</div>
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Spent</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-slate-900 mb-1">{{ work_order_count }}</div>
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Work Orders</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-slate-900 mb-1">{{ vehicle_age }}</div>
+                    <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">Years Old</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Photos -->
+        {% if recent_photos %}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-images mr-2 text-primary"></i>
+                    Recent Photos
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 gap-3">
+                    {% for photo in recent_photos %}
+                    <div class="aspect-square rounded-lg overflow-hidden border border-slate-200 cursor-pointer hover:border-primary transition-colors group" onclick="viewPhoto('{{ photo.image.url }}')">
+                        <img src="{{ photo.image.url }}" alt="{{ photo.description }}" class="w-full h-full object-cover group-hover:scale-110 transition-transform">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Documents -->
+        {% if recent_documents %}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-file-alt mr-2 text-primary"></i>
+                    Recent Documents
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-3">
+                    {% for document in recent_documents %}
+                    <div class="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all">
+                        <div class="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-file-pdf text-rose-600"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold text-slate-900 truncate">{{ document.name }}</div>
+                            <div class="text-xs text-slate-500">{{ document.uploaded_at|date:"M d, Y" }}</div>
+                        </div>
+                        <a href="{{ document.file.url }}" target="_blank" class="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-all flex-shrink-0">
+                            <i class="fas fa-download text-sm"></i>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Warranty Information -->
+        {% if vehicle.warranty_type or vehicle.warranty_expiry_date or vehicle.warranty_coverage %}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-shield-alt mr-2 text-primary"></i>
+                    Warranty Information
+                </h3>
+            </div>
+            <div class="p-6 space-y-4">
+                {% if vehicle.warranty_type %}
+                <div>
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Warranty Type</div>
+                    <div class="text-sm font-medium text-slate-900">{{ vehicle.warranty_type }}</div>
+                </div>
+                {% endif %}
+                {% if vehicle.warranty_expiry_date %}
+                <div>
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Expires</div>
+                    <div class="text-sm font-medium text-slate-900">{{ vehicle.warranty_expiry_date|date:"M d, Y" }}</div>
+                </div>
+                {% endif %}
+                {% if vehicle.warranty_coverage %}
+                <div>
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Coverage</div>
+                    <div class="text-sm text-slate-700 whitespace-pre-line">{{ vehicle.warranty_coverage }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Notes -->
+        {% if vehicle.notes %}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-sticky-note mr-2 text-primary"></i>
+                    Notes
+                </h3>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-slate-700 whitespace-pre-line">{{ vehicle.notes }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+              <h3 class="text-sm font-semibold text-slate-900">
+                <i class="fas fa-tools mr-2 text-primary"></i>
+                Quick Actions
+              </h3>
+            </div>
+            <div class="p-6">
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <a href="{% url 'workorders:create' %}?vehicle={{ vehicle.id }}" class="flex flex-col items-center justify-center p-4 rounded-lg border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group">
+                  <i class="fas fa-plus text-xl text-primary mb-2 group-hover:scale-110 transition-transform"></i>
+                  <span class="text-xs font-medium text-slate-700 text-center">Work Order</span>
+                </a>
+                <a href="{% url 'appointments:appointment-create' %}?vehicle={{ vehicle.id }}" class="flex flex-col items-center justify-center p-4 rounded-lg border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group">
+                  <i class="fas fa-calendar text-xl text-success mb-2 group-hover:scale-110 transition-transform"></i>
+                  <span class="text-xs font-medium text-slate-700 text-center">Schedule</span>
+                </a>
+                <button type="button" onclick="uploadPhoto()" class="flex flex-col items-center justify-center p-4 rounded-lg border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group">
+                  <i class="fas fa-camera text-xl text-info mb-2 group-hover:scale-110 transition-transform"></i>
+                  <span class="text-xs font-medium text-slate-700 text-center">Photo</span>
+                </button>
+                <button type="button" onclick="uploadDocument()" class="flex flex-col items-center justify-center p-4 rounded-lg border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group">
+                  <i class="fas fa-file-upload text-xl text-slate-600 mb-2 group-hover:scale-110 transition-transform"></i>
+                  <span class="text-xs font-medium text-slate-700 text-center">Document</span>
+                </button>
+              </div>
+            </div>
+          </div>      
+    </div>
+</div>
+
+<!-- Photo Viewer Modal -->
+<div id="photoModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm" onclick="closePhotoModal()">
+    <div class="relative max-w-5xl max-h-[95vh] w-full mx-4" onclick="event.stopPropagation()">
+        <button type="button" onclick="closePhotoModal()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 hover:bg-white flex items-center justify-center text-slate-700 shadow-lg transition-all z-10">
+            <i class="fas fa-times"></i>
+        </button>
+        <img id="modalPhoto" src="" alt="" class="w-full h-auto max-h-[95vh] object-contain rounded-lg shadow-2xl">
+    </div>
+</div>
+{% endblock %}
+
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 {% if mileage_history %}
 <script>
-    // Mileage History Chart
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('mileageChart');
+    if (!ctx) return;
+    
     fetch(`/vehicles/{{ vehicle.id }}/mileage-history/`)
         .then(response => response.json())
         .then(data => {
-            const ctx = document.getElementById('mileageChart').getContext('2d');
-            new Chart(ctx, {
+            const ctx2d = ctx.getContext('2d');
+            new Chart(ctx2d, {
                 type: 'line',
                 data: {
                     labels: data.labels,
                     datasets: [{
                         label: `Mileage (${data.unit})`,
                         data: data.data,
-                        borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                        borderWidth: 2,
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        borderWidth: 3,
                         fill: true,
-                        tension: 0.4
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#4f46e5',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: false,
                             title: {
                                 display: true,
                                 text: `Mileage (${data.unit})`
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
                             }
                         },
                         x: {
                             title: {
                                 display: true,
                                 text: 'Date'
+                            },
+                            grid: {
+                                display: false
                             }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
                         }
                     }
                 }
             });
         })
         .catch(error => console.error('Error loading mileage chart:', error));
+});
 </script>
 {% endif %}
 
 <script>
-    // Photo viewer
-    function viewPhoto(imageUrl) {
-        document.getElementById('modalPhoto').src = imageUrl;
-        new bootstrap.Modal(document.getElementById('photoModal')).show();
-    }
+function viewPhoto(imageUrl) {
+    document.getElementById('modalPhoto').src = imageUrl;
+    document.getElementById('photoModal').classList.remove('hidden');
+    document.getElementById('photoModal').classList.add('flex');
+    document.body.style.overflow = 'hidden';
+}
 
-    // Upload functions (placeholders for now)
-    function uploadPhoto() {
-        alert('Photo upload functionality will be implemented with Dropzone.js');
-    }
+function closePhotoModal() {
+    document.getElementById('photoModal').classList.add('hidden');
+    document.getElementById('photoModal').classList.remove('flex');
+    document.body.style.overflow = '';
+}
 
-    function uploadDocument() {
-        alert('Document upload functionality will be implemented with Dropzone.js');
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closePhotoModal();
     }
+});
+
+function uploadPhoto() {
+    alert('Photo upload functionality will be implemented with Dropzone.js');
+}
+
+function uploadDocument() {
+    alert('Document upload functionality will be implemented with Dropzone.js');
+}
 </script>
 {% endblock %}

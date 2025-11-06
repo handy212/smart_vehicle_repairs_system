@@ -1,28 +1,27 @@
 """
 Paystack Payment Gateway Integration
 Handles payment processing via Paystack for Ghana
-Using official Paystack Python SDK (paystack-sdk)
+Using pypaystack2 library
 """
 import logging
 from decimal import Decimal
 from django.conf import settings
-import paystack
+from pypaystack2 import PaystackClient
 
 logger = logging.getLogger(__name__)
 
 
-def configure_paystack():
-    """Configure Paystack SDK with API key"""
+def get_paystack_client():
+    """Get configured Paystack client"""
     if not settings.PAYSTACK_SECRET_KEY:
         logger.error("Paystack secret key not configured")
-        return False
+        return None
     
     try:
-        paystack.api_key = settings.PAYSTACK_SECRET_KEY
-        return True
+        return PaystackClient(secret_key=settings.PAYSTACK_SECRET_KEY)
     except Exception as e:
-        logger.error(f"Failed to configure Paystack: {e}")
-        return False
+        logger.error(f"Failed to create Paystack client: {e}")
+        return None
 
 
 def initialize_payment(email, amount, reference, callback_url=None, metadata=None):
@@ -46,16 +45,14 @@ def initialize_payment(email, amount, reference, callback_url=None, metadata=Non
             'reference': 'xxx'
         }
     """
-    if not configure_paystack():
+    paystack_client = get_paystack_client()
+    if not paystack_client:
         return False, "Paystack not configured"
     
     try:
         # Convert amount to kobo (smallest currency unit)
         # 1 GHS = 100 kobo
         amount_kobo = int(Decimal(str(amount)) * 100)
-        
-        # Initialize transaction
-        transaction = paystack.Transaction()
         
         # Prepare request parameters
         params = {
@@ -70,12 +67,12 @@ def initialize_payment(email, amount, reference, callback_url=None, metadata=Non
         if metadata:
             params['metadata'] = metadata
         
-        response = transaction.initialize(**params)
+        response = paystack_client.transaction.initialize(**params)
         
-        # Check response status (response.status is a boolean)
-        if response.status:
-            # response.data is a dict with the payment details
-            data = response.data
+        # Check response status 
+        if response.get('status'):
+            # Get payment details from response data
+            data = response.get('data', {})
             logger.info(f"Paystack payment initialized: {reference} for GHS {amount}")
             return True, {
                 'authorization_url': data.get('authorization_url'),
@@ -112,16 +109,16 @@ def verify_payment(reference):
             'customer': {...}
         }
     """
-    if not configure_paystack():
+    paystack_client = get_paystack_client()
+    if not paystack_client:
         return False, "Paystack not configured"
     
     try:
-        transaction = paystack.Transaction()
-        response = transaction.verify(reference=reference)
+        response = paystack_client.transaction.verify(reference=reference)
         
         # Check response status
-        if response.status:
-            data = response.data
+        if response.get('status'):
+            data = response.get('data', {})
             status = data.get('status')
             
             if status == 'success':

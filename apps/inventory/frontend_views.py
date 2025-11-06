@@ -698,6 +698,16 @@ def supplier_list_view(request):
     page = request.GET.get('page')
     suppliers = paginator.get_page(page)
     
+    # Calculate statistics
+    total_suppliers = Supplier.objects.count()
+    active_suppliers = Supplier.objects.filter(is_active=True).count()
+    parts_with_suppliers = Part.objects.filter(
+        Q(preferred_supplier__isnull=False) | Q(suppliers__isnull=False)
+    ).distinct().count()
+    pending_orders = PurchaseOrder.objects.filter(
+        status__in=['draft', 'submitted', 'confirmed']
+    ).count()
+    
     context = {
         'suppliers': suppliers,
         'search': search,
@@ -706,6 +716,10 @@ def supplier_list_view(request):
         'sort_by': sort_by,
         'SUPPLIER_TYPE_CHOICES': Supplier.SUPPLIER_TYPE_CHOICES,
         'can_edit': request.user.role in ['admin', 'manager', 'parts_manager'],
+        'total_suppliers': total_suppliers,
+        'active_suppliers': active_suppliers,
+        'parts_with_suppliers': parts_with_suppliers,
+        'pending_orders': pending_orders,
     }
     
     return render(request, 'inventory/supplier_list.html', context)
@@ -810,6 +824,9 @@ def purchase_order_create_view(request):
     suppliers = Supplier.objects.filter(is_active=True).order_by('name')
     parts = Part.objects.filter(is_active=True).order_by('name')
     
+    # Handle supplier parameter from URL
+    initial_supplier_id = request.GET.get('supplier')
+    
     if request.method == 'POST':
         try:
             # Create purchase order
@@ -855,6 +872,7 @@ def purchase_order_create_view(request):
     context = {
         'suppliers': suppliers,
         'parts': parts,
+        'initial_supplier_id': initial_supplier_id,
     }
     
     return render(request, 'inventory/purchase_order_create.html', context)
@@ -881,32 +899,32 @@ def adjust_stock(request, pk):
         if quantity_change == 0:
             return JsonResponse({'success': False, 'error': 'Quantity change cannot be zero'})
         
-        # Calculate new balance
+        # Calculate new balance (prevent negative stock)
         old_balance = part.quantity_in_stock
         new_balance = max(0, old_balance + quantity_change)
         actual_change = new_balance - old_balance
         
-        # Update part stock
-        part.quantity_in_stock = new_balance
-        part.save()
-        
-        # Create transaction
-        InventoryTransaction.objects.create(
+        # Create transaction with the calculated balance_after
+        # The model will update the part's stock to match balance_after
+        transaction = InventoryTransaction.objects.create(
             part=part,
             transaction_type=adjustment_type,
             quantity=actual_change,
-            balance_after=new_balance,
+            balance_after=new_balance,  # Set explicitly to prevent double calculation
             unit_cost=part.cost_price,
-            total_cost=part.cost_price * abs(actual_change),
+            total_cost=part.cost_price * abs(actual_change) if part.cost_price else None,
             reason=reason,
             notes=notes,
             created_by=request.user
         )
         
+        # Refresh to get updated stock
+        part.refresh_from_db()
+        
         return JsonResponse({
             'success': True,
-            'message': f'Stock adjusted successfully. New balance: {new_balance}',
-            'new_balance': new_balance
+            'message': f'Stock adjusted successfully. New balance: {part.quantity_in_stock}',
+            'new_balance': part.quantity_in_stock
         })
         
     except Exception as e:
@@ -964,6 +982,16 @@ def inventory_dashboard_view(request):
         status__in=['draft', 'submitted', 'confirmed']
     ).select_related('supplier').order_by('-created_at')[:5]
     
+    # Supplier statistics
+    total_suppliers = Supplier.objects.count()
+    active_suppliers = Supplier.objects.filter(is_active=True).count()
+    parts_with_suppliers = Part.objects.filter(
+        Q(preferred_supplier__isnull=False) | Q(suppliers__isnull=False)
+    ).distinct().count()
+    pending_orders = PurchaseOrder.objects.filter(
+        status__in=['draft', 'submitted', 'confirmed']
+    ).count()
+    
     context = {
         'total_parts': total_parts,
         'total_value': total_value,
@@ -974,6 +1002,10 @@ def inventory_dashboard_view(request):
         'reorder_needed': reorder_needed[:10],
         'recent_transactions': recent_transactions,
         'pending_pos': pending_pos,
+        'total_suppliers': total_suppliers,
+        'active_suppliers': active_suppliers,
+        'parts_with_suppliers': parts_with_suppliers,
+        'pending_orders': pending_orders,
     }
     
     return render(request, 'inventory/dashboard.html', context)

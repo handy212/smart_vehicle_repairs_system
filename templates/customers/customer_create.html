@@ -4,246 +4,348 @@
 
 {% block title %}Add Customer - Smart Vehicle Repairs{% endblock %}
 
+{% block page_header %}
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h1 class="text-xl font-semibold text-slate-900">
+                <i class="fas fa-user-plus mr-2 text-primary"></i>
+                Add New Customer
+            </h1>
+            <p class="text-sm text-slate-500 mt-1">Create a new customer account with contact information and preferences.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'customers:customer-list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to List</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'customers:customer-list' %}">Customers</a></li>
-            <li class="breadcrumb-item active">Add Customer</li>
-        </ol>
-    </nav>
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Main Form -->
+    <div class="lg:col-span-3">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-user mr-2 text-primary"></i>
+                    Customer Registration Form
+                </h3>
+            </div>
+            <div class="p-6">
+                <form method="post" id="customerForm" novalidate>
+                    {% csrf_token %}
 
-    <div class="row">
-        <div class="col-lg-8 col-xl-9">
-            <!-- Main Form Card -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-brand text-white">
-                    <h4 class="mb-0">
-                        <i class="fas fa-user-plus me-2"></i>
-                        Add New Customer
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <form method="post" id="customerForm">
-                        {% csrf_token %}
-                        
-                        <!-- Display Form Errors -->
-                        {% if form.errors %}
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>Please correct the following errors:</strong>
-                            <ul class="mb-0 mt-2">
-                                {% for field in form %}
-                                    {% for error in field.errors %}
-                                        <li>{{ field.label }}: {{ error }}</li>
+                    {% if form.errors or form.non_field_errors %}
+                    <div class="mb-6 p-4 rounded-lg bg-rose-50 border border-rose-200">
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-exclamation-triangle text-rose-600 mt-0.5"></i>
+                            <div class="flex-1">
+                                <h4 class="text-sm font-semibold text-rose-900 mb-2">Please correct the highlighted issues:</h4>
+                                <ul class="text-sm text-rose-700 space-y-1">
+                                    {% for field in form %}
+                                        {% for error in field.errors %}
+                                            <li>{{ field.label }}: {{ error }}</li>
+                                        {% endfor %}
                                     {% endfor %}
-                                {% endfor %}
-                                {% for error in form.non_field_errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    {% for error in form.non_field_errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
                         </div>
-                        {% endif %}
+                    </div>
+                    {% endif %}
 
-                        <!-- Personal Information -->
-                        <div class="form-section">
-                            <h5 class="form-section-title"><i class="fas fa-user"></i> Personal Information</h5>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.first_name.id_for_label }}" class="form-label required-field">First Name</label>
-                                    {% render_field form.first_name class="form-control" placeholder="Enter first name" %}
-                                    {% if form.first_name.help_text %}
-                                    <div class="form-help-text">{{ form.first_name.help_text }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.last_name.id_for_label }}" class="form-label required-field">Last Name</label>
-                                    {% render_field form.last_name class="form-control" placeholder="Enter last name" %}
-                                    {% if form.last_name.help_text %}
-                                    <div class="form-help-text">{{ form.last_name.help_text }}</div>
-                                    {% endif %}
-                                </div>
+                    <!-- Personal Information -->
+                    <div class="mb-8">
+                        <h4 class="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                            <i class="fas fa-user text-primary"></i>
+                            Personal Information
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="{{ form.first_name.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    First Name <span class="text-rose-500">*</span>
+                                </label>
+                                {% render_field form.first_name class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Enter first name" %}
+                                {% if form.first_name.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.first_name.errors }}</div>
+                                {% endif %}
                             </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.email.id_for_label }}" class="form-label required-field">Email</label>
-                                    {% render_field form.email class="form-control" type="email" placeholder="customer@example.com" %}
-                                    <div class="form-help-text">Used for login and communications</div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
-                                    {% render_field form.phone_number class="form-control" placeholder="+1 (555) 123-4567" %}
-                                </div>
+                            <div>
+                                <label for="{{ form.last_name.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    Last Name <span class="text-rose-500">*</span>
+                                </label>
+                                {% render_field form.last_name class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Enter last name" %}
+                                {% if form.last_name.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.last_name.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label for="{{ form.email.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    Email <span class="text-rose-500">*</span>
+                                </label>
+                                {% render_field form.email type="email" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="customer@example.com" %}
+                                <div class="text-xs text-slate-500 mt-1.5">Used for login and communications</div>
+                                {% if form.email.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.email.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.phone_number.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">Phone Number</label>
+                                {% render_field form.phone_number class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="+1 (555) 123-4567" %}
+                                {% if form.phone_number.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.phone_number.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
 
-                        <!-- Customer Type & Status -->
-                        <div class="form-section">
-                            <h5 class="form-section-title"><i class="fas fa-tag"></i> Customer Details</h5>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.customer_type.id_for_label }}" class="form-label required-field">Customer Type</label>
-                                    {% render_field form.customer_type class="form-select" %}
-                                    <div class="form-help-text">Individual, Business, or Fleet</div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
-                                    {% render_field form.status class="form-select" %}
-                                </div>
+                    <!-- Customer Type & Status -->
+                    <div class="mb-8">
+                        <h4 class="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                            <i class="fas fa-tag text-primary"></i>
+                            Customer Details
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="{{ form.customer_type.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">
+                                    Customer Type <span class="text-rose-500">*</span>
+                                </label>
+                                {% render_field form.customer_type class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" %}
+                                <div class="text-xs text-slate-500 mt-1.5">Individual, Business, or Fleet</div>
+                                {% if form.customer_type.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.customer_type.errors }}</div>
+                                {% endif %}
                             </div>
-                            <div class="col-md-12 mb-3">
-                                <label for="{{ form.preferred_contact_method.id_for_label }}" class="form-label">Preferred Contact Method</label>
-                                {% render_field form.preferred_contact_method class="form-select" %}
+                            <div>
+                                <label for="{{ form.status.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">Status</label>
+                                {% render_field form.status class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" %}
+                                {% if form.status.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.status.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+                        <div class="mt-4">
+                            <label for="{{ form.preferred_contact_method.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">Preferred Contact Method</label>
+                            {% render_field form.preferred_contact_method class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" %}
+                            {% if form.preferred_contact_method.errors %}
+                                <div class="text-xs text-rose-600 mt-1">{{ form.preferred_contact_method.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
 
-                        <!-- Business Information (Conditional) -->
-                        <div class="form-section business-fields d-none" id="businessFields">
-                            <h5 class="form-section-title"><i class="fas fa-building"></i> Business Information</h5>
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                <small>These fields are required for Business and Fleet customers</small>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.company_name.id_for_label }}" class="form-label">Company Name</label>
-                                    {% render_field form.company_name class="form-control" placeholder="ABC Company Inc." %}
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.tax_id.id_for_label }}" class="form-label">Tax ID / EIN</label>
-                                    {% render_field form.tax_id class="form-control" placeholder="12-3456789" %}
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.payment_terms.id_for_label }}" class="form-label">Payment Terms</label>
-                                    {% render_field form.payment_terms class="form-select" %}
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="{{ form.credit_limit.id_for_label }}" class="form-label">Credit Limit</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">$</span>
-                                        {% render_field form.credit_limit class="form-control" placeholder="0.00" %}
-                                    </div>
-                                </div>
+                    <!-- Business Information (Conditional) -->
+                    <div class="mb-8 business-fields hidden" id="businessFields">
+                        <h4 class="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                            <i class="fas fa-building text-primary"></i>
+                            Business Information
+                        </h4>
+                        <div class="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
+                            <div class="flex items-start gap-2">
+                                <i class="fas fa-info-circle text-blue-600 mt-0.5"></i>
+                                <p class="text-xs text-blue-700">These fields are required for Business and Fleet customers</p>
                             </div>
                         </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="{{ form.company_name.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">Company Name</label>
+                                {% render_field form.company_name class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="ABC Company Inc." %}
+                                {% if form.company_name.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.company_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.tax_id.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">Tax ID / EIN</label>
+                                {% render_field form.tax_id class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="12-3456789" %}
+                                {% if form.tax_id.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.tax_id.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label for="{{ form.payment_terms.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">Payment Terms</label>
+                                {% render_field form.payment_terms class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" %}
+                                {% if form.payment_terms.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.payment_terms.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.credit_limit.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">Credit Limit</label>
+                                <div class="flex items-center">
+                                    <span class="px-3 py-2.5 border border-r-0 border-slate-300 rounded-l-lg bg-slate-50 text-slate-600 text-sm">$</span>
+                                    {% render_field form.credit_limit class="flex-1 px-3 py-2.5 border border-slate-300 rounded-r-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="0.00" %}
+                                </div>
+                                {% if form.credit_limit.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.credit_limit.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
 
-                        <!-- Address Information -->
-                        <div class="form-section">
-                            <h5 class="form-section-title"><i class="fas fa-map-marker-alt"></i> Service Address</h5>
-                            <div class="mb-3">
-                                <label for="{{ form.service_address.id_for_label }}" class="form-label">Service Address</label>
-                                {% render_field form.service_address class="form-control" placeholder="Primary service/pickup address" %}
+                    <!-- Service Address -->
+                    <div class="mb-8">
+                        <h4 class="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                            <i class="fas fa-map-marker-alt text-primary"></i>
+                            Service Address
+                        </h4>
+                        <div class="mb-4">
+                            <label for="{{ form.service_address.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">Service Address</label>
+                            {% render_field form.service_address class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Primary service/pickup address" %}
+                            {% if form.service_address.errors %}
+                                <div class="text-xs text-rose-600 mt-1">{{ form.service_address.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label for="{{ form.service_city.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">City</label>
+                                {% render_field form.service_city class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="City" %}
+                                {% if form.service_city.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.service_city.errors }}</div>
+                                {% endif %}
                             </div>
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label for="{{ form.service_city.id_for_label }}" class="form-label">City</label>
-                                    {% render_field form.service_city class="form-control" placeholder="City" %}
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="{{ form.service_state.id_for_label }}" class="form-label">State</label>
-                                    {% render_field form.service_state class="form-control" placeholder="State" %}
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="{{ form.service_zip_code.id_for_label }}" class="form-label">ZIP Code</label>
-                                    {% render_field form.service_zip_code class="form-control" placeholder="12345" %}
-                                </div>
+                            <div>
+                                <label for="{{ form.service_state.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">State</label>
+                                {% render_field form.service_state class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="State" %}
+                                {% if form.service_state.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.service_state.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.service_zip_code.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">ZIP Code</label>
+                                {% render_field form.service_zip_code class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="12345" %}
+                                {% if form.service_zip_code.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.service_zip_code.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Billing Address (Optional) -->
-                        <div class="form-section">
-                            <h5 class="form-section-title"><i class="fas fa-file-invoice"></i> Billing Address <small class="text-muted">(Optional - if different from service address)</small></h5>
-                            <div class="mb-3">
-                                <label for="{{ form.billing_address.id_for_label }}" class="form-label">Billing Address</label>
-                                {% render_field form.billing_address class="form-control" placeholder="Billing address if different from service address" %}
+                    <!-- Billing Address (Optional) -->
+                    <div class="mb-8">
+                        <h4 class="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                            <i class="fas fa-file-invoice text-primary"></i>
+                            Billing Address <span class="text-xs font-normal text-slate-500">(Optional - if different from service address)</span>
+                        </h4>
+                        <div class="mb-4">
+                            <label for="{{ form.billing_address.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">Billing Address</label>
+                            {% render_field form.billing_address class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Billing address if different from service address" %}
+                            {% if form.billing_address.errors %}
+                                <div class="text-xs text-rose-600 mt-1">{{ form.billing_address.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label for="{{ form.billing_city.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">Billing City</label>
+                                {% render_field form.billing_city class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Billing city" %}
+                                {% if form.billing_city.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.billing_city.errors }}</div>
+                                {% endif %}
                             </div>
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label for="{{ form.billing_city.id_for_label }}" class="form-label">Billing City</label>
-                                    {% render_field form.billing_city class="form-control" placeholder="Billing city" %}
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="{{ form.billing_state.id_for_label }}" class="form-label">Billing State</label>
-                                    {% render_field form.billing_state class="form-control" placeholder="Billing state" %}
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="{{ form.billing_zip_code.id_for_label }}" class="form-label">Billing ZIP</label>
-                                    {% render_field form.billing_zip_code class="form-control" placeholder="12345" %}
-                                </div>
+                            <div>
+                                <label for="{{ form.billing_state.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">Billing State</label>
+                                {% render_field form.billing_state class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Billing state" %}
+                                {% if form.billing_state.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.billing_state.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <label for="{{ form.billing_zip_code.id_for_label }}" class="block text-xs font-semibold text-slate-700 mb-2">Billing ZIP</label>
+                                {% render_field form.billing_zip_code class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="12345" %}
+                                {% if form.billing_zip_code.errors %}
+                                    <div class="text-xs text-rose-600 mt-1">{{ form.billing_zip_code.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Sticky Submit Buttons -->
-                        <div class="sticky-actions">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-save me-2"></i>Create Customer
-                            </button>
-                            <button type="submit" name="save_and_add_vehicle" class="btn btn-success btn-lg">
-                                <i class="fas fa-car me-2"></i>Create & Add Vehicle
-                            </button>
-                            <a href="{% url 'customers:customer-list' %}" class="btn btn-secondary btn-lg">
-                                <i class="fas fa-times me-2"></i>Cancel
-                            </a>
-                        </div>
-                    </form>
-                </div>
+                    <!-- Form Actions -->
+                    <div class="flex flex-wrap items-center gap-3 pt-6 border-t border-slate-200">
+                        <button type="submit" class="inline-flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                            <i class="fas fa-save"></i>
+                            Create Customer
+                        </button>
+                        <button type="submit" name="save_and_add_vehicle" class="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
+                            <i class="fas fa-car"></i>
+                            Create & Add Vehicle
+                        </button>
+                        <a href="{% url 'customers:customer-list' %}" class="inline-flex items-center gap-2 px-6 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                            <i class="fas fa-times"></i>
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <!-- Tips Card -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-amber-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-lightbulb mr-2 text-amber-600"></i>
+                    Tips
+                </h3>
+            </div>
+            <div class="p-6">
+                <ul class="space-y-3 text-sm text-slate-600">
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check-circle text-emerald-600 mt-0.5"></i>
+                        <span>Email address will be used for customer login</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check-circle text-emerald-600 mt-0.5"></i>
+                        <span>Customer will receive a welcome email with login instructions</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check-circle text-emerald-600 mt-0.5"></i>
+                        <span>Business and Fleet customers can have credit terms</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check-circle text-emerald-600 mt-0.5"></i>
+                        <span>You can add vehicles after creating the customer</span>
+                    </li>
+                </ul>
             </div>
         </div>
 
-        <!-- Sidebar Help -->
-        <div class="col-lg-4 col-xl-3">
-            <!-- Tips Card -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0">
-                        <i class="fas fa-lightbulb text-warning me-2"></i>
-                        Tips
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <ul class="list-unstyled mb-0">
-                        <li class="mb-2">
-                            <i class="fas fa-check-circle text-success me-2"></i>
-                            <small>Email address will be used for customer login</small>
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check-circle text-success me-2"></i>
-                            <small>Customer will receive a welcome email with login instructions</small>
-                        </li>
-                        <li class="mb-2">
-                            <i class="fas fa-check-circle text-success me-2"></i>
-                            <small>Business and Fleet customers can have credit terms</small>
-                        </li>
-                        <li class="mb-0">
-                            <i class="fas fa-check-circle text-success me-2"></i>
-                            <small>You can add vehicles after creating the customer</small>
-                        </li>
-                    </ul>
-                </div>
+        <!-- Required Fields -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900">
+                    <i class="fas fa-asterisk mr-2 text-rose-600"></i>
+                    Required Fields
+                </h3>
             </div>
-
-            <!-- Required Fields -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0">
-                        <i class="fas fa-asterisk text-danger me-2"></i>
-                        Required Fields
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <p class="small mb-2">Fields marked with <span class="text-danger">*</span> are required:</p>
-                    <ul class="small mb-0">
-                        <li>First Name</li>
-                        <li>Last Name</li>
-                        <li>Email</li>
-                        <li>Customer Type</li>
-                    </ul>
-                </div>
+            <div class="p-6">
+                <p class="text-xs text-slate-600 mb-3">Fields marked with <span class="text-rose-600 font-semibold">*</span> are required:</p>
+                <ul class="space-y-1.5 text-xs text-slate-600">
+                    <li class="flex items-center gap-2">
+                        <span class="w-1 h-1 rounded-full bg-slate-400"></span>
+                        First Name
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="w-1 h-1 rounded-full bg-slate-400"></span>
+                        Last Name
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="w-1 h-1 rounded-full bg-slate-400"></span>
+                        Email
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="w-1 h-1 rounded-full bg-slate-400"></span>
+                        Customer Type
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
@@ -260,9 +362,9 @@
         function toggleBusinessFields() {
             const customerType = customerTypeField.value;
             if (customerType === 'business' || customerType === 'fleet') {
-                businessFields.classList.remove('d-none');
+                businessFields.classList.remove('hidden');
             } else {
-                businessFields.classList.add('d-none');
+                businessFields.classList.add('hidden');
             }
         }
         

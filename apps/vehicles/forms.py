@@ -7,6 +7,13 @@ from .models import Vehicle, VehicleDocument, VehiclePhoto, VehicleMileageHistor
 from apps.customers.models import Customer
 
 
+INPUT_CLASS = "block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+TEXTAREA_CLASS = "block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+SELECT_CLASS = "block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+FILE_INPUT_CLASS = "block w-full cursor-pointer rounded-md border border-gray-300 bg-white text-sm text-gray-900 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100 focus:border-indigo-500 focus:ring-indigo-500"
+CHECKBOX_CLASS = "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+
+
 class VehicleForm(forms.ModelForm):
     """
     Form for creating and editing vehicles
@@ -24,102 +31,100 @@ class VehicleForm(forms.ModelForm):
         ]
         widgets = {
             'owner': forms.Select(attrs={
-                'class': 'form-select',
+                'class': SELECT_CLASS,
                 'required': True
             }),
             'vin': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': f"{INPUT_CLASS} uppercase",
                 'placeholder': 'Enter 17-character VIN',
                 'maxlength': '17',
-                'pattern': '[A-HJ-NPR-Z0-9]{17}',
-                'style': 'text-transform: uppercase;'
+                'pattern': '[A-HJ-NPR-Z0-9]{17}'
             }),
             'year': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'e.g., 2020',
                 'min': '1900',
                 'max': '2030'
             }),
             'make': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'e.g., Toyota, Ford, BMW'
             }),
             'model': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'e.g., Camry, F-150, X3'
             }),
             'trim': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'e.g., SE, XLT, xDrive30i'
             }),
             'exterior_color': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'e.g., Blue, White, Black'
             }),
             'interior_color': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'e.g., Tan, Black, Gray'
             }),
             'license_plate': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'License plate number',
-                'style': 'text-transform: uppercase;'
+                'class': f"{INPUT_CLASS} uppercase",
+                'placeholder': 'License plate number'
             }),
             'license_plate_state': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'State/Province'
             }),
             'current_mileage': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'Current odometer reading',
                 'min': '0'
             }),
-            'mileage_unit': forms.Select(attrs={'class': 'form-select'}),
-            'engine_type': forms.Select(attrs={'class': 'form-select'}),
+            'mileage_unit': forms.Select(attrs={'class': SELECT_CLASS}),
+            'engine_type': forms.Select(attrs={'class': SELECT_CLASS}),
             'engine_size': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'e.g., 2.0L, 3.5L V6'
             }),
-            'transmission_type': forms.Select(attrs={'class': 'form-select'}),
+            'transmission_type': forms.Select(attrs={'class': SELECT_CLASS}),
             'fuel_tank_capacity': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'Tank capacity',
                 'step': '0.1',
                 'min': '0'
             }),
             'tire_size': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'e.g., 225/45R17'
             }),
-            'condition_rating': forms.Select(attrs={'class': 'form-select'}),
+            'condition_rating': forms.Select(attrs={'class': SELECT_CLASS}),
             'purchase_date': forms.DateInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'type': 'date'
             }),
             'warranty_expiry_date': forms.DateInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'type': 'date'
             }),
             'warranty_type': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'e.g., Bumper-to-bumper, Powertrain'
             }),
             'warranty_coverage': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': f"{TEXTAREA_CLASS} min-h-[6.5rem]",
                 'rows': 3,
                 'placeholder': 'Warranty coverage details...'
             }),
             'image': forms.ClearableFileInput(attrs={
-                'class': 'form-control',
+                'class': FILE_INPUT_CLASS,
                 'accept': 'image/*'
             }),
             'tags': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'Comma-separated tags'
             }),
-            'status': forms.Select(attrs={'class': 'form-select'}),
+            'status': forms.Select(attrs={'class': SELECT_CLASS}),
             'notes': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': f"{TEXTAREA_CLASS} min-h-[6.5rem]",
                 'rows': 3,
                 'placeholder': 'Additional notes about this vehicle...'
             }),
@@ -127,73 +132,69 @@ class VehicleForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         # Set up customer choices
         self.fields['owner'].queryset = Customer.objects.select_related('user').order_by(
             'user__first_name', 'user__last_name'
         )
         self.fields['owner'].empty_label = "Select customer..."
-        
+
         # Add help text
         self.fields['vin'].help_text = "17-character Vehicle Identification Number (excluding I, O, Q)"
         self.fields['current_mileage'].help_text = "Enter the current odometer reading"
-    
+
     def clean_vin(self):
-        """
-        Validate VIN format and uniqueness
-        """
+        """Validate VIN format and uniqueness."""
         vin = self.cleaned_data['vin'].upper()
-        
+
         # Check format
         if len(vin) != 17:
             raise ValidationError("VIN must be exactly 17 characters long.")
-        
+
         # Check characters (no I, O, Q allowed)
         import re
         if not re.match(r'^[A-HJ-NPR-Z0-9]{17}$', vin):
             raise ValidationError("VIN contains invalid characters. Letters I, O, Q are not allowed.")
-        
+
         # Check uniqueness (excluding current instance if editing)
         existing_vehicles = Vehicle.objects.filter(vin=vin)
         if self.instance.pk:
             existing_vehicles = existing_vehicles.exclude(pk=self.instance.pk)
-        
+
         if existing_vehicles.exists():
             raise ValidationError("A vehicle with this VIN already exists.")
-        
+
         return vin
-    
+
     def clean_license_plate(self):
-        """
-        Validate license plate
-        """
+        """Ensure license plate is uppercase for consistency."""
         license_plate = self.cleaned_data['license_plate'].upper()
         return license_plate
-    
+
     def clean(self):
-        """
-        Custom validation
-        """
+        """Perform additional validations for vehicle data."""
         cleaned_data = super().clean()
-        
+
         # Validate year
         year = cleaned_data.get('year')
         if year:
             import datetime
+
             current_year = datetime.datetime.now().year
             if year > current_year + 1:
                 raise ValidationError({
                     'year': 'Vehicle year cannot be more than one year in the future.'
                 })
-        
+
         # Validate mileage
         current_mileage = cleaned_data.get('current_mileage')
         if current_mileage is not None and current_mileage < 0:
             raise ValidationError({
                 'current_mileage': 'Mileage cannot be negative.'
             })
-        
+
         return cleaned_data
+
 
 
 class VehicleDocumentForm(forms.ModelForm):
@@ -206,20 +207,20 @@ class VehicleDocumentForm(forms.ModelForm):
         fields = ['title', 'document_type', 'file', 'expiry_date', 'notes']
         widgets = {
             'title': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'Document title'
             }),
-            'document_type': forms.Select(attrs={'class': 'form-select'}),
+            'document_type': forms.Select(attrs={'class': SELECT_CLASS}),
             'file': forms.FileInput(attrs={
-                'class': 'form-control',
+                'class': FILE_INPUT_CLASS,
                 'accept': '.pdf,.doc,.docx,.jpg,.jpeg,.png'
             }),
             'expiry_date': forms.DateInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'type': 'date'
             }),
             'notes': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': f"{TEXTAREA_CLASS} min-h-[6.5rem]",
                 'rows': 3,
                 'placeholder': 'Document notes (optional)'
             }),
@@ -258,16 +259,16 @@ class VehiclePhotoForm(forms.ModelForm):
         fields = ['image', 'photo_type', 'caption', 'taken_date']
         widgets = {
             'image': forms.FileInput(attrs={
-                'class': 'form-control',
+                'class': FILE_INPUT_CLASS,
                 'accept': 'image/*'
             }),
-            'photo_type': forms.Select(attrs={'class': 'form-select'}),
+            'photo_type': forms.Select(attrs={'class': SELECT_CLASS}),
             'caption': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'Photo caption (optional)'
             }),
             'taken_date': forms.DateInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'type': 'date'
             }),
         }
@@ -304,16 +305,16 @@ class VehicleMileageHistoryForm(forms.ModelForm):
         fields = ['mileage', 'recorded_date', 'notes']
         widgets = {
             'mileage': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'placeholder': 'Current mileage',
                 'min': '0'
             }),
             'recorded_date': forms.DateInput(attrs={
-                'class': 'form-control',
+                'class': INPUT_CLASS,
                 'type': 'date'
             }),
             'notes': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': f"{TEXTAREA_CLASS} min-h-[5rem]",
                 'rows': 2,
                 'placeholder': 'Notes about this mileage reading (optional)'
             }),
@@ -339,7 +340,7 @@ class VehicleSearchForm(forms.Form):
         max_length=255,
         required=False,
         widget=forms.TextInput(attrs={
-            'class': 'form-control',
+            'class': INPUT_CLASS,
             'placeholder': 'Search by VIN, license plate, make, model, or owner...'
         })
     )
@@ -347,14 +348,14 @@ class VehicleSearchForm(forms.Form):
     status = forms.ChoiceField(
         choices=[('', 'All Statuses')] + Vehicle.STATUS_CHOICES,
         required=False,
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.Select(attrs={'class': SELECT_CLASS})
     )
     
     make = forms.CharField(
         max_length=100,
         required=False,
         widget=forms.TextInput(attrs={
-            'class': 'form-control',
+            'class': INPUT_CLASS,
             'placeholder': 'Make'
         })
     )
@@ -362,7 +363,7 @@ class VehicleSearchForm(forms.Form):
     year_from = forms.IntegerField(
         required=False,
         widget=forms.NumberInput(attrs={
-            'class': 'form-control',
+            'class': INPUT_CLASS,
             'placeholder': 'From year',
             'min': '1900',
             'max': '2030'
@@ -372,7 +373,7 @@ class VehicleSearchForm(forms.Form):
     year_to = forms.IntegerField(
         required=False,
         widget=forms.NumberInput(attrs={
-            'class': 'form-control',
+            'class': INPUT_CLASS,
             'placeholder': 'To year',
             'min': '1900',
             'max': '2030'
@@ -385,7 +386,7 @@ class VehicleSearchForm(forms.Form):
         ),
         required=False,
         empty_label="All customers",
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.Select(attrs={'class': SELECT_CLASS})
     )
     
     sort = forms.ChoiceField(
@@ -402,5 +403,5 @@ class VehicleSearchForm(forms.Form):
             ('-current_mileage', 'Mileage (High to Low)'),
         ],
         required=False,
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.Select(attrs={'class': SELECT_CLASS})
     )

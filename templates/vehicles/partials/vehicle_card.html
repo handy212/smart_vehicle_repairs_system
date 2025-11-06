@@ -1,201 +1,170 @@
 <!-- Vehicle Card Component -->
-{% load widget_tweaks %}
-{% load humanize %}
+<!-- {% load widget_tweaks %} -->
+<!-- {% load humanize %} -->
 
-<div class="card vehicle-card h-100 shadow-sm">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center">
-            <i class="fas fa-car me-2 text-primary"></i>
-            <strong>{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</strong>
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col h-full">
+    <!-- Card Header -->
+    <div class="px-4 py-3 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-car text-primary"></i>
+            <strong class="text-sm font-semibold text-slate-900">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</strong>
         </div>
-        <span class="badge badge-{{ vehicle.status|lower }}">
+        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold
+            {% if vehicle.status == 'active' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+            {% elif vehicle.status == 'inactive' %}bg-slate-50 text-slate-700 border border-slate-200
+            {% elif vehicle.status == 'maintenance' %}bg-amber-50 text-amber-700 border border-amber-200
+            {% elif vehicle.status == 'sold' %}bg-blue-50 text-blue-700 border border-blue-200
+            {% endif %}">
             {{ vehicle.get_status_display }}
         </span>
     </div>
     
-    <div class="card-body">
+    <div class="p-4 flex-1 flex flex-col">
         <!-- Vehicle Photo -->
-        <div class="vehicle-photo mb-3">
+        <div class="mb-4 rounded-lg overflow-hidden">
             {% if vehicle.image %}
                 <img src="{{ vehicle.image.url }}" 
                      alt="{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}"
-                     class="img-fluid rounded"
-                     style="height: 150px; width: 100%; object-fit: cover;"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                     class="w-full h-40 object-cover transition-transform duration-300 hover:scale-105"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="hidden h-40 bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg items-center justify-center">
+                    <div class="text-center text-slate-400">
+                        <i class="fas fa-camera text-4xl mb-2"></i>
+                        <div class="text-sm">No Photo</div>
+                    </div>
+                </div>
             {% elif vehicle.photos.first %}
                 <img src="{{ vehicle.photos.first.image.url }}" 
                      alt="{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}"
-                     class="img-fluid rounded"
-                     style="height: 150px; width: 100%; object-fit: cover;"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                     class="w-full h-40 object-cover transition-transform duration-300 hover:scale-105"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="hidden h-40 bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg items-center justify-center">
+                    <div class="text-center text-slate-400">
+                        <i class="fas fa-camera text-4xl mb-2"></i>
+                        <div class="text-sm">No Photo</div>
+                    </div>
+                </div>
             {% else %}
-                <div class="no-photo-placeholder d-flex align-items-center justify-content-center rounded" 
-                     style="height: 150px; background: #f8f9fa; border: 2px dashed #dee2e6;">
-                    <div class="text-center text-muted">
-                        <i class="fas fa-camera fa-2x mb-2"></i>
-                        <div>No Photo</div>
+                <div class="h-40 bg-slate-100 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center">
+                    <div class="text-center text-slate-400">
+                        <i class="fas fa-camera text-4xl mb-2"></i>
+                        <div class="text-sm">No Photo</div>
                     </div>
                 </div>
             {% endif %}
         </div>
         
         <!-- Vehicle Info -->
-        <div class="vehicle-info">
-            <div class="row mb-2">
-                <div class="col-6">
-                    <small class="text-muted">Owner:</small><br>
-                    <span class="fw-bold">{{ vehicle.owner.user.get_full_name }}</span>
+        <div class="space-y-3 mb-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <div class="text-xs text-slate-500 mb-1">Owner</div>
+                    <div class="text-sm font-semibold text-slate-900 truncate">{{ vehicle.owner.user.get_full_name }}</div>
                 </div>
-                <div class="col-6">
-                    <small class="text-muted">License:</small><br>
-                    <span class="fw-bold">{{ vehicle.license_plate }}</span>
+                <div>
+                    <div class="text-xs text-slate-500 mb-1">License</div>
+                    <div class="text-sm font-semibold text-slate-900">{{ vehicle.license_plate }}</div>
                 </div>
             </div>
             
-            <div class="row mb-2">
-                <div class="col-6">
-                    <small class="text-muted">Mileage:</small><br>
-                    <span class="fw-bold">{{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</span>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <div class="text-xs text-slate-500 mb-1">Mileage</div>
+                    <div class="text-sm font-semibold text-slate-900">{{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</div>
                 </div>
-                <div class="col-6">
-                    <small class="text-muted">Color:</small><br>
-                    <span class="fw-bold">{{ vehicle.exterior_color|default:"Not specified" }}</span>
+                <div>
+                    <div class="text-xs text-slate-500 mb-1">Color</div>
+                    <div class="text-sm font-semibold text-slate-900">{{ vehicle.exterior_color|default:"Not specified" }}</div>
                 </div>
             </div>
             
             {% if vehicle.trim %}
-            <div class="mb-2">
-                <small class="text-muted">Trim:</small><br>
-                <span class="fw-bold">{{ vehicle.trim }}</span>
+            <div>
+                <div class="text-xs text-slate-500 mb-1">Trim</div>
+                <div class="text-sm font-semibold text-slate-900">{{ vehicle.trim }}</div>
             </div>
             {% endif %}
             
             <!-- VIN (truncated for card view) -->
-            <div class="mb-3">
-                <small class="text-muted">VIN:</small><br>
-                <code class="small">{{ vehicle.vin|truncatechars:10 }}...</code>
+            <div>
+                <div class="text-xs text-slate-500 mb-1">VIN</div>
+                <code class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-700">{{ vehicle.vin|truncatechars:10 }}...</code>
             </div>
         </div>
         
         <!-- Quick Stats -->
-        <div class="quick-stats mb-3">
-            <div class="row text-center">
-                <div class="col-4">
-                    <div class="stat-item">
-                        <div class="stat-value text-primary">{{ vehicle.work_orders.count }}</div>
-                        <div class="stat-label small text-muted">Services</div>
-                    </div>
+        <div class="mb-4 pb-4 border-b border-slate-200">
+            <div class="grid grid-cols-3 gap-2 text-center">
+                <div>
+                    <div class="text-lg font-bold text-primary">{{ vehicle.work_orders.count }}</div>
+                    <div class="text-xs text-slate-500">Services</div>
                 </div>
-                <div class="col-4">
-                    <div class="stat-item">
-                        <div class="stat-value text-success">{{ vehicle.total_service_cost|floatformat:0|default:"0" }}</div>
-                        <div class="stat-label small text-muted">Total Cost</div>
-                    </div>
+                <div>
+                    <div class="text-lg font-bold text-emerald-600">${{ vehicle.total_service_cost|floatformat:0|default:"0" }}</div>
+                    <div class="text-xs text-slate-500">Total Cost</div>
                 </div>
-                <div class="col-4">
-                    <div class="stat-item">
-                        <div class="stat-value text-info">{{ vehicle.days_since_last_service|default:"N/A" }}</div>
-                        <div class="stat-label small text-muted">Days Ago</div>
-                    </div>
+                <div>
+                    <div class="text-lg font-bold text-blue-600">{{ vehicle.days_since_last_service|default:"N/A" }}</div>
+                    <div class="text-xs text-slate-500">Days Ago</div>
                 </div>
             </div>
         </div>
         
         <!-- Last Service Info -->
         {% if vehicle.last_service %}
-        <div class="last-service mb-3">
-            <small class="text-muted">Last Service:</small><br>
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="small">{{ vehicle.last_service.title|truncatechars:20 }}</span>
-                <span class="badge bg-light text-dark small">{{ vehicle.last_service.created_at|date:"M d" }}</span>
+        <div class="mb-4">
+            <div class="text-xs text-slate-500 mb-1">Last Service</div>
+            <div class="flex justify-between items-center">
+                <span class="text-sm text-slate-700 truncate">{{ vehicle.last_service.title|truncatechars:20 }}</span>
+                <span class="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-700 text-xs">{{ vehicle.last_service.created_at|date:"M d" }}</span>
             </div>
         </div>
         {% endif %}
         
         <!-- Maintenance Alerts -->
         {% if vehicle.has_overdue_maintenance %}
-        <div class="alert alert-warning alert-sm py-2 px-3 mb-3">
-            <i class="fas fa-exclamation-triangle me-1"></i>
-            <small>Maintenance overdue</small>
+        <div class="mb-4 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-2">
+            <i class="fas fa-exclamation-triangle text-amber-600"></i>
+            <span class="text-sm text-amber-800">Maintenance overdue</span>
         </div>
         {% elif vehicle.has_upcoming_maintenance %}
-        <div class="alert alert-info alert-sm py-2 px-3 mb-3">
-            <i class="fas fa-clock me-1"></i>
-            <small>Maintenance due soon</small>
+        <div class="mb-4 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 flex items-center gap-2">
+            <i class="fas fa-clock text-blue-600"></i>
+            <span class="text-sm text-blue-800">Maintenance due soon</span>
         </div>
         {% endif %}
     </div>
     
-    <div class="card-footer d-flex justify-content-between">
+    <!-- Card Footer -->
+    <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
         <!-- Quick Actions -->
-        <div class="btn-group btn-group-sm" role="group">
+        <div class="inline-flex rounded-lg border border-slate-300 overflow-hidden">
             <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" 
-               class="btn btn-outline-primary" title="View Details">
-                <i class="fas fa-eye"></i>
+               class="px-3 py-2 bg-white hover:bg-slate-50 border-r border-slate-300 text-primary transition-colors" 
+               title="View Details">
+                <i class="fas fa-eye text-sm"></i>
             </a>
             <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" 
-               class="btn btn-outline-secondary" title="Edit">
-                <i class="fas fa-edit"></i>
+               class="px-3 py-2 bg-white hover:bg-slate-50 border-r border-slate-300 text-slate-600 transition-colors" 
+               title="Edit">
+                <i class="fas fa-edit text-sm"></i>
             </a>
-            <button class="btn btn-outline-info" 
-                    onclick="showVehicleQR('{{ vehicle.id }}')" title="QR Code">
-                <i class="fas fa-qrcode"></i>
+            <button class="px-3 py-2 bg-white hover:bg-slate-50 text-blue-600 transition-colors" 
+                    onclick="showVehicleQR('{{ vehicle.id }}')" 
+                    title="QR Code">
+                <i class="fas fa-qrcode text-sm"></i>
             </button>
         </div>
         
         <!-- Create Work Order -->
-        <a href="#" title="Create work order (coming soon)" 
-           class="btn btn-sm btn-success">
-            <i class="fas fa-plus me-1"></i>Service
+        <a href="{% url 'workorders:create' %}?vehicle={{ vehicle.id }}" 
+           class="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors" 
+           title="Create work order">
+            <i class="fas fa-plus"></i>
+            <span>Service</span>
         </a>
     </div>
 </div>
-
-<style>
-    .vehicle-card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border: 1px solid #e9ecef;
-    }
-    
-    .vehicle-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    
-    .badge-active { background-color: #28a745; }
-    .badge-inactive { background-color: #6c757d; }
-    .badge-maintenance { background-color: #ffc107; color: #000; }
-    .badge-sold { background-color: #17a2b8; }
-    
-    .stat-value {
-        font-size: 1.1rem;
-        font-weight: bold;
-        line-height: 1;
-    }
-    
-    .stat-label {
-        font-size: 0.75rem;
-        line-height: 1;
-        margin-top: 2px;
-    }
-    
-    .alert-sm {
-        font-size: 0.875rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .no-photo-placeholder {
-        border-style: dashed !important;
-    }
-    
-    .vehicle-photo img {
-        transition: transform 0.3s ease;
-    }
-    
-    .vehicle-card:hover .vehicle-photo img {
-        transform: scale(1.05);
-    }
-</style>
 
 <script>
     function showVehicleQR(vehicleId) {

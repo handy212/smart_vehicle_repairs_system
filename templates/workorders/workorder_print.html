@@ -5,8 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Work Order {{ workorder.work_order_number }} - Print</title>
     
-    <!-- Bootstrap for basic styling -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6', // Blue-500
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     
     <style>
         @media print {
@@ -20,63 +34,16 @@
             .page-break { 
                 page-break-before: always; 
             }
-            .container-fluid {
+            .max-w-7xl {
                 margin: 0;
                 padding: 0;
             }
-            .row {
+            .grid {
                 margin: 0;
             }
-            .col, .col-md-6, .col-md-4 {
+            .grid > * {
                 padding: 0 5px;
             }
-        }
-        
-        .print-header {
-            border-bottom: 3px solid #0d6efd;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-        }
-        
-        .company-info {
-            text-align: right;
-        }
-        
-        .workorder-title {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #0d6efd;
-        }
-        
-        .info-section {
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: #f8f9fa;
-        }
-        
-        .info-section h6 {
-            color: #495057;
-            font-weight: bold;
-            border-bottom: 1px solid #dee2e6;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
-        }
-        
-        .info-item {
-            margin-bottom: 8px;
-        }
-        
-        .info-label {
-            font-weight: 600;
-            color: #6c757d;
-            display: inline-block;
-            min-width: 120px;
-        }
-        
-        .info-value {
-            color: #212529;
         }
         
         .status-badge {
@@ -113,203 +80,151 @@
         .priority-normal { background-color: #0d6efd; color: white; }
         .priority-high { background-color: #ffc107; color: black; }
         .priority-urgent { background-color: #dc3545; color: white; }
-        
-        .task-table, .parts-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        
-        .task-table th, .task-table td,
-        .parts-table th, .parts-table td {
-            border: 1px solid #dee2e6;
-            padding: 8px;
-            text-align: left;
-            font-size: 11px;
-        }
-        
-        .task-table th, .parts-table th {
-            background-color: #e9ecef;
-            font-weight: bold;
-        }
-        
-        .cost-summary {
-            border: 2px solid #0d6efd;
-            border-radius: 5px;
-            padding: 15px;
-            background-color: #f8f9fa;
-        }
-        
-        .cost-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-            padding: 3px 0;
-        }
-        
-        .cost-total {
-            border-top: 2px solid #0d6efd;
-            padding-top: 8px;
-            margin-top: 8px;
-            font-weight: bold;
-            font-size: 1.1em;
-        }
-        
-        .signature-section {
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
-            padding: 15px;
-            margin-top: 30px;
-            height: 120px;
-        }
-        
-        .signature-line {
-            border-bottom: 1px solid #212529;
-            width: 200px;
-            margin: 20px 0 5px 0;
-            display: inline-block;
-        }
-        
-        .print-timestamp {
-            text-align: center;
-            color: #6c757d;
-            font-size: 10px;
-            margin-top: 20px;
-            border-top: 1px solid #dee2e6;
-            padding-top: 10px;
-        }
     </style>
 </head>
-<body>
-    <div class="container-fluid">
+<body class="bg-white p-4">
+    <div class="max-w-7xl mx-auto">
         <!-- Print Button (hidden when printing) -->
-        <div class="no-print text-center mb-3">
-            <button onclick="window.print()" class="btn btn-primary">
-                <i class="fas fa-print me-2"></i> Print Work Order
+        <div class="no-print text-center mb-6">
+            <button onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                <i class="fas fa-print"></i>
+                <span>Print Work Order</span>
             </button>
-            <button onclick="window.close()" class="btn btn-outline-secondary ms-2">
-                <i class="fas fa-times me-2"></i> Close
+            <button onclick="window.close()" class="inline-flex items-center gap-2 px-4 py-2 ml-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-times"></i>
+                <span>Close</span>
             </button>
         </div>
 
         <!-- Header -->
-        <div class="print-header">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="workorder-title">WORK ORDER</div>
-                    <div class="h4">{{ workorder.work_order_number }}</div>
+        <div class="border-b-4 border-primary mb-5 pb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <div class="text-2xl font-bold text-primary mb-2">WORK ORDER</div>
+                    <div class="text-xl font-semibold text-slate-900 mb-2">{{ workorder.work_order_number }}</div>
                     <div>
                         <span class="status-badge status-{{ workorder.status }}">{{ workorder.get_status_display }}</span>
-                        <span class="priority-badge priority-{{ workorder.priority }} ms-2">{{ workorder.get_priority_display }} Priority</span>
+                        <span class="priority-badge priority-{{ workorder.priority }} ml-2">{{ workorder.get_priority_display }} Priority</span>
                     </div>
                 </div>
-                <div class="col-md-6 company-info">
-                    <div class="h5">Smart Vehicle Repairs</div>
-                    <div>123 Auto Service Lane</div>
-                    <div>Your City, ST 12345</div>
-                    <div>Phone: (555) 123-4567</div>
-                    <div>Email: info@smartvehiclerepairs.com</div>
+                <div class="text-right">
+                    <div class="text-lg font-semibold text-slate-900 mb-1">Smart Vehicle Repairs</div>
+                    <div class="text-sm text-slate-700">123 Auto Service Lane</div>
+                    <div class="text-sm text-slate-700">Your City, ST 12345</div>
+                    <div class="text-sm text-slate-700">Phone: (555) 123-4567</div>
+                    <div class="text-sm text-slate-700">Email: info@smartvehiclerepairs.com</div>
                 </div>
             </div>
         </div>
 
         <!-- Customer and Vehicle Information -->
-        <div class="row">
-            <div class="col-md-6">
-                <div class="info-section">
-                    <h6><i class="fas fa-user me-2"></i>Customer Information</h6>
-                    <div class="info-item">
-                        <span class="info-label">Name:</span>
-                        <span class="info-value">{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            <div class="border border-slate-300 rounded-lg p-4 bg-slate-50">
+                <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
+                    <i class="fas fa-user"></i>
+                    Customer Information
+                </h6>
+                <div class="space-y-2">
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Name:</span>
+                        <span class="text-slate-900">{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</span>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">Email:</span>
-                        <span class="info-value">{{ workorder.customer.user.email }}</span>
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Email:</span>
+                        <span class="text-slate-900">{{ workorder.customer.user.email }}</span>
                     </div>
                     {% if workorder.customer.phone %}
-                    <div class="info-item">
-                        <span class="info-label">Phone:</span>
-                        <span class="info-value">{{ workorder.customer.phone }}</span>
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Phone:</span>
+                        <span class="text-slate-900">{{ workorder.customer.phone }}</span>
                     </div>
                     {% endif %}
                     {% if workorder.customer.address %}
-                    <div class="info-item">
-                        <span class="info-label">Address:</span>
-                        <span class="info-value">{{ workorder.customer.address }}</span>
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Address:</span>
+                        <span class="text-slate-900">{{ workorder.customer.address }}</span>
                     </div>
                     {% endif %}
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="info-section">
-                    <h6><i class="fas fa-car me-2"></i>Vehicle Information</h6>
-                    <div class="info-item">
-                        <span class="info-label">Vehicle:</span>
-                        <span class="info-value">{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</span>
+            <div class="border border-slate-300 rounded-lg p-4 bg-slate-50">
+                <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
+                    <i class="fas fa-car"></i>
+                    Vehicle Information
+                </h6>
+                <div class="space-y-2">
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Vehicle:</span>
+                        <span class="text-slate-900">{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</span>
                     </div>
-                    <div class="info-item">
-                        <span class="info-label">License Plate:</span>
-                        <span class="info-value">{{ workorder.vehicle.license_plate }}</span>
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">License Plate:</span>
+                        <span class="text-slate-900">{{ workorder.vehicle.license_plate }}</span>
                     </div>
                     {% if workorder.vehicle.vin %}
-                    <div class="info-item">
-                        <span class="info-label">VIN:</span>
-                        <span class="info-value">{{ workorder.vehicle.vin }}</span>
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">VIN:</span>
+                        <span class="text-slate-900">{{ workorder.vehicle.vin }}</span>
                     </div>
                     {% endif %}
                     {% if workorder.odometer_in %}
-                    <div class="info-item">
-                        <span class="info-label">Odometer:</span>
-                        <span class="info-value">{{ workorder.odometer_in|floatformat:0 }} miles</span>
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Odometer:</span>
+                        <span class="text-slate-900">{{ workorder.odometer_in|floatformat:0 }} miles</span>
                     </div>
                     {% endif %}
-
                 </div>
             </div>
         </div>
 
         <!-- Work Order Details -->
-        <div class="row">
-            <div class="col-md-6">
-                <div class="info-section">
-                    <h6><i class="fas fa-clipboard me-2"></i>Work Order Details</h6>
-                    <div class="info-item">
-                        <span class="info-label">Created:</span>
-                        <span class="info-value">{{ workorder.created_at|date:"M d, Y H:i" }}</span>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            <div class="border border-slate-300 rounded-lg p-4 bg-slate-50">
+                <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
+                    <i class="fas fa-clipboard"></i>
+                    Work Order Details
+                </h6>
+                <div class="space-y-2">
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Created:</span>
+                        <span class="text-slate-900">{{ workorder.created_at|date:"M d, Y H:i" }}</span>
                     </div>
                     {% if workorder.started_at %}
-                    <div class="info-item">
-                        <span class="info-label">Started:</span>
-                        <span class="info-value">{{ workorder.started_at|date:"M d, Y H:i" }}</span>
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Started:</span>
+                        <span class="text-slate-900">{{ workorder.started_at|date:"M d, Y H:i" }}</span>
                     </div>
                     {% endif %}
                     {% if workorder.completed_at %}
-                    <div class="info-item">
-                        <span class="info-label">Completed:</span>
-                        <span class="info-value">{{ workorder.completed_at|date:"M d, Y H:i" }}</span>
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Completed:</span>
+                        <span class="text-slate-900">{{ workorder.completed_at|date:"M d, Y H:i" }}</span>
                     </div>
                     {% endif %}
                     {% if workorder.estimated_completion %}
-                    <div class="info-item">
-                        <span class="info-label">Est. Completion:</span>
-                        <span class="info-value">{{ workorder.estimated_completion|date:"M d, Y H:i" }}</span>
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Est. Completion:</span>
+                        <span class="text-slate-900">{{ workorder.estimated_completion|date:"M d, Y H:i" }}</span>
                     </div>
                     {% endif %}
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="info-section">
-                    <h6><i class="fas fa-wrench me-2"></i>Technician Assignment</h6>
+            <div class="border border-slate-300 rounded-lg p-4 bg-slate-50">
+                <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
+                    <i class="fas fa-wrench"></i>
+                    Technician Assignment
+                </h6>
+                <div class="space-y-2">
                     {% if workorder.primary_technician %}
-                    <div class="info-item">
-                        <span class="info-label">Primary Tech:</span>
-                        <span class="info-value">{{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}</span>
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Primary Tech:</span>
+                        <span class="text-slate-900">{{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}</span>
                     </div>
                     {% endif %}
                     {% if workorder.assigned_technicians.exists %}
-                    <div class="info-item">
-                        <span class="info-label">Additional:</span>
-                        <span class="info-value">
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Additional:</span>
+                        <span class="text-slate-900">
                             {% for tech in workorder.assigned_technicians.all %}
                                 {{ tech.first_name }} {{ tech.last_name }}{% if not forloop.last %}, {% endif %}
                             {% endfor %}
@@ -317,9 +232,9 @@
                     </div>
                     {% endif %}
                     {% if workorder.created_by %}
-                    <div class="info-item">
-                        <span class="info-label">Created By:</span>
-                        <span class="info-value">{{ workorder.created_by.first_name }} {{ workorder.created_by.last_name }}</span>
+                    <div class="flex">
+                        <span class="font-semibold text-slate-600 inline-block min-w-[120px]">Created By:</span>
+                        <span class="text-slate-900">{{ workorder.created_by.first_name }} {{ workorder.created_by.last_name }}</span>
                     </div>
                     {% endif %}
                 </div>
@@ -328,57 +243,66 @@
 
         <!-- Customer Concerns -->
         {% if workorder.customer_concerns %}
-        <div class="info-section">
-            <h6><i class="fas fa-comment me-2"></i>Customer Concerns</h6>
-            <div class="info-value">{{ workorder.customer_concerns }}</div>
+        <div class="border border-slate-300 rounded-lg p-4 bg-slate-50 mb-5">
+            <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
+                <i class="fas fa-comment"></i>
+                Customer Concerns
+            </h6>
+            <div class="text-slate-900 whitespace-pre-line">{{ workorder.customer_concerns }}</div>
         </div>
         {% endif %}
 
         <!-- Diagnosis Notes -->
         {% if workorder.diagnosis_notes %}
-        <div class="info-section">
-            <h6><i class="fas fa-search me-2"></i>Diagnosis Notes</h6>
-            <div class="info-value">{{ workorder.diagnosis_notes }}</div>
+        <div class="border border-slate-300 rounded-lg p-4 bg-slate-50 mb-5">
+            <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
+                <i class="fas fa-search"></i>
+                Diagnosis Notes
+            </h6>
+            <div class="text-slate-900 whitespace-pre-line">{{ workorder.diagnosis_notes }}</div>
         </div>
         {% endif %}
 
         <!-- Service Tasks -->
         {% if workorder.tasks.exists %}
-        <div style="margin-bottom: 20px;">
-            <h6><i class="fas fa-tasks me-2"></i>Service Tasks</h6>
-            <table class="task-table">
+        <div class="mb-5">
+            <h6 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                <i class="fas fa-tasks"></i>
+                Service Tasks
+            </h6>
+            <table class="w-full border-collapse mb-5">
                 <thead>
-                    <tr>
-                        <th style="width: 15%;">Type</th>
-                        <th style="width: 35%;">Description</th>
-                        <th style="width: 15%;">Assigned To</th>
-                        <th style="width: 10%;">Est. Hours</th>
-                        <th style="width: 10%;">Actual Hours</th>
-                        <th style="width: 10%;">Labor Cost</th>
-                        <th style="width: 5%;">Status</th>
+                    <tr class="bg-slate-100">
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 15%;">Type</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 35%;">Description</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 15%;">Assigned To</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 10%;">Est. Hours</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 10%;">Actual Hours</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 10%;">Labor Cost</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 5%;">Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for task in workorder.tasks.all %}
                     <tr>
-                        <td>{{ task.get_task_type_display }}</td>
-                        <td>
+                        <td class="border border-slate-300 p-2 text-xs">{{ task.get_task_type_display }}</td>
+                        <td class="border border-slate-300 p-2 text-xs">
                             {{ task.description }}
                             {% if task.detailed_notes %}
-                                <br><small style="color: #6c757d;">{{ task.detailed_notes|truncatechars:100 }}</small>
+                                <br><span class="text-slate-500">{{ task.detailed_notes|truncatechars:100 }}</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="border border-slate-300 p-2 text-xs">
                             {% if task.assigned_to %}
                                 {{ task.assigned_to.first_name }} {{ task.assigned_to.last_name }}
                             {% else %}
                                 <em>Unassigned</em>
                             {% endif %}
                         </td>
-                        <td>{{ task.estimated_hours|floatformat:1 }}h</td>
-                        <td>{{ task.actual_hours|floatformat:1 }}h</td>
-                        <td>${{ task.labor_cost|floatformat:2 }}</td>
-                        <td>{{ task.get_status_display }}</td>
+                        <td class="border border-slate-300 p-2 text-xs">{{ task.estimated_hours|floatformat:1 }}h</td>
+                        <td class="border border-slate-300 p-2 text-xs">{{ task.actual_hours|floatformat:1 }}h</td>
+                        <td class="border border-slate-300 p-2 text-xs">${{ task.labor_cost|floatformat:2 }}</td>
+                        <td class="border border-slate-300 p-2 text-xs">{{ task.get_status_display }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -388,37 +312,40 @@
 
         <!-- Parts Used -->
         {% if workorder.parts.exists %}
-        <div style="margin-bottom: 20px;">
-            <h6><i class="fas fa-cogs me-2"></i>Parts Used</h6>
-            <table class="parts-table">
+        <div class="mb-5">
+            <h6 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                <i class="fas fa-cogs"></i>
+                Parts Used
+            </h6>
+            <table class="w-full border-collapse mb-5">
                 <thead>
-                    <tr>
-                        <th style="width: 15%;">Part Number</th>
-                        <th style="width: 25%;">Description</th>
-                        <th style="width: 10%;">Quantity</th>
-                        <th style="width: 12%;">Unit Cost</th>
-                        <th style="width: 10%;">Markup</th>
-                        <th style="width: 12%;">Selling Price</th>
-                        <th style="width: 12%;">Total</th>
-                        <th style="width: 4%;">Status</th>
+                    <tr class="bg-slate-100">
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 15%;">Part Number</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 25%;">Description</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 10%;">Quantity</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 12%;">Unit Cost</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 10%;">Markup</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 12%;">Selling Price</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 12%;">Total</th>
+                        <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 4%;">Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for part in workorder.parts.all %}
                     <tr>
-                        <td>{{ part.part_number }}</td>
-                        <td>
+                        <td class="border border-slate-300 p-2 text-xs">{{ part.part_number }}</td>
+                        <td class="border border-slate-300 p-2 text-xs">
                             {{ part.part_name }}
                             {% if part.description %}
-                                <br><small style="color: #6c757d;">{{ part.description|truncatechars:80 }}</small>
+                                <br><span class="text-slate-500">{{ part.description|truncatechars:80 }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ part.quantity|floatformat:0 }}</td>
-                        <td>${{ part.unit_cost|floatformat:2 }}</td>
-                        <td>{{ part.markup_percentage|floatformat:0 }}%</td>
-                        <td>${{ part.selling_price|floatformat:2 }}</td>
-                        <td>${{ part.total_cost|floatformat:2 }}</td>
-                        <td>{{ part.get_status_display }}</td>
+                        <td class="border border-slate-300 p-2 text-xs">{{ part.quantity|floatformat:0 }}</td>
+                        <td class="border border-slate-300 p-2 text-xs">${{ part.unit_cost|floatformat:2 }}</td>
+                        <td class="border border-slate-300 p-2 text-xs">{{ part.markup_percentage|floatformat:0 }}%</td>
+                        <td class="border border-slate-300 p-2 text-xs">${{ part.selling_price|floatformat:2 }}</td>
+                        <td class="border border-slate-300 p-2 text-xs">${{ part.total_cost|floatformat:2 }}</td>
+                        <td class="border border-slate-300 p-2 text-xs">{{ part.get_status_display }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -427,30 +354,35 @@
         {% endif %}
 
         <!-- Cost Summary -->
-        <div class="row">
-            <div class="col-md-8"></div>
-            <div class="col-md-4">
-                <div class="cost-summary">
-                    <h6><i class="fas fa-calculator me-2"></i>Cost Summary</h6>
-                    <div class="cost-row">
-                        <span>Labor Cost:</span>
-                        <span>${{ total_labor_cost|floatformat:2 }}</span>
-                    </div>
-                    <div class="cost-row">
-                        <span>Parts Cost:</span>
-                        <span>${{ total_parts_cost|floatformat:2 }}</span>
-                    </div>
-                    <div class="cost-row">
-                        <span>Subtotal:</span>
-                        <span>${{ total_labor_cost|add:total_parts_cost|floatformat:2 }}</span>
-                    </div>
-                    <div class="cost-row">
-                        <span>Tax (0%):</span>
-                        <span>$0.00</span>
-                    </div>
-                    <div class="cost-row cost-total">
-                        <span>Total:</span>
-                        <span>${{ total_labor_cost|add:total_parts_cost|floatformat:2 }}</span>
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-5">
+            <div class="md:col-span-8"></div>
+            <div class="md:col-span-4">
+                <div class="border-2 border-primary rounded-lg p-4 bg-slate-50">
+                    <h6 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                        <i class="fas fa-calculator"></i>
+                        Cost Summary
+                    </h6>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs">
+                            <span>Labor Cost:</span>
+                            <span>${{ total_labor_cost|floatformat:2 }}</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span>Parts Cost:</span>
+                            <span>${{ total_parts_cost|floatformat:2 }}</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span>Subtotal:</span>
+                            <span>${{ total_labor_cost|add:total_parts_cost|floatformat:2 }}</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span>Tax (0%):</span>
+                            <span>$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-xs font-bold border-t-2 border-primary pt-2 mt-2 text-base">
+                            <span>Total:</span>
+                            <span>${{ total_labor_cost|add:total_parts_cost|floatformat:2 }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -458,36 +390,36 @@
 
         <!-- Special Instructions -->
         {% if workorder.special_instructions %}
-        <div class="info-section">
-            <h6><i class="fas fa-sticky-note me-2"></i>Special Instructions</h6>
-            <div class="info-value">{{ workorder.special_instructions }}</div>
+        <div class="border border-slate-300 rounded-lg p-4 bg-slate-50 mb-5">
+            <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
+                <i class="fas fa-sticky-note"></i>
+                Special Instructions
+            </h6>
+            <div class="text-slate-900 whitespace-pre-line">{{ workorder.special_instructions }}</div>
         </div>
         {% endif %}
 
         <!-- Signature Section -->
-        <div class="signature-section">
-            <div class="row">
-                <div class="col-md-6">
-                    <div>Customer Signature:</div>
-                    <div class="signature-line"></div>
-                    <div style="font-size: 10px; margin-top: 5px;">Date: ________________</div>
+        <div class="border border-slate-300 rounded-lg p-4 mt-8 h-32">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <div class="text-sm font-medium text-slate-700 mb-2">Customer Signature:</div>
+                    <div class="border-b border-slate-900 w-48 inline-block mb-1"></div>
+                    <div class="text-xs text-slate-600 mt-1">Date: ________________</div>
                 </div>
-                <div class="col-md-6">
-                    <div>Technician Signature:</div>
-                    <div class="signature-line"></div>
-                    <div style="font-size: 10px; margin-top: 5px;">Date: ________________</div>
+                <div>
+                    <div class="text-sm font-medium text-slate-700 mb-2">Technician Signature:</div>
+                    <div class="border-b border-slate-900 w-48 inline-block mb-1"></div>
+                    <div class="text-xs text-slate-600 mt-1">Date: ________________</div>
                 </div>
             </div>
         </div>
 
         <!-- Print Timestamp -->
-        <div class="print-timestamp">
+        <div class="text-center text-slate-500 text-xs mt-5 pt-3 border-t border-slate-300">
             Work Order printed on {{ print_date|date:"M d, Y \a\\t H:i" }}
         </div>
     </div>
-
-    <!-- Font Awesome for icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     
     <!-- Auto-print when loaded (optional) -->
     <script>

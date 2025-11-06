@@ -1,56 +1,29 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ page_title }}{% endblock %}
-
-{% block extra_css %}
-<style>
-    .info-card {
-        background: #f8f9fa;
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-radius: 5px;
-    }
-    
-    .form-section {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 1.5rem;
-    }
-    
-    .section-title {
-        color: var(--primary-color);
-        font-weight: 600;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #e9ecef;
-    }
-    
-    .readonly-field {
-        background-color: #f8f9fa;
-        cursor: not-allowed;
-    }
-</style>
-{% endblock %}
+{% block title %}Edit Invoice{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="page-header-primary rounded p-4 mb-4">
-        <div class="d-flex justify-content-between align-items-center">
+    <div class="bg-gradient-to-r from-primary to-primary/80 rounded-xl p-6 text-white">
+        <div class="flex flex-wrap justify-between items-center gap-4">
             <div>
-                <h2 class="mb-1">
-                    <i class="fas fa-edit me-2"></i>{{ page_title }}
+                <h2 class="text-xl font-semibold mb-2">
+                    <i class="fas fa-edit mr-2"></i>Edit Invoice
                 </h2>
-                <p class="mb-0 opacity-75">
-                    <i class="fas fa-info-circle me-1"></i>
+                <p class="text-sm opacity-90 flex items-center gap-1">
+                    <i class="fas fa-info-circle"></i>
                     Only draft invoices can be edited
                 </p>
             </div>
             <div>
-                <span class="badge bg-{% if invoice.status == 'draft' %}secondary{% elif invoice.status == 'sent' %}info{% elif invoice.status == 'paid' %}success{% elif invoice.status == 'overdue' %}danger{% else %}warning{% endif %} fs-5">
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold
+                    {% if invoice.status == 'draft' %}bg-slate-100 text-slate-700
+                    {% elif invoice.status == 'sent' %}bg-blue-100 text-blue-700
+                    {% elif invoice.status == 'paid' %}bg-emerald-100 text-emerald-700
+                    {% elif invoice.status == 'overdue' %}bg-rose-100 text-rose-700
+                    {% else %}bg-amber-100 text-amber-700{% endif %}">
                     {{ invoice.get_status_display }}
                 </span>
             </div>
@@ -58,38 +31,39 @@
     </div>
 
     <!-- Current Invoice Info -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="info-card">
-                <h6 class="text-muted mb-2">
-                    <i class="fas fa-file-invoice me-1"></i>Invoice Number
-                </h6>
-                <h4 class="mb-0">{{ invoice.invoice_number }}</h4>
-            </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-slate-50 rounded-lg p-4">
+            <h6 class="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1">
+                <i class="fas fa-file-invoice"></i>
+                Invoice Number
+            </h6>
+            <h4 class="text-lg font-semibold text-slate-900 mb-0">{{ invoice.invoice_number }}</h4>
         </div>
-        <div class="col-md-4">
-            <div class="info-card">
-                <h6 class="text-muted mb-2">
-                    <i class="fas fa-user me-1"></i>Customer
-                </h6>
-                <h5 class="mb-0">{{ invoice.customer }}</h5>
-            </div>
+        <div class="bg-slate-50 rounded-lg p-4">
+            <h6 class="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1">
+                <i class="fas fa-user"></i>
+                Customer
+            </h6>
+            <h5 class="text-base font-semibold text-slate-900 mb-0">{{ invoice.customer }}</h5>
         </div>
-        <div class="col-md-4">
-            <div class="info-card">
-                <h6 class="text-muted mb-2">
-                    <i class="fas fa-car me-1"></i>Vehicle
-                </h6>
-                <h5 class="mb-0">{{ invoice.vehicle }}</h5>
-            </div>
+        <div class="bg-slate-50 rounded-lg p-4">
+            <h6 class="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1">
+                <i class="fas fa-car"></i>
+                Vehicle
+            </h6>
+            <h5 class="text-base font-semibold text-slate-900 mb-0">{{ invoice.vehicle }}</h5>
         </div>
     </div>
 
     {% if invoice.work_order %}
-    <div class="alert alert-info">
-        <i class="fas fa-link me-2"></i>
-        This invoice is linked to Work Order <strong>{{ invoice.work_order.work_order_number }}</strong>. 
-        Line items are calculated from the work order and cannot be edited here.
+    <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-link text-blue-600"></i>
+            <p class="text-sm text-slate-700 mb-0">
+                This invoice is linked to Work Order <strong>{{ invoice.work_order.work_order_number }}</strong>. 
+                Line items are calculated from the work order and cannot be edited here.
+            </p>
+        </div>
     </div>
     {% endif %}
 
@@ -97,125 +71,134 @@
     <form method="post" id="invoiceEditForm">
         {% csrf_token %}
         
-        <div class="row">
-            <div class="col-lg-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Main Form -->
+            <div class="lg:col-span-3 space-y-6">
                 <!-- Description & Notes -->
-                <div class="form-section">
-                    <h5 class="section-title">
-                        <i class="fas fa-align-left me-2"></i>Description & Notes
-                    </h5>
-                    
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea 
-                            class="form-control" 
-                            id="description" 
-                            name="description" 
-                            rows="3"
-                            placeholder="Brief description of work performed...">{{ invoice.description }}</textarea>
-                        <small class="form-text text-muted">
-                            This will appear on the invoice
-                        </small>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-align-left text-primary"></i>
+                            Description & Notes
+                        </h5>
                     </div>
+                    <div class="p-6 space-y-4">
+                        <div>
+                            <label for="description" class="block text-xs font-semibold text-slate-700 mb-2">Description</label>
+                            <textarea 
+                                class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                id="description" 
+                                name="description" 
+                                rows="3"
+                                placeholder="Brief description of work performed...">{{ invoice.description }}</textarea>
+                            <small class="text-xs text-slate-500 mt-1">
+                                This will appear on the invoice
+                            </small>
+                        </div>
 
-                    <div class="mb-3">
-                        <label for="customer_notes" class="form-label">Customer Notes</label>
-                        <textarea 
-                            class="form-control" 
-                            id="customer_notes" 
-                            name="customer_notes" 
-                            rows="3"
-                            placeholder="Notes visible to customer...">{{ invoice.customer_notes }}</textarea>
-                        <small class="form-text text-muted">
-                            These notes will be visible to the customer
-                        </small>
-                    </div>
+                        <div>
+                            <label for="customer_notes" class="block text-xs font-semibold text-slate-700 mb-2">Customer Notes</label>
+                            <textarea 
+                                class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                id="customer_notes" 
+                                name="customer_notes" 
+                                rows="3"
+                                placeholder="Notes visible to customer...">{{ invoice.customer_notes }}</textarea>
+                            <small class="text-xs text-slate-500 mt-1">
+                                These notes will be visible to the customer
+                            </small>
+                        </div>
 
-                    <div class="mb-3">
-                        <label for="notes" class="form-label">Internal Notes</label>
-                        <textarea 
-                            class="form-control" 
-                            id="notes" 
-                            name="notes" 
-                            rows="3"
-                            placeholder="Internal notes (not visible to customer)...">{{ invoice.notes }}</textarea>
-                        <small class="form-text text-muted">
-                            These notes are for internal use only
-                        </small>
-                    </div>
+                        <div>
+                            <label for="notes" class="block text-xs font-semibold text-slate-700 mb-2">Internal Notes</label>
+                            <textarea 
+                                class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                id="notes" 
+                                name="notes" 
+                                rows="3"
+                                placeholder="Internal notes (not visible to customer)...">{{ invoice.notes }}</textarea>
+                            <small class="text-xs text-slate-500 mt-1">
+                                These notes are for internal use only
+                            </small>
+                        </div>
 
-                    <div class="mb-3">
-                        <label for="terms" class="form-label">Payment Terms</label>
-                        <select class="form-select" id="terms" name="terms">
-                            <option value="Due on Receipt" {% if invoice.terms == "Due on Receipt" %}selected{% endif %}>Due on Receipt</option>
-                            <option value="Net 15" {% if invoice.terms == "Net 15" %}selected{% endif %}>Net 15</option>
-                            <option value="Net 30" {% if invoice.terms == "Net 30" %}selected{% endif %}>Net 30</option>
-                            <option value="Net 45" {% if invoice.terms == "Net 45" %}selected{% endif %}>Net 45</option>
-                            <option value="Net 60" {% if invoice.terms == "Net 60" %}selected{% endif %}>Net 60</option>
-                        </select>
+                        <div>
+                            <label for="terms" class="block text-xs font-semibold text-slate-700 mb-2">Payment Terms</label>
+                            <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" id="terms" name="terms">
+                                <option value="Due on Receipt" {% if invoice.terms == "Due on Receipt" %}selected{% endif %}>Due on Receipt</option>
+                                <option value="Net 15" {% if invoice.terms == "Net 15" %}selected{% endif %}>Net 15</option>
+                                <option value="Net 30" {% if invoice.terms == "Net 30" %}selected{% endif %}>Net 30</option>
+                                <option value="Net 45" {% if invoice.terms == "Net 45" %}selected{% endif %}>Net 45</option>
+                                <option value="Net 60" {% if invoice.terms == "Net 60" %}selected{% endif %}>Net 60</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Adjustments & Fees -->
-                <div class="form-section">
-                    <h5 class="section-title">
-                        <i class="fas fa-percentage me-2"></i>Discounts & Fees
-                    </h5>
-                    
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="discount_percentage" class="form-label">Discount %</label>
-                            <input 
-                                type="number" 
-                                class="form-control" 
-                                id="discount_percentage" 
-                                name="discount_percentage"
-                                step="0.01" 
-                                min="0" 
-                                max="100"
-                                value="{{ invoice.discount_percentage|default:'0' }}">
-                        </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="discount_reason" class="form-label">Discount Reason</label>
-                            <input 
-                                type="text" 
-                                class="form-control" 
-                                id="discount_reason" 
-                                name="discount_reason"
-                                placeholder="e.g., Loyalty discount"
-                                value="{{ invoice.discount_reason }}">
-                        </div>
+                <!-- Discounts & Fees -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-percentage text-primary"></i>
+                            Discounts & Fees
+                        </h5>
                     </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="shop_supplies_fee" class="form-label">Shop Supplies Fee</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="discount_percentage" class="block text-xs font-semibold text-slate-700 mb-2">Discount %</label>
                                 <input 
                                     type="number" 
-                                    class="form-control" 
-                                    id="shop_supplies_fee" 
-                                    name="shop_supplies_fee"
+                                    class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                    id="discount_percentage" 
+                                    name="discount_percentage"
                                     step="0.01" 
-                                    min="0"
-                                    value="{{ invoice.shop_supplies_fee|default:'0' }}">
+                                    min="0" 
+                                    max="100"
+                                    value="{{ invoice.discount_percentage|default:'0' }}">
+                            </div>
+                            
+                            <div>
+                                <label for="discount_reason" class="block text-xs font-semibold text-slate-700 mb-2">Discount Reason</label>
+                                <input 
+                                    type="text" 
+                                    class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                    id="discount_reason" 
+                                    name="discount_reason"
+                                    placeholder="e.g., Loyalty discount"
+                                    value="{{ invoice.discount_reason }}">
                             </div>
                         </div>
-                        
-                        <div class="col-md-6 mb-3">
-                            <label for="environmental_fee" class="form-label">Environmental Fee</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input 
-                                    type="number" 
-                                    class="form-control" 
-                                    id="environmental_fee" 
-                                    name="environmental_fee"
-                                    step="0.01" 
-                                    min="0"
-                                    value="{{ invoice.environmental_fee|default:'0' }}">
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="shop_supplies_fee" class="block text-xs font-semibold text-slate-700 mb-2">Shop Supplies Fee</label>
+                                <div class="flex items-center">
+                                    <span class="px-3 py-2.5 border border-r-0 border-slate-300 rounded-l-lg bg-slate-50 text-sm text-slate-700">$</span>
+                                    <input 
+                                        type="number" 
+                                        class="w-full px-3 py-2.5 border border-slate-300 rounded-r-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        id="shop_supplies_fee" 
+                                        name="shop_supplies_fee"
+                                        step="0.01" 
+                                        min="0"
+                                        value="{{ invoice.shop_supplies_fee|default:'0' }}">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label for="environmental_fee" class="block text-xs font-semibold text-slate-700 mb-2">Environmental Fee</label>
+                                <div class="flex items-center">
+                                    <span class="px-3 py-2.5 border border-r-0 border-slate-300 rounded-l-lg bg-slate-50 text-sm text-slate-700">$</span>
+                                    <input 
+                                        type="number" 
+                                        class="w-full px-3 py-2.5 border border-slate-300 rounded-r-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        id="environmental_fee" 
+                                        name="environmental_fee"
+                                        step="0.01" 
+                                        min="0"
+                                        value="{{ invoice.environmental_fee|default:'0' }}">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -223,117 +206,132 @@
             </div>
 
             <!-- Right Column - Summary & Actions -->
-            <div class="col-lg-4">
+            <div class="space-y-6">
                 <!-- Current Totals -->
-                <div class="form-section">
-                    <h5 class="section-title">
-                        <i class="fas fa-calculator me-2"></i>Current Totals
-                    </h5>
-                    
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Labor:</span>
-                        <strong>${{ invoice.labor_subtotal|floatformat:2 }}</strong>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-calculator text-primary"></i>
+                            Current Totals
+                        </h5>
                     </div>
-                    
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Parts:</span>
-                        <strong>${{ invoice.parts_subtotal|floatformat:2 }}</strong>
-                    </div>
-                    
-                    {% if invoice.sublet_subtotal > 0 %}
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Sublet:</span>
-                        <strong>${{ invoice.sublet_subtotal|floatformat:2 }}</strong>
-                    </div>
-                    {% endif %}
-                    
-                    <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
-                        <span class="text-muted">Subtotal:</span>
-                        <strong>${{ invoice.subtotal|floatformat:2 }}</strong>
-                    </div>
-                    
-                    {% if invoice.discount_amount > 0 %}
-                    <div class="d-flex justify-content-between mb-2 text-success">
-                        <span>Discount:</span>
-                        <strong>-${{ invoice.discount_amount|floatformat:2 }}</strong>
-                    </div>
-                    {% endif %}
-                    
-                    {% if invoice.tax_amount > 0 %}
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Tax:</span>
-                        <strong>${{ invoice.tax_amount|floatformat:2 }}</strong>
-                    </div>
-                    {% endif %}
-                    
-                    {% if invoice.shop_supplies_fee > 0 %}
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Shop Supplies:</span>
-                        <strong>${{ invoice.shop_supplies_fee|floatformat:2 }}</strong>
-                    </div>
-                    {% endif %}
-                    
-                    {% if invoice.environmental_fee > 0 %}
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Environmental:</span>
-                        <strong>${{ invoice.environmental_fee|floatformat:2 }}</strong>
-                    </div>
-                    {% endif %}
-                    
-                    <div class="d-flex justify-content-between mb-2 pt-2 border-top">
-                        <span class="fw-bold">Total:</span>
-                        <strong class="fs-5 text-primary">${{ invoice.total|floatformat:2 }}</strong>
-                    </div>
-                    
-                    {% if invoice.amount_paid > 0 %}
-                    <div class="d-flex justify-content-between mb-2 text-success">
-                        <span>Paid:</span>
-                        <strong>-${{ invoice.amount_paid|floatformat:2 }}</strong>
-                    </div>
-                    {% endif %}
-                    
-                    <div class="d-flex justify-content-between pt-2 border-top">
-                        <span class="fw-bold">Amount Due:</span>
-                        <strong class="fs-5 text-danger">${{ invoice.amount_due|floatformat:2 }}</strong>
+                    <div class="p-6 space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-600">Labor:</span>
+                            <strong class="text-slate-900">${{ invoice.labor_subtotal|floatformat:2 }}</strong>
+                        </div>
+                        
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-600">Parts:</span>
+                            <strong class="text-slate-900">${{ invoice.parts_subtotal|floatformat:2 }}</strong>
+                        </div>
+                        
+                        {% if invoice.sublet_subtotal > 0 %}
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-600">Sublet:</span>
+                            <strong class="text-slate-900">${{ invoice.sublet_subtotal|floatformat:2 }}</strong>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="flex justify-between text-sm pb-2 border-b border-slate-200">
+                            <span class="text-slate-600">Subtotal:</span>
+                            <strong class="text-slate-900">${{ invoice.subtotal|floatformat:2 }}</strong>
+                        </div>
+                        
+                        {% if invoice.discount_amount > 0 %}
+                        <div class="flex justify-between text-sm text-emerald-600">
+                            <span>Discount:</span>
+                            <strong>-${{ invoice.discount_amount|floatformat:2 }}</strong>
+                        </div>
+                        {% endif %}
+                        
+                        {% if invoice.tax_amount > 0 %}
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-600">Tax:</span>
+                            <strong class="text-slate-900">${{ invoice.tax_amount|floatformat:2 }}</strong>
+                        </div>
+                        {% endif %}
+                        
+                        {% if invoice.shop_supplies_fee > 0 %}
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-600">Shop Supplies:</span>
+                            <strong class="text-slate-900">${{ invoice.shop_supplies_fee|floatformat:2 }}</strong>
+                        </div>
+                        {% endif %}
+                        
+                        {% if invoice.environmental_fee > 0 %}
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-600">Environmental:</span>
+                            <strong class="text-slate-900">${{ invoice.environmental_fee|floatformat:2 }}</strong>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="flex justify-between pt-2 border-t border-slate-200">
+                            <span class="font-semibold text-slate-900">Total:</span>
+                            <strong class="text-lg text-primary">${{ invoice.total|floatformat:2 }}</strong>
+                        </div>
+                        
+                        {% if invoice.amount_paid > 0 %}
+                        <div class="flex justify-between text-sm text-emerald-600">
+                            <span>Paid:</span>
+                            <strong>-${{ invoice.amount_paid|floatformat:2 }}</strong>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="flex justify-between pt-2 border-t border-slate-200">
+                            <span class="font-semibold text-slate-900">Amount Due:</span>
+                            <strong class="text-lg text-rose-600">${{ invoice.amount_due|floatformat:2 }}</strong>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Dates Info -->
-                <div class="form-section">
-                    <h5 class="section-title">
-                        <i class="fas fa-calendar me-2"></i>Dates
-                    </h5>
-                    
-                    <div class="mb-2">
-                        <small class="text-muted">Invoice Date:</small><br>
-                        <strong>{{ invoice.invoice_date|date:"M d, Y" }}</strong>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-calendar text-primary"></i>
+                            Dates
+                        </h5>
                     </div>
-                    
-                    {% if invoice.due_date %}
-                    <div class="mb-2">
-                        <small class="text-muted">Due Date:</small><br>
-                        <strong>{{ invoice.due_date|date:"M d, Y" }}</strong>
+                    <div class="p-6 space-y-3">
+                        <div>
+                            <small class="text-xs text-slate-500">Invoice Date:</small>
+                            <div class="text-sm font-semibold text-slate-900">{{ invoice.invoice_date|date:"M d, Y" }}</div>
+                        </div>
+                        
+                        {% if invoice.due_date %}
+                        <div>
+                            <small class="text-xs text-slate-500">Due Date:</small>
+                            <div class="text-sm font-semibold text-slate-900">{{ invoice.due_date|date:"M d, Y" }}</div>
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
 
                 <!-- Actions -->
-                <div class="form-section">
-                    <h5 class="section-title">
-                        <i class="fas fa-tasks me-2"></i>Actions
-                    </h5>
-                    
-                    <button type="submit" class="btn btn-primary w-100 mb-2">
-                        <i class="fas fa-save me-2"></i>Save Changes
-                    </button>
-                    
-                    <a href="{% url 'billing:invoice_detail' invoice.id %}" class="btn btn-outline-secondary w-100 mb-2">
-                        <i class="fas fa-times me-2"></i>Cancel
-                    </a>
-                    
-                    <a href="{% url 'billing:invoice_list' %}" class="btn btn-outline-secondary w-100">
-                        <i class="fas fa-arrow-left me-2"></i>Back to Invoices
-                    </a>
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-0">
+                            <i class="fas fa-tasks text-primary"></i>
+                            Actions
+                        </h5>
+                    </div>
+                    <div class="p-6 space-y-3">
+                        <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                            <i class="fas fa-save"></i>
+                            <span>Save Changes</span>
+                        </button>
+                        
+                        <a href="{% url 'billing:invoice_detail' invoice.id %}" class="block w-full text-center inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                            <i class="fas fa-times"></i>
+                            <span>Cancel</span>
+                        </a>
+                        
+                        <a href="{% url 'billing:invoice_list' %}" class="block w-full text-center inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Back to Invoices</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -343,11 +341,11 @@
 
 {% block extra_js %}
 <script>
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
     // Form validation
-    $('#invoiceEditForm').on('submit', function(e) {
+    document.getElementById('invoiceEditForm').addEventListener('submit', function(e) {
         // Validate discount percentage
-        const discountPercentage = parseFloat($('#discount_percentage').val());
+        const discountPercentage = parseFloat(document.getElementById('discount_percentage').value);
         if (discountPercentage < 0 || discountPercentage > 100) {
             e.preventDefault();
             alert('Discount percentage must be between 0 and 100');
@@ -355,19 +353,28 @@ $(document).ready(function() {
         }
         
         // Show loading state
-        const submitBtn = $(this).find('button[type="submit"]');
-        submitBtn.prop('disabled', true);
-        submitBtn.html('<i class="fas fa-spinner fa-spin me-2"></i>Saving...');
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
     });
     
     // Auto-save draft (optional)
     let autoSaveTimeout;
-    $('textarea, input[type="text"], input[type="number"], select').on('input change', function() {
-        clearTimeout(autoSaveTimeout);
-        autoSaveTimeout = setTimeout(function() {
-            // Could implement auto-save functionality here
-            console.log('Changes detected - auto-save available');
-        }, 2000);
+    const inputs = document.querySelectorAll('textarea, input[type="text"], input[type="number"], select');
+    inputs.forEach(input => {
+        input.addEventListener('input', function() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(function() {
+                // Could implement auto-save functionality here
+                console.log('Changes detected - auto-save available');
+            }, 2000);
+        });
+        input.addEventListener('change', function() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(function() {
+                console.log('Changes detected - auto-save available');
+            }, 2000);
+        });
     });
 });
 </script>

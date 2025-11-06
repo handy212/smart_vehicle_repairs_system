@@ -1,78 +1,73 @@
-{% comment %}
-Notifications feed component
-Requires: recent_notifications queryset
-{% endcomment %}
-
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white border-0">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="fas fa-bell text-primary me-2"></i>
+{# Notifications feed component using Tailwind CSS #}
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-full">
+    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+        <div class="flex items-center justify-between">
+            <h5 class="text-sm font-semibold text-slate-900">
+                <i class="fas fa-bell mr-2 text-primary"></i>
                 Recent Notifications
             </h5>
-            <a href="{% url 'notifications:notification-center' %}" class="btn btn-sm btn-outline-primary">
+            <a href="{% url 'notifications:notification-center' %}" class="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
                 View All
             </a>
         </div>
     </div>
-    <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+    <div class="p-4 max-h-[400px] overflow-y-auto">
         {% if recent_notifications %}
-        <div class="list-group list-group-flush">
+        <div class="space-y-2">
             {% for notification in recent_notifications %}
             <a href="{{ notification.link_url|default:'#' }}" 
-               class="list-group-item list-group-item-action {% if not notification.is_read %}bg-light{% endif %}"
+               class="block p-3 rounded-lg border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all {% if not notification.is_read %}bg-blue-50/50 border-blue-200{% endif %}"
                data-notification-id="{{ notification.id }}">
-                <div class="d-flex w-100 justify-content-between">
-                    <div class="flex-grow-1">
-                        <div class="d-flex align-items-start">
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 mt-0.5">
                             {% if notification.priority == 'urgent' %}
-                            <i class="fas fa-exclamation-circle text-danger me-2 mt-1"></i>
+                            <i class="fas fa-exclamation-circle text-rose-600"></i>
                             {% elif notification.priority == 'high' %}
-                            <i class="fas fa-exclamation text-warning me-2 mt-1"></i>
+                            <i class="fas fa-exclamation text-amber-600"></i>
                             {% elif notification.notification_type == 'appointment' %}
-                            <i class="fas fa-calendar text-info me-2 mt-1"></i>
+                            <i class="fas fa-calendar text-blue-600"></i>
                             {% elif notification.notification_type == 'payment' %}
-                            <i class="fas fa-dollar-sign text-success me-2 mt-1"></i>
+                            <i class="fas fa-dollar-sign text-emerald-600"></i>
                             {% elif notification.notification_type == 'workorder' %}
-                            <i class="fas fa-wrench text-warning me-2 mt-1"></i>
+                            <i class="fas fa-wrench text-warning"></i>
                             {% else %}
-                            <i class="fas fa-info-circle text-primary me-2 mt-1"></i>
+                            <i class="fas fa-info-circle text-primary"></i>
                             {% endif %}
-                            
-                            <div class="flex-grow-1">
-                                <h6 class="mb-1 {% if not notification.is_read %}fw-bold{% endif %}">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h6 class="text-sm font-semibold {% if not notification.is_read %}text-slate-900{% else %}text-slate-700{% endif %} mb-1">
                                     {{ notification.title }}
                                 </h6>
-                                <p class="mb-1 small text-muted">
+                        <p class="text-xs text-slate-500 mb-2 line-clamp-2">
                                     {{ notification.message|truncatewords:15 }}
                                 </p>
-                                <small class="text-muted">
-                                    <i class="fas fa-clock me-1"></i>
+                        <div class="flex items-center justify-between">
+                            <small class="text-xs text-slate-400">
+                                <i class="fas fa-clock mr-1"></i>
                                     {{ notification.created_at|timesince }} ago
                                 </small>
-                            </div>
+                            {% if not notification.is_read %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-primary text-white">
+                                New
+                            </span>
+                            {% endif %}
                         </div>
                     </div>
-                    {% if not notification.is_read %}
-                    <div class="ms-2">
-                        <span class="badge bg-primary rounded-pill">New</span>
-                    </div>
-                    {% endif %}
                 </div>
             </a>
             {% endfor %}
         </div>
         {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-            <p class="text-muted mb-0">No recent notifications</p>
+        <div class="text-center py-8">
+            <i class="fas fa-inbox text-4xl text-slate-300 mb-3"></i>
+            <p class="text-sm text-slate-500 mb-0">No recent notifications</p>
         </div>
         {% endif %}
     </div>
     {% if recent_notifications %}
-    <div class="card-footer bg-white border-0 text-center">
-        <button class="btn btn-sm btn-link text-decoration-none" id="markAllRead">
-            <i class="fas fa-check-double me-1"></i>
+    <div class="px-6 py-3 border-t border-slate-200 bg-slate-50/50 text-center">
+        <button class="text-xs font-medium text-primary hover:text-primary/80 transition-colors" id="markAllRead">
+            <i class="fas fa-check-double mr-1"></i>
             Mark all as read
         </button>
     </div>
@@ -80,6 +75,7 @@ Requires: recent_notifications queryset
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
 // Mark notification as read when clicked
 document.querySelectorAll('[data-notification-id]').forEach(item => {
     item.addEventListener('click', function(e) {
@@ -87,7 +83,7 @@ document.querySelectorAll('[data-notification-id]').forEach(item => {
         fetch(`/api/notifications/notifications/${notificationId}/mark_read/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
                 'Content-Type': 'application/json'
             }
         });
@@ -95,31 +91,19 @@ document.querySelectorAll('[data-notification-id]').forEach(item => {
 });
 
 // Mark all as read
-document.getElementById('markAllRead')?.addEventListener('click', function() {
+    const markAllBtn = document.getElementById('markAllRead');
+    if (markAllBtn) {
+        markAllBtn.addEventListener('click', function() {
     fetch('/api/notifications/notifications/mark_all_read/', {
         method: 'POST',
         headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
             'Content-Type': 'application/json'
         }
     }).then(() => {
         location.reload();
     });
 });
-
-// Helper function to get CSRF token
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
             }
-        }
-    }
-    return cookieValue;
-}
+});
 </script>

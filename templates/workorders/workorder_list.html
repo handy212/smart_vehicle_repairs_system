@@ -1,516 +1,457 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load widget_tweaks %}
 
-{% block title %}Work Orders - Smart Vehicle Repairs{% endblock %}
+{% block title %}Work Orders • {{ block.super }}{% endblock %}
 
-{% block extra_css %}
-<link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+{% block page_header %}
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h1 class="text-xl font-semibold text-slate-900">
+                <i class="fas fa-wrench mr-2 text-primary"></i>
+                Work Orders
+            </h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'workorders:kanban' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-columns"></i>
+                <span>Kanban View</span>
+            </a>
+            <a href="{% url 'workorders:create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                <i class="fas fa-plus"></i>
+                <span>New Work Order</span>
+            </a>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="page-header-card shadow-sm mb-4">
-        <div class="row align-items-center g-3">
-            <div class="col-lg-8">
-                <div class="d-inline-flex align-items-center gap-3">
-                    <span class="badge bg-white text-primary fw-semibold text-uppercase px-3 py-2 shadow-sm">Work Orders</span>
-                </div>
-                <h1 class="page-title mt-3 mb-2">Service Work Orders</h1>
-                <p class="page-subtitle">Track job status, technician assignments, and progress across every repair.</p>
-            </div>
-            <div class="col-lg-4 text-lg-end">
-                <div class="page-actions d-flex justify-content-lg-end gap-2 flex-wrap">
-                    <a href="{% url 'workorders:kanban' %}" class="btn btn-light">
-                        <i class="fas fa-columns me-2"></i> Kanban View
+<!-- Quick Stats -->
+<style>
+    .stat-cards-grid {
+        display: grid !important;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (min-width: 640px) {
+        .stat-cards-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+    }
+    @media (min-width: 1024px) {
+        .stat-cards-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        }
+    }
+</style>
+<div class="stat-cards-grid">
+    {% url 'workorders:list' as workorder_list_url %}
+    <a href="{{ workorder_list_url }}" class="block h-full w-full">
+        {% include 'partials/stat_card.html' with label="Total" value=page_obj.paginator.count icon="fas fa-wrench" color="primary" %}
+    </a>
+    <a href="{{ workorder_list_url }}?status=in_progress" class="block h-full w-full">
+        {% include 'partials/stat_card.html' with label="In Progress" value="0" icon="fas fa-play-circle" color="info" %}
+    </a>
+    <a href="{{ workorder_list_url }}?status=completed" class="block h-full w-full">
+        {% include 'partials/stat_card.html' with label="Completed" value="0" icon="fas fa-check-circle" color="success" %}
+    </a>
+    <a href="{{ workorder_list_url }}?status=pending" class="block h-full w-full">
+        {% include 'partials/stat_card.html' with label="Pending" value="0" icon="fas fa-clock" color="warning" %}
                     </a>
-                    <div class="dropdown">
-                        <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-download me-2"></i> Export
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{% url 'workorders:export' %}?format=csv">Export to CSV</a></li>
-                        </ul>
-                    </div>
-                    <a href="{% url 'workorders:create' %}" class="btn btn-contrast">
-                        <i class="fas fa-plus me-2"></i> New Work Order
-                    </a>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <div id="alerts-container" class="mb-3"></div>
-
-    <!-- Filters -->
-    <div class="filter-section">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-12 col-lg-4">
-                <label for="search" class="form-label">Search</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-transparent text-muted"><i class="fas fa-search"></i></span>
-                    <input type="text" class="form-control" id="search" name="search"
-                           value="{{ current_filters.search }}" placeholder="Work order #, customer, vehicle...">
-                </div>
+<!-- Search and Filters -->
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6 overflow-hidden">
+    <!-- Quick Search Bar -->
+    <div class="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+        <form method="get" id="quickSearchForm" class="flex items-center gap-3">
+            <div class="flex-1 relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input 
+                    type="text" 
+                    name="search" 
+                    value="{{ current_filters.search }}" 
+                    placeholder="Search work orders by number, customer, vehicle..." 
+                    class="w-full pl-11 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                    id="quickSearchInput"
+                />
             </div>
-            <div class="col-6 col-lg-2">
-                <label for="status" class="form-label">Status</label>
-                <select class="form-select" id="status" name="status">
-                    <option value="">All Statuses</option>
-                    {% for value, label in status_choices %}
-                        <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-6 col-lg-2">
-                <label for="priority" class="form-label">Priority</label>
-                <select class="form-select" id="priority" name="priority">
-                    <option value="">All Priorities</option>
-                    {% for value, label in priority_choices %}
-                        <option value="{{ value }}" {% if current_filters.priority == value %}selected{% endif %}>
-                            {{ label }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-12 col-lg-3">
-                <label for="technician" class="form-label">Technician</label>
-                <select class="form-select" id="technician" name="technician">
-                    <option value="">All Technicians</option>
-                    {% for tech in technicians %}
-                        <option value="{{ tech.id }}" {% if current_filters.technician == tech.id|stringformat:"s" %}selected{% endif %}>
-                            {{ tech.first_name }} {{ tech.last_name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-12 col-lg-8">
-                <div class="filter-actions justify-content-lg-end">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-sliders-h me-2"></i>Apply Filters
-                    </button>
-                    <a href="{% url 'workorders:list' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-undo me-2"></i>Reset
-                    </a>
-                </div>
-            </div>
+            <button 
+                type="button" 
+                id="filterToggle" 
+                class="px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors flex items-center gap-2"
+            >
+                <i class="fas fa-sliders-h"></i>
+                <span>Filters</span>
+                {% if current_filters.status or current_filters.priority or current_filters.technician %}
+                    <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-white text-xs font-semibold">
+                        {% if current_filters.status %}+{% endif %}{% if current_filters.priority %}+{% endif %}{% if current_filters.technician %}+{% endif %}
+                    </span>
+                {% endif %}
+            </button>
         </form>
     </div>
 
-    <!-- Work Orders List View -->
-    <div id="list-view-content">
-        <div class="card shadow-sm">
-            <div class="card-header bg-white border-0 pb-0">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div class="table-meta">
-                        {% if page_obj.paginator.count %}
-                            Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} work orders
-                        {% else %}
-                            No work orders yet
-                        {% endif %}
-                    </div>
-                    <div class="btn-group view-toggle" role="group">
-                        <input type="radio" class="btn-check" name="view" id="list-view" autocomplete="off" checked>
-                        <label class="btn btn-outline-primary active" for="list-view">
-                            <i class="fas fa-list"></i>
-                        </label>
-                        <input type="radio" class="btn-check" name="view" id="card-view" autocomplete="off">
-                        <label class="btn btn-outline-primary" for="card-view">
-                            <i class="fas fa-th-large"></i>
-                        </label>
-                    </div>
+    <!-- Active Filters -->
+    {% if current_filters.search or current_filters.status or current_filters.priority or current_filters.technician %}
+    <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center flex-wrap gap-2">
+        <span class="text-xs font-medium text-slate-500">Active filters:</span>
+        {% if current_filters.search %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            <i class="fas fa-search text-[10px]"></i>
+            Search: "{{ current_filters.search }}"
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'search' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        {% if current_filters.status %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            Status: {{ current_filters.status|title }}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'status' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        {% if current_filters.priority %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            Priority: {{ current_filters.priority|title }}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'priority' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        {% if current_filters.technician %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            Technician: {{ current_filters.technician }}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'technician' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        <a href="{% url 'workorders:list' %}" class="ml-auto text-xs font-medium text-slate-600 hover:text-primary transition-colors">
+            <i class="fas fa-times-circle mr-1"></i>Clear all
+        </a>
+                </div>
+    {% endif %}
+
+    <!-- Advanced Filters -->
+    <div id="filterContent" class="hidden">
+        <form method="get" id="filterForm" class="p-4 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                        <i class="fas fa-check-circle mr-1.5 text-primary"></i>Status
+                    </label>
+                    <select name="status" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                        <option value="">All Status</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                        <i class="fas fa-exclamation-triangle mr-1.5 text-primary"></i>Priority
+                    </label>
+                    <select name="priority" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                    <option value="">All Priorities</option>
+                    {% for value, label in priority_choices %}
+                        <option value="{{ value }}" {% if current_filters.priority == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                        <i class="fas fa-user-cog mr-1.5 text-primary"></i>Technician
+                    </label>
+                    <select name="technician" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                    <option value="">All Technicians</option>
+                    {% for tech in technicians %}
+                        <option value="{{ tech.id }}" {% if current_filters.technician == tech.id|stringformat:"s" %}selected{% endif %}>{{ tech.first_name }} {{ tech.last_name }}</option>
+                    {% endfor %}
+                </select>
                 </div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-modern align-middle mb-0" id="workorders-table">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Work Order #</th>
-                                <th>Status</th>
-                                <th>Priority</th>
-                                <th>Customer</th>
-                                <th>Vehicle</th>
-                                <th>Technician</th>
-                                <th>Created</th>
-                                <th>Progress</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for workorder in workorders %}
-                            <tr data-workorder-id="{{ workorder.id }}">
-                                <td>
-                                    <a href="{% url 'workorders:detail' workorder.pk %}" class="text-decoration-none fw-bold">
-                                        {{ workorder.work_order_number }}
-                                    </a>
-                                </td>
-                                <td>
-                                    {% include 'workorders/partials/status_badge.html' with status=workorder.status %}
-                                </td>
-                                <td>
-                                    {% include 'workorders/partials/priority_badge.html' with priority=workorder.priority %}
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="avatar-initials me-2">
-                                            {{ workorder.customer.user.first_name|first }}{{ workorder.customer.user.last_name|first }}
-                                        </div>
-                                        <div>
-                                            <div class="fw-medium">{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</div>
-                                            <small class="text-muted">{{ workorder.customer.user.email }}</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div>
-                                        <div class="fw-medium">{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</div>
-                                        <small class="text-muted">{{ workorder.vehicle.license_plate }}</small>
-                                    </div>
-                                </td>
-                                <td>
-                                    {% if workorder.primary_technician %}
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-initials bg-success text-white me-2">
-                                                {{ workorder.primary_technician.first_name|first }}{{ workorder.primary_technician.last_name|first }}
-                                            </div>
-                                            <span>{{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}</span>
-                                        </div>
-                                    {% else %}
-                                        <span class="text-muted">Unassigned</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div>{{ workorder.created_at|date:"M d, Y" }}</div>
-                                    <small class="text-muted">{{ workorder.created_at|time:"H:i" }}</small>
-                                </td>
-                                <td>
-                                    {% if workorder.task_count > 0 %}
-                                        {% widthratio workorder.completed_tasks_count workorder.task_count 100 as completion_pct %}
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="progress progress-thin flex-grow-1" data-progress="{{ completion_pct }}">
-                                                <div class="progress-bar bg-primary" role="progressbar" aria-valuenow="{{ completion_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
-                                            </div>
-                                            <small class="text-muted">{{ workorder.completed_tasks_count }}/{{ workorder.task_count }}</small>
-                                        </div>
-                                    {% else %}
-                                        <span class="text-muted">No tasks</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                            Actions
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                            <li><a class="dropdown-item" href="{% url 'workorders:detail' workorder.pk %}">
-                                                <i class="fas fa-eye me-2"></i>View Details
-                                            </a></li>
-                                            {% if request.user.role in 'admin,manager,receptionist' %}
-                                            <li><a class="dropdown-item" href="{% url 'workorders:edit' workorder.pk %}">
-                                                <i class="fas fa-edit me-2"></i>Edit
-                                            </a></li>
-                                            {% endif %}
-                                            <li><a class="dropdown-item" href="{% url 'workorders:print' workorder.pk %}" target="_blank">
-                                                <i class="fas fa-print me-2"></i>Print
-                                            </a></li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item text-success status-update" href="#"
-                                                   data-workorder-id="{{ workorder.id }}" data-status="in_progress">
-                                                <i class="fas fa-play me-2"></i>Mark In Progress
-                                            </a></li>
-                                            <li><a class="dropdown-item text-primary status-update" href="#"
-                                                   data-workorder-id="{{ workorder.id }}" data-status="completed">
-                                                <i class="fas fa-check me-2"></i>Mark Completed
-                                            </a></li>
-                                        </ul>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr data-empty="true">
-                                <td colspan="9" class="text-center py-4">
-                                    <div class="text-muted">
-                                        <i class="fas fa-search fa-2x mb-3"></i>
-                                        <p>No work orders found matching your criteria.</p>
-                                        <a href="{% url 'workorders:create' %}" class="btn btn-primary">Create First Work Order</a>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+            <div class="flex items-center justify-between pt-3 border-t border-slate-200">
+                <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-all shadow-sm hover:shadow-md">
+                    <i class="fas fa-filter"></i>
+                    Apply Filters
+                    </button>
+                <a href="{% url 'workorders:list' %}" class="text-sm font-medium text-slate-600 hover:text-primary transition-colors">
+                    <i class="fas fa-redo mr-1.5"></i>Reset
+                    </a>
+            </div>
+        </form>
+    </div>
+    </div>
+
+<!-- Work Order List Table -->
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <!-- Table Header -->
+    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-900">Work Order Directory</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                        {% if page_obj.paginator.count > 0 %}
+                            Showing <span class="font-medium text-slate-700">{{ page_obj.start_index }}</span>–<span class="font-medium text-slate-700">{{ page_obj.end_index }}</span> of <span class="font-medium text-slate-700">{{ page_obj.paginator.count }}</span> work orders
+                        {% else %}
+                            No work orders found
+                        {% endif %}
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Work Orders Card View -->
-    <div id="card-view-content" class="d-none">
-        <div class="row g-3">
+    <!-- Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-slate-50/50">
+                <tr>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Work Order</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Customer</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Vehicle</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Technician</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Priority</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Progress</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-right">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 bg-white">
             {% for workorder in workorders %}
-            <div class="col-xxl-3 col-lg-4 col-md-6">
-                <div class="card h-100 card-hover-lift shadow-sm border-0">
-                    <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">{{ workorder.work_order_number }}</h6>
-                        <div class="d-flex gap-2">
-                            {% include 'workorders/partials/status_badge.html' with status=workorder.status %}
-                            {% include 'workorders/partials/priority_badge.html' with priority=workorder.priority %}
-                        </div>
-                    </div>
-                    <div class="card-body pt-0 px-4 pb-4">
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center mb-2">
-                                <div class="avatar-initials me-3">
-                                    {{ workorder.customer.user.first_name|first }}{{ workorder.customer.user.last_name|first }}
-                                </div>
-                                <div>
-                                    <strong>{{ workorder.customer.user.first_name }} {{ workorder.customer.user.last_name }}</strong>
-                                    <div class="text-muted small">{{ workorder.customer.user.email }}</div>
-                                </div>
+                <tr class="hover:bg-slate-50/50 transition-colors group">
+                    <td class="px-6 py-4">
+                        <div class="min-w-0">
+                            <div class="font-semibold text-slate-900 text-sm">
+                                <a href="{% url 'workorders:detail' workorder.pk %}" class="hover:text-primary">
+                                    {{ workorder.work_order_number }}
+                                </a>
                             </div>
-                            <div class="d-flex align-items-center mb-2 text-muted">
-                                <i class="fas fa-car text-primary me-2"></i>
-                                <span>{{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}</span>
-                            </div>
-                            {% if workorder.primary_technician %}
-                            <div class="d-flex align-items-center text-muted">
-                                <i class="fas fa-wrench text-warning me-2"></i>
-                                <span>{{ workorder.primary_technician.first_name }} {{ workorder.primary_technician.last_name }}</span>
-                            </div>
-                            {% else %}
-                            <div class="text-muted small"><i class="fas fa-user-clock me-1"></i>Unassigned</div>
-                            {% endif %}
+                            <div class="text-xs text-slate-500 mt-0.5">{{ workorder.created_at|date:"M d, Y" }}</div>
                         </div>
-
-                        {% if workorder.customer_concerns %}
-                        <div class="mb-3">
-                            <small class="text-muted d-block text-uppercase fw-semibold">Customer Concerns</small>
-                            <p class="mb-0 small">{{ workorder.customer_concerns|truncatechars:100 }}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-slate-900">{{ workorder.customer.user.get_full_name }}</div>
+                        <div class="text-xs text-slate-500 mt-0.5">{{ workorder.customer.user.email }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-slate-900">
+                            {{ workorder.vehicle.year }} {{ workorder.vehicle.make }} {{ workorder.vehicle.model }}
                         </div>
+                        <div class="text-xs text-slate-500 mt-0.5">{{ workorder.vehicle.license_plate }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if workorder.primary_technician %}
+                        <div class="text-sm font-medium text-slate-900">{{ workorder.primary_technician.get_full_name }}</div>
+                        {% else %}
+                        <span class="text-sm text-slate-400">Unassigned</span>
                         {% endif %}
-
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if workorder.status == 'pending' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Pending
+                            </span>
+                        {% elif workorder.status == 'in_progress' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>In Progress
+                            </span>
+                        {% elif workorder.status == 'completed' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Completed
+                            </span>
+                        {% elif workorder.status == 'on_hold' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>On Hold
+                            </span>
+                        {% elif workorder.status == 'cancelled' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Cancelled
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>{{ workorder.get_status_display }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if workorder.priority == 'urgent' %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                <i class="fas fa-exclamation-triangle text-[10px]"></i>Urgent
+                            </span>
+                        {% elif workorder.priority == 'high' %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                <i class="fas fa-exclamation text-[10px]"></i>High
+                            </span>
+                        {% elif workorder.priority == 'normal' %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                Normal
+                            </span>
+                        {% elif workorder.priority == 'low' %}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200">
+                                Low
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
                         {% if workorder.task_count > 0 %}
-                        {% widthratio workorder.completed_tasks_count workorder.task_count 100 as card_completion_pct %}
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <small class="text-muted">Progress</small>
-                                <small class="text-muted">{{ workorder.completed_tasks_count }}/{{ workorder.task_count }} tasks</small>
+                            {% widthratio workorder.completed_tasks_count workorder.task_count 100 as completion_pct %}
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 bg-slate-200 rounded-full h-2 overflow-hidden">
+                                    <div class="bg-primary h-full rounded-full transition-all" style="width: {{ completion_pct }}%"></div>
                             </div>
-                            <div class="progress progress-thin" data-progress="{{ card_completion_pct }}">
-                                <div class="progress-bar bg-primary" role="progressbar" aria-valuenow="{{ card_completion_pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                <span class="text-xs font-medium text-slate-600 min-w-[3rem]">{{ workorder.completed_tasks_count }}/{{ workorder.task_count }}</span>
                             </div>
-                        </div>
+                        {% else %}
+                            <span class="text-xs text-slate-400">No tasks</span>
                         {% endif %}
-                    </div>
-                    <div class="card-footer bg-white border-0 pt-0 px-4 pb-4">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small class="text-muted">{{ workorder.created_at|date:"M d, Y" }}</small>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <a href="{% url 'workorders:detail' workorder.pk %}" class="btn btn-outline-primary">
-                                    <i class="fas fa-eye"></i>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center justify-end gap-1">
+                            <a href="{% url 'workorders:detail' workorder.pk %}" class="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-all group-hover:bg-slate-100" title="View details">
+                                <i class="fas fa-eye text-sm"></i>
                                 </a>
                                 {% if request.user.role in 'admin,manager,receptionist' %}
-                                <a href="{% url 'workorders:edit' workorder.pk %}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-edit"></i>
+                            <a href="{% url 'workorders:edit' workorder.pk %}" class="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-all group-hover:bg-slate-100" title="Edit work order">
+                                <i class="fas fa-edit text-sm"></i>
                                 </a>
                                 {% endif %}
-                                <a href="{% url 'workorders:print' workorder.pk %}" target="_blank" class="btn btn-outline-success">
-                                    <i class="fas fa-print"></i>
+                            <a href="{% url 'workorders:print' workorder.pk %}" class="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-all group-hover:bg-slate-100" title="Print work order" target="_blank">
+                                <i class="fas fa-print text-sm"></i>
                                 </a>
-                            </div>
                         </div>
-                    </div>
-                </div>
-            </div>
+                    </td>
+                </tr>
             {% empty %}
-            <div class="col-12">
-                <div class="text-center py-5">
-                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">No work orders found</h5>
-                    <p class="text-muted">Try adjusting your search criteria or create a new work order.</p>
-                    <a href="{% url 'workorders:create' %}" class="btn btn-primary">Create Work Order</a>
-                </div>
-            </div>
+                <tr>
+                    <td colspan="8" class="px-6 py-16 text-center">
+                        {% url 'workorders:create' as create_url %}
+                        {% include 'partials/empty_state.html' with icon="fas fa-wrench" title="No work orders found" message="Get started by creating your first work order" action_url=create_url action_text="Create Work Order" %}
+                    </td>
+                </tr>
             {% endfor %}
-        </div>
+            </tbody>
+        </table>
     </div>
 
     <!-- Pagination -->
     {% if page_obj.has_other_pages %}
-    <nav aria-label="Work orders pagination" class="mt-4">
-        <ul class="pagination justify-content-center">
+    <div class="px-6 py-4 border-t border-slate-200 bg-slate-50/50">
+        <div class="flex items-center justify-between">
+            <div class="text-sm text-slate-600">
+                Page <span class="font-semibold text-slate-900">{{ page_obj.number }}</span> of <span class="font-semibold text-slate-900">{{ page_obj.paginator.num_pages }}</span>
+            </div>
+            <div class="flex items-center gap-2">
             {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.status %}status={{ current_filters.status }}&{% endif %}{% if current_filters.priority %}priority={{ current_filters.priority }}&{% endif %}{% if current_filters.technician %}technician={{ current_filters.technician }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
-                </li>
-            {% endif %}
-
-            {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ num }}</span>
-                    </li>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <li class="page-item">
-                        <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.status %}status={{ current_filters.status }}&{% endif %}{% if current_filters.priority %}priority={{ current_filters.priority }}&{% endif %}{% if current_filters.technician %}technician={{ current_filters.technician }}&{% endif %}page={{ num }}">{{ num }}</a>
-                    </li>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1" class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-primary transition-all" title="First page">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-primary transition-all" title="Previous">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                {% else %}
+                    <span class="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <i class="fas fa-angle-double-left"></i>
+                    </span>
+                    <span class="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <i class="fas fa-chevron-left"></i>
+                    </span>
                 {% endif %}
-            {% endfor %}
-
             {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?{% if current_filters.search %}search={{ current_filters.search }}&{% endif %}{% if current_filters.status %}status={{ current_filters.status }}&{% endif %}{% if current_filters.priority %}priority={{ current_filters.priority }}&{% endif %}{% if current_filters.technician %}technician={{ current_filters.technician }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
-                </li>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-primary transition-all" title="Next">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-primary transition-all" title="Last page">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                {% else %}
+                    <span class="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <i class="fas fa-chevron-right"></i>
+                    </span>
+                    <span class="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <i class="fas fa-angle-double-right"></i>
+                    </span>
             {% endif %}
-        </ul>
-    </nav>
+            </div>
+        </div>
+    </div>
     {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- DataTables JS (jQuery already loaded in base template) -->
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-
 <script>
-$(document).ready(function() {
-    const $table = $('#workorders-table');
-    const $listContent = $('#list-view-content');
-    const $cardContent = $('#card-view-content');
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter toggle
+    const filterToggle = document.getElementById('filterToggle');
+    const filterContent = document.getElementById('filterContent');
 
-    if ($table.length > 0) {
-        const dataRows = $table.find('tbody tr:not([data-empty])');
-
-        if (dataRows.length > 0) {
-            try {
-                $table.DataTable({
-                    paging: false,
-                    searching: false,
-                    info: false,
-                    columnDefs: [
-                        { orderable: false, targets: [8] }
-                    ],
-                    language: {
-                        emptyTable: 'No work orders found'
-                    }
-                });
-            } catch (error) {
-                console.warn('DataTables initialization failed:', error);
-            }
-        }
-    }
-
-    hydrateProgress($(document));
-
-    $('input[name="view"]').on('change', function() {
-        const isListView = this.id === 'list-view';
-
-        $listContent.toggleClass('d-none', !isListView);
-        $cardContent.toggleClass('d-none', isListView);
-
-        $('.view-toggle label').removeClass('active');
-        $(`label[for="${this.id}"]`).addClass('active');
-
-        hydrateProgress(isListView ? $listContent : $cardContent);
-    });
-
-    $('.status-update').on('click', function(e) {
-        e.preventDefault();
-
-        const workorderId = $(this).data('workorder-id');
-        const newStatus = $(this).data('status');
-        const $row = $(`tr[data-workorder-id="${workorderId}"]`);
-
-        if (confirm(`Are you sure you want to change the status to "${newStatus}"?`)) {
-            fetch(`/workorders/${workorderId}/update-status/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: `status=${newStatus}`
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const statusCell = $row.find('td:nth-child(2)');
-                        statusCell.html(getStatusBadgeHtml(data.status, data.status_display));
-                        showAlert('success', 'Status updated successfully!');
-                    } else {
-                        showAlert('danger', 'Error updating status: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showAlert('danger', 'An error occurred while updating the status.');
-                });
-        }
-    });
-
-    function hydrateProgress(scope) {
-        const $scope = scope instanceof jQuery ? scope : $(scope);
-        $scope.find('.progress[data-progress]').each(function() {
-            const value = parseFloat($(this).data('progress')) || 0;
-            $(this).find('.progress-bar')
-                .css('width', `${value}%`)
-                .attr('aria-valuenow', value);
+    if (filterToggle && filterContent) {
+        {% if current_filters.status or current_filters.priority or current_filters.technician %}
+        filterContent.classList.remove('hidden');
+        {% endif %}
+        
+        filterToggle.addEventListener('click', function() {
+            const isHidden = filterContent.classList.contains('hidden');
+            filterContent.classList.toggle('hidden', !isHidden);
         });
     }
 
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; cookies.length > i; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
+    // Quick search auto-submit
+    const quickSearchInput = document.getElementById('quickSearchInput');
+    const quickSearchForm = document.getElementById('quickSearchForm');
+    if (quickSearchInput && quickSearchForm) {
+        let debounceHandle;
+        quickSearchInput.addEventListener('input', function() {
+            clearTimeout(debounceHandle);
+            debounceHandle = setTimeout(() => {
+                if (this.value.length >= 3 || this.value.length === 0) {
+                    quickSearchForm.submit();
                 }
+            }, 500);
+        });
+        
+        quickSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                quickSearchForm.submit();
             }
-        }
-        return cookieValue;
+        });
     }
 
-    const statusStyles = {
-        draft: { cls: 'status-badge badge-soft badge-soft-secondary' },
-        inspection: { cls: 'status-badge badge-soft badge-soft-primary', icon: '<i class="fas fa-search me-1"></i>' },
-        intake: { cls: 'status-badge badge-soft badge-soft-info' },
-        diagnosis: { cls: 'status-badge badge-soft badge-soft-warning' },
-        awaiting_approval: { cls: 'status-badge badge-soft badge-soft-primary' },
-        approved: { cls: 'status-badge badge-soft badge-soft-success' },
-        in_progress: { cls: 'status-badge badge-soft badge-soft-warning', icon: '<i class="fas fa-spinner fa-spin me-1"></i>' },
-        paused: { cls: 'status-badge badge-soft badge-soft-secondary', icon: '<i class="fas fa-pause me-1"></i>' },
-        quality_check: { cls: 'status-badge badge-soft badge-soft-info', icon: '<i class="fas fa-search me-1"></i>' },
-        completed: { cls: 'status-badge badge-soft badge-soft-success', icon: '<i class="fas fa-check me-1"></i>' },
-        invoiced: { cls: 'status-badge badge-soft badge-soft-dark', icon: '<i class="fas fa-file-invoice me-1"></i>' },
-        closed: { cls: 'status-badge badge-soft badge-soft-secondary', icon: '<i class="fas fa-lock me-1"></i>' },
-        default: { cls: 'status-badge badge-soft badge-soft-secondary' }
-    };
-
-    function getStatusBadgeHtml(status, display) {
-        const config = statusStyles[status] || statusStyles.default;
-        const icon = config.icon ? `${config.icon}` : '';
-        return `<span class="${config.cls}">${icon}${display}</span>`;
-    }
-
-    function showAlert(type, message) {
-        const alertHtml = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
-        $('#alerts-container').html(alertHtml);
-
-        setTimeout(() => {
-            $('.alert').alert('close');
-        }, 3000);
+    // Auto-submit advanced filters
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+        const filterSelects = filterForm.querySelectorAll('select');
+        filterSelects.forEach(select => {
+            select.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
     }
 });
 </script>

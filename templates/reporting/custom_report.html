@@ -9,149 +9,175 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2><i class="fas fa-magic me-2"></i>Custom Report Builder</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'reporting:report-dashboard' %}">Reports</a></li>
-                    <li class="breadcrumb-item active">Custom Builder</li>
-                </ol>
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <div>
+            <nav class="flex items-center gap-2 text-sm text-slate-500 mb-2">
+                <a href="{% url 'dashboard' %}" class="hover:text-slate-700">Dashboard</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <a href="{% url 'reporting:report-dashboard' %}" class="hover:text-slate-700">Reports</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <span class="text-slate-700">Custom Builder</span>
             </nav>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">
+                <i class="fas fa-magic mr-2 text-primary"></i>
+                Custom Report Builder
+            </h1>
         </div>
     </div>
 
-    <div class="row">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Report Configuration -->
-        <div class="col-lg-4">
-            <div class="card sticky-top" style="top: 20px;">
-                <div class="card-header">
-                    <h5 class="mb-0">Report Configuration</h5>
-                </div>
-                <div class="card-body">
-                    <form id="reportBuilderForm">
-                        <!-- Data Source -->
-                        <div class="mb-3">
-                            <label class="form-label">Data Source</label>
-                            <select class="form-select" name="data_source" id="dataSource" required>
-                                <option value="">Select data source...</option>
-                                <option value="workorders">Work Orders</option>
-                                <option value="invoices">Invoices</option>
-                                <option value="customers">Customers</option>
-                                <option value="vehicles">Vehicles</option>
-                                <option value="inventory">Inventory</option>
-                                <option value="appointments">Appointments</option>
-                                <option value="inspections">Inspections</option>
-                            </select>
-                        </div>
-
-                        <!-- Date Range -->
-                        <div class="mb-3">
-                            <label class="form-label">Date Range</label>
-                            <select class="form-select mb-2" id="datePreset">
-                                <option value="custom">Custom Range</option>
-                                <option value="today">Today</option>
-                                <option value="last7">Last 7 Days</option>
-                                <option value="last30" selected>Last 30 Days</option>
-                                <option value="thisMonth">This Month</option>
-                                <option value="lastMonth">Last Month</option>
-                            </select>
-                            <input type="date" class="form-control mb-2" name="start_date" id="startDate">
-                            <input type="date" class="form-control" name="end_date" id="endDate">
-                        </div>
-
-                        <!-- Metrics -->
-                        <div class="mb-3">
-                            <label class="form-label">Metrics to Display</label>
-                            <div id="metricsContainer">
-                                <!-- Dynamic checkboxes based on data source -->
+        <div class="lg:col-span-1">
+            <div class="sticky top-6">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                        <h5 class="text-sm font-semibold text-slate-900 mb-0">Report Configuration</h5>
+                    </div>
+                    <div class="p-6">
+                        <form id="reportBuilderForm" class="space-y-4">
+                            <!-- Data Source -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Data Source</label>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        name="data_source" id="dataSource" required>
+                                    <option value="">Select data source...</option>
+                                    <option value="workorders">Work Orders</option>
+                                    <option value="invoices">Invoices</option>
+                                    <option value="customers">Customers</option>
+                                    <option value="vehicles">Vehicles</option>
+                                    <option value="inventory">Inventory</option>
+                                    <option value="appointments">Appointments</option>
+                                    <option value="inspections">Inspections</option>
+                                </select>
                             </div>
-                        </div>
 
-                        <!-- Grouping -->
-                        <div class="mb-3">
-                            <label class="form-label">Group By</label>
-                            <select class="form-select" name="group_by" id="groupBy">
-                                <option value="">No grouping</option>
-                                <!-- Dynamic options based on data source -->
-                            </select>
-                        </div>
+                            <!-- Date Range -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Date Range</label>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary mb-2" 
+                                        id="datePreset">
+                                    <option value="custom">Custom Range</option>
+                                    <option value="today">Today</option>
+                                    <option value="last7">Last 7 Days</option>
+                                    <option value="last30" selected>Last 30 Days</option>
+                                    <option value="thisMonth">This Month</option>
+                                    <option value="lastMonth">Last Month</option>
+                                </select>
+                                <input type="date" 
+                                       class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary mb-2" 
+                                       name="start_date" 
+                                       id="startDate">
+                                <input type="date" 
+                                       class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                       name="end_date" 
+                                       id="endDate">
+                            </div>
 
-                        <!-- Filters -->
-                        <div class="mb-3">
-                            <label class="form-label">Filters</label>
-                            <div id="filtersContainer">
-                                <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="addFilter()">
-                                    <i class="fas fa-plus me-1"></i>Add Filter
+                            <!-- Metrics -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Metrics to Display</label>
+                                <div id="metricsContainer" class="space-y-2">
+                                    <!-- Dynamic checkboxes based on data source -->
+                                </div>
+                            </div>
+
+                            <!-- Grouping -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Group By</label>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        name="group_by" id="groupBy">
+                                    <option value="">No grouping</option>
+                                    <!-- Dynamic options based on data source -->
+                                </select>
+                            </div>
+
+                            <!-- Filters -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Filters</label>
+                                <div id="filtersContainer" class="space-y-2">
+                                    <button type="button" 
+                                            class="w-full inline-flex items-center justify-center gap-2 px-3 py-2 border border-primary text-primary rounded-lg text-xs font-medium hover:bg-primary/10 transition-colors" 
+                                            onclick="addFilter()">
+                                        <i class="fas fa-plus"></i>
+                                        <span>Add Filter</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Sort -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Sort By</label>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary mb-2" 
+                                        name="sort_by" id="sortBy">
+                                    <!-- Dynamic options -->
+                                </select>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        name="sort_direction">
+                                    <option value="asc">Ascending</option>
+                                    <option value="desc">Descending</option>
+                                </select>
+                            </div>
+
+                            <!-- Chart Type -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-2">Visualization</label>
+                                <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        name="chart_type">
+                                    <option value="table">Table</option>
+                                    <option value="line">Line Chart</option>
+                                    <option value="bar">Bar Chart</option>
+                                    <option value="pie">Pie Chart</option>
+                                    <option value="doughnut">Doughnut Chart</option>
+                                </select>
+                            </div>
+
+                            <!-- Buttons -->
+                            <div class="space-y-2 pt-2">
+                                <button type="button" 
+                                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" 
+                                        onclick="generateReport()">
+                                    <i class="fas fa-chart-bar"></i>
+                                    <span>Generate Report</span>
+                                </button>
+                                <button type="button" 
+                                        class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" 
+                                        onclick="resetForm()">
+                                    <i class="fas fa-redo"></i>
+                                    <span>Reset</span>
                                 </button>
                             </div>
-                        </div>
-
-                        <!-- Sort -->
-                        <div class="mb-3">
-                            <label class="form-label">Sort By</label>
-                            <select class="form-select mb-2" name="sort_by" id="sortBy">
-                                <!-- Dynamic options -->
-                            </select>
-                            <select class="form-select" name="sort_direction">
-                                <option value="asc">Ascending</option>
-                                <option value="desc">Descending</option>
-                            </select>
-                        </div>
-
-                        <!-- Chart Type -->
-                        <div class="mb-3">
-                            <label class="form-label">Visualization</label>
-                            <select class="form-select" name="chart_type">
-                                <option value="table">Table</option>
-                                <option value="line">Line Chart</option>
-                                <option value="bar">Bar Chart</option>
-                                <option value="pie">Pie Chart</option>
-                                <option value="doughnut">Doughnut Chart</option>
-                            </select>
-                        </div>
-
-                        <!-- Buttons -->
-                        <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-primary" onclick="generateReport()">
-                                <i class="fas fa-chart-bar me-1"></i>Generate Report
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
-                                <i class="fas fa-redo me-1"></i>Reset
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Report Preview -->
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Report Preview</h5>
-                    <div class="btn-group" id="reportActions" style="display: none;">
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white flex justify-between items-center">
+                    <h5 class="text-sm font-semibold text-slate-900 mb-0">Report Preview</h5>
+                    <div id="reportActions" class="hidden">
                         {% include 'reporting/partials/export_buttons.html' %}
                     </div>
                 </div>
-                <div class="card-body">
-                    <div id="reportPreview" class="text-center text-muted py-5">
-                        <i class="fas fa-chart-line" style="font-size: 3rem; opacity: 0.3;"></i>
-                        <p class="mt-3">Configure your report settings and click "Generate Report" to preview</p>
+                <div class="p-6">
+                    <div id="reportPreview" class="text-center py-12">
+                        <i class="fas fa-chart-line text-6xl text-slate-300 mb-4"></i>
+                        <p class="text-sm text-slate-500">Configure your report settings and click "Generate Report" to preview</p>
                     </div>
                 </div>
             </div>
 
             <!-- Report Summary -->
-            <div class="card mt-4" id="reportSummary" style="display: none;">
-                <div class="card-header">
-                    <h5 class="mb-0">Summary Statistics</h5>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hidden" id="reportSummary">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900 mb-0">Summary Statistics</h5>
                 </div>
-                <div class="card-body">
-                    <div class="row text-center" id="summaryStats">
+                <div class="p-6">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center" id="summaryStats">
                         <!-- Dynamic summary stats -->
                     </div>
                 </div>
@@ -227,10 +253,14 @@ function updateMetrics(dataSource) {
     container.innerHTML = '';
     metrics.forEach((metric, index) => {
         const div = document.createElement('div');
-        div.className = 'form-check mb-2';
+        div.className = 'flex items-center gap-2';
         div.innerHTML = `
-            <input class="form-check-input" type="checkbox" value="${metric.value}" id="metric_${index}" ${index === 0 ? 'checked' : ''}>
-            <label class="form-check-label" for="metric_${index}">
+            <input type="checkbox" 
+                   class="w-4 h-4 border-slate-300 rounded text-primary focus:ring-primary" 
+                   value="${metric.value}" 
+                   id="metric_${index}" 
+                   ${index === 0 ? 'checked' : ''}>
+            <label class="text-sm text-slate-700 cursor-pointer" for="metric_${index}">
                 ${metric.label}
             </label>
         `;
@@ -268,28 +298,33 @@ function updateSortOptions(dataSource) {
 function addFilter() {
     const container = document.getElementById('filtersContainer');
     const filterDiv = document.createElement('div');
-    filterDiv.className = 'filter-item mb-2 p-2 border rounded';
+    filterDiv.className = 'filter-item p-3 border border-slate-200 rounded-lg bg-slate-50';
     filterDiv.innerHTML = `
-        <div class="row g-2">
-            <div class="col-5">
-                <select class="form-select form-select-sm" name="filter_field[]">
+        <div class="grid grid-cols-12 gap-2 items-end">
+            <div class="col-span-5">
+                <select class="w-full px-2 py-1.5 border border-slate-300 rounded text-xs bg-white focus:ring-1 focus:ring-primary focus:border-primary" name="filter_field[]">
                     <option>Field</option>
                 </select>
             </div>
-            <div class="col-3">
-                <select class="form-select form-select-sm" name="filter_operator[]">
+            <div class="col-span-3">
+                <select class="w-full px-2 py-1.5 border border-slate-300 rounded text-xs bg-white focus:ring-1 focus:ring-primary focus:border-primary" name="filter_operator[]">
                     <option>=</option>
                     <option>></option>
                     <option><</option>
                     <option>Contains</option>
                 </select>
             </div>
-            <div class="col-3">
-                <input type="text" class="form-control form-control-sm" name="filter_value[]" placeholder="Value">
+            <div class="col-span-3">
+                <input type="text" 
+                       class="w-full px-2 py-1.5 border border-slate-300 rounded text-xs bg-white focus:ring-1 focus:ring-primary focus:border-primary" 
+                       name="filter_value[]" 
+                       placeholder="Value">
             </div>
-            <div class="col-1">
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.filter-item').remove()">
-                    <i class="fas fa-times"></i>
+            <div class="col-span-1">
+                <button type="button" 
+                        class="w-full p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" 
+                        onclick="this.closest('.filter-item').remove()">
+                    <i class="fas fa-times text-xs"></i>
                 </button>
             </div>
         </div>
@@ -303,10 +338,10 @@ function generateReport() {
     
     // Show loading
     document.getElementById('reportPreview').innerHTML = `
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
+        <div class="flex flex-col items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+            <p class="text-sm text-slate-500">Generating report...</p>
         </div>
-        <p class="mt-3">Generating report...</p>
     `;
     
     // AJAX call to generate report
@@ -320,13 +355,13 @@ function generateReport() {
     .then(response => response.json())
     .then(data => {
         displayReport(data);
-        document.getElementById('reportActions').style.display = 'block';
-        document.getElementById('reportSummary').style.display = 'block';
+        document.getElementById('reportActions').classList.remove('hidden');
+        document.getElementById('reportSummary').classList.remove('hidden');
     })
     .catch(error => {
         document.getElementById('reportPreview').innerHTML = `
-            <div class="alert alert-danger">
-                Error generating report: ${error.message}
+            <div class="p-4 bg-rose-50 border border-rose-200 rounded-lg">
+                <p class="text-sm text-rose-800">Error generating report: ${error.message}</p>
             </div>
         `;
     });
@@ -338,10 +373,10 @@ function displayReport(data) {
     
     if (chartType === 'table') {
         // Display as table
-        preview.innerHTML = '<div class="table-responsive"><table class="table table-striped"><thead><tr>' +
-            data.columns.map(col => `<th>${col}</th>`).join('') +
-            '</tr></thead><tbody>' +
-            data.rows.map(row => '<tr>' + row.map(cell => `<td>${cell}</td>`).join('') + '</tr>').join('') +
+        preview.innerHTML = '<div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-200"><thead class="bg-slate-50"><tr>' +
+            data.columns.map(col => `<th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">${col}</th>`).join('') +
+            '</tr></thead><tbody class="divide-y divide-slate-100 bg-white">' +
+            data.rows.map(row => '<tr class="hover:bg-slate-50">' + row.map(cell => `<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700">${cell}</td>`).join('') + '</tr>').join('') +
             '</tbody></table></div>';
     } else {
         // Display as chart
@@ -359,11 +394,9 @@ function displayReport(data) {
     // Update summary stats
     const summary = document.getElementById('summaryStats');
     summary.innerHTML = Object.entries(data.summary || {}).map(([key, value]) => `
-        <div class="col-md-3">
-            <div class="p-3 bg-light rounded">
-                <h4 class="mb-0">${value}</h4>
-                <small class="text-muted">${key}</small>
-            </div>
+        <div class="p-4 bg-slate-50 rounded-lg">
+            <h4 class="text-lg font-bold text-slate-900 mb-1">${value}</h4>
+            <small class="text-xs text-slate-500">${key}</small>
         </div>
     `).join('');
 }
@@ -371,11 +404,13 @@ function displayReport(data) {
 function resetForm() {
     document.getElementById('reportBuilderForm').reset();
     document.getElementById('reportPreview').innerHTML = `
-        <i class="fas fa-chart-line" style="font-size: 3rem; opacity: 0.3;"></i>
-        <p class="mt-3">Configure your report settings and click "Generate Report" to preview</p>
+        <div class="text-center py-12">
+            <i class="fas fa-chart-line text-6xl text-slate-300 mb-4"></i>
+            <p class="text-sm text-slate-500">Configure your report settings and click "Generate Report" to preview</p>
+        </div>
     `;
-    document.getElementById('reportActions').style.display = 'none';
-    document.getElementById('reportSummary').style.display = 'none';
+    document.getElementById('reportActions').classList.add('hidden');
+    document.getElementById('reportSummary').classList.add('hidden');
 }
 </script>
 {% endblock %}

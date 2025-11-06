@@ -1,638 +1,555 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Vehicles - Smart Vehicle Repairs{% endblock %}
+{% block title %}Vehicles • {{ block.super }}{% endblock %}
 
-{% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="page-header-card shadow-sm mb-4">
-        <div class="row align-items-center g-3">
-            <div class="col-lg-8">
-                <div class="d-inline-flex align-items-center gap-3">
-                    <span class="badge bg-white text-primary fw-semibold text-uppercase px-3 py-2 shadow-sm">Vehicles</span>
-                </div>
-                <h1 class="page-title mt-3 mb-2">Vehicle Management</h1>
-                <p class="page-subtitle">Monitor fleet readiness, customer ownership, and service timelines without leaving this view.</p>
+{% block page_header %}
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div>
+            <h1 class="text-xl font-semibold text-slate-900">
+                <i class="fas fa-car mr-2 text-primary"></i>
+                Vehicles
+            </h1>
             </div>
-            <div class="col-lg-4 text-lg-end">
-                <div class="page-actions d-flex justify-content-lg-end gap-2 flex-wrap">
-                    <a href="#" class="btn btn-light" data-export-format="csv">
-                        <i class="fas fa-file-export me-2"></i> Export CSV
-                    </a>
-                    <a href="{% url 'vehicles:vehicle-create' %}" class="btn btn-contrast">
-                        <i class="fas fa-plus me-2"></i> Add Vehicle
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-xxl-3 col-sm-6">
-            <div class="stat-card shadow-sm h-100">
-                <div class="stat-icon">
-                    <i class="fas fa-car"></i>
-                </div>
-                <div>
-                    <p class="stat-label">Total Vehicles</p>
-                    <p class="stat-value">{{ total_vehicles|default:0 }}</p>
-                    <p class="stat-meta">Across customer fleet</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-xxl-3 col-sm-6">
-            <div class="stat-card is-success shadow-sm h-100">
-                <div class="stat-icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <div>
-                    <p class="stat-label">Active</p>
-                    <p class="stat-value">{{ active_vehicles|default:0 }}</p>
-                    <p class="stat-meta">Ready for scheduling</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-xxl-3 col-sm-6">
-            <div class="stat-card is-warning shadow-sm h-100">
-                <div class="stat-icon">
-                    <i class="fas fa-wrench"></i>
-                </div>
-                <div>
-                    <p class="stat-label">In Service</p>
-                    <p class="stat-value">{{ in_service_vehicles|default:0 }}</p>
-                    <p class="stat-meta">Currently in the bay</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-xxl-3 col-sm-6">
-            <div class="stat-card is-neutral shadow-sm h-100">
-                <div class="stat-icon">
-                    <i class="fas fa-warehouse"></i>
-                </div>
-                <div>
-                    <p class="stat-label">Inactive</p>
-                    <p class="stat-value">{{ inactive_vehicles|default:0 }}</p>
-                    <p class="stat-meta">Awaiting follow-up</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="filter-section">
-        <form method="get" id="filterForm">
-            <div class="row g-3 align-items-end">
-                <div class="col-12 col-lg-4">
-                    <label class="form-label">Search</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-transparent text-muted"><i class="fas fa-search"></i></span>
-                        <input type="text" name="search" class="form-control" placeholder="VIN, license plate, make, model..." value="{{ search }}">
-                    </div>
-                </div>
-                <div class="col-6 col-lg-2">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select">
-                        <option value="">All Status</option>
-                        {% for status_key, status_label in vehicle_statuses %}
-                        <option value="{{ status_key }}" {% if request.GET.status == status_key %}selected{% endif %}>{{ status_label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-6 col-lg-2">
-                    <label class="form-label">Make</label>
-                    <select name="make" class="form-select">
-                        <option value="">All Makes</option>
-                        {% for make in makes %}
-                        <option value="{{ make }}" {% if request.GET.make == make %}selected{% endif %}>{{ make }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-6 col-lg-2">
-                    <label class="form-label">Customer</label>
-                    <select name="customer" class="form-select">
-                        <option value="">All Customers</option>
-                        {% for customer in customers %}
-                        <option value="{{ customer.id }}" {% if request.GET.customer|add:"0" == customer.id %}selected{% endif %}>{{ customer.user.get_full_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-6 col-lg-2">
-                    <label class="form-label">Sort By</label>
-                    <select name="sort" class="form-select">
-                        <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Newest First</option>
-                        <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>Oldest First</option>
-                        <option value="year" {% if request.GET.sort == 'year' %}selected{% endif %}>Year (Ascending)</option>
-                        <option value="-year" {% if request.GET.sort == '-year' %}selected{% endif %}>Year (Descending)</option>
-                        <option value="make" {% if request.GET.sort == 'make' %}selected{% endif %}>Make A-Z</option>
-                        <option value="-make" {% if request.GET.sort == '-make' %}selected{% endif %}>Make Z-A</option>
-                    </select>
-                </div>
-                <div class="col-12 col-lg-4">
-                    <label class="form-label">Year Range</label>
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <input type="number" name="year_from" class="form-control" placeholder="From" value="{{ year_from }}" min="1900" max="2030">
-                        </div>
-                        <div class="col-6">
-                            <input type="number" name="year_to" class="form-control" placeholder="To" value="{{ year_to }}" min="1900" max="2030">
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-lg-8">
-                    <div class="filter-actions justify-content-lg-end">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-sliders-h me-2"></i>Apply Filters
-                        </button>
-                        <a href="{% url 'vehicles:vehicle-list' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-undo me-2"></i>Reset
-                        </a>
-                        <div class="dropdown">
-                            <button class="btn btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-download me-2"></i>Export
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" data-export-format="csv">Export as CSV</a></li>
-                                <li><a class="dropdown-item" href="#" data-export-format="pdf">Export as PDF</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <!-- Bulk Actions Toolbar -->
-    <div id="bulkActionsToolbar" class="alert alert-info bulk-toolbar d-none mb-3" role="alert">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-            <div class="d-flex align-items-center gap-2">
-                <i class="fas fa-check-square text-primary"></i>
-                <span><span id="selectedCount">0</span> vehicle(s) selected</span>
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-outline-primary" id="bulkExportBtn">
-                    <i class="fas fa-file-export me-1"></i>Export
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-warning" id="bulkStatusBtn">
-                    <i class="fas fa-exchange-alt me-1"></i>Update Status
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-danger" id="bulkDeleteBtn">
-                    <i class="fas fa-trash me-1"></i>Delete
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Vehicle List -->
-    <div class="card">
-        <div class="card-header bg-white">
-            <div class="card-toolbar w-100 gap-3">
-                <div>
-                    <h5 class="mb-1">Vehicle List</h5>
-                    {% if page_obj.paginator.count > 0 %}
-                        <div class="table-meta">Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}</div>
-                    {% else %}
-                        <div class="table-meta">No vehicles yet</div>
-                    {% endif %}
-                    {% if request.GET %}
-                        <div class="small text-muted mt-1">
-                            <i class="fas fa-filter me-1"></i>Filtered results
-                            <a href="{% url 'vehicles:vehicle-list' %}" class="ms-2 text-decoration-none">Clear filters</a>
-                        </div>
-                    {% endif %}
-                </div>
-                <div class="ms-auto d-flex flex-wrap align-items-center gap-2">
-                    <div class="input-group input-group-sm per-page-control">
-                        <span class="input-group-text"><i class="fas fa-list-ol"></i></span>
-                        <select class="form-select form-select-sm" id="perPageSelect">
-                            <option value="10" {% if request.GET.per_page == '10' %}selected{% endif %}>10 per page</option>
-                            <option value="20" {% if request.GET.per_page == '20' or not request.GET.per_page %}selected{% endif %}>20 per page</option>
-                            <option value="50" {% if request.GET.per_page == '50' %}selected{% endif %}>50 per page</option>
-                            <option value="100" {% if request.GET.per_page == '100' %}selected{% endif %}>100 per page</option>
-                        </select>
-                    </div>
-                    <div class="view-toggle" role="group">
-                        <input type="radio" class="btn-check" name="vehicleViewToggle" id="viewToggleTable" data-view-target="table" autocomplete="off" checked>
-                        <label class="btn btn-outline-secondary active" for="viewToggleTable"><i class="fas fa-table me-1"></i>Table</label>
-                        <input type="radio" class="btn-check" name="vehicleViewToggle" id="viewToggleCards" data-view-target="card" autocomplete="off">
-                        <label class="btn btn-outline-secondary" for="viewToggleCards"><i class="fas fa-th-large me-1"></i>Cards</label>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            <!-- Table View -->
-            <div id="tableView" class="table-responsive">
-                <table class="table table-modern table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th class="ps-3" style="width: 48px;">
-                                <div class="form-check mb-0">
-                                    <input class="form-check-input" type="checkbox" id="selectAll">
-                                </div>
-                            </th>
-                            <th>Vehicle</th>
-                            <th>Owner</th>
-                            <th>Details</th>
-                            <th>Mileage</th>
-                            <th>Status</th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for vehicle in vehicles %}
-                        <tr>
-                            <td class="ps-3">
-                                <div class="form-check mb-0">
-                                    <input type="checkbox" class="form-check-input vehicle-checkbox" value="{{ vehicle.id }}">
-                                </div>
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center gap-3">
-                                    {% if vehicle.image %}
-                                        <img src="{{ vehicle.image.url }}" alt="{{ vehicle.make }} {{ vehicle.model }}" class="vehicle-thumb">
-                                    {% else %}
-                                        <div class="vehicle-thumb-placeholder">
-                                            <i class="fas fa-car"></i>
-                                        </div>
-                                    {% endif %}
-                                    <div>
-                                        <div class="fw-semibold">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</div>
-                                        <small class="text-muted">{{ vehicle.vin }}</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div>
-                                    <div class="fw-semibold">{{ vehicle.owner.user.get_full_name }}</div>
-                                    <small class="text-muted">{{ vehicle.owner.user.email }}</small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="small">
-                                    <div><i class="fas fa-id-card text-muted me-1"></i>{{ vehicle.license_plate }}</div>
-                                    <div><i class="fas fa-palette text-muted me-1"></i>{{ vehicle.exterior_color|default:"N/A" }}</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="mileage-display">
-                                    {{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}
-                                </div>
-                            </td>
-                            <td>
-                                {% if vehicle.status == 'active' %}
-                                    <span class="badge-soft badge-soft-success">Active</span>
-                                {% elif vehicle.status == 'in_service' %}
-                                    <span class="badge-soft badge-soft-warning">In Service</span>
-                                {% elif vehicle.status == 'sold' %}
-                                    <span class="badge-soft badge-soft-info">Sold</span>
-                                {% elif vehicle.status == 'totaled' %}
-                                    <span class="badge-soft badge-soft-danger">Totaled</span>
-                                {% else %}
-                                    <span class="badge-soft badge-soft-muted">{{ vehicle.get_status_display }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end table-actions">
-                                <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-sm btn-outline-primary" title="View Details">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{% url 'vehicles:vehicle-service-history' vehicle.id %}" class="btn btn-sm btn-outline-info" title="Service History">
-                                    <i class="fas fa-history"></i>
-                                </a>
-                                <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" class="btn btn-sm btn-outline-secondary" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <button class="btn btn-sm btn-outline-danger" type="button" title="Delete" data-delete-vehicle data-vehicle-id="{{ vehicle.id }}" data-vehicle-name="{{ vehicle.year }} {{ vehicle.make|escape }} {{ vehicle.model|escape }}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center py-5">
-                                <i class="fas fa-car fa-3x text-muted mb-3"></i>
-                                <p class="text-muted">No vehicles found</p>
-                                <a href="{% url 'vehicles:vehicle-create' %}" class="btn btn-primary">Add Your First Vehicle</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Card View -->
-            <div id="cardView" class="collection-grid d-none">
-                {% for vehicle in vehicles %}
-                <div class="card vehicle-card h-100">
-                    <div class="status-badge-overlay">
-                        {% if vehicle.status == 'active' %}
-                            <span class="badge-soft badge-soft-success">Active</span>
-                        {% elif vehicle.status == 'in_service' %}
-                            <span class="badge-soft badge-soft-warning">In Service</span>
-                        {% elif vehicle.status == 'sold' %}
-                            <span class="badge-soft badge-soft-info">Sold</span>
-                        {% elif vehicle.status == 'totaled' %}
-                            <span class="badge-soft badge-soft-danger">Totaled</span>
-                        {% else %}
-                            <span class="badge-soft badge-soft-muted">{{ vehicle.get_status_display }}</span>
-                        {% endif %}
-                    </div>
-                    {% if vehicle.image %}
-                        <img src="{{ vehicle.image.url }}" class="vehicle-card-img" alt="{{ vehicle.make }} {{ vehicle.model }}">
-                    {% else %}
-                        <div class="vehicle-card-placeholder">
-                            <i class="fas fa-car-side"></i>
-                        </div>
-                    {% endif %}
-                    <div class="card-body">
-                        <h6 class="mb-1">{{ vehicle.year }} {{ vehicle.make }}</h6>
-                        <p class="mb-2 fw-semibold">{{ vehicle.model }}</p>
-                        <div class="small text-muted mb-3">
-                            <div class="mb-1"><i class="fas fa-user me-1"></i>{{ vehicle.owner.user.get_full_name|truncatewords:2 }}</div>
-                            <div class="mb-1"><i class="fas fa-id-card me-1"></i>{{ vehicle.license_plate }}</div>
-                            <div><i class="fas fa-tachometer-alt me-1"></i>{{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</div>
-                        </div>
-                        <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-sm btn-outline-primary w-100">
-                            <i class="fas fa-eye me-1"></i>View Details
-                        </a>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="empty-state w-100">
-                    <i class="fas fa-car fa-3x opacity-50 mb-3"></i>
-                    <p class="text-muted">No vehicles found</p>
-                    <a href="{% url 'vehicles:vehicle-create' %}" class="btn btn-primary">Add Your First Vehicle</a>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        {% if is_paginated %}
-        <div class="card-footer bg-white">
-            <div class="row align-items-center gy-2">
-                <div class="col-md-4 text-md-start text-center">
-                    <div class="table-meta">Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} results</div>
-                </div>
-                <div class="col-md-8">
-                    <nav aria-label="Vehicle pagination">
-                        <ul class="pagination pagination-sm justify-content-md-end justify-content-center mb-0">
-                            {% if page_obj.has_previous %}
-                                <li class="page-item"><a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1" aria-label="First"><i class="fas fa-angle-double-left"></i></a></li>
-                                <li class="page-item"><a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" aria-label="Previous"><i class="fas fa-angle-left"></i></a></li>
-                            {% else %}
-                                <li class="page-item disabled"><span class="page-link"><i class="fas fa-angle-double-left"></i></span></li>
-                                <li class="page-item disabled"><span class="page-link"><i class="fas fa-angle-left"></i></span></li>
-                            {% endif %}
-
-                            {% for num in page_obj.paginator.page_range %}
-                                {% if num == page_obj.number %}
-                                    <li class="page-item active" aria-current="page"><span class="page-link">{{ num }}</span></li>
-                                {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
-                                    <li class="page-item"><a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a></li>
-                                {% elif num == 1 or num == page_obj.paginator.num_pages %}
-                                    <li class="page-item"><a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a></li>
-                                {% elif num == page_obj.number|add:-3 or num == page_obj.number|add:3 %}
-                                    <li class="page-item disabled"><span class="page-link">…</span></li>
-                                {% endif %}
-                            {% endfor %}
-
-                            {% if page_obj.has_next %}
-                                <li class="page-item"><a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" aria-label="Next"><i class="fas fa-angle-right"></i></a></li>
-                                <li class="page-item"><a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}" aria-label="Last"><i class="fas fa-angle-double-right"></i></a></li>
-                            {% else %}
-                                <li class="page-item disabled"><span class="page-link"><i class="fas fa-angle-right"></i></span></li>
-                                <li class="page-item disabled"><span class="page-link"><i class="fas fa-angle-double-right"></i></span></li>
-                            {% endif %}
-                        </ul>
-                    </nav>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteModalLabel"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete vehicle <strong id="vehicleName"></strong>?</p>
-                <p class="text-danger small mb-0"><i class="fas fa-info-circle me-1"></i>This action cannot be undone and will also remove associated history, documents, and photos.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="post" class="d-inline">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Delete Vehicle</button>
-                </form>
-            </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'vehicles:vehicle-create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                <i class="fas fa-plus"></i>
+                <span>Add Vehicle</span>
+            </a>
         </div>
     </div>
 </div>
 {% endblock %}
- 
+
+{% block content %}
+<!-- Quick Stats -->
+<style>
+    .stat-cards-grid {
+        display: grid !important;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (min-width: 640px) {
+        .stat-cards-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+    }
+    @media (min-width: 1024px) {
+        .stat-cards-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        }
+    }
+</style>
+<div class="stat-cards-grid">
+    {% url 'vehicles:vehicle-list' as vehicle_list_url %}
+    <a href="{{ vehicle_list_url }}" class="block h-full w-full">
+        {% include 'partials/stat_card.html' with label="Total" value=total_vehicles icon="fas fa-car" color="primary" %}
+    </a>
+    <a href="{{ vehicle_list_url }}?status=active" class="block h-full w-full">
+        {% include 'partials/stat_card.html' with label="Active" value=active_vehicles icon="fas fa-check-circle" color="success" %}
+    </a>
+    <a href="{{ vehicle_list_url }}?status=in_service" class="block h-full w-full">
+        {% include 'partials/stat_card.html' with label="In Service" value=in_service_vehicles icon="fas fa-wrench" color="warning" %}
+    </a>
+    <a href="{{ vehicle_list_url }}?status=inactive" class="block h-full w-full">
+        {% include 'partials/stat_card.html' with label="Inactive" value=inactive_vehicles icon="fas fa-ban" color="secondary" %}
+    </a>
+</div>
+
+<!-- Search and Filters -->
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6 overflow-hidden">
+    <!-- Quick Search Bar -->
+    <div class="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+        <form method="get" id="quickSearchForm" class="flex items-center gap-3">
+            <div class="flex-1 relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input 
+                    type="text" 
+                    name="search" 
+                    value="{{ search }}" 
+                    placeholder="Search vehicles by VIN, license plate, make, model..." 
+                    class="w-full pl-11 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                    id="quickSearchInput"
+                />
+            </div>
+            <button 
+                type="button" 
+                id="filterToggle" 
+                class="px-4 py-2.5 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors flex items-center gap-2"
+            >
+                <i class="fas fa-sliders-h"></i>
+                <span>Filters</span>
+                {% if request.GET.status or request.GET.make or request.GET.customer %}
+                    <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-white text-xs font-semibold">
+                        {% if request.GET.status %}+{% endif %}{% if request.GET.make %}+{% endif %}{% if request.GET.customer %}+{% endif %}
+                </span>
+                {% endif %}
+            </button>
+        </form>
+                </div>
+
+    <!-- Active Filters (if any) -->
+    {% if request.GET.search or request.GET.status or request.GET.make or request.GET.customer %}
+    <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center flex-wrap gap-2">
+        <span class="text-xs font-medium text-slate-500">Active filters:</span>
+        {% if request.GET.search %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            <i class="fas fa-search text-[10px]"></i>
+            Search: "{{ request.GET.search }}"
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'search' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        {% if request.GET.status %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            Status: {{ request.GET.status|title }}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'status' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        {% if request.GET.make %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            Make: {{ request.GET.make }}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'make' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+        </span>
+        {% endif %}
+        {% if request.GET.customer %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+            Customer: {{ request.GET.customer }}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'customer' %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="hover:text-primary/80">
+                <i class="fas fa-times text-[10px]"></i>
+            </a>
+                </span>
+        {% endif %}
+        <a href="{% url 'vehicles:vehicle-list' %}" class="ml-auto text-xs font-medium text-slate-600 hover:text-primary transition-colors">
+            <i class="fas fa-times-circle mr-1"></i>Clear all
+        </a>
+                </div>
+    {% endif %}
+
+    <!-- Advanced Filters (Collapsible) -->
+    <div id="filterContent" class="hidden">
+        <form method="get" id="filterForm" class="p-4 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                        <i class="fas fa-check-circle mr-1.5 text-primary"></i>Status
+                    </label>
+                    <select name="status" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                    <option value="">All Status</option>
+                    {% for status_key, status_label in vehicle_statuses %}
+                    <option value="{{ status_key }}" {% if request.GET.status == status_key %}selected{% endif %}>{{ status_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                        <i class="fas fa-car mr-1.5 text-primary"></i>Make
+                    </label>
+                    <select name="make" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                    <option value="">All Makes</option>
+                    {% for make in makes %}
+                    <option value="{{ make }}" {% if request.GET.make == make %}selected{% endif %}>{{ make }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                        <i class="fas fa-user mr-1.5 text-primary"></i>Customer
+                    </label>
+                    <select name="customer" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                    <option value="">All Customers</option>
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}" {% if request.GET.customer|add:'0' == customer.id %}selected{% endif %}>{{ customer.user.get_full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            </div>
+            <div class="flex items-center justify-between pt-3 border-t border-slate-200">
+                <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-all shadow-sm hover:shadow-md">
+                    <i class="fas fa-filter"></i>
+                    Apply Filters
+                </button>
+                <a href="{% url 'vehicles:vehicle-list' %}" class="text-sm font-medium text-slate-600 hover:text-primary transition-colors">
+                    <i class="fas fa-redo mr-1.5"></i>Reset
+                </a>
+            </div>
+        </form>
+            </div>
+        </div>
+
+<!-- Bulk Actions Toolbar -->
+<div id="bulkActionsToolbar" class="hidden bg-primary/10 border border-primary/30 rounded-lg px-4 py-3 mb-4">
+    <div class="flex items-center justify-between">
+        <span class="text-sm font-medium text-primary">
+            <span id="selectedCount">0</span> selected
+        </span>
+        <div class="flex items-center gap-2">
+            <button type="button" id="bulkExportBtn" class="px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 rounded-lg transition-colors">
+                Export
+                </button>
+            <button type="button" id="bulkDeleteBtn" class="px-3 py-1.5 text-xs font-medium text-danger hover:bg-danger/20 rounded-lg transition-colors">
+                Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+<!-- Vehicle List Table -->
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <!-- Table Header -->
+    <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+            <div>
+                    <h3 class="text-sm font-semibold text-slate-900">Vehicle Directory</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                {% if page_obj.paginator.count > 0 %}
+                            Showing <span class="font-medium text-slate-700">{{ page_obj.start_index }}</span>–<span class="font-medium text-slate-700">{{ page_obj.end_index }}</span> of <span class="font-medium text-slate-700">{{ page_obj.paginator.count }}</span> vehicles
+                {% else %}
+                            No vehicles found
+                {% endif %}
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <label class="text-xs font-medium text-slate-600">Rows per page:</label>
+                <select id="perPageSelect" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                    <option value="10" {% if request.GET.per_page == '10' %}selected{% endif %}>10</option>
+                    <option value="20" {% if request.GET.per_page == '20' or not request.GET.per_page %}selected{% endif %}>20</option>
+                    <option value="50" {% if request.GET.per_page == '50' %}selected{% endif %}>50</option>
+                    <option value="100" {% if request.GET.per_page == '100' %}selected{% endif %}>100</option>
+                </select>
+            </div>
+            </div>
+        </div>
+
+    <!-- Table -->
+        <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-slate-50/50">
+                <tr>
+                    <th class="px-6 py-3.5 text-left">
+                        <input type="checkbox" id="selectAll" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0 cursor-pointer">
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Vehicle</span>
+                        </div>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Owner</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-left">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</span>
+                    </th>
+                    <th class="px-6 py-3.5 text-right">
+                        <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</span>
+                        </th>
+                    </tr>
+                </thead>
+            <tbody class="divide-y divide-slate-100 bg-white">
+                    {% for vehicle in vehicles %}
+                <tr class="hover:bg-slate-50/50 transition-colors group">
+                    <td class="px-6 py-4">
+                        <input type="checkbox" class="vehicle-checkbox h-4 w-4 rounded border-slate-300 text-primary focus:ring-2 focus:ring-primary focus:ring-offset-0 cursor-pointer" value="{{ vehicle.id }}">
+                        </td>
+                    <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                {% if vehicle.image %}
+                                <img src="{{ vehicle.image.url }}" alt="{{ vehicle.make }} {{ vehicle.model }}" class="h-12 w-12 rounded-lg object-cover border border-slate-200 shadow-sm">
+                                {% else %}
+                                <div class="h-12 w-12 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-400 border border-slate-200">
+                                    <i class="fas fa-car text-lg"></i>
+                                    </div>
+                                {% endif %}
+                            <div class="min-w-0">
+                                <div class="font-semibold text-slate-900 text-sm">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</div>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-xs text-slate-500 font-mono">{{ vehicle.vin|slice:":8" }}...</span>
+                                    <span class="text-xs text-slate-400">•</span>
+                                    <span class="text-xs text-slate-500">{{ vehicle.license_plate }}</span>
+                                </div>
+                            </div>
+                            </div>
+                        </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-slate-900">{{ vehicle.owner.user.get_full_name }}</div>
+                        <div class="text-xs text-slate-500 mt-0.5 truncate max-w-[200px]">{{ vehicle.owner.user.email }}</div>
+                        </td>
+                    <td class="px-6 py-4">
+                        {% if vehicle.status == 'active' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Active
+                            </span>
+                            {% elif vehicle.status == 'in_service' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>In Service
+                            </span>
+                            {% elif vehicle.status == 'sold' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Sold
+                            </span>
+                            {% elif vehicle.status == 'totaled' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Totaled
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>{{ vehicle.get_status_display }}
+                            </span>
+                            {% endif %}
+                        </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center justify-end gap-1">
+                            <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-all group-hover:bg-slate-100" title="View details">
+                                <i class="fas fa-eye text-sm"></i>
+                                </a>
+                            <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" class="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-all group-hover:bg-slate-100" title="Edit vehicle">
+                                <i class="fas fa-edit text-sm"></i>
+                                </a>
+                            <button type="button" class="p-2 text-slate-500 hover:text-danger hover:bg-rose-50 rounded-lg transition-all group-hover:bg-slate-100" title="Delete vehicle" data-delete-vehicle data-vehicle-id="{{ vehicle.id }}" data-vehicle-name="{{ vehicle.year }} {{ vehicle.make|escape }} {{ vehicle.model|escape }}">
+                                <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                    <td colspan="5" class="px-6 py-16 text-center">
+                        {% url 'vehicles:vehicle-create' as create_url %}
+                        {% include 'partials/empty_state.html' with icon="fas fa-car" title="No vehicles found" message="Get started by adding your first vehicle" action_url=create_url action_text="Add Vehicle" %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    <!-- Pagination -->
+        {% if is_paginated %}
+    <div class="px-6 py-4 border-t border-slate-200 bg-slate-50/50">
+        <div class="flex items-center justify-between">
+            <div class="text-sm text-slate-600">
+                Page <span class="font-semibold text-slate-900">{{ page_obj.number }}</span> of <span class="font-semibold text-slate-900">{{ page_obj.paginator.num_pages }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+                        {% if page_obj.has_previous %}
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1" class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-primary transition-all" title="First page">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-primary transition-all" title="Previous">
+                        <i class="fas fa-chevron-left"></i>
+                                </a>
+                        {% else %}
+                    <span class="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <i class="fas fa-angle-double-left"></i>
+                    </span>
+                    <span class="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <i class="fas fa-chevron-left"></i>
+                    </span>
+                            {% endif %}
+                        {% if page_obj.has_next %}
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-primary transition-all" title="Next">
+                        <i class="fas fa-chevron-right"></i>
+                                </a>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-primary transition-all" title="Last page">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                        {% else %}
+                    <span class="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <i class="fas fa-chevron-right"></i>
+                    </span>
+                    <span class="px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-300 bg-slate-50 cursor-not-allowed">
+                        <i class="fas fa-angle-double-right"></i>
+                    </span>
+                        {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+                </div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 px-4">
+    <div class="w-full max-w-md rounded-xl bg-white shadow-xl">
+        <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+            <h3 class="text-base font-semibold text-slate-900">Delete Vehicle</h3>
+            <button type="button" class="text-slate-400 hover:text-slate-600" data-delete-modal-close>
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        <div class="px-6 py-4 text-sm text-slate-600">
+            <p>Are you sure you want to delete <strong id="vehicleName" class="text-slate-900"></strong>?</p>
+            <p class="mt-2 text-xs text-rose-600">This action cannot be undone.</p>
+            </div>
+        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50">
+            <button type="button" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-white transition-colors" data-delete-modal-close>Cancel</button>
+            <form id="deleteForm" method="post" class="inline">
+                    {% csrf_token %}
+                <button type="submit" class="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-500 transition-colors">
+                    Delete
+                    </button>
+                </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
-    function changePerPage(perPage) {
-        const params = new URLSearchParams(window.location.search);
-        params.set('per_page', perPage);
-        params.delete('page');
-        window.location.href = `?${params.toString()}`;
-    }
-
-    function exportVehicles(format) {
-        const params = new URLSearchParams(window.location.search);
-        params.set('format', format);
-        window.location.href = `/vehicles/export/?${params.toString()}`;
-    }
-
-    function getSelectedVehicleIds() {
-        return Array.from(document.querySelectorAll('.vehicle-checkbox:checked')).map(cb => cb.value);
-    }
-
-    function updateSelectionState() {
-        const selectAll = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.vehicle-checkbox');
-        const selectedIds = getSelectedVehicleIds();
-        const selectedCount = selectedIds.length;
-        const totalCheckboxes = checkboxes.length;
-
-        if (selectAll) {
-            selectAll.checked = totalCheckboxes > 0 && selectedCount === totalCheckboxes;
-            selectAll.indeterminate = selectedCount > 0 && selectedCount < totalCheckboxes;
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter toggle
+    const filterToggle = document.getElementById('filterToggle');
+    const filterContent = document.getElementById('filterContent');
+    
+    if (filterToggle && filterContent) {
+        // Show filters if advanced filters are active
+        {% if request.GET.status or request.GET.make or request.GET.customer %}
+        filterContent.classList.remove('hidden');
+        {% endif %}
+        
+        filterToggle.addEventListener('click', function() {
+            const isHidden = filterContent.classList.contains('hidden');
+            filterContent.classList.toggle('hidden', !isHidden);
+        });
         }
 
-        const toolbar = document.getElementById('bulkActionsToolbar');
-        const selectedCountLabel = document.getElementById('selectedCount');
-        if (toolbar) {
-            toolbar.classList.toggle('d-none', selectedCount === 0);
-        }
-        if (selectedCountLabel) {
-            selectedCountLabel.textContent = selectedCount;
-        }
-    }
-
-    function exportSelected() {
-        const selected = getSelectedVehicleIds();
-        if (!selected.length) {
-            alert('Please select at least one vehicle.');
-            return;
-        }
-        const format = prompt('Export format (csv or pdf):', 'csv');
-        if (format) {
-            const params = new URLSearchParams();
-            params.set('format', format);
-            params.set('ids', selected.join(','));
-            window.location.href = `/vehicles/export/?${params.toString()}`;
-        }
-    }
-
-    function bulkUpdateStatus() {
-        const selected = getSelectedVehicleIds();
-        if (!selected.length) {
-            alert('Please select at least one vehicle.');
-            return;
-        }
-        const status = prompt('Enter new status (active, inactive, in_service):', 'active');
-        if (status && confirm(`Update status to "${status}" for ${selected.length} vehicle(s)?`)) {
-            alert('Bulk status update will be implemented soon.');
-        }
-    }
-
-    function bulkDelete() {
-        const selected = getSelectedVehicleIds();
-        if (!selected.length) {
-            alert('Please select at least one vehicle.');
-            return;
-        }
-        if (confirm(`Are you sure you want to delete ${selected.length} vehicle(s)? This action cannot be undone.`)) {
-            alert('Bulk delete will be implemented soon.');
-        }
-    }
-
-    function confirmDelete(vehicleId, vehicleName) {
-        document.getElementById('vehicleName').textContent = vehicleName;
-        const deleteForm = document.getElementById('deleteForm');
-        if (deleteForm) {
-            deleteForm.action = `/vehicles/${vehicleId}/delete/`;
-        }
-        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-        modal.show();
-    }
-
-    function toggleView(view) {
-        const tableView = document.getElementById('tableView');
-        const cardView = document.getElementById('cardView');
-        if (!tableView || !cardView) {
-            return;
-        }
-        tableView.classList.toggle('d-none', view !== 'table');
-        cardView.classList.toggle('d-none', view !== 'card');
-        document.querySelectorAll('.view-toggle label.btn').forEach(label => label.classList.remove('active'));
-        const activeToggle = document.querySelector(view === 'table' ? 'label[for="viewToggleTable"]' : 'label[for="viewToggleCards"]');
-        activeToggle?.classList.add('active');
-        localStorage.setItem('vehicleListView', view);
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
+    // Select all
         const selectAll = document.getElementById('selectAll');
         if (selectAll) {
             selectAll.addEventListener('change', function() {
-                const checked = this.checked;
                 document.querySelectorAll('.vehicle-checkbox').forEach(cb => {
-                    cb.checked = checked;
+                cb.checked = this.checked;
                 });
                 updateSelectionState();
             });
         }
 
-        document.querySelectorAll('.vehicle-checkbox').forEach(cb => cb.addEventListener('change', updateSelectionState));
+    // Individual checkboxes
+    document.querySelectorAll('.vehicle-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateSelectionState);
+    });
 
+    // Per page select
         const perPageSelect = document.getElementById('perPageSelect');
         if (perPageSelect) {
-            perPageSelect.addEventListener('change', event => changePerPage(event.target.value));
-        }
-
-        document.querySelectorAll('[data-view-target]').forEach(toggle => {
-            toggle.addEventListener('change', function() {
-                if (!this.checked) {
-                    return;
-                }
-                toggleView(this.getAttribute('data-view-target'));
-            });
+        perPageSelect.addEventListener('change', function() {
+            const params = new URLSearchParams(window.location.search);
+            params.set('per_page', this.value);
+            params.delete('page');
+            window.location.href = `?${params.toString()}`;
         });
+    }
 
-        const savedView = localStorage.getItem('vehicleListView');
-        if (savedView === 'card') {
-            const cardToggle = document.getElementById('viewToggleCards');
-            if (cardToggle) {
-                cardToggle.checked = true;
-                toggleView('card');
-            }
-        } else {
-            toggleView('table');
+    // Bulk actions
+    document.getElementById('bulkExportBtn')?.addEventListener('click', function() {
+        const selected = getSelectedVehicleIds();
+        if (selected.length) {
+            exportVehicles('csv', selected);
         }
+    });
 
-        document.querySelectorAll('[data-export-format]').forEach(link => {
-            link.addEventListener('click', event => {
-                event.preventDefault();
-                const format = link.getAttribute('data-export-format');
-                if (format) {
-                    exportVehicles(format);
+    document.getElementById('bulkDeleteBtn')?.addEventListener('click', function() {
+        const selected = getSelectedVehicleIds();
+        if (selected.length && confirm(`Delete ${selected.length} vehicle(s)?`)) {
+            alert('Bulk delete coming soon.');
                 }
             });
-        });
 
+    // Delete modal
         document.querySelectorAll('[data-delete-vehicle]').forEach(button => {
-            button.addEventListener('click', () => {
-                confirmDelete(button.dataset.vehicleId, button.dataset.vehicleName);
+        button.addEventListener('click', function() {
+            const vehicleName = this.dataset.vehicleName;
+            const vehicleId = this.dataset.vehicleId;
+            document.getElementById('vehicleName').textContent = vehicleName;
+            document.getElementById('deleteForm').action = `/vehicles/${vehicleId}/delete/`;
+            document.getElementById('deleteModal').classList.remove('hidden');
+            document.getElementById('deleteModal').classList.add('flex');
+        });
+        });
+
+        document.querySelectorAll('[data-delete-modal-close]').forEach(button => {
+        button.addEventListener('click', function() {
+            document.getElementById('deleteModal').classList.add('hidden');
+            document.getElementById('deleteModal').classList.remove('flex');
             });
         });
 
-        document.getElementById('bulkExportBtn')?.addEventListener('click', exportSelected);
-        document.getElementById('bulkStatusBtn')?.addEventListener('click', bulkUpdateStatus);
-        document.getElementById('bulkDeleteBtn')?.addEventListener('click', bulkDelete);
-
-        document.querySelectorAll('#filterForm select').forEach(select => {
-            select.addEventListener('change', function() {
-                if (this.id !== 'perPageSelect') {
-                    document.getElementById('filterForm').submit();
-                }
-            });
-        });
-
-        const searchInput = document.querySelector('input[name="search"]');
-        if (searchInput) {
+    // Quick search auto-submit
+    const quickSearchInput = document.getElementById('quickSearchInput');
+    const quickSearchForm = document.getElementById('quickSearchForm');
+    if (quickSearchInput && quickSearchForm) {
             let debounceHandle;
-            searchInput.addEventListener('input', function() {
+        quickSearchInput.addEventListener('input', function() {
                 clearTimeout(debounceHandle);
                 debounceHandle = setTimeout(() => {
                     if (this.value.length >= 3 || this.value.length === 0) {
-                        document.getElementById('filterForm').submit();
+                    quickSearchForm.submit();
                     }
                 }, 500);
             });
-        }
 
-        document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        // Submit on Enter key
+        quickSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
                 e.preventDefault();
-                document.querySelector('input[name="search"]')?.focus();
-            }
-            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-                e.preventDefault();
-                window.location.href = '{% url "vehicles:vehicle-create" %}';
+                quickSearchForm.submit();
             }
         });
+    }
 
-        updateSelectionState();
-    });
+    // Auto-submit advanced filters
+    const filterForm = document.getElementById('filterForm');
+    if (filterForm) {
+        const filterSelects = filterForm.querySelectorAll('select');
+        filterSelects.forEach(select => {
+            select.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
+    }
+});
+
+function getSelectedVehicleIds() {
+    return Array.from(document.querySelectorAll('.vehicle-checkbox:checked')).map(cb => cb.value);
+}
+
+function updateSelectionState() {
+    const selected = getSelectedVehicleIds();
+    const toolbar = document.getElementById('bulkActionsToolbar');
+    const countLabel = document.getElementById('selectedCount');
+    
+    if (toolbar) {
+        toolbar.classList.toggle('hidden', selected.length === 0);
+    }
+    if (countLabel) {
+        countLabel.textContent = selected.length;
+    }
+    
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.vehicle-checkbox');
+    if (selectAll && checkboxes.length) {
+        selectAll.checked = selected.length === checkboxes.length;
+        selectAll.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
+            }
+}
+
+function exportVehicles(format, ids = null) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('format', format);
+    if (ids && ids.length) {
+        params.set('ids', ids.join(','));
+    }
+    window.location.href = `/vehicles/export/?${params.toString()}`;
+}
 </script>
 {% endblock %}

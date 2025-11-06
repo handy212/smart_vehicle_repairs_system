@@ -247,7 +247,8 @@ def dashboard_view(request):
         'recent_appointments': recent_appointments,
         'recent_workorders': recent_workorders,
         'recent_notifications': recent_notifications,
-        'workorder_stats': workorder_stats_json,
+        'workorder_stats': workorder_stats,
+        'workorder_stats_json': workorder_stats_json,
         'revenue_chart_data': revenue_chart_json,
         'active_technicians': active_technicians,
     }

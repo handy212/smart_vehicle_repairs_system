@@ -32,7 +32,12 @@ db.sqlite3
 db.sqlite3-journal
 /media
 /staticfiles
-/static
+/static/**
+!/static/css/
+!/static/css/**
+!/static/manifest.json
+!/static/icons/
+!/static/icons/**
 
 # Environment variables
 .env

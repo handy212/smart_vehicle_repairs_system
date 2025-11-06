@@ -1,297 +1,373 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Service History - {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - Smart Vehicle Repairs{% endblock %}
+{% block title %}Service History - {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} • {{ block.super }}{% endblock %}
+
+{% block page_header %}
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-6">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                    Vehicle
+                </span>
+            </div>
+            <h1 class="text-xl font-semibold text-slate-900 mb-2">Service History</h1>
+            <p class="text-sm text-slate-500 mb-3">Track every maintenance milestone and repair action logged for this vehicle.</p>
+            <div class="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                <span class="flex items-center gap-1.5">
+                    <i class="fas fa-car-side text-slate-400"></i>
+                    {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <i class="fas fa-barcode text-slate-400"></i>
+                    {{ vehicle.vin }}
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <i class="fas fa-user text-slate-400"></i>
+                    {{ vehicle.owner.user.get_full_name }}
+                </span>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Vehicle</span>
+            </a>
+            <button type="button" onclick="exportServiceHistory()" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                <i class="fas fa-download"></i>
+                <span>Export PDF</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'vehicles:vehicle-list' %}">Vehicles</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'vehicles:vehicle-detail' vehicle.id %}">Vehicle Detail</a></li>
-            <li class="breadcrumb-item active">Service History</li>
-        </ol>
-    </nav>
-
-    <div class="page-header-card profile-header-card shadow-sm mb-4">
-        <div class="row align-items-center g-3">
-            <div class="col-lg-8">
-                <span class="badge-soft badge-soft-primary fw-semibold text-uppercase px-3 py-2">Vehicle</span>
-                <h1 class="page-title mt-3 mb-2">Service History</h1>
-                <p class="page-subtitle">Track every maintenance milestone and repair action logged for this vehicle.</p>
-                <div class="d-flex flex-wrap gap-3 mt-3 small text-white-50">
-                    <span><i class="fas fa-car-side me-2"></i>{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</span>
-                    <span><i class="fas fa-barcode me-2"></i>{{ vehicle.vin }}</span>
-                    <span><i class="fas fa-user me-2"></i>{{ vehicle.owner.user.get_full_name }}</span>
-                </div>
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                <i class="fas fa-layer-group text-primary text-xl"></i>
             </div>
-            <div class="col-lg-4 text-lg-end">
-                <div class="page-actions d-flex justify-content-lg-end gap-2 flex-wrap">
-                    <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-light">
-                        <i class="fas fa-arrow-left me-2"></i>Back to Vehicle
-                    </a>
-                    <button type="button" class="btn btn-contrast" onclick="exportServiceHistory()">
-                        <i class="fas fa-download me-2"></i>Export PDF
-                    </button>
-                </div>
+            <div class="flex-1">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Total Services</div>
+                <div class="text-2xl font-bold text-slate-900">{{ total_services|default:0 }}</div>
+                <div class="text-xs text-slate-500 mt-1">Logged work orders</div>
             </div>
         </div>
     </div>
-
-    <div class="row g-3 mb-4">
-        <div class="col-xxl-3 col-sm-6">
-            <div class="stat-card shadow-sm h-100">
-                <div class="stat-icon">
-                    <i class="fas fa-layer-group"></i>
-                </div>
-                <div>
-                    <p class="stat-label">Total Services</p>
-                    <p class="stat-value">{{ total_services|default:0 }}</p>
-                    <p class="stat-meta">Logged work orders</p>
-                </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <i class="fas fa-dollar-sign text-emerald-600 text-xl"></i>
             </div>
-        </div>
-        <div class="col-xxl-3 col-sm-6">
-            <div class="stat-card is-success shadow-sm h-100">
-                <div class="stat-icon">
-                    <i class="fas fa-dollar-sign"></i>
-                </div>
-                <div>
-                    <p class="stat-label">Total Cost</p>
-                    <p class="stat-value">${{ total_cost|floatformat:2 }}</p>
-                    <p class="stat-meta">Approved invoices</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-xxl-3 col-sm-6">
-            <div class="stat-card shadow-sm h-100">
-                <div class="stat-icon">
-                    <i class="fas fa-stopwatch"></i>
-                </div>
-                <div>
-                    <p class="stat-label">Avg Days Between</p>
-                    <p class="stat-value">{{ avg_interval|floatformat:0 }}</p>
-                    <p class="stat-meta">Rolling average interval</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-xxl-3 col-sm-6">
-            <div class="stat-card is-warning shadow-sm h-100">
-                <div class="stat-icon">
-                    <i class="fas fa-history"></i>
-                </div>
-                <div>
-                    <p class="stat-label">Days Since Service</p>
-                    <p class="stat-value">{{ last_service_days|default:0 }}</p>
-                    <p class="stat-meta">Last closed work order</p>
-                </div>
+            <div class="flex-1">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Total Cost</div>
+                <div class="text-2xl font-bold text-slate-900">${{ total_cost|floatformat:2 }}</div>
+                <div class="text-xs text-slate-500 mt-1">Approved invoices</div>
             </div>
         </div>
     </div>
-
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <div class="row g-3 align-items-center">
-                <div class="col-lg-7">
-                    <div class="btn-group" role="group" aria-label="Service type filter">
-                        <input type="radio" class="btn-check" name="serviceFilter" id="filterAll" value="all" checked>
-                        <label class="btn btn-outline-primary" for="filterAll">All Services</label>
-
-                        <input type="radio" class="btn-check" name="serviceFilter" id="filterRoutine" value="routine">
-                        <label class="btn btn-outline-success" for="filterRoutine">
-                            <span class="maintenance-indicator maintenance-routine"></span>Routine
-                        </label>
-
-                        <input type="radio" class="btn-check" name="serviceFilter" id="filterRepair" value="repair">
-                        <label class="btn btn-outline-danger" for="filterRepair">
-                            <span class="maintenance-indicator maintenance-repair"></span>Repairs
-                        </label>
-
-                        <input type="radio" class="btn-check" name="serviceFilter" id="filterInspection" value="inspection">
-                        <label class="btn btn-outline-info" for="filterInspection">
-                            <span class="maintenance-indicator maintenance-inspection"></span>Inspections
-                        </label>
-                    </div>
-                </div>
-                <div class="col-lg-3">
-                    <label for="yearFilter" class="form-label mb-0 small text-muted">Filter by year</label>
-                    <select class="form-select" id="yearFilter">
-                        <option value="">All Years</option>
-                        {% for year in service_years %}
-                        <option value="{{ year }}">{{ year }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-lg-2 text-lg-end">
-                    <button type="button" class="btn btn-outline-secondary w-100" onclick="resetServiceFilters()">
-                        <i class="fas fa-undo me-2"></i>Reset
-                    </button>
-                </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
+                <i class="fas fa-stopwatch text-blue-600 text-xl"></i>
+            </div>
+            <div class="flex-1">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Avg Days Between</div>
+                <div class="text-2xl font-bold text-slate-900">{{ avg_interval|floatformat:0 }}</div>
+                <div class="text-xs text-slate-500 mt-1">Rolling average interval</div>
             </div>
         </div>
     </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-amber-50 flex items-center justify-center">
+                <i class="fas fa-history text-amber-600 text-xl"></i>
+            </div>
+            <div class="flex-1">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Days Since Service</div>
+                <div class="text-2xl font-bold text-slate-900">{{ last_service_days|default:0 }}</div>
+                <div class="text-xs text-slate-500 mt-1">Last closed work order</div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <div class="row g-4">
-        <div class="col-lg-8">
-            {% if work_orders %}
-            <div class="timeline-modern" id="serviceTimeline">
-                {% for work_order in work_orders %}
-                <article class="timeline-card animate-fade-in-up" data-service-type="{{ work_order.service_type|lower }}" data-year="{{ work_order.created_at.year }}">
-                    <span class="timeline-marker {% if work_order.status == 'completed' %}is-success{% elif work_order.status == 'in_progress' %}is-warning{% elif work_order.status == 'cancelled' %}is-danger{% elif work_order.status == 'pending' %}is-muted{% else %}is-info{% endif %}"></span>
+<!-- Filters -->
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+    <div class="flex flex-wrap items-end gap-4">
+        <div class="flex-1 min-w-0">
+            <label class="block text-xs font-semibold text-slate-700 mb-2">Service Type</label>
+            <div class="flex flex-wrap gap-2">
+                <label class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium cursor-pointer hover:bg-primary/5 transition-colors">
+                    <input type="radio" name="serviceFilter" value="all" id="filterAll" checked class="sr-only peer">
+                    <span class="peer-checked:font-semibold">All Services</span>
+                </label>
+                <label class="inline-flex items-center gap-2 px-4 py-2 border border-emerald-300 text-emerald-700 rounded-lg text-sm font-medium cursor-pointer hover:bg-emerald-50 transition-colors">
+                    <input type="radio" name="serviceFilter" value="routine" id="filterRoutine" class="sr-only peer">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span class="peer-checked:font-semibold">Routine</span>
+                </label>
+                <label class="inline-flex items-center gap-2 px-4 py-2 border border-rose-300 text-rose-700 rounded-lg text-sm font-medium cursor-pointer hover:bg-rose-50 transition-colors">
+                    <input type="radio" name="serviceFilter" value="repair" id="filterRepair" class="sr-only peer">
+                    <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                    <span class="peer-checked:font-semibold">Repairs</span>
+                </label>
+                <label class="inline-flex items-center gap-2 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg text-sm font-medium cursor-pointer hover:bg-blue-50 transition-colors">
+                    <input type="radio" name="serviceFilter" value="inspection" id="filterInspection" class="sr-only peer">
+                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                    <span class="peer-checked:font-semibold">Inspections</span>
+                </label>
+            </div>
+        </div>
+        <div class="min-w-[150px]">
+            <label for="yearFilter" class="block text-xs font-semibold text-slate-700 mb-2">Filter by Year</label>
+            <select id="yearFilter" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                <option value="">All Years</option>
+                {% for year in service_years %}
+                <option value="{{ year }}">{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <button type="button" onclick="resetServiceFilters()" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors whitespace-nowrap">
+                <i class="fas fa-undo"></i>
+                <span>Reset</span>
+            </button>
+        </div>
+    </div>
+</div>
 
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <h5 class="mb-1">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Timeline -->
+    <div class="lg:col-span-2">
+        {% if work_orders %}
+        <div class="space-y-6" id="serviceTimeline">
+            {% for work_order in work_orders %}
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden timeline-card" data-service-type="{{ work_order.service_type|lower }}" data-year="{{ work_order.created_at.year }}">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
                                 {% if work_order.service_type == 'routine' %}
-                                    <i class="fas fa-tools text-success me-2"></i>
+                                    <i class="fas fa-tools text-emerald-600"></i>
                                 {% elif work_order.service_type == 'repair' %}
-                                    <i class="fas fa-wrench text-danger me-2"></i>
+                                    <i class="fas fa-wrench text-rose-600"></i>
                                 {% elif work_order.service_type == 'inspection' %}
-                                    <i class="fas fa-search text-info me-2"></i>
+                                    <i class="fas fa-search text-blue-600"></i>
                                 {% else %}
-                                    <i class="fas fa-cog text-secondary me-2"></i>
+                                    <i class="fas fa-cog text-slate-400"></i>
                                 {% endif %}
-                                {{ work_order.title|default:"Work Order" }}
-                            </h5>
-                            <div class="timeline-meta">
+                                <h3 class="text-sm font-semibold text-slate-900">
+                                    {{ work_order.title|default:"Work Order" }}
+                                </h3>
+                            </div>
+                            <div class="text-xs text-slate-500">
                                 Work Order #{{ work_order.work_order_number }} · {{ work_order.created_at|date:"M d, Y" }}
                             </div>
                         </div>
-                        <div class="text-end">
+                        <div class="text-right">
                             {% if work_order.status == 'completed' %}
-                                <span class="badge-soft badge-soft-success">Completed</span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Completed
+                                </span>
                             {% elif work_order.status == 'in_progress' %}
-                                <span class="badge-soft badge-soft-warning">In Progress</span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>In Progress
+                                </span>
                             {% elif work_order.status == 'pending' %}
-                                <span class="badge-soft badge-soft-muted">Pending</span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>Pending
+                                </span>
                             {% elif work_order.status == 'cancelled' %}
-                                <span class="badge-soft badge-soft-danger">Cancelled</span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Cancelled
+                                </span>
                             {% else %}
-                                <span class="badge-soft badge-soft-info">{{ work_order.get_status_display }}</span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                    {{ work_order.get_status_display }}
+                                </span>
                             {% endif %}
                             {% if work_order.total_cost %}
-                            <div class="cost-emphasis mt-2">${{ work_order.total_cost|floatformat:2 }}</div>
+                            <div class="text-lg font-bold text-emerald-600 mt-2">${{ work_order.total_cost|floatformat:2 }}</div>
                             {% endif %}
                         </div>
                     </div>
-
-                    <div class="row gy-3 mb-3">
-                        <div class="col-sm-4">
-                            <small class="text-muted d-block">Completed</small>
-                            <span class="fw-semibold">{% if work_order.completion_date %}{{ work_order.completion_date|date:"M d, Y" }}{% else %}In progress{% endif %}</span>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Completed</div>
+                            <div class="text-sm font-medium text-slate-900">
+                                {% if work_order.completion_date %}
+                                    {{ work_order.completion_date|date:"M d, Y" }}
+                                {% else %}
+                                    <span class="text-slate-400">In progress</span>
+                                {% endif %}
+                            </div>
                         </div>
-                        <div class="col-sm-4">
-                            <small class="text-muted d-block">Mileage</small>
-                            <span class="mileage-chip"><i class="fas fa-tachometer-alt"></i>{{ work_order.mileage_at_service|floatformat:0 }} {{ vehicle.mileage_unit }}</span>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Mileage</div>
+                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-sm font-medium">
+                                <i class="fas fa-tachometer-alt text-xs"></i>
+                                {{ work_order.mileage_at_service|floatformat:0 }} {{ vehicle.mileage_unit }}
+                            </div>
                         </div>
-                        <div class="col-sm-4">
-                            <small class="text-muted d-block">Technician</small>
-                            <span class="fw-semibold">{{ work_order.assigned_technician.user.get_full_name|default:"Not Assigned" }}</span>
+                        <div>
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Technician</div>
+                            <div class="text-sm font-medium text-slate-900">
+                                {{ work_order.assigned_technician.user.get_full_name|default:"Not Assigned" }}
+                            </div>
                         </div>
                     </div>
 
                     {% if work_order.description %}
-                    <p class="mb-3 text-muted">{{ work_order.description|truncatewords:28 }}</p>
+                    <p class="text-sm text-slate-600 mb-4">{{ work_order.description|truncatewords:28 }}</p>
                     {% endif %}
 
                     {% if work_order.service_items.exists %}
-                    <div class="mb-3">
-                        <small class="text-muted">Services Performed</small>
-                        <ul class="service-steps mt-2">
+                    <div class="mb-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Services Performed</div>
+                        <ul class="space-y-1.5">
                             {% for item in work_order.service_items.all|slice:":3" %}
-                            <li><i class="fas fa-check"></i>{{ item.service_name }}{% if item.cost %} · <span class="text-success">${{ item.cost|floatformat:2 }}</span>{% endif %}</li>
+                            <li class="flex items-center gap-2 text-sm text-slate-700">
+                                <i class="fas fa-check text-emerald-500 text-xs"></i>
+                                <span>{{ item.service_name }}{% if item.cost %} · <span class="text-emerald-600 font-medium">${{ item.cost|floatformat:2 }}</span>{% endif %}</span>
+                            </li>
                             {% endfor %}
                             {% if work_order.service_items.count > 3 %}
-                            <li class="text-muted"><i class="fas fa-ellipsis-h"></i>{{ work_order.service_items.count|add:"-3" }} additional item{{ work_order.service_items.count|add:"-3"|pluralize }}</li>
+                            <li class="flex items-center gap-2 text-sm text-slate-400">
+                                <i class="fas fa-ellipsis-h text-xs"></i>
+                                <span>{{ work_order.service_items.count|add:"-3" }} additional item{{ work_order.service_items.count|add:"-3"|pluralize }}</span>
+                            </li>
                             {% endif %}
                         </ul>
                     </div>
                     {% endif %}
 
                     {% if work_order.parts_used.exists %}
-                    <div class="mb-3">
-                        <small class="text-muted">Parts Utilized</small>
-                        <div class="mt-2 d-flex flex-wrap gap-2">
+                    <div class="mb-4">
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Parts Utilized</div>
+                        <div class="flex flex-wrap gap-2">
                             {% for part in work_order.parts_used.all|slice:":3" %}
-                            <span class="badge-soft badge-soft-muted">{{ part.part_name }}</span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                                {{ part.part_name }}
+                            </span>
                             {% endfor %}
                             {% if work_order.parts_used.count > 3 %}
-                            <span class="badge-soft badge-soft-info">+{{ work_order.parts_used.count|add:"-3" }} more</span>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                                +{{ work_order.parts_used.count|add:"-3" }} more
+                            </span>
                             {% endif %}
                         </div>
                     </div>
                     {% endif %}
 
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="timeline-meta">
+                    <div class="flex items-center justify-between pt-4 border-t border-slate-200">
+                        <span class="text-xs text-slate-500">
                             Logged {{ work_order.created_at|date:"M d, Y g:i A" }}
                         </span>
-                        <button type="button" class="btn btn-sm btn-outline-primary" disabled title="Work order details coming soon">
-                            <i class="fas fa-eye me-1"></i>Details
+                        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-primary text-primary rounded-lg text-xs font-medium hover:bg-primary/5 transition-colors opacity-50 cursor-not-allowed" disabled title="Work order details coming soon">
+                            <i class="fas fa-eye"></i>
+                            <span>Details</span>
                         </button>
                     </div>
-                </article>
-                {% endfor %}
+                </div>
             </div>
-            {% else %}
-            <div class="empty-state">
-                <i class="fas fa-tools mb-3"></i>
-                <h4 class="fw-semibold">No Service History Yet</h4>
-                <p>Log the first work order to populate this timeline.</p>
-                <button class="btn btn-primary" type="button" disabled>
-                    <i class="fas fa-plus me-2"></i>Create First Work Order
-                </button>
-            </div>
-            {% endif %}
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+            <i class="fas fa-tools text-5xl text-slate-300 mb-4"></i>
+            <h3 class="text-lg font-semibold text-slate-900 mb-2">No Service History Yet</h3>
+            <p class="text-sm text-slate-500 mb-6">Log the first work order to populate this timeline.</p>
+            <button class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium opacity-50 cursor-not-allowed" disabled>
+                <i class="fas fa-plus"></i>
+                <span>Create First Work Order</span>
+            </button>
+        </div>
+        {% endif %}
+    </div>
 
-        <div class="col-lg-4">
-            <div class="info-card">
-                <h6><i class="fas fa-calendar-alt"></i>Upcoming Maintenance</h6>
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <!-- Upcoming Maintenance -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-calendar-alt text-primary"></i>
+                    Upcoming Maintenance
+                </h3>
+            </div>
+            <div class="p-6">
                 {% if upcoming_maintenance %}
+                <div class="space-y-4">
                     {% for maintenance in upcoming_maintenance %}
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <div class="fw-semibold">{{ maintenance.service_name }}</div>
-                            <small class="text-muted">Due {{ maintenance.due_date|date:"M d, Y" }}</small>
+                    <div class="flex items-center justify-between gap-4 p-3 rounded-lg border border-slate-200 hover:border-amber-200 hover:bg-amber-50/50 transition-all">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold text-slate-900 mb-1">{{ maintenance.service_name }}</div>
+                            <div class="text-xs text-slate-500">Due {{ maintenance.due_date|date:"M d, Y" }}</div>
                         </div>
-                        <span class="badge-soft badge-soft-warning">{{ maintenance.days_until_due }} days</span>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
+                            {{ maintenance.days_until_due }} days
+                        </span>
                     </div>
                     {% endfor %}
+                </div>
                 {% else %}
-                    <div class="text-center text-muted">
-                        <i class="fas fa-check-circle fa-2x mb-2"></i>
-                        <p class="mb-0">No scheduled maintenance</p>
-                    </div>
+                <div class="text-center py-8">
+                    <i class="fas fa-check-circle text-4xl text-emerald-400 mb-3"></i>
+                    <p class="text-sm text-slate-500">No scheduled maintenance</p>
+                </div>
                 {% endif %}
             </div>
+        </div>
 
-            <div class="info-card">
-                <h6><i class="fas fa-chart-bar"></i>Service Frequency</h6>
-                <div style="height: 220px;">
+        <!-- Service Frequency Chart -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-chart-bar text-primary"></i>
+                    Service Frequency
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="h-56">
                     <canvas id="serviceFrequencyChart"></canvas>
                 </div>
             </div>
+        </div>
 
-            <div class="info-card mb-0">
-                <h6><i class="fas fa-users"></i>Recent Technicians</h6>
+        <!-- Recent Technicians -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-users text-primary"></i>
+                    Recent Technicians
+                </h3>
+            </div>
+            <div class="p-6">
                 {% if recent_technicians %}
+                <div class="space-y-4">
                     {% for tech in recent_technicians %}
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="avatar-initials avatar-md bg-primary text-white me-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-primary text-white flex items-center justify-center font-semibold text-sm flex-shrink-0">
                             {{ tech.user.first_name|default:''|slice:':1' }}{{ tech.user.last_name|default:''|slice:':1' }}
                         </div>
-                        <div>
-                            <div class="fw-semibold">{{ tech.user.get_full_name }}</div>
-                            <small class="text-muted">{{ tech.work_order_count }} service{{ tech.work_order_count|pluralize }}</small>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold text-slate-900 truncate">{{ tech.user.get_full_name }}</div>
+                            <div class="text-xs text-slate-500">{{ tech.work_order_count }} service{{ tech.work_order_count|pluralize }}</div>
                         </div>
                     </div>
                     {% endfor %}
+                </div>
                 {% else %}
-                    <div class="text-center text-muted">
-                        <p class="mb-0">No technician assignments yet</p>
-                    </div>
+                <div class="text-center py-8">
+                    <p class="text-sm text-slate-500">No technician assignments yet</p>
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -300,45 +376,57 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
     // Service frequency chart
-    const ctx = document.getElementById('serviceFrequencyChart').getContext('2d');
-    const serviceData = JSON.parse('{{ service_frequency_data|escapejs }}');
-    
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: serviceData.labels,
-            datasets: [{
-                data: serviceData.data,
-                backgroundColor: [
-                    '#28a745',  // Routine
-                    '#dc3545',  // Repair
-                    '#17a2b8',  // Inspection
-                    '#6c757d'   // Other
-                ],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
+    const ctx = document.getElementById('serviceFrequencyChart');
+    if (ctx) {
+        const ctx2d = ctx.getContext('2d');
+        const serviceData = JSON.parse('{{ service_frequency_data|escapejs }}');
+        
+        new Chart(ctx2d, {
+            type: 'doughnut',
+            data: {
+                labels: serviceData.labels,
+                datasets: [{
+                    data: serviceData.data,
+                    backgroundColor: [
+                        '#10b981',  // Routine - emerald
+                        '#ef4444',  // Repair - rose
+                        '#3b82f6',  // Inspection - blue
+                        '#6b7280'   // Other - slate
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 12,
+                            usePointStyle: true,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 
+    // Filter functionality
     const serviceFilters = document.querySelectorAll('input[name="serviceFilter"]');
     const yearFilter = document.getElementById('yearFilter');
     const timelineItems = document.querySelectorAll('.timeline-card');
 
     function filterServices() {
-        const selectedType = document.querySelector('input[name="serviceFilter"]:checked').value;
-        const selectedYear = yearFilter.value;
+        const selectedType = document.querySelector('input[name="serviceFilter"]:checked')?.value || 'all';
+        const selectedYear = yearFilter?.value || '';
 
         timelineItems.forEach(item => {
             const itemType = item.getAttribute('data-service-type');
@@ -349,7 +437,10 @@
             
             if (showType && showYear) {
                 item.style.display = 'block';
-                item.classList.add('animate-fade-in-up');
+                setTimeout(() => {
+                    item.style.opacity = '1';
+                    item.style.transform = 'translateY(0)';
+                }, 10);
             } else {
                 item.style.display = 'none';
             }
@@ -360,17 +451,21 @@
         filter.addEventListener('change', filterServices);
     });
 
-    yearFilter.addEventListener('change', filterServices);
-
-    function resetServiceFilters() {
-        document.getElementById('filterAll').checked = true;
-        yearFilter.value = '';
-        filterServices();
+    if (yearFilter) {
+        yearFilter.addEventListener('change', filterServices);
     }
+
+    window.resetServiceFilters = function() {
+        const allFilter = document.getElementById('filterAll');
+        if (allFilter) allFilter.checked = true;
+        if (yearFilter) yearFilter.value = '';
+        filterServices();
+    };
 
     // Export function
-    function exportServiceHistory() {
+    window.exportServiceHistory = function() {
         window.location.href = `{% url 'vehicles:vehicle-service-history' vehicle.id %}?export=pdf`;
-    }
+    };
+});
 </script>
 {% endblock %}

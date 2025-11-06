@@ -9,161 +9,8 @@
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 <style>
-    .supplier-card {
-        background: white;
-        border-radius: 0.5rem;
-        border: 1px solid var(--gray-200);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-    }
-    
-    .supplier-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-    
-    .supplier-header {
-        background: var(--gray-50);
-        border-bottom: 1px solid var(--gray-200);
-        padding: 1rem 1.5rem;
-        border-radius: 0.5rem 0.5rem 0 0;
-        display: flex;
-        justify-content: between;
-        align-items: center;
-    }
-    
-    .supplier-body {
-        padding: 1.5rem;
-    }
-    
-    .supplier-status {
-        padding: 0.25rem 0.75rem;
-        border-radius: 1rem;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    
-    .status-active { background: #d1f2eb; color: #27ae60; }
-    .status-inactive { background: #fadbd8; color: #e74c3c; }
-    .status-pending { background: #fef9e7; color: #f39c12; }
-    
-    .supplier-rating {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-    
-    .star {
-        color: #ffc107;
-        font-size: 1rem;
-    }
-    
     .star.empty {
-        color: var(--gray-300);
-    }
-    
-    .contact-info {
-        font-size: 0.875rem;
-        color: var(--gray-600);
-    }
-    
-    .contact-info i {
-        width: 16px;
-        text-align: center;
-        margin-right: 0.5rem;
-    }
-    
-    .parts-count {
-        background: var(--primary);
-        color: white;
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    
-    .filter-section {
-        background: white;
-        border-radius: 0.5rem;
-        border: 1px solid var(--gray-200);
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    
-    .stats-cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-    
-    .stat-card {
-        background: white;
-        border-radius: 0.5rem;
-        border: 1px solid var(--gray-200);
-        padding: 1.5rem;
-        text-align: center;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    
-    .stat-value {
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-    
-    .stat-label {
-        color: var(--gray-600);
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    
-    .view-toggle {
-        background: var(--gray-100);
-        border-radius: 0.375rem;
-        padding: 0.25rem;
-        display: inline-flex;
-    }
-    
-    .view-toggle button {
-        background: none;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 0.25rem;
-        color: var(--gray-600);
-        transition: all 0.2s ease;
-    }
-    
-    .view-toggle button.active {
-        background: white;
-        color: var(--primary);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    
-    .suppliers-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 1.5rem;
-    }
-    
-    .suppliers-table {
-        background: white;
-        border-radius: 0.5rem;
-        border: 1px solid var(--gray-200);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    
-    .import-section {
-        background: #f8f9ff;
-        border: 2px dashed #6366f1;
-        border-radius: 0.5rem;
-        padding: 2rem;
-        text-align: center;
-        margin-bottom: 1.5rem;
+        color: #cbd5e1;
     }
     
     .performance-indicator {
@@ -181,84 +28,85 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
         <div>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Inventory</a></li>
-                    <li class="breadcrumb-item active">Suppliers</li>
-                </ol>
-            </nav>
-            <h1 class="h3 mb-0">Supplier Management</h1>
-            <p class="text-muted">Manage your parts suppliers and vendor relationships</p>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">Supplier Management</h1>
+            <p class="text-sm text-slate-500">Manage your parts suppliers and vendor relationships</p>
         </div>
-        <div class="d-flex gap-2">
-            <div class="view-toggle">
-                <button type="button" class="active" data-view="cards" onclick="switchView('cards')">
-                    <i class="fas fa-th-large me-1"></i> Cards
+        <div class="flex items-center gap-2">
+            <div class="inline-flex bg-slate-100 rounded-lg p-0.5">
+                <button type="button" class="px-3 py-1.5 text-sm font-medium rounded transition-colors active bg-white text-primary shadow-sm" data-view="cards" onclick="switchView('cards')">
+                    <i class="fas fa-th-large mr-1"></i> Cards
                 </button>
-                <button type="button" data-view="table" onclick="switchView('table')">
-                    <i class="fas fa-table me-1"></i> Table
+                <button type="button" class="px-3 py-1.5 text-sm font-medium rounded transition-colors text-slate-600 hover:text-slate-900" data-view="table" onclick="switchView('table')">
+                    <i class="fas fa-table mr-1"></i> Table
                 </button>
             </div>
-            <div class="dropdown">
-                <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    <i class="fas fa-download me-1"></i> Export
+            <div class="relative">
+                <button class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors" onclick="toggleExportMenu()">
+                    <i class="fas fa-download"></i>
+                    <span>Export</span>
+                    <i class="fas fa-chevron-down text-xs"></i>
                 </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="?export=csv"><i class="fas fa-file-csv me-2"></i>CSV</a></li>
-                    <li><a class="dropdown-item" href="?export=xlsx"><i class="fas fa-file-excel me-2"></i>Excel</a></li>
-                    <li><a class="dropdown-item" href="?export=pdf"><i class="fas fa-file-pdf me-2"></i>PDF</a></li>
-                </ul>
+                <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-50" id="exportMenu">
+                    <div class="py-1">
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" href="?export=csv"><i class="fas fa-file-csv mr-2"></i>CSV</a>
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" href="?export=xlsx"><i class="fas fa-file-excel mr-2"></i>Excel</a>
+                        <a class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" href="?export=pdf"><i class="fas fa-file-pdf mr-2"></i>PDF</a>
+                    </div>
+                </div>
             </div>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-                <i class="fas fa-plus me-1"></i> Add Supplier
+            <button class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="openAddSupplierModal()">
+                <i class="fas fa-plus"></i>
+                <span>Add Supplier</span>
             </button>
         </div>
     </div>
 
     <!-- Statistics Cards -->
-    <div class="stats-cards">
-        <div class="stat-card">
-            <div class="stat-value text-primary">{{ total_suppliers }}</div>
-            <div class="stat-label">Total Suppliers</div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
+            <div class="text-3xl font-bold text-primary mb-2">{{ total_suppliers }}</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Suppliers</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-value text-success">{{ active_suppliers }}</div>
-            <div class="stat-label">Active Suppliers</div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
+            <div class="text-3xl font-bold text-emerald-600 mb-2">{{ active_suppliers }}</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Active Suppliers</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-value text-info">{{ parts_with_suppliers }}</div>
-            <div class="stat-label">Parts with Suppliers</div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
+            <div class="text-3xl font-bold text-blue-600 mb-2">{{ parts_with_suppliers }}</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Parts with Suppliers</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-value text-warning">{{ pending_orders }}</div>
-            <div class="stat-label">Pending Orders</div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
+            <div class="text-3xl font-bold text-amber-600 mb-2">{{ pending_orders }}</div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Pending Orders</div>
         </div>
     </div>
 
     <!-- Import Section -->
-    <div class="import-section" id="import-section" style="display: none;">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h5 class="mb-2">
-                    <i class="fas fa-upload me-2"></i>Bulk Import Suppliers
+    <div class="hidden bg-indigo-50 border-2 border-dashed border-indigo-300 rounded-lg p-6 mb-6" id="import-section">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex-1">
+                <h5 class="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                    <i class="fas fa-upload text-indigo-600"></i>
+                    Bulk Import Suppliers
                 </h5>
-                <p class="text-muted mb-0">
+                <p class="text-sm text-slate-600">
                     Upload a CSV file with supplier information to add multiple suppliers at once.
-                    <a href="/media/templates/supplier_import_template.csv" class="ms-2">
-                        <i class="fas fa-download me-1"></i>Download Template
+                    <a href="/media/templates/supplier_import_template.csv" class="ml-2 text-indigo-600 hover:text-indigo-700 font-medium">
+                        <i class="fas fa-download mr-1"></i>Download Template
                     </a>
                 </p>
             </div>
-            <div class="col-md-4 text-end">
-                <input type="file" id="import-file" accept=".csv" class="d-none">
-                <button class="btn btn-primary" onclick="document.getElementById('import-file').click()">
-                    <i class="fas fa-file-upload me-1"></i> Choose File
+            <div class="flex items-center gap-2">
+                <input type="file" id="import-file" accept=".csv" class="hidden">
+                <button class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors" onclick="document.getElementById('import-file').click()">
+                    <i class="fas fa-file-upload"></i>
+                    <span>Choose File</span>
                 </button>
-                <button class="btn btn-outline-secondary ms-2" onclick="toggleImportSection()">
+                <button class="inline-flex items-center justify-center w-9 h-9 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors" onclick="toggleImportSection()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -266,26 +114,26 @@
     </div>
 
     <!-- Filters -->
-    <div class="filter-section">
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
         <form method="get" id="filter-form">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label for="search" class="form-label">Search</label>
-                    <input type="text" class="form-control" id="search" name="search" 
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div class="md:col-span-3">
+                    <label for="search" class="block text-xs font-semibold text-slate-700 mb-2">Search</label>
+                    <input type="text" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="search" name="search" 
                            value="{{ request.GET.search }}" placeholder="Supplier name, code, or contact...">
                 </div>
-                <div class="col-md-2">
-                    <label for="status" class="form-label">Status</label>
-                    <select class="form-select" id="status" name="status">
+                <div class="md:col-span-2">
+                    <label for="status" class="block text-xs font-semibold text-slate-700 mb-2">Status</label>
+                    <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="status" name="status">
                         <option value="">All Statuses</option>
                         <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
                         <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactive</option>
                         <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Pending</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label for="rating" class="form-label">Min Rating</label>
-                    <select class="form-select" id="rating" name="rating">
+                <div class="md:col-span-2">
+                    <label for="rating" class="block text-xs font-semibold text-slate-700 mb-2">Min Rating</label>
+                    <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="rating" name="rating">
                         <option value="">Any Rating</option>
                         <option value="5" {% if request.GET.rating == '5' %}selected{% endif %}>5 Stars</option>
                         <option value="4" {% if request.GET.rating == '4' %}selected{% endif %}>4+ Stars</option>
@@ -293,27 +141,28 @@
                         <option value="2" {% if request.GET.rating == '2' %}selected{% endif %}>2+ Stars</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label for="sort" class="form-label">Sort By</label>
-                    <select class="form-select" id="sort" name="sort">
+                <div class="md:col-span-2">
+                    <label for="sort" class="block text-xs font-semibold text-slate-700 mb-2">Sort By</label>
+                    <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="sort" name="sort">
                         <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Name</option>
                         <option value="rating" {% if request.GET.sort == 'rating' %}selected{% endif %}>Rating</option>
                         <option value="parts_count" {% if request.GET.sort == 'parts_count' %}selected{% endif %}>Parts Count</option>
                         <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>Date Added</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-1"></i> Filter
-                        </button>
-                        <a href="{% url 'inventory:supplier_list' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-1"></i> Clear
-                        </a>
-                        <button type="button" class="btn btn-outline-info" onclick="toggleImportSection()">
-                            <i class="fas fa-upload me-1"></i> Import
-                        </button>
-                    </div>
+                <div class="md:col-span-3 flex items-end gap-2">
+                    <button type="submit" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                        <i class="fas fa-search"></i>
+                        <span>Filter</span>
+                    </button>
+                    <a href="{% url 'inventory:supplier_list' %}" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                        <i class="fas fa-times"></i>
+                        <span>Clear</span>
+                    </a>
+                    <button type="button" class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 border border-blue-600 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors" onclick="toggleImportSection()">
+                        <i class="fas fa-upload"></i>
+                        <span>Import</span>
+                    </button>
                 </div>
             </div>
         </form>
@@ -322,68 +171,69 @@
     <!-- Cards View -->
     <div id="cards-view">
         {% if suppliers %}
-        <div class="suppliers-grid">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for supplier in suppliers %}
-            <div class="supplier-card">
-                <div class="supplier-header">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all hover:-translate-y-0.5">
+                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 rounded-t-xl flex justify-between items-center">
                     <div>
-                        <h5 class="mb-1">{{ supplier.name }}</h5>
-                        <small class="text-muted">{{ supplier.supplier_code }}</small>
+                        <h5 class="text-sm font-semibold text-slate-900 mb-1">{{ supplier.name }}</h5>
+                        <p class="text-xs text-slate-500">{{ supplier.supplier_code }}</p>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="parts-count">{{ supplier.parts_count }} parts</span>
-                        <span class="supplier-status status-{{ supplier.status }}">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-primary text-white">{{ supplier.parts_count }} parts</span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold
+                            {% if supplier.status == 'active' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                            {% elif supplier.status == 'inactive' %}bg-rose-50 text-rose-700 border border-rose-200
+                            {% else %}bg-amber-50 text-amber-700 border border-amber-200{% endif %}">
                             {{ supplier.get_status_display }}
                         </span>
                     </div>
                 </div>
-                <div class="supplier-body">
-                    <div class="row g-3">
-                        <div class="col-md-12">
-                            {% if supplier.rating %}
-                            <div class="supplier-rating mb-2">
-                                {% for i in "12345" %}
-                                    <i class="fas fa-star star {% if forloop.counter > supplier.rating %}empty{% endif %}"></i>
-                                {% endfor %}
-                                <span class="ms-2 text-muted">({{ supplier.rating }}/5)</span>
-                            </div>
-                            {% endif %}
-                            
-                            <div class="contact-info">
-                                {% if supplier.contact_person %}
-                                <div class="mb-1">
-                                    <i class="fas fa-user"></i>{{ supplier.contact_person }}
-                                </div>
-                                {% endif %}
-                                {% if supplier.email %}
-                                <div class="mb-1">
-                                    <i class="fas fa-envelope"></i>
-                                    <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>
-                                </div>
-                                {% endif %}
-                                {% if supplier.phone %}
-                                <div class="mb-1">
-                                    <i class="fas fa-phone"></i>
-                                    <a href="tel:{{ supplier.phone }}">{{ supplier.phone }}</a>
-                                </div>
-                                {% endif %}
-                                {% if supplier.website %}
-                                <div class="mb-1">
-                                    <i class="fas fa-globe"></i>
-                                    <a href="{{ supplier.website }}" target="_blank">Website</a>
-                                </div>
-                                {% endif %}
-                                {% if supplier.address %}
-                                <div>
-                                    <i class="fas fa-map-marker-alt"></i>{{ supplier.address|truncatechars:30 }}
-                                </div>
-                                {% endif %}
-                            </div>
+                <div class="p-6">
+                    {% if supplier.rating %}
+                    <div class="flex items-center gap-1 mb-4">
+                        {% for i in "12345" %}
+                            <i class="fas fa-star text-sm {% if forloop.counter > supplier.rating %}star empty{% else %}text-amber-400{% endif %}"></i>
+                        {% endfor %}
+                        <span class="ml-2 text-xs text-slate-500">({{ supplier.rating }}/5)</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="space-y-2 text-sm text-slate-600 mb-4">
+                        {% if supplier.contact_person %}
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-user text-xs w-4 text-center"></i>
+                            <span>{{ supplier.contact_person }}</span>
                         </div>
+                        {% endif %}
+                        {% if supplier.email %}
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-envelope text-xs w-4 text-center"></i>
+                            <a href="mailto:{{ supplier.email }}" class="text-primary hover:text-primary/80">{{ supplier.email }}</a>
+                        </div>
+                        {% endif %}
+                        {% if supplier.phone %}
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-phone text-xs w-4 text-center"></i>
+                            <a href="tel:{{ supplier.phone }}" class="text-primary hover:text-primary/80">{{ supplier.phone }}</a>
+                        </div>
+                        {% endif %}
+                        {% if supplier.website %}
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-globe text-xs w-4 text-center"></i>
+                            <a href="{{ supplier.website }}" target="_blank" class="text-primary hover:text-primary/80">Website</a>
+                        </div>
+                        {% endif %}
+                        {% if supplier.address %}
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-map-marker-alt text-xs w-4 text-center"></i>
+                            <span>{{ supplier.address|truncatechars:30 }}</span>
+                        </div>
+                        {% endif %}
                     </div>
                     
-                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                        <div class="performance-indicator">
+                    <div class="flex justify-between items-center pt-4 border-t border-slate-200">
+                        <div class="text-xs text-slate-600">
                             {% if supplier.performance_score >= 80 %}
                             <span class="performance-indicator performance-excellent"></span> Excellent
                             {% elif supplier.performance_score >= 60 %}
@@ -392,17 +242,20 @@
                             <span class="performance-indicator performance-poor"></span> Needs Improvement
                             {% endif %}
                         </div>
-                        <div class="d-flex gap-1">
+                        <div class="flex items-center gap-1">
                             <a href="{% url 'inventory:supplier_detail' supplier.pk %}" 
-                               class="btn btn-sm btn-outline-primary" title="View Details">
+                               class="inline-flex items-center justify-center w-8 h-8 border border-primary text-primary rounded text-xs hover:bg-primary/10 transition-colors" 
+                               title="View Details">
                                 <i class="fas fa-eye"></i>
                             </a>
                             <a href="{% url 'inventory:supplier_edit' supplier.pk %}" 
-                               class="btn btn-sm btn-outline-secondary" title="Edit">
+                               class="inline-flex items-center justify-center w-8 h-8 border border-slate-300 text-slate-600 rounded text-xs hover:bg-slate-50 transition-colors" 
+                               title="Edit">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <button class="btn btn-sm btn-outline-info" 
-                                    onclick="createPurchaseOrder({{ supplier.pk }})" title="New Order">
+                            <button class="inline-flex items-center justify-center w-8 h-8 border border-blue-300 text-blue-600 rounded text-xs hover:bg-blue-50 transition-colors" 
+                                    onclick="createPurchaseOrder({{ supplier.pk }})" 
+                                    title="New Order">
                                 <i class="fas fa-shopping-cart"></i>
                             </button>
                         </div>
@@ -412,190 +265,191 @@
             {% endfor %}
         </div>
         {% else %}
-        <div class="text-center py-5">
-            <i class="fas fa-store-alt fa-4x text-muted mb-3"></i>
-            <h4 class="text-muted">No Suppliers Found</h4>
-            <p class="text-muted">Start by adding your first supplier to manage inventory sources.</p>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
-                <i class="fas fa-plus me-1"></i> Add First Supplier
+        <div class="text-center py-12">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
+                <i class="fas fa-store-alt text-3xl text-slate-400"></i>
+            </div>
+            <h4 class="text-sm font-semibold text-slate-900 mb-2">No Suppliers Found</h4>
+            <p class="text-xs text-slate-500 mb-4">Start by adding your first supplier to manage inventory sources.</p>
+            <button class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="openAddSupplierModal()">
+                <i class="fas fa-plus"></i>
+                <span>Add First Supplier</span>
             </button>
         </div>
         {% endif %}
     </div>
 
     <!-- Table View -->
-    <div id="table-view" style="display: none;">
-        <div class="suppliers-table">
-            <table class="table table-striped" id="suppliers-table">
-                <thead>
-                    <tr>
-                        <th>Supplier</th>
-                        <th>Contact</th>
-                        <th>Status</th>
-                        <th>Rating</th>
-                        <th>Parts</th>
-                        <th>Performance</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for supplier in suppliers %}
-                    <tr>
-                        <td>
-                            <div>
-                                <strong>{{ supplier.name }}</strong><br>
-                                <small class="text-muted">{{ supplier.supplier_code }}</small>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="contact-info">
-                                {% if supplier.contact_person %}
-                                <div>{{ supplier.contact_person }}</div>
+    <div id="table-view" class="hidden">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full" id="suppliers-table">
+                    <thead class="bg-slate-50 border-b border-slate-200">
+                        <tr>
+                            <th class="py-3 px-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Supplier</th>
+                            <th class="py-3 px-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Contact</th>
+                            <th class="py-3 px-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Status</th>
+                            <th class="py-3 px-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Rating</th>
+                            <th class="py-3 px-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Parts</th>
+                            <th class="py-3 px-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Performance</th>
+                            <th class="py-3 px-4 text-right text-xs font-semibold text-slate-700 uppercase tracking-wide">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for supplier in suppliers %}
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="py-3 px-4">
+                                <div>
+                                    <div class="text-sm font-semibold text-slate-900">{{ supplier.name }}</div>
+                                    <div class="text-xs text-slate-500">{{ supplier.supplier_code }}</div>
+                                </div>
+                            </td>
+                            <td class="py-3 px-4">
+                                <div class="text-sm text-slate-600">
+                                    {% if supplier.contact_person %}
+                                    <div>{{ supplier.contact_person }}</div>
+                                    {% endif %}
+                                    {% if supplier.email %}
+                                    <div class="text-xs"><a href="mailto:{{ supplier.email }}" class="text-primary hover:text-primary/80">{{ supplier.email }}</a></div>
+                                    {% endif %}
+                                    {% if supplier.phone %}
+                                    <div class="text-xs"><a href="tel:{{ supplier.phone }}" class="text-primary hover:text-primary/80">{{ supplier.phone }}</a></div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold
+                                    {% if supplier.status == 'active' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                                    {% elif supplier.status == 'inactive' %}bg-rose-50 text-rose-700 border border-rose-200
+                                    {% else %}bg-amber-50 text-amber-700 border border-amber-200{% endif %}">
+                                    {{ supplier.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4">
+                                {% if supplier.rating %}
+                                <div class="flex items-center gap-1">
+                                    {% for i in "12345" %}
+                                        <i class="fas fa-star text-xs {% if forloop.counter > supplier.rating %}star empty{% else %}text-amber-400{% endif %}"></i>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <span class="text-xs text-slate-400">Not rated</span>
                                 {% endif %}
-                                {% if supplier.email %}
-                                <small><a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a></small>
-                                {% endif %}
-                                {% if supplier.phone %}
-                                <small class="d-block"><a href="tel:{{ supplier.phone }}">{{ supplier.phone }}</a></small>
-                                {% endif %}
-                            </div>
-                        </td>
-                        <td>
-                            <span class="supplier-status status-{{ supplier.status }}">
-                                {{ supplier.get_status_display }}
-                            </span>
-                        </td>
-                        <td>
-                            {% if supplier.rating %}
-                            <div class="supplier-rating">
-                                {% for i in "12345" %}
-                                    <i class="fas fa-star star {% if forloop.counter > supplier.rating %}empty{% endif %}"></i>
-                                {% endfor %}
-                            </div>
-                            {% else %}
-                            <span class="text-muted">Not rated</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="parts-count">{{ supplier.parts_count }}</span>
-                        </td>
-                        <td>
-                            {% if supplier.performance_score >= 80 %}
-                            <span class="performance-indicator performance-excellent"></span> Excellent
-                            {% elif supplier.performance_score >= 60 %}
-                            <span class="performance-indicator performance-good"></span> Good
-                            {% else %}
-                            <span class="performance-indicator performance-poor"></span> Poor
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="d-flex gap-1">
-                                <a href="{% url 'inventory:supplier_detail' supplier.pk %}" 
-                                   class="btn btn-sm btn-outline-primary" title="View">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{% url 'inventory:supplier_edit' supplier.pk %}" 
-                                   class="btn btn-sm btn-outline-secondary" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <button class="btn btn-sm btn-outline-info" 
-                                        onclick="createPurchaseOrder({{ supplier.pk }})" title="Order">
-                                    <i class="fas fa-shopping-cart"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-primary text-white">{{ supplier.parts_count }}</span>
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="text-xs text-slate-600">
+                                    {% if supplier.performance_score >= 80 %}
+                                    <span class="performance-indicator performance-excellent"></span> Excellent
+                                    {% elif supplier.performance_score >= 60 %}
+                                    <span class="performance-indicator performance-good"></span> Good
+                                    {% else %}
+                                    <span class="performance-indicator performance-poor"></span> Poor
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-right">
+                                <div class="flex items-center justify-end gap-1">
+                                    <a href="{% url 'inventory:supplier_detail' supplier.pk %}" 
+                                       class="inline-flex items-center justify-center w-8 h-8 border border-primary text-primary rounded text-xs hover:bg-primary/10 transition-colors" 
+                                       title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'inventory:supplier_edit' supplier.pk %}" 
+                                       class="inline-flex items-center justify-center w-8 h-8 border border-slate-300 text-slate-600 rounded text-xs hover:bg-slate-50 transition-colors" 
+                                       title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button class="inline-flex items-center justify-center w-8 h-8 border border-blue-300 text-blue-600 rounded text-xs hover:bg-blue-50 transition-colors" 
+                                            onclick="createPurchaseOrder({{ supplier.pk }})" 
+                                            title="Order">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <!-- Pagination -->
     {% if is_paginated %}
-    <nav aria-label="Suppliers pagination" class="mt-4">
-        <ul class="pagination justify-content-center">
-            {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">First</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
-                </li>
-            {% endif %}
-            
-            <li class="page-item active">
-                <span class="page-link">
-                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                </span>
-            </li>
-            
-            {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Last</a>
-                </li>
-            {% endif %}
-        </ul>
+    <nav aria-label="Suppliers pagination" class="flex items-center justify-center gap-2 mt-6">
+        {% if page_obj.has_previous %}
+            <a class="inline-flex items-center justify-center px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">First</a>
+            <a class="inline-flex items-center justify-center px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
+        {% endif %}
+        
+        <span class="inline-flex items-center justify-center px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
+        
+        {% if page_obj.has_next %}
+            <a class="inline-flex items-center justify-center px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
+            <a class="inline-flex items-center justify-center px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Last</a>
+        {% endif %}
     </nav>
     {% endif %}
 </div>
 
 <!-- Add Supplier Modal -->
-<div class="modal fade" id="addSupplierModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add New Supplier</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="add-supplier-form">
-                    {% csrf_token %}
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="supplier-name" class="form-label">Supplier Name *</label>
-                            <input type="text" class="form-control" id="supplier-name" name="name" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="supplier-code" class="form-label">Supplier Code</label>
-                            <input type="text" class="form-control" id="supplier-code" name="supplier_code">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="contact-person" class="form-label">Contact Person</label>
-                            <input type="text" class="form-control" id="contact-person" name="contact_person">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="phone" class="form-label">Phone</label>
-                            <input type="tel" class="form-control" id="phone" name="phone">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="website" class="form-label">Website</label>
-                            <input type="url" class="form-control" id="website" name="website">
-                        </div>
-                        <div class="col-12">
-                            <label for="address" class="form-label">Address</label>
-                            <textarea class="form-control" id="address" name="address" rows="3"></textarea>
-                        </div>
-                        <div class="col-12">
-                            <label for="notes" class="form-label">Notes</label>
-                            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
-                        </div>
+<div class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" id="addSupplierModal" onclick="if(event.target===this) closeAddSupplierModal()">
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+            <h5 class="text-lg font-semibold text-slate-900">Add New Supplier</h5>
+            <button type="button" class="text-slate-400 hover:text-slate-600" onclick="closeAddSupplierModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="p-6">
+            <form id="add-supplier-form">
+                {% csrf_token %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="supplier-name" class="block text-xs font-semibold text-slate-700 mb-2">Supplier Name *</label>
+                        <input type="text" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="supplier-name" name="name" required>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitAddSupplier()">
-                    <i class="fas fa-save me-1"></i> Add Supplier
-                </button>
-            </div>
+                    <div>
+                        <label for="supplier-code" class="block text-xs font-semibold text-slate-700 mb-2">Supplier Code</label>
+                        <input type="text" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="supplier-code" name="supplier_code">
+                    </div>
+                    <div>
+                        <label for="contact-person" class="block text-xs font-semibold text-slate-700 mb-2">Contact Person</label>
+                        <input type="text" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="contact-person" name="contact_person">
+                    </div>
+                    <div>
+                        <label for="email" class="block text-xs font-semibold text-slate-700 mb-2">Email</label>
+                        <input type="email" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="email" name="email">
+                    </div>
+                    <div>
+                        <label for="phone" class="block text-xs font-semibold text-slate-700 mb-2">Phone</label>
+                        <input type="tel" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="phone" name="phone">
+                    </div>
+                    <div>
+                        <label for="website" class="block text-xs font-semibold text-slate-700 mb-2">Website</label>
+                        <input type="url" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="website" name="website">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="address" class="block text-xs font-semibold text-slate-700 mb-2">Address</label>
+                        <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="address" name="address" rows="3"></textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="notes" class="block text-xs font-semibold text-slate-700 mb-2">Notes</label>
+                        <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" id="notes" name="notes" rows="2"></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-xl">
+            <button type="button" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors" onclick="closeAddSupplierModal()">Cancel</button>
+            <button type="button" class="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors" onclick="submitAddSupplier()">
+                <i class="fas fa-save mr-1"></i> Add Supplier
+            </button>
         </div>
     </div>
 </div>
@@ -626,21 +480,61 @@ $(document).ready(function() {
     });
 });
 
+function toggleExportMenu() {
+    const menu = document.getElementById('exportMenu');
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
+function toggleImportSection() {
+    const section = document.getElementById('import-section');
+    if (section) {
+        section.classList.toggle('hidden');
+    }
+}
+
+function openAddSupplierModal() {
+    const modal = document.getElementById('addSupplierModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeAddSupplierModal() {
+    const modal = document.getElementById('addSupplierModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+    }
+}
+
 // View switching
 function switchView(view) {
     const cardsView = document.getElementById('cards-view');
     const tableView = document.getElementById('table-view');
     const buttons = document.querySelectorAll('[data-view]');
     
-    buttons.forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`[data-view="${view}"]`).classList.add('active');
+    buttons.forEach(btn => {
+        btn.classList.remove('active', 'bg-white', 'text-primary', 'shadow-sm');
+        btn.classList.add('text-slate-600');
+    });
+    
+    const activeBtn = document.querySelector(`[data-view="${view}"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active', 'bg-white', 'text-primary', 'shadow-sm');
+        activeBtn.classList.remove('text-slate-600');
+    }
     
     if (view === 'cards') {
-        cardsView.style.display = 'block';
-        tableView.style.display = 'none';
+        cardsView.classList.remove('hidden');
+        tableView.classList.add('hidden');
     } else {
-        cardsView.style.display = 'none';
-        tableView.style.display = 'block';
+        cardsView.classList.add('hidden');
+        tableView.classList.remove('hidden');
     }
     
     // Store preference
@@ -655,11 +549,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Toggle import section
-function toggleImportSection() {
-    const section = document.getElementById('import-section');
-    section.style.display = section.style.display === 'none' ? 'block' : 'none';
-}
 
 // Handle file import
 document.getElementById('import-file').addEventListener('change', function(e) {
@@ -698,18 +587,42 @@ function submitAddSupplier() {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRFToken': getCookie('csrftoken')
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('success', 'Supplier added successfully');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('addSupplierModal'));
-            modal.hide();
-            setTimeout(() => location.reload(), 1000);
+    .then(response => {
+        // Check response status first
+        if (response.ok) {
+            // Try to parse as JSON first
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json().then(data => {
+                    if (data.success) {
+                        showToast('success', 'Supplier added successfully');
+                        closeAddSupplierModal();
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showToast('danger', 'Error adding supplier: ' + (data.error || 'Unknown error'));
+                    }
+                });
+            } else {
+                // If HTML response but status is OK, assume success (likely a redirect)
+                showToast('success', 'Supplier added successfully');
+                closeAddSupplierModal();
+                setTimeout(() => location.reload(), 1000);
+            }
         } else {
-            showToast('danger', 'Error adding supplier: ' + data.error);
+            // Error response - try to parse as JSON for error message
+            return response.text().then(text => {
+                try {
+                    const data = JSON.parse(text);
+                    showToast('danger', 'Error adding supplier: ' + (data.error || 'Unknown error'));
+                } catch (e) {
+                    // Not JSON, show generic error
+                    showToast('danger', 'Error adding supplier. Please check the form for errors.');
+                }
+            });
         }
     })
     .catch(error => {
@@ -765,28 +678,43 @@ function showToast(type, message) {
     if (!toastContainer) {
         toastContainer = document.createElement('div');
         toastContainer.id = 'toast-container';
-        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-        toastContainer.style.zIndex = '1080';
+        toastContainer.className = 'fixed top-4 right-4 z-50 space-y-2';
         document.body.appendChild(toastContainer);
     }
     
-    const toastHtml = `
-        <div class="toast align-items-center text-white bg-${type} border-0" role="alert">
-            <div class="d-flex">
-                <div class="toast-body">${message}</div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
+    const bgColors = {
+        'success': 'bg-emerald-600',
+        'danger': 'bg-rose-600',
+        'warning': 'bg-amber-600',
+        'info': 'bg-blue-600'
+    };
+    
+    const toast = document.createElement('div');
+    toast.className = `${bgColors[type] || 'bg-slate-600'} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px]`;
+    toast.innerHTML = `
+        <span class="flex-1">${message}</span>
+        <button onclick="this.parentElement.remove()" class="text-white/80 hover:text-white">
+            <i class="fas fa-times"></i>
+        </button>
     `;
     
-    toastContainer.innerHTML = toastHtml;
-    const toastElement = toastContainer.querySelector('.toast');
-    const toast = new bootstrap.Toast(toastElement);
-    toast.show();
+    toastContainer.appendChild(toast);
     
-    toastElement.addEventListener('hidden.bs.toast', function() {
-        toastElement.remove();
-    });
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
+
+// Close dropdown menus when clicking outside
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.relative')) {
+        const exportMenu = document.getElementById('exportMenu');
+        if (exportMenu && !exportMenu.classList.contains('hidden')) {
+            exportMenu.classList.add('hidden');
+        }
+    }
+});
 </script>
 {% endblock %}

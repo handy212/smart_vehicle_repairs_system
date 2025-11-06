@@ -1,150 +1,152 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Admin Dashboard - Smart Vehicle Repairs{% endblock %}
+{% block title %}Admin Dashboard • {{ block.super }}{% endblock %}
 
 {% block page_header %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
     <div>
-        <h1 class="h2">
-            <i class="fas fa-tachometer-alt me-2 text-primary"></i>
+            <h1 class="text-xl font-semibold text-slate-900">
+                <i class="fas fa-tachometer-alt mr-2 text-primary"></i>
             Admin Dashboard
         </h1>
-        <p class="text-muted mb-0">Welcome back, {{ user.get_full_name }}! Here's your system overview.</p>
+            <p class="text-sm text-slate-500 mt-1">Welcome back, {{ user.get_full_name }}! Here's your system overview.</p>
     </div>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="refreshDashboard">
-            <i class="fas fa-sync-alt me-1"></i> Refresh
+        <div class="flex items-center gap-2">
+            <button type="button" id="refreshDashboard" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                <i class="fas fa-sync-alt"></i>
+                <span>Refresh</span>
         </button>
-        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-            <i class="fas fa-download me-1"></i> Export
-        </button>
-        <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf me-2"></i>PDF Report</a></li>
-            <li><a class="dropdown-item" href="#"><i class="fas fa-file-excel me-2"></i>Excel Report</a></li>
-        </ul>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<!-- Key Metrics Row -->
-<div class="row mb-4" id="statsCards">
-    {% include 'dashboard/partials/stats_card.html' with title="Total Customers" value=total_customers icon="fas fa-users" color="primary" link="customers:customer-list" trend=customer_trend %}
-    {% include 'dashboard/partials/stats_card.html' with title="Total Vehicles" value=total_vehicles icon="fas fa-car" color="success" link="vehicles:vehicle-list" trend=vehicle_trend %}
-    {% include 'dashboard/partials/stats_card.html' with title="Active Work Orders" value=active_workorders icon="fas fa-wrench" color="warning" link="workorders:list" subtitle="In progress" %}
-    {% include 'dashboard/partials/stats_card.html' with title="Monthly Revenue" value=monthly_revenue|floatformat:2 icon="fas fa-dollar-sign" color="success" subtitle="This month" trend=revenue_trend %}
+<!-- Key Metrics -->
+<style>
+    .stat-cards-grid {
+        display: grid !important;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (min-width: 640px) {
+        .stat-cards-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+    }
+    @media (min-width: 1024px) {
+        .stat-cards-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        }
+    }
+</style>
+<div class="stat-cards-grid">
+    {% url 'customers:customer-list' as customer_list_url %}
+    <a href="{{ customer_list_url }}" class="block h-full w-full">
+        {% include 'dashboard/partials/stats_card.html' with title="Total Customers" value=total_customers icon="fas fa-users" color="primary" trend=customer_trend|default:"" %}
+    </a>
+    {% url 'vehicles:vehicle-list' as vehicle_list_url %}
+    <a href="{{ vehicle_list_url }}" class="block h-full w-full">
+        {% include 'dashboard/partials/stats_card.html' with title="Total Vehicles" value=total_vehicles icon="fas fa-car" color="success" trend=vehicle_trend|default:"" %}
+    </a>
+    {% url 'workorders:list' as workorder_list_url %}
+    <a href="{{ workorder_list_url }}" class="block h-full w-full">
+        {% include 'dashboard/partials/stats_card.html' with title="Active Work Orders" value=active_work_orders icon="fas fa-wrench" color="warning" subtitle="In progress" %}
+    </a>
+    <div class="block h-full w-full">
+        {% include 'dashboard/partials/stats_card.html' with title="Monthly Revenue" value=monthly_revenue|floatformat:2 icon="fas fa-dollar-sign" color="success" subtitle="This month" trend=revenue_trend|default:"" %}
+    </div>
 </div>
 
-<!-- Secondary Metrics Row -->
-<div class="row mb-4">
-    {% include 'dashboard/partials/stats_card.html' with title="Pending Invoices" value=pending_invoices_count icon="fas fa-file-invoice-dollar" color="warning" link="billing:invoice_list" subtitle=pending_invoices_amount %}
-    {% include 'dashboard/partials/stats_card.html' with title="Today's Appointments" value=today_appointments icon="fas fa-calendar-check" color="info" link="appointments:appointment-list" %}
-    {% include 'dashboard/partials/stats_card.html' with title="Low Stock Items" value=low_stock_count icon="fas fa-exclamation-triangle" color="danger" link="inventory:part_list" subtitle="Need attention" %}
+<!-- Secondary Metrics -->
+<div class="stat-cards-grid mb-6">
+    {% url 'billing:invoice_list' as invoice_list_url %}
+    <a href="{{ invoice_list_url }}?status=sent" class="block h-full w-full">
+        {% include 'dashboard/partials/stats_card.html' with title="Pending Invoices" value=pending_invoices icon="fas fa-file-invoice-dollar" color="warning" subtitle=pending_invoices_amount %}
+    </a>
+    {% url 'appointments:appointment-list' as appointment_list_url %}
+    <a href="{{ appointment_list_url }}" class="block h-full w-full">
+        {% include 'dashboard/partials/stats_card.html' with title="Today's Appointments" value=todays_appointments icon="fas fa-calendar-check" color="info" %}
+    </a>
+    {% url 'inventory:part_list' as part_list_url %}
+    <a href="{{ part_list_url }}" class="block h-full w-full">
+        {% include 'dashboard/partials/stats_card.html' with title="Low Stock Items" value=low_stock_items_count icon="fas fa-exclamation-triangle" color="danger" subtitle="Need attention" %}
+    </a>
+    <div class="block h-full w-full">
     {% include 'dashboard/partials/stats_card.html' with title="Active Technicians" value=active_technicians icon="fas fa-user-cog" color="info" subtitle="On duty today" %}
+    </div>
 </div>
 
 <!-- Charts Row -->
-<div class="row mb-4">
-    <div class="col-lg-8 mb-4">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="lg:col-span-2">
         {% include 'dashboard/partials/chart_revenue.html' %}
     </div>
-    <div class="col-lg-4 mb-4">
+    <div class="lg:col-span-1 flex flex-col gap-6">
         {% include 'dashboard/partials/chart_workorders.html' %}
+        {% if recent_notifications %}
+        {% include 'dashboard/partials/notifications_feed.html' %}
+        {% endif %}
     </div>
 </div>
 
 <!-- Activity Row -->
-<div class="row mb-4">
-    <div class="col-lg-6 mb-4">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {% include 'dashboard/partials/recent_appointments.html' %}
-    </div>
-    <div class="col-lg-6 mb-4">
         {% include 'dashboard/partials/recent_workorders.html' %}
-    </div>
 </div>
 
-<!-- Alerts and Notifications Row -->
-<div class="row mb-4">
-    <div class="col-lg-6 mb-4">
+<!-- Alerts Row -->
+{% if low_stock_items_count > 0 %}
+<div class="mb-6">
         {% include 'dashboard/partials/low_stock_alerts.html' %}
-    </div>
-    <div class="col-lg-6 mb-4">
-        {% include 'dashboard/partials/notifications_feed.html' %}
-    </div>
 </div>
+{% endif %}
 
-<!-- Quick Actions Card -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-0">
-                <h5 class="mb-0">
-                    <i class="fas fa-bolt text-warning me-2"></i>
+<!-- Quick Actions -->
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+    <h3 class="text-sm font-semibold text-slate-900 mb-4">
+        <i class="fas fa-bolt mr-2 text-primary"></i>
                     Quick Actions
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <a href="{% url 'customers:customer-create' %}" class="btn btn-outline-primary w-100">
-                            <i class="fas fa-user-plus fa-2x mb-2 d-block"></i>
-                            Add Customer
-                        </a>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="{% url 'appointments:appointment-create' %}" class="btn btn-outline-info w-100">
-                            <i class="fas fa-calendar-plus fa-2x mb-2 d-block"></i>
-                            Schedule Appointment
-                        </a>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="{% url 'workorders:create' %}" class="btn btn-outline-warning w-100">
-                            <i class="fas fa-clipboard-list fa-2x mb-2 d-block"></i>
-                            Create Work Order
-                        </a>
-                    </div>
-                    <div class="col-md-3">
-                        <a href="{% url 'billing:invoice_create' %}" class="btn btn-outline-success w-100">
-                            <i class="fas fa-file-invoice-dollar fa-2x mb-2 d-block"></i>
-                            Create Invoice
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
+    </h3>
+    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <a href="{% url 'customers:customer-create' %}" class="flex flex-col items-center justify-center p-4 border border-slate-200 rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+            <i class="fas fa-user-plus text-2xl text-primary mb-2 group-hover:scale-110 transition-transform"></i>
+            <span class="text-sm font-medium text-slate-700">Add Customer</span>
+        </a>
+        <a href="{% url 'appointments:appointment-create' %}" class="flex flex-col items-center justify-center p-4 border border-slate-200 rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+            <i class="fas fa-calendar-plus text-2xl text-primary mb-2 group-hover:scale-110 transition-transform"></i>
+            <span class="text-sm font-medium text-slate-700">Schedule</span>
+        </a>
+        <a href="{% url 'workorders:create' %}" class="flex flex-col items-center justify-center p-4 border border-slate-200 rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+            <i class="fas fa-clipboard-list text-2xl text-primary mb-2 group-hover:scale-110 transition-transform"></i>
+            <span class="text-sm font-medium text-slate-700">Work Order</span>
+        </a>
+        <a href="{% url 'billing:invoice_create' %}" class="flex flex-col items-center justify-center p-4 border border-slate-200 rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
+            <i class="fas fa-file-invoice-dollar text-2xl text-primary mb-2 group-hover:scale-110 transition-transform"></i>
+            <span class="text-sm font-medium text-slate-700">Invoice</span>
+        </a>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Auto-refresh dashboard every 5 minutes
-setInterval(function() {
-    location.reload();
-}, 300000);
-
+document.addEventListener('DOMContentLoaded', function() {
 // Manual refresh button
-document.getElementById('refreshDashboard')?.addEventListener('click', function() {
-    this.innerHTML = '<i class="fas fa-sync-alt fa-spin me-1"></i> Refreshing...';
+    const refreshBtn = document.getElementById('refreshDashboard');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            icon.classList.add('fa-spin');
+            setTimeout(() => {
     location.reload();
-});
-
-// Live updates for stats cards (AJAX)
-function updateStatsCards() {
-    fetch('/dashboard/api/stats/')
-        .then(response => response.json())
-        .then(data => {
-            // Update stat values without page reload
-            document.querySelector('[data-stat="customers"]').textContent = data.total_customers;
-            document.querySelector('[data-stat="vehicles"]').textContent = data.total_vehicles;
-            document.querySelector('[data-stat="workorders"]').textContent = data.active_workorders;
-            document.querySelector('[data-stat="revenue"]').textContent = '$' + parseFloat(data.monthly_revenue).toFixed(2);
-        })
-        .catch(error => console.error('Error updating stats:', error));
+            }, 500);
+        });
 }
-
-// Update stats every 60 seconds
-setInterval(updateStatsCards, 60000);
+});
 </script>
 {% endblock %}

@@ -84,6 +84,16 @@ class Estimate(models.Model):
     # Auto-generated estimate number
     estimate_number = models.CharField(max_length=20, unique=True, editable=False)
     
+    # Branch assignment
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        related_name='estimates',
+        null=True,  # Allow null for migration
+        blank=True,
+        help_text="Branch where this estimate was created"
+    )
+    
     # References
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='estimates')
     vehicle = models.ForeignKey(
@@ -177,18 +187,9 @@ class Estimate(models.Model):
         return f"{self.estimate_number} - {self.customer}"
     
     def save(self, *args, **kwargs):
-        # Auto-generate estimate number if not set
-        if not self.estimate_number:
-            last_estimate = Estimate.objects.order_by('-id').first()
-            if last_estimate and last_estimate.estimate_number:
-                try:
-                    last_number = int(last_estimate.estimate_number.replace('EST', ''))
-                    new_number = last_number + 1
-                except (ValueError, AttributeError):
-                    new_number = 1
-            else:
-                new_number = 1
-            self.estimate_number = f'EST{new_number:06d}'
+        # Auto-generate estimate number using branch sequence
+        if not self.estimate_number and self.branch:
+            self.estimate_number = self.branch.get_next_estimate_number()
         
         super().save(*args, **kwargs)
     
@@ -351,6 +352,16 @@ class Invoice(models.Model):
     # Auto-generated invoice number
     invoice_number = models.CharField(max_length=20, unique=True, editable=False)
     
+    # Branch assignment
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        related_name='invoices',
+        null=True,  # Allow null for migration
+        blank=True,
+        help_text="Branch where this invoice was created"
+    )
+    
     # References
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='invoices')
     vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name='invoices')
@@ -448,22 +459,9 @@ class Invoice(models.Model):
         return f"{self.invoice_number} - {self.customer}"
     
     def save(self, *args, **kwargs):
-        # Auto-generate invoice number if not set
-        if not self.invoice_number:
-            # Get the last invoice with an INV number
-            last_invoice = Invoice.objects.filter(
-                invoice_number__startswith='INV'
-            ).order_by('-invoice_number').first()
-            
-            if last_invoice and last_invoice.invoice_number:
-                try:
-                    last_number = int(last_invoice.invoice_number.replace('INV', ''))
-                    new_number = last_number + 1
-                except (ValueError, AttributeError):
-                    new_number = 1
-            else:
-                new_number = 1
-            self.invoice_number = f'INV{new_number:06d}'
+        # Auto-generate invoice number using branch sequence
+        if not self.invoice_number and self.branch:
+            self.invoice_number = self.branch.get_next_invoice_number()
         
         # Calculate amount due
         self.amount_due = (self.total - self.amount_paid).quantize(Decimal('0.01'))

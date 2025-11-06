@@ -18,7 +18,6 @@ import json
 import csv
 from django.http import HttpResponse
 from django.template.loader import render_to_string
-import weasyprint
 
 from .models import Vehicle, VehicleMileageHistory, VehicleDocument, VehiclePhoto
 from .forms import VehicleForm, VehicleDocumentForm, VehiclePhotoForm
@@ -554,7 +553,7 @@ def vehicle_export_view(request):
     if format_type == "csv":
         return export_vehicles_csv(vehicles)
     elif format_type == "pdf":
-        return export_vehicles_pdf(vehicles)
+        return export_vehicles_pdf(request, vehicles)
     else:
         return JsonResponse({"error": "Invalid format. Use csv or pdf."}, status=400)
 
@@ -606,8 +605,15 @@ def export_vehicles_csv(vehicles):
     return response
 
 
-def export_vehicles_pdf(vehicles):
+def export_vehicles_pdf(request, vehicles):
     """Export vehicles to PDF format"""
+    try:
+        import weasyprint
+    except Exception as e:
+        # Catch any exception during import (ImportError, NameError, etc.)
+        messages.error(request, f"PDF generation is not available: {str(e)}")
+        return redirect('vehicles:vehicle-list')
+    
     # Create HTML content for PDF
     html_content = render_to_string("vehicles/vehicle_export_pdf.html", {
         "vehicles": vehicles,
@@ -619,7 +625,11 @@ def export_vehicles_pdf(vehicles):
     response = HttpResponse(content_type="application/pdf")
     response["Content-Disposition"] = "attachment; filename=\"vehicles_export.pdf\""
     
-    # Use weasyprint to generate PDF
-    weasyprint.HTML(string=html_content).write_pdf(response)
+    try:
+        # Use weasyprint to generate PDF
+        weasyprint.HTML(string=html_content).write_pdf(response)
+    except Exception as e:
+        messages.error(request, f"Error generating PDF: {str(e)}")
+        return redirect('vehicles:vehicle-list')
     
     return response

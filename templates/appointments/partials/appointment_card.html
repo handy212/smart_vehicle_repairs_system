@@ -1,36 +1,46 @@
-<div class="card appointment-card status-{{ appointment.status }} h-100">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start mb-2">
-            <h6 class="card-title mb-0">
-                <a href="{% url 'appointments:appointment-detail' appointment.pk %}" class="text-decoration-none">
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-full flex flex-col status-{{ appointment.status }}">
+    <div class="p-6 flex-1">
+        <div class="flex justify-between items-start mb-4">
+            <h6 class="text-sm font-semibold text-slate-900 mb-0">
+                <a href="{% url 'appointments:appointment-detail' appointment.pk %}" class="hover:text-primary transition-colors">
                     {{ appointment.appointment_number }}
                 </a>
             </h6>
-            <span class="badge bg-{{ appointment.status|default:'secondary' }} status-badge">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold
+                {% if appointment.status == 'pending' %}bg-amber-50 text-amber-700 border border-amber-200
+                {% elif appointment.status == 'confirmed' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                {% elif appointment.status == 'in_progress' %}bg-blue-50 text-blue-700 border border-blue-200
+                {% elif appointment.status == 'completed' %}bg-slate-100 text-slate-700 border border-slate-200
+                {% elif appointment.status == 'cancelled' %}bg-rose-50 text-rose-700 border border-rose-200
+                {% elif appointment.status == 'no_show' %}bg-rose-50 text-rose-700 border border-rose-200
+                {% elif appointment.status == 'rescheduled' %}bg-amber-50 text-amber-700 border border-amber-200
+                {% else %}bg-slate-100 text-slate-700 border border-slate-200{% endif %}">
                 {% if appointment.status == 'pending' %}
-                    <i class="fas fa-clock me-1"></i>
+                    <i class="fas fa-clock text-[10px]"></i>
                 {% elif appointment.status == 'confirmed' %}
-                    <i class="fas fa-check me-1"></i>
+                    <i class="fas fa-check text-[10px]"></i>
                 {% elif appointment.status == 'in_progress' %}
-                    <i class="fas fa-play me-1"></i>
+                    <i class="fas fa-play text-[10px]"></i>
                 {% elif appointment.status == 'completed' %}
-                    <i class="fas fa-check-circle me-1"></i>
+                    <i class="fas fa-check-circle text-[10px]"></i>
                 {% elif appointment.status == 'cancelled' %}
-                    <i class="fas fa-times me-1"></i>
+                    <i class="fas fa-times text-[10px]"></i>
                 {% elif appointment.status == 'no_show' %}
-                    <i class="fas fa-user-times me-1"></i>
+                    <i class="fas fa-user-times text-[10px]"></i>
                 {% elif appointment.status == 'rescheduled' %}
-                    <i class="fas fa-calendar-alt me-1"></i>
+                    <i class="fas fa-calendar-alt text-[10px]"></i>
                 {% endif %}
                 {{ appointment.get_status_display }}
             </span>
         </div>
         
         <!-- Customer Info -->
-        <div class="mb-2">
-            <i class="fas fa-user text-muted me-1"></i>
-            <small class="text-muted">Customer:</small>
-            <div class="fw-bold">
+        <div class="mb-3">
+            <div class="flex items-center gap-2 mb-1">
+                <i class="fas fa-user text-slate-400 text-xs"></i>
+                <small class="text-xs text-slate-500">Customer:</small>
+            </div>
+            <div class="text-sm font-semibold text-slate-900">
                 {% if appointment.customer.user %}
                     {{ appointment.customer.user.first_name }} {{ appointment.customer.user.last_name }}
                 {% elif appointment.customer.company_name %}
@@ -42,51 +52,62 @@
         </div>
         
         <!-- Vehicle Info -->
-        <div class="mb-2">
-            <i class="fas fa-car text-muted me-1"></i>
-            <small class="text-muted">Vehicle:</small>
-            <div class="fw-bold">
+        <div class="mb-3">
+            <div class="flex items-center gap-2 mb-1">
+                <i class="fas fa-car text-slate-400 text-xs"></i>
+                <small class="text-xs text-slate-500">Vehicle:</small>
+            </div>
+            <div class="text-sm font-semibold text-slate-900">
                 {{ appointment.vehicle.year }} {{ appointment.vehicle.make }} {{ appointment.vehicle.model }}
             </div>
-            <small class="text-muted">VIN: {{ appointment.vehicle.vin }}</small>
+            <small class="text-xs text-slate-500 font-mono">VIN: {{ appointment.vehicle.vin }}</small>
         </div>
         
         <!-- Date and Time -->
-        <div class="mb-2">
-            <i class="fas fa-clock text-muted me-1"></i>
-            <small class="text-muted">Date & Time:</small>
-            <div class="fw-bold">
+        <div class="mb-3">
+            <div class="flex items-center gap-2 mb-1">
+                <i class="fas fa-clock text-slate-400 text-xs"></i>
+                <small class="text-xs text-slate-500">Date & Time:</small>
+            </div>
+            <div class="text-sm font-semibold text-slate-900">
                 {{ appointment.appointment_date|date:"M d, Y" }} at {{ appointment.appointment_time|time:"g:i A" }}
             </div>
-            <small class="text-muted">Duration: {{ appointment.estimated_duration }} minutes</small>
+            <small class="text-xs text-slate-500">Duration: {{ appointment.estimated_duration }} minutes</small>
         </div>
         
         <!-- Service Type -->
-        <div class="mb-2">
-            <i class="fas fa-wrench text-muted me-1"></i>
-            <small class="text-muted">Service:</small>
-            <div class="fw-bold">{{ appointment.get_service_type_display }}</div>
+        <div class="mb-3">
+            <div class="flex items-center gap-2 mb-1">
+                <i class="fas fa-wrench text-slate-400 text-xs"></i>
+                <small class="text-xs text-slate-500">Service:</small>
+            </div>
+            <div class="text-sm font-semibold text-slate-900">{{ appointment.get_service_type_display }}</div>
         </div>
         
         <!-- Service Bay -->
         {% if appointment.service_bay %}
-        <div class="mb-2">
-            <i class="fas fa-warehouse text-muted me-1"></i>
-            <small class="text-muted">Service Bay:</small>
-            <div class="fw-bold">{{ appointment.service_bay.name }}</div>
+        <div class="mb-3">
+            <div class="flex items-center gap-2 mb-1">
+                <i class="fas fa-warehouse text-slate-400 text-xs"></i>
+                <small class="text-xs text-slate-500">Service Bay:</small>
+            </div>
+            <div class="text-sm font-semibold text-slate-900">{{ appointment.service_bay.name }}</div>
         </div>
         {% endif %}
         
         <!-- Priority -->
         {% if appointment.priority != 'normal' %}
-        <div class="mb-2">
-            <span class="badge bg-{% if appointment.priority == 'urgent' %}danger{% elif appointment.priority == 'high' %}warning{% else %}info{% endif %}">
+        <div class="mb-3">
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold
+                {% if appointment.priority == 'urgent' %}bg-rose-50 text-rose-700 border border-rose-200
+                {% elif appointment.priority == 'high' %}bg-amber-50 text-amber-700 border border-amber-200
+                {% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
                 {% if appointment.priority == 'urgent' %}
-                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    <i class="fas fa-exclamation-triangle text-[10px]"></i>
                 {% elif appointment.priority == 'high' %}
-                    <i class="fas fa-exclamation me-1"></i>
+                    <i class="fas fa-exclamation text-[10px]"></i>
                 {% elif appointment.priority == 'low' %}
-                    <i class="fas fa-arrow-down me-1"></i>
+                    <i class="fas fa-arrow-down text-[10px]"></i>
                 {% endif %}
                 {{ appointment.get_priority_display }} Priority
             </span>
@@ -95,42 +116,44 @@
         
         <!-- Description -->
         {% if appointment.customer_concerns %}
-        <div class="mb-3">
-            <small class="text-muted">Description:</small>
-            <p class="small mb-0">{{ appointment.customer_concerns|truncatewords:15 }}</p>
+        <div class="mb-4">
+            <small class="text-xs text-slate-500">Description:</small>
+            <p class="text-xs text-slate-700 mb-0 mt-1">{{ appointment.customer_concerns|truncatewords:15 }}</p>
         </div>
         {% endif %}
         
         <!-- Estimated Cost -->
         {% if appointment.estimated_cost %}
-        <div class="mb-3">
-            <i class="fas fa-dollar-sign text-muted me-1"></i>
-            <small class="text-muted">Estimated Cost:</small>
-            <div class="fw-bold text-success">${{ appointment.estimated_cost|floatformat:2 }}</div>
+        <div class="mb-4">
+            <div class="flex items-center gap-2 mb-1">
+                <i class="fas fa-dollar-sign text-slate-400 text-xs"></i>
+                <small class="text-xs text-slate-500">Estimated Cost:</small>
+            </div>
+            <div class="text-sm font-semibold text-emerald-600">${{ appointment.estimated_cost|floatformat:2 }}</div>
         </div>
         {% endif %}
     </div>
     
     <!-- Card Footer with Actions -->
-    <div class="card-footer bg-transparent">
-        <div class="btn-group w-100" role="group">
+    <div class="px-6 py-4 border-t border-slate-200 bg-slate-50">
+        <div class="flex items-center gap-1">
             <a href="{% url 'appointments:appointment-detail' appointment.pk %}" 
-               class="btn btn-outline-primary btn-sm" title="View Details">
+               class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border border-primary text-primary rounded-lg text-xs font-medium hover:bg-primary/10 transition-colors" title="View Details">
                 <i class="fas fa-eye"></i>
             </a>
             <a href="{% url 'appointments:appointment-edit' appointment.pk %}" 
-               class="btn btn-outline-secondary btn-sm" title="Edit">
+               class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-100 transition-colors" title="Edit">
                 <i class="fas fa-edit"></i>
             </a>
             {% if appointment.status == 'pending' %}
-            <button class="btn btn-outline-success btn-sm" 
+            <button class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border border-emerald-300 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-50 transition-colors" 
                     onclick="updateAppointmentStatus({{ appointment.pk }}, 'confirmed')"
                     title="Confirm">
                 <i class="fas fa-check"></i>
             </button>
             {% endif %}
             {% if appointment.status in 'pending,confirmed' %}
-            <button class="btn btn-outline-danger btn-sm" 
+            <button class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border border-rose-300 text-rose-700 rounded-lg text-xs font-medium hover:bg-rose-50 transition-colors" 
                     onclick="updateAppointmentStatus({{ appointment.pk }}, 'cancelled')"
                     title="Cancel">
                 <i class="fas fa-times"></i>
@@ -139,33 +162,6 @@
         </div>
     </div>
 </div>
-
-<style>
-.status-badge {
-    font-size: 0.7rem;
-}
-.appointment-card.status-pending .status-badge {
-    background-color: #ffc107 !important;
-}
-.appointment-card.status-confirmed .status-badge {
-    background-color: #28a745 !important;
-}
-.appointment-card.status-in-progress .status-badge {
-    background-color: #007bff !important;
-}
-.appointment-card.status-completed .status-badge {
-    background-color: #6c757d !important;
-}
-.appointment-card.status-cancelled .status-badge {
-    background-color: #dc3545 !important;
-}
-.appointment-card.status-no-show .status-badge {
-    background-color: #dc3545 !important;
-}
-.appointment-card.status-rescheduled .status-badge {
-    background-color: #fd7e14 !important;
-}
-</style>
 
 <script>
 function updateAppointmentStatus(appointmentId, newStatus) {

@@ -6,126 +6,101 @@
 {% block extra_css %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/5.11.5/main.min.css" rel="stylesheet">
 <style>
-.fc-toolbar {
-    background: white;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.fc-daygrid-event {
-    border-radius: 4px;
-    font-size: 0.8rem;
-    padding: 2px 4px;
-}
-
-.fc-event-title {
-    font-weight: 500;
-}
-
-.appointment-modal .modal-body {
-    padding: 1.5rem;
-}
-
-.appointment-details {
-    background: #f8f9fa;
-    border-radius: 0.5rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
-}
-
-.service-bay-legend {
-    background: white;
-    border-radius: 0.5rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.bay-indicator {
-    display: inline-flex;
-    align-items: center;
-    margin-right: 1rem;
-    margin-bottom: 0.5rem;
-}
-
-.bay-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 0.5rem;
-}
+    .fc-toolbar {
+        background: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .fc-daygrid-event {
+        border-radius: 4px;
+        font-size: 0.8rem;
+        padding: 2px 4px;
+    }
+    
+    .fc-event-title {
+        font-weight: 500;
+    }
+    
+    .bay-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="space-y-6">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <h1 class="h3 mb-0">
-                <i class="fas fa-calendar text-primary me-2"></i>
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <div>
+            <h1 class="text-xl font-semibold text-slate-900 mb-1">
+                <i class="fas fa-calendar text-primary mr-2"></i>
                 Appointment Calendar
             </h1>
-            <p class="text-muted mb-0">View and manage appointments in calendar format</p>
+            <p class="text-sm text-slate-500">View and manage appointments in calendar format</p>
         </div>
-        <div class="col-md-6 text-end">
-            <a href="{% url 'appointments:appointment-list' %}" class="btn btn-outline-primary me-2">
-                <i class="fas fa-list me-1"></i>
-                List View
+        <div class="flex items-center gap-2">
+            <a href="{% url 'appointments:appointment-list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors">
+                <i class="fas fa-list"></i>
+                <span>List View</span>
             </a>
-            <a href="{% url 'appointments:appointment-create' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i>
-                New Appointment
+            <a href="{% url 'appointments:appointment-create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                <i class="fas fa-plus"></i>
+                <span>New Appointment</span>
             </a>
         </div>
     </div>
 
     <!-- Service Bay Legend -->
-    <div class="service-bay-legend">
-        <h6 class="mb-3">
-            <i class="fas fa-warehouse me-2"></i>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <h6 class="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <i class="fas fa-warehouse text-primary"></i>
             Service Bays
         </h6>
-        <div class="row">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {% for bay in service_bays %}
-            <div class="col-md-3">
-                <div class="bay-indicator">
-                    <div class="bay-color" style="background-color: {{ bay.color|default:'#6c757d' }}"></div>
-                    <span class="small">{{ bay.name }} ({{ bay.get_bay_type_display }})</span>
-                </div>
+            <div class="flex items-center">
+                <div class="bay-color" style="background-color: {{ bay.color|default:'#64748b' }}"></div>
+                <span class="text-sm text-slate-700">{{ bay.name }} ({{ bay.get_bay_type_display }})</span>
             </div>
             {% endfor %}
         </div>
     </div>
 
     <!-- Calendar -->
-    <div class="card">
-        <div class="card-body p-0">
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-0">
             <div id="calendar"></div>
         </div>
     </div>
 </div>
 
 <!-- Appointment Details Modal -->
-<div class="modal fade" id="appointmentModal" tabindex="-1" aria-labelledby="appointmentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="appointmentModalLabel">Appointment Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div id="appointmentModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 transition-opacity" onclick="closeAppointmentModal()"></div>
+        <div class="relative bg-white rounded-xl shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white flex justify-between items-center">
+                <h5 class="text-sm font-semibold text-slate-900">Appointment Details</h5>
+                <button type="button" class="text-slate-500 hover:text-slate-700" onclick="closeAppointmentModal()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="modal-body">
+            <div class="p-6">
                 <div id="appointmentDetails">
                     <!-- Appointment details will be loaded here -->
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <a href="#" id="editAppointmentBtn" class="btn btn-primary" style="display: none;">
-                    <i class="fas fa-edit me-1"></i>
-                    Edit Appointment
+            <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" onclick="closeAppointmentModal()">Close</button>
+                <a href="#" id="editAppointmentBtn" class="hidden inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+                    <i class="fas fa-edit"></i>
+                    <span>Edit Appointment</span>
                 </a>
             </div>
         </div>
@@ -133,41 +108,44 @@
 </div>
 
 <!-- Quick Create Modal -->
-<div class="modal fade" id="quickCreateModal" tabindex="-1" aria-labelledby="quickCreateModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="quickCreateModalLabel">Quick Create Appointment</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div id="quickCreateModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 transition-opacity" onclick="closeQuickCreateModal()"></div>
+        <div class="relative bg-white rounded-xl shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-primary/10 to-white flex justify-between items-center">
+                <h5 class="text-sm font-semibold text-slate-900">Quick Create Appointment</h5>
+                <button type="button" class="text-slate-500 hover:text-slate-700" onclick="closeQuickCreateModal()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="modal-body">
-                <form id="quickCreateForm">
+            <div class="p-6">
+                <form id="quickCreateForm" class="space-y-4">
                     {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="quickCreateDate" class="form-label">Date</label>
-                        <input type="date" class="form-control" id="quickCreateDate" name="date" required>
+                    <div>
+                        <label for="quickCreateDate" class="block text-xs font-semibold text-slate-700 mb-2">Date</label>
+                        <input type="date" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" id="quickCreateDate" name="date" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="quickCreateTime" class="form-label">Time</label>
-                        <input type="time" class="form-control" id="quickCreateTime" name="time" required>
+                    <div>
+                        <label for="quickCreateTime" class="block text-xs font-semibold text-slate-700 mb-2">Time</label>
+                        <input type="time" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" id="quickCreateTime" name="time" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="quickCreateCustomer" class="form-label">Customer</label>
-                        <select class="form-select" id="quickCreateCustomer" name="customer" required>
+                    <div>
+                        <label for="quickCreateCustomer" class="block text-xs font-semibold text-slate-700 mb-2">Customer</label>
+                        <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" id="quickCreateCustomer" name="customer" required>
                             <option value="">Select Customer</option>
                             <!-- Options will be loaded dynamically -->
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label for="quickCreateVehicle" class="form-label">Vehicle</label>
-                        <select class="form-select" id="quickCreateVehicle" name="vehicle" required>
+                    <div>
+                        <label for="quickCreateVehicle" class="block text-xs font-semibold text-slate-700 mb-2">Vehicle</label>
+                        <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" id="quickCreateVehicle" name="vehicle" required>
                             <option value="">Select Vehicle</option>
                             <!-- Options will be loaded when customer is selected -->
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label for="quickCreateServiceType" class="form-label">Service Type</label>
-                        <select class="form-select" id="quickCreateServiceType" name="service_type" required>
+                    <div>
+                        <label for="quickCreateServiceType" class="block text-xs font-semibold text-slate-700 mb-2">Service Type</label>
+                        <select class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" id="quickCreateServiceType" name="service_type" required>
                             <option value="">Select Service</option>
                             <option value="inspection">Inspection</option>
                             <option value="repair">Repair</option>
@@ -179,17 +157,17 @@
                             <option value="other">Other</option>
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label for="quickCreateDescription" class="form-label">Description</label>
-                        <textarea class="form-control" id="quickCreateDescription" name="customer_concerns" rows="3"></textarea>
+                    <div>
+                        <label for="quickCreateDescription" class="block text-xs font-semibold text-slate-700 mb-2">Description</label>
+                        <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary" id="quickCreateDescription" name="customer_concerns" rows="3"></textarea>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitQuickCreate()">
-                    <i class="fas fa-save me-1"></i>
-                    Create Appointment
+            <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors" onclick="closeQuickCreateModal()">Cancel</button>
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors" onclick="submitQuickCreate()">
+                    <i class="fas fa-save"></i>
+                    <span>Create Appointment</span>
                 </button>
             </div>
         </div>
@@ -204,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if FullCalendar is loaded
     if (typeof FullCalendar === 'undefined') {
         console.error('FullCalendar failed to load from CDN');
-        document.getElementById('calendar').innerHTML = '<div class="alert alert-danger"><h4>Calendar Loading Error</h4><p>Failed to load calendar library. Please check your internet connection and refresh the page.</p></div>';
+        document.getElementById('calendar').innerHTML = '<div class="bg-rose-50 border border-rose-200 rounded-lg p-4"><h4 class="text-sm font-semibold text-rose-900 mb-2">Calendar Loading Error</h4><p class="text-sm text-rose-700">Failed to load calendar library. Please check your internet connection and refresh the page.</p></div>';
         return;
     }
     
@@ -236,8 +214,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 Status: ${props.status}
             `;
             info.el.setAttribute('title', tooltip);
-            info.el.setAttribute('data-bs-toggle', 'tooltip');
-            info.el.setAttribute('data-bs-html', 'true');
         },
         eventDrop: function(info) {
             // Handle drag and drop
@@ -263,43 +239,41 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Calendar rendered successfully');
     } catch (error) {
         console.error('Calendar render error:', error);
-        document.getElementById('calendar').innerHTML = '<div class="alert alert-danger">Failed to load calendar. Please refresh the page.</div>';
+        document.getElementById('calendar').innerHTML = '<div class="bg-rose-50 border border-rose-200 rounded-lg p-4"><p class="text-sm text-rose-700">Failed to load calendar. Please refresh the page.</p></div>';
     }
-    
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
 });
 
 function showAppointmentDetails(event) {
     const props = event.extendedProps;
     const details = `
-        <div class="appointment-details">
-            <h6>${props.appointment_number}</h6>
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Customer:</strong> ${props.customer}</p>
-                    <p><strong>Vehicle:</strong> ${props.vehicle}</p>
-                    <p><strong>Service Bay:</strong> ${props.service_bay}</p>
+        <div class="bg-slate-50 rounded-lg p-4 mb-4">
+            <h6 class="text-sm font-semibold text-slate-900 mb-3">${props.appointment_number}</h6>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <p class="text-sm"><span class="font-semibold text-slate-700">Customer:</span> <span class="text-slate-900">${props.customer}</span></p>
+                    <p class="text-sm"><span class="font-semibold text-slate-700">Vehicle:</span> <span class="text-slate-900">${props.vehicle}</span></p>
+                    <p class="text-sm"><span class="font-semibold text-slate-700">Service Bay:</span> <span class="text-slate-900">${props.service_bay}</span></p>
                 </div>
-                <div class="col-md-6">
-                    <p><strong>Status:</strong> <span class="badge bg-${getStatusColor(event.backgroundColor)}">${props.status}</span></p>
-                    <p><strong>Date:</strong> ${event.start.toLocaleDateString()}</p>
-                    <p><strong>Time:</strong> ${event.start.toLocaleTimeString()}</p>
+                <div class="space-y-2">
+                    <p class="text-sm"><span class="font-semibold text-slate-700">Status:</span> <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">${props.status}</span></p>
+                    <p class="text-sm"><span class="font-semibold text-slate-700">Date:</span> <span class="text-slate-900">${event.start.toLocaleDateString()}</span></p>
+                    <p class="text-sm"><span class="font-semibold text-slate-700">Time:</span> <span class="text-slate-900">${event.start.toLocaleTimeString()}</span></p>
                 </div>
             </div>
-            ${props.customer_concerns ? `<p><strong>Description:</strong> ${props.customer_concerns}</p>` : ''}
+            ${props.customer_concerns ? `<div class="mt-4 pt-4 border-t border-slate-200"><p class="text-sm"><span class="font-semibold text-slate-700">Description:</span> <span class="text-slate-900">${props.customer_concerns}</span></p></div>` : ''}
         </div>
     `;
     
     document.getElementById('appointmentDetails').innerHTML = details;
     document.getElementById('editAppointmentBtn').href = `/appointments/${event.id}/edit/`;
-    document.getElementById('editAppointmentBtn').style.display = 'inline-block';
+    document.getElementById('editAppointmentBtn').classList.remove('hidden');
     
-    const modal = new bootstrap.Modal(document.getElementById('appointmentModal'));
-    modal.show();
+    document.getElementById('appointmentModal').classList.remove('hidden');
+}
+
+function closeAppointmentModal() {
+    document.getElementById('appointmentModal').classList.add('hidden');
+    document.getElementById('editAppointmentBtn').classList.add('hidden');
 }
 
 function showQuickCreateModal(dateStr) {
@@ -309,8 +283,11 @@ function showQuickCreateModal(dateStr) {
     // Load customers
     loadCustomers();
     
-    const modal = new bootstrap.Modal(document.getElementById('quickCreateModal'));
-    modal.show();
+    document.getElementById('quickCreateModal').classList.remove('hidden');
+}
+
+function closeQuickCreateModal() {
+    document.getElementById('quickCreateModal').classList.add('hidden');
 }
 
 function loadCustomers() {
@@ -405,18 +382,6 @@ function updateAppointmentDateTime(appointmentId, newStart) {
         alert('An error occurred while updating the appointment');
         location.reload();
     });
-}
-
-function getStatusColor(backgroundColor) {
-    const colorMap = {
-        '#ffc107': 'warning',
-        '#28a745': 'success',
-        '#007bff': 'primary',
-        '#6c757d': 'secondary',
-        '#dc3545': 'danger',
-        '#fd7e14': 'warning'
-    };
-    return colorMap[backgroundColor] || 'secondary';
 }
 
 // Event listeners

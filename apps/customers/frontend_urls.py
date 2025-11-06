@@ -26,6 +26,9 @@ urlpatterns = [
     # Export customers
     path('export/', frontend_views.export_customers, name='customer-export'),
     
+    # Import customers
+    path('import/', frontend_views.import_customers, name='customer-import'),
+    
     # AJAX endpoints for dynamic content
     path('<int:pk>/notes/', frontend_views.customer_notes_ajax, name='customer-notes-ajax'),
     path('<int:pk>/vehicles/', frontend_views.customer_vehicles_ajax, name='customer-vehicles-ajax'),

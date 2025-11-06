@@ -296,3 +296,30 @@ class QuickAddCustomerForm(forms.ModelForm):
             customer.save()
         
         return customer
+
+
+class CustomerImportForm(forms.Form):
+    """
+    Form for importing customers from CSV
+    """
+    csv_file = forms.FileField(
+        label='CSV File',
+        help_text='Upload a CSV file with customer data. Maximum file size: 2 MB.',
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': '.csv'
+        })
+    )
+    
+    def clean_csv_file(self):
+        csv_file = self.cleaned_data['csv_file']
+        
+        # Check file size (2 MB limit)
+        if csv_file.size > 2 * 1024 * 1024:
+            raise ValidationError('File size must be less than 2 MB.')
+        
+        # Check file extension
+        if not csv_file.name.endswith('.csv'):
+            raise ValidationError('Please upload a CSV file.')
+        
+        return csv_file
