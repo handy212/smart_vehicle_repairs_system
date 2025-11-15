@@ -6,16 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Package, AlertTriangle, Trash2, Download } from "lucide-react";
+import { Plus, Search, Package, AlertTriangle, Trash2, Download, Upload } from "lucide-react";
+import { ImportDialog } from "@/components/ui/import-dialog";
+import { downloadPartTemplate } from "@/lib/utils/import-templates";
+import { exportPartsForImport } from "@/lib/utils/export-templates";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
 import { exportToCSV } from "@/lib/utils/export";
+import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
+import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 export default function InventoryPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -27,6 +34,9 @@ export default function InventoryPage() {
         search: search || undefined,
       }),
   });
+
+  const parts = data?.results || [];
+  const bulkSelection = useBulkSelection(parts);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => inventoryApi.delete(id),
@@ -46,6 +56,30 @@ export default function InventoryPage() {
   const handleDelete = (part: any) => {
     if (confirm(`Are you sure you want to delete part "${part.name}" (${part.part_number})? This action cannot be undone.`)) {
       deleteMutation.mutate(part.id);
+    }
+  };
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await Promise.all(ids.map((id) => inventoryApi.delete(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      bulkSelection.clearSelection();
+      toast({ title: "Success", description: `${bulkSelection.selectedCount} parts deleted successfully` });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to delete parts",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleBulkDelete = () => {
+    if (confirm(`Are you sure you want to delete ${bulkSelection.selectedCount} part(s)? This action cannot be undone.`)) {
+      bulkDeleteMutation.mutate(bulkSelection.selectedIds);
     }
   };
 
@@ -77,10 +111,20 @@ export default function InventoryPage() {
     toast({ title: "Success", description: "Inventory exported successfully" });
   };
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
+            <div className="h-5 w-64 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <TableSkeleton rows={8} columns={8} />
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -107,10 +151,29 @@ export default function InventoryPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
+          <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+            <Upload className="w-4 h-4 mr-2" />
+            Import CSV
           </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                if (data?.results) {
+                  exportPartsForImport(data.results);
+                }
+              }} 
+              disabled={!data?.results || data.results.length === 0}
+              title="Export in import-compatible format"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export for Import
+            </Button>
+          </div>
           <Link href="/inventory/new">
             <Button>
               <Plus className="w-4 h-4 mr-2" />
@@ -139,6 +202,13 @@ export default function InventoryPage() {
         </CardContent>
       </Card>
 
+      {/* Bulk Action Toolbar */}
+      <BulkActionToolbar
+        selectedCount={bulkSelection.selectedCount}
+        onClearSelection={bulkSelection.clearSelection}
+        onBulkDelete={handleBulkDelete}
+      />
+
       {/* Inventory Table */}
       <Card>
         <CardHeader>
@@ -147,11 +217,24 @@ export default function InventoryPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {data?.results && data.results.length > 0 ? (
+          {isLoading ? (
+            <TableSkeleton rows={8} columns={10} />
+          ) : data?.results && data.results.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>
+                      <input
+                        type="checkbox"
+                        checked={bulkSelection.isAllSelected}
+                        ref={(input) => {
+                          if (input) input.indeterminate = bulkSelection.isIndeterminate;
+                        }}
+                        onChange={bulkSelection.toggleSelectAll}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </TableHead>
                     <TableHead>Part Number</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Category</TableHead>
@@ -165,7 +248,15 @@ export default function InventoryPage() {
                 </TableHeader>
                 <TableBody>
                   {data.results.map((part) => (
-                    <TableRow key={part.id} className={isLowStock(part) ? "bg-red-50" : ""}>
+                    <TableRow key={part.id} className={`transition-colors duration-150 ${isLowStock(part) ? "bg-red-50" : "hover:bg-gray-50"}`}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={bulkSelection.isSelected(part.id)}
+                          onChange={() => bulkSelection.toggleSelection(part.id)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-sm">
                         {part.part_number || "-"}
                       </TableCell>
@@ -267,6 +358,20 @@ export default function InventoryPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Import Dialog */}
+      <ImportDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={async (file) => {
+          const result = await inventoryApi.import(file);
+          queryClient.invalidateQueries({ queryKey: ["inventory"] });
+          return result;
+        }}
+        title="Import Parts"
+        description="Upload a CSV file with part data. Required columns: part_number, name, category (ID or name)."
+        onDownloadTemplate={downloadPartTemplate}
+      />
     </div>
   );
 }

@@ -5,9 +5,11 @@ import { notificationsApi, NotificationPreference } from "@/lib/api/notification
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Save } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Save, Mail, MessageSquare, Bell, Smartphone, Calendar, Wrench, Receipt, CreditCard, FileText, Package, Car } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 
 export default function NotificationPreferencesPage() {
@@ -20,6 +22,13 @@ export default function NotificationPreferencesPage() {
   });
 
   const [formData, setFormData] = useState<Partial<NotificationPreference>>({});
+
+  // Initialize form data when preferences load
+  useEffect(() => {
+    if (preferences) {
+      setFormData(preferences);
+    }
+  }, [preferences]);
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<NotificationPreference>) =>
@@ -90,36 +99,45 @@ export default function NotificationPreferencesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Email</label>
-                <p className="text-xs text-gray-500">Receive notifications via email</p>
+            <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+              <div className="flex items-center space-x-3">
+                <Mail className="w-5 h-5 text-gray-400" />
+                <div>
+                  <Label htmlFor="email_enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+                    Email
+                  </Label>
+                  <p className="text-xs text-gray-500">Receive notifications via email</p>
+                </div>
               </div>
-              <input
-                type="checkbox"
+              <Checkbox
+                id="email_enabled"
                 checked={mergedData.email_enabled ?? true}
-                onChange={(e) => handleChange("email_enabled", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                onCheckedChange={(checked) => handleChange("email_enabled", checked === true)}
               />
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium text-gray-700">SMS</label>
-                <p className="text-xs text-gray-500">Receive notifications via text message</p>
+            <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+              <div className="flex items-center space-x-3">
+                <MessageSquare className="w-5 h-5 text-gray-400" />
+                <div>
+                  <Label htmlFor="sms_enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+                    SMS
+                  </Label>
+                  <p className="text-xs text-gray-500">Receive notifications via text message</p>
+                </div>
               </div>
-              <input
-                type="checkbox"
+              <Checkbox
+                id="sms_enabled"
                 checked={mergedData.sms_enabled ?? false}
-                onChange={(e) => handleChange("sms_enabled", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                onCheckedChange={(checked) => handleChange("sms_enabled", checked === true)}
               />
             </div>
             {mergedData.sms_enabled && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="ml-8 p-3 rounded-lg bg-gray-50 border border-gray-200">
+                <Label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 mb-2">
                   Phone Number
-                </label>
+                </Label>
                 <Input
+                  id="phone_number"
                   type="tel"
                   value={mergedData.phone_number || ""}
                   onChange={(e) => handleChange("phone_number", e.target.value)}
@@ -127,28 +145,36 @@ export default function NotificationPreferencesPage() {
                 />
               </div>
             )}
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Push Notifications</label>
-                <p className="text-xs text-gray-500">Receive push notifications on your device</p>
+            <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+              <div className="flex items-center space-x-3">
+                <Smartphone className="w-5 h-5 text-gray-400" />
+                <div>
+                  <Label htmlFor="push_enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+                    Push Notifications
+                  </Label>
+                  <p className="text-xs text-gray-500">Receive push notifications on your device</p>
+                </div>
               </div>
-              <input
-                type="checkbox"
+              <Checkbox
+                id="push_enabled"
                 checked={mergedData.push_enabled ?? true}
-                onChange={(e) => handleChange("push_enabled", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                onCheckedChange={(checked) => handleChange("push_enabled", checked === true)}
               />
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium text-gray-700">In-App</label>
-                <p className="text-xs text-gray-500">Show notifications in the application</p>
+            <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+              <div className="flex items-center space-x-3">
+                <Bell className="w-5 h-5 text-gray-400" />
+                <div>
+                  <Label htmlFor="in_app_enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+                    In-App
+                  </Label>
+                  <p className="text-xs text-gray-500">Show notifications in the application</p>
+                </div>
               </div>
-              <input
-                type="checkbox"
+              <Checkbox
+                id="in_app_enabled"
                 checked={mergedData.in_app_enabled ?? true}
-                onChange={(e) => handleChange("in_app_enabled", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                onCheckedChange={(checked) => handleChange("in_app_enabled", checked === true)}
               />
             </div>
           </CardContent>
@@ -162,78 +188,41 @@ export default function NotificationPreferencesPage() {
               Choose which types of notifications you want to receive
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Appointments</label>
-              <input
-                type="checkbox"
-                checked={mergedData.appointment_notifications ?? true}
-                onChange={(e) => handleChange("appointment_notifications", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Work Orders</label>
-              <input
-                type="checkbox"
-                checked={mergedData.work_order_notifications ?? true}
-                onChange={(e) => handleChange("work_order_notifications", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Invoices</label>
-              <input
-                type="checkbox"
-                checked={mergedData.invoice_notifications ?? true}
-                onChange={(e) => handleChange("invoice_notifications", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Payments</label>
-              <input
-                type="checkbox"
-                checked={mergedData.payment_notifications ?? true}
-                onChange={(e) => handleChange("payment_notifications", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Inspections</label>
-              <input
-                type="checkbox"
-                checked={mergedData.inspection_notifications ?? true}
-                onChange={(e) => handleChange("inspection_notifications", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Inventory</label>
-              <input
-                type="checkbox"
-                checked={mergedData.inventory_notifications ?? true}
-                onChange={(e) => handleChange("inventory_notifications", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Vehicles</label>
-              <input
-                type="checkbox"
-                checked={mergedData.vehicle_notifications ?? true}
-                onChange={(e) => handleChange("vehicle_notifications", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">System</label>
-              <input
-                type="checkbox"
-                checked={mergedData.system_notifications ?? true}
-                onChange={(e) => handleChange("system_notifications", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
+          <CardContent className="space-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                { key: "appointment_notifications", label: "Appointments", icon: Calendar },
+                { key: "work_order_notifications", label: "Work Orders", icon: Wrench },
+                { key: "invoice_notifications", label: "Invoices", icon: Receipt },
+                { key: "payment_notifications", label: "Payments", icon: CreditCard },
+                { key: "inspection_notifications", label: "Inspections", icon: FileText },
+                { key: "inventory_notifications", label: "Inventory", icon: Package },
+                { key: "vehicle_notifications", label: "Vehicles", icon: Car },
+                { key: "system_notifications", label: "System", icon: Bell },
+              ].map(({ key, label, icon: Icon }) => (
+                <div
+                  key={key}
+                  className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <Icon className="w-4 h-4 text-gray-400" />
+                    <Label
+                      htmlFor={key}
+                      className="text-sm font-medium text-gray-900 cursor-pointer"
+                    >
+                      {label}
+                    </Label>
+                  </div>
+                  <Checkbox
+                    id={key}
+                    checked={!!(mergedData[key as keyof NotificationPreference] ?? true)}
+                    onCheckedChange={(checked) => {
+                      const value = checked === true;
+                      handleChange(key as keyof NotificationPreference, value);
+                    }}
+                  />
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -247,13 +236,14 @@ export default function NotificationPreferencesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">Enable Quiet Hours</label>
-              <input
-                type="checkbox"
+            <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+              <Label htmlFor="quiet_hours_enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+                Enable Quiet Hours
+              </Label>
+              <Checkbox
+                id="quiet_hours_enabled"
                 checked={mergedData.quiet_hours_enabled ?? false}
-                onChange={(e) => handleChange("quiet_hours_enabled", e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                onCheckedChange={(checked) => handleChange("quiet_hours_enabled", checked === true)}
               />
             </div>
             {mergedData.quiet_hours_enabled && (

@@ -2,7 +2,8 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.db.models import Q, Sum, Count, F
 from django_filters.rest_framework import DjangoFilterBackend
@@ -51,7 +52,8 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     ]
     ordering_fields = [
         'created_at', 'estimated_completion', 'priority', 'status',
-        'estimated_total', 'actual_total'
+        'estimated_total', 'actual_total', 'work_order_number',
+        'customer__user__last_name', 'customer__user__first_name'
     ]
     ordering = ['-created_at']
     
@@ -60,12 +62,23 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         # Check if user wants to see all branches (for admins) or just active branch
         show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
-        return filter_queryset_for_user_branches(
+        queryset = filter_queryset_for_user_branches(
             queryset, 
             self.request.user, 
             request=self.request, 
             use_active_branch=not show_all
         )
+        
+        # Date range filtering for work orders
+        if self.action == 'list':
+            date_from = self.request.query_params.get('created_at__gte') or self.request.query_params.get('date_from')
+            date_to = self.request.query_params.get('created_at__lte') or self.request.query_params.get('date_to')
+            if date_from:
+                queryset = queryset.filter(created_at__gte=date_from)
+            if date_to:
+                queryset = queryset.filter(created_at__lte=date_to)
+        
+        return queryset
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -155,11 +168,36 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
                 work_order.approval_requested_at = timezone.now()
                 work_order.transition_to('awaiting_approval', user=request.user)
             else:
-                work_order.transition_to('approved', user=request.user)
-        except ValidationError as e:
+                # Auto-approve if approval not required
+                work_order.approved_by_customer = True
+                work_order.approved_at = timezone.now()
+                work_order.save()
+                # Try to transition to in_progress if technician is assigned
+                # If no technician, keep in diagnosis status (approved but waiting for technician)
+                if work_order.primary_technician or work_order.assigned_technicians.exists():
+                    work_order.transition_to('in_progress', user=request.user)
+                # If no technician assigned, work order stays in 'diagnosis' status
+                # but is marked as approved, so it can be transitioned to in_progress
+                # once a technician is assigned
+        except (ValidationError, DRFValidationError) as e:
+            # Handle both Django and DRF ValidationErrors
+            error_message = str(e)
+            if hasattr(e, 'message_dict'):
+                # Django ValidationError with message_dict
+                error_message = '; '.join([f"{k}: {', '.join(v)}" for k, v in e.message_dict.items()])
+            elif hasattr(e, 'messages'):
+                # Django ValidationError with messages list
+                error_message = '; '.join(e.messages)
             return Response(
-                {'error': str(e)},
+                {'error': error_message},
                 status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            # Catch any other unexpected errors and return 500 with error details
+            import traceback
+            return Response(
+                {'error': f'An error occurred: {str(e)}', 'detail': traceback.format_exc()},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
         serializer = self.get_serializer(work_order)

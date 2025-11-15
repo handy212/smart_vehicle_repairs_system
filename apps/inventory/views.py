@@ -370,6 +370,161 @@ class PartViewSet(viewsets.ModelViewSet):
             'total_reserved': part.quantity_reserved,
             'available': part.available_quantity
         })
+    
+    @action(detail=False, methods=['post'])
+    def import_csv(self, request):
+        """Import parts from CSV file"""
+        import csv
+        from django.db import transaction
+        from apps.accounts.admin_views import log_audit
+        
+        if 'file' not in request.FILES:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        csv_file = request.FILES['file']
+        filename = csv_file.name
+        
+        try:
+            imported_count = 0
+            skipped_count = 0
+            errors = []
+            
+            # Read CSV file
+            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            reader = csv.DictReader(decoded_file)
+            
+            # Required headers
+            required_headers = ['part_number', 'name']
+            
+            # Check if required headers exist
+            if not all(header in reader.fieldnames for header in required_headers):
+                return Response({
+                    'error': f'CSV file must contain these columns: {", ".join(required_headers)}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Process each row
+            for row_num, row in enumerate(reader, start=2):
+                try:
+                    part_number = row.get('part_number', '').strip()
+                    name = row.get('name', '').strip()
+                    
+                    # Validate required fields
+                    if not part_number or not name:
+                        errors.append(f"Row {row_num}: Missing part_number or name")
+                        skipped_count += 1
+                        continue
+                    
+                    # Get or create category
+                    category = None
+                    if row.get('category'):
+                        category_name = row.get('category', '').strip()
+                        category, _ = PartCategory.objects.get_or_create(
+                            name=category_name,
+                            defaults={'created_by': request.user, 'is_active': True}
+                        )
+                    
+                    # Parse numeric fields
+                    cost_price = None
+                    if row.get('cost_price'):
+                        try:
+                            cost_price = Decimal(row.get('cost_price', '0'))
+                        except:
+                            pass
+                    
+                    selling_price = None
+                    if row.get('selling_price'):
+                        try:
+                            selling_price = Decimal(row.get('selling_price', '0'))
+                        except:
+                            pass
+                    
+                    quantity_in_stock = int(row.get('quantity_in_stock', 0)) if row.get('quantity_in_stock') else 0
+                    minimum_stock = int(row.get('minimum_stock', 0)) if row.get('minimum_stock') else 0
+                    reorder_point = int(row.get('reorder_point', 0)) if row.get('reorder_point') else 0
+                    reorder_quantity = int(row.get('reorder_quantity', 0)) if row.get('reorder_quantity') else 0
+                    
+                    # Parse boolean fields
+                    is_taxable = row.get('is_taxable', 'false').lower() == 'true'
+                    is_core = row.get('is_core', 'false').lower() == 'true'
+                    is_active = row.get('is_active', 'true').lower() != 'false'
+                    
+                    core_charge = None
+                    if row.get('core_charge'):
+                        try:
+                            core_charge = Decimal(row.get('core_charge', '0'))
+                        except:
+                            pass
+                    
+                    # Create or update part
+                    with transaction.atomic():
+                        part, created = Part.objects.update_or_create(
+                            part_number=part_number,
+                            defaults={
+                                'name': name,
+                                'description': row.get('description', '').strip() or None,
+                                'category': category,
+                                'manufacturer': row.get('manufacturer', '').strip() or None,
+                                'manufacturer_part_number': row.get('manufacturer_part_number', '').strip() or None,
+                                'cost_price': cost_price,
+                                'selling_price': selling_price,
+                                'quantity_in_stock': quantity_in_stock,
+                                'minimum_stock': minimum_stock,
+                                'reorder_point': reorder_point,
+                                'reorder_quantity': reorder_quantity,
+                                'bin_location': row.get('bin_location', '').strip() or None,
+                                'is_taxable': is_taxable,
+                                'is_core': is_core,
+                                'core_charge': core_charge,
+                                'unit_of_measure': row.get('unit_of_measure', 'each').strip() or 'each',
+                                'is_active': is_active,
+                                'created_by': request.user if created else None,
+                            }
+                        )
+                        
+                        if created:
+                            imported_count += 1
+                        else:
+                            skipped_count += 1
+                            
+                except Exception as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    skipped_count += 1
+            
+            # Log import to audit log
+            log_audit(
+                user=request.user,
+                action='import',
+                model_name='Part',
+                object_repr=f'CSV Import: {filename}',
+                changes={
+                    'imported': imported_count,
+                    'skipped': skipped_count,
+                    'total_errors': len(errors),
+                    'filename': filename,
+                },
+                request=request
+            )
+            
+            return Response({
+                'imported': imported_count,
+                'skipped': skipped_count,
+                'errors': errors[:50]  # Limit errors to 50
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            # Log failed import
+            log_audit(
+                user=request.user,
+                action='import',
+                model_name='Part',
+                object_repr=f'CSV Import Failed: {filename}',
+                changes={
+                    'error': str(e),
+                    'filename': filename,
+                },
+                request=request
+            )
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PurchaseOrderViewSet(viewsets.ModelViewSet):

@@ -7,29 +7,41 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Car, Trash2, Download } from "lucide-react";
+import { Plus, Search, Car, Trash2, Download, Upload } from "lucide-react";
+import { ImportDialog } from "@/components/ui/import-dialog";
+import { downloadVehicleTemplate } from "@/lib/utils/import-templates";
+import { exportVehiclesForImport } from "@/lib/utils/export-templates";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
+import { useDebounce } from "@/lib/hooks/useDebounce";
 import { exportToCSV } from "@/lib/utils/export";
+import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
+import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 export default function VehiclesPage() {
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500); // Debounce search by 500ms
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["vehicles", page, search, statusFilter],
+    queryKey: ["vehicles", page, debouncedSearch, statusFilter],
     queryFn: () =>
       vehiclesApi.list({
         page,
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
       }),
   });
+
+  const vehicles = data?.results || [];
+  const bulkSelection = useBulkSelection(vehicles);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => vehiclesApi.delete(id),
@@ -49,6 +61,30 @@ export default function VehiclesPage() {
   const handleDelete = (vehicle: any) => {
     if (confirm(`Are you sure you want to delete vehicle "${vehicle.make} ${vehicle.model} ${vehicle.year}" (${vehicle.vin})? This action cannot be undone.`)) {
       deleteMutation.mutate(vehicle.id);
+    }
+  };
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await Promise.all(ids.map((id) => vehiclesApi.delete(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+      bulkSelection.clearSelection();
+      toast({ title: "Success", description: `${bulkSelection.selectedCount} vehicles deleted successfully` });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to delete vehicles",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleBulkDelete = () => {
+    if (confirm(`Are you sure you want to delete ${bulkSelection.selectedCount} vehicle(s)? This action cannot be undone.`)) {
+      bulkDeleteMutation.mutate(bulkSelection.selectedIds);
     }
   };
 
@@ -80,10 +116,20 @@ export default function VehiclesPage() {
     toast({ title: "Success", description: "Vehicles exported successfully" });
   };
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
+            <div className="h-5 w-64 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <TableSkeleton rows={8} columns={8} />
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -119,10 +165,29 @@ export default function VehiclesPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
+          <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+            <Upload className="w-4 h-4 mr-2" />
+            Import CSV
           </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                if (data?.results) {
+                  exportVehiclesForImport(data.results);
+                }
+              }} 
+              disabled={!data?.results || data.results.length === 0}
+              title="Export in import-compatible format"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export for Import
+            </Button>
+          </div>
           <Link href="/vehicles/new">
             <Button>
               <Plus className="w-4 h-4 mr-2" />
@@ -135,45 +200,54 @@ export default function VehiclesPage() {
       {/* Search and Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+            
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
               <Input
                 type="text"
                 placeholder="Search by VIN, make, model, or license plate..."
                 value={search}
                 onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
+                  setSearch(e.target.value)
+                  setPage(1)
                 }}
                 className="pl-10"
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <Select
-                  id="status-filter"
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setPage(1);
-                  }}
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="active">Active</option>
-                  <option value="in_service">In Service</option>
-                  <option value="sold">Sold</option>
-                  <option value="totaled">Totaled</option>
-                  <option value="inactive">Inactive</option>
-                </Select>
-              </div>
+
+            <div>
+              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <Select
+                id="status-filter"
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value)
+                  setPage(1)
+                }}
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="in_service">In Service</option>
+                <option value="sold">Sold</option>
+                <option value="totaled">Totaled</option>
+                <option value="inactive">Inactive</option>
+              </Select>
             </div>
+
           </div>
         </CardContent>
       </Card>
+
+
+      {/* Bulk Action Toolbar */}
+      <BulkActionToolbar
+        selectedCount={bulkSelection.selectedCount}
+        onClearSelection={bulkSelection.clearSelection}
+        onBulkDelete={handleBulkDelete}
+      />
 
       {/* Vehicles Table */}
       <Card>
@@ -183,11 +257,24 @@ export default function VehiclesPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {data?.results && data.results.length > 0 ? (
+          {isLoading ? (
+            <TableSkeleton rows={8} columns={8} />
+          ) : data?.results && data.results.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>
+                      <input
+                        type="checkbox"
+                        checked={bulkSelection.isAllSelected}
+                        ref={(input) => {
+                          if (input) input.indeterminate = bulkSelection.isIndeterminate;
+                        }}
+                        onChange={bulkSelection.toggleSelectAll}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </TableHead>
                     <TableHead>VIN</TableHead>
                     <TableHead>Make/Model</TableHead>
                     <TableHead>Year</TableHead>
@@ -199,7 +286,15 @@ export default function VehiclesPage() {
                 </TableHeader>
                 <TableBody>
                   {data.results.map((vehicle) => (
-                    <TableRow key={vehicle.id}>
+                    <TableRow key={vehicle.id} className="transition-colors duration-150 hover:bg-gray-50">
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={bulkSelection.isSelected(vehicle.id)}
+                          onChange={() => bulkSelection.toggleSelection(vehicle.id)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-sm">
                         {vehicle.vin || "-"}
                       </TableCell>
@@ -286,6 +381,20 @@ export default function VehiclesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Import Dialog */}
+      <ImportDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={async (file) => {
+          const result = await vehiclesApi.import(file);
+          queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+          return result;
+        }}
+        title="Import Vehicles"
+        description="Upload a CSV file with vehicle data. Required columns: vin, make, model, year, owner (customer ID or email)."
+        onDownloadTemplate={downloadVehicleTemplate}
+      />
     </div>
   );
 }

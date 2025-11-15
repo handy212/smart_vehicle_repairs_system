@@ -12,6 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model"""
     
     full_name = serializers.CharField(source='get_full_name', read_only=True)
+    customer_profile = serializers.SerializerMethodField()
     
     class Meta:
         model = User
@@ -20,12 +21,22 @@ class UserSerializer(serializers.ModelSerializer):
             'phone', 'role', 'profile_picture', 'date_of_birth',
             'address', 'city', 'state', 'zip_code', 'country',
             'email_notifications', 'sms_notifications',
-            'is_active', 'created_at', 'updated_at'
+            'is_active', 'created_at', 'updated_at', 'customer_profile'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
         extra_kwargs = {
             'password': {'write_only': True}
         }
+    
+    def get_customer_profile(self, obj):
+        """Include customer profile if user is a customer"""
+        if hasattr(obj, 'customer_profile'):
+            return {
+                'id': obj.customer_profile.id,
+                'customer_type': obj.customer_profile.customer_type,
+                'customer_number': getattr(obj.customer_profile, 'customer_number', None),
+            }
+        return None
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

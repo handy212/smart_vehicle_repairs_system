@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -13,6 +13,11 @@ export default function DashboardLayoutWrapper({
 }) {
   const router = useRouter();
   const { user, setUser, isAuthenticated } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -28,17 +33,31 @@ export default function DashboardLayoutWrapper({
         try {
           const currentUser = await authApi.getCurrentUser();
           setUser(currentUser);
+          
+          // Redirect customers to portal
+          if (currentUser.role === "customer") {
+            router.push("/portal");
+            return;
+          }
         } catch (error) {
           // Token invalid, redirect to login
           router.push("/login");
         }
+      } else if (user) {
+        // Check role if user is already loaded
+        if (user.role === "customer") {
+          router.push("/portal");
+          return;
+        }
       }
     };
 
-    checkAuth();
-  }, [user, setUser, router]);
+    if (mounted) {
+      checkAuth();
+    }
+  }, [user, setUser, router, mounted]);
 
-  if (!isAuthenticated) {
+  if (!mounted || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -47,6 +66,11 @@ export default function DashboardLayoutWrapper({
         </div>
       </div>
     );
+  }
+
+  // Don't render dashboard if user is a customer (will be redirected)
+  if (user?.role === "customer") {
+    return null;
   }
 
   return <DashboardLayout>{children}</DashboardLayout>;

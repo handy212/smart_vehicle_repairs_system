@@ -37,7 +37,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
         'customer_number', 'company_name', 'user__first_name',
         'user__last_name', 'user__email', 'user__phone', 'tags'
     ]
-    ordering_fields = ['customer_number', 'customer_since', 'current_balance', 'loyalty_points']
+    ordering_fields = [
+        'customer_number', 'customer_since', 'current_balance', 'loyalty_points',
+        'user__last_name', 'user__first_name', 'user__email', 'customer_type', 'status',
+        'created_at', 'company_name'
+    ]
     ordering = ['-created_at']
     
     def get_queryset(self):
@@ -49,6 +53,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
             status_param = self.request.query_params.get('status')
             if not status_param:
                 queryset = queryset.filter(status='active')
+            
+            # Date range filtering
+            date_from = self.request.query_params.get('created_at__gte') or self.request.query_params.get('date_from')
+            date_to = self.request.query_params.get('created_at__lte') or self.request.query_params.get('date_to')
+            if date_from:
+                queryset = queryset.filter(created_at__gte=date_from)
+            if date_to:
+                queryset = queryset.filter(created_at__lte=date_to)
         
         return queryset
     
@@ -90,6 +102,121 @@ class CustomerViewSet(viewsets.ModelViewSet):
             'work_orders': [],
             'message': 'Service history will be available when work orders are implemented'
         })
+    
+    @action(detail=False, methods=['post'])
+    def import_csv(self, request):
+        """Import customers from CSV file"""
+        import csv
+        from django.contrib.auth import get_user_model
+        from django.db import transaction
+        from apps.accounts.admin_views import log_audit
+        
+        User = get_user_model()
+        
+        if 'file' not in request.FILES:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        csv_file = request.FILES['file']
+        filename = csv_file.name
+        
+        try:
+            imported_count = 0
+            skipped_count = 0
+            errors = []
+            
+            # Read CSV file
+            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            reader = csv.DictReader(decoded_file)
+            
+            # Required headers
+            required_headers = ['first_name', 'last_name', 'email']
+            
+            # Check if required headers exist
+            if not all(header in reader.fieldnames for header in required_headers):
+                return Response({
+                    'error': f'CSV file must contain these columns: {", ".join(required_headers)}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Process each row
+            for row_num, row in enumerate(reader, start=2):
+                try:
+                    first_name = row.get('first_name', '').strip()
+                    last_name = row.get('last_name', '').strip()
+                    email = row.get('email', '').strip().lower()
+                    phone = row.get('phone', '').strip()
+                    
+                    # Validate required fields
+                    if not first_name or not last_name or not email:
+                        errors.append(f"Row {row_num}: Missing required fields")
+                        skipped_count += 1
+                        continue
+                    
+                    # Check if user with this email already exists
+                    if User.objects.filter(email=email).exists():
+                        errors.append(f"Row {row_num}: Email {email} already exists")
+                        skipped_count += 1
+                        continue
+                    
+                    # Create user and customer in a transaction
+                    with transaction.atomic():
+                        username = email
+                        user = User.objects.create_user(
+                            username=username,
+                            email=email,
+                            first_name=first_name,
+                            last_name=last_name,
+                            phone=phone or '',
+                            role='customer'
+                        )
+                        
+                        Customer.objects.create(
+                            user=user,
+                            company_name=row.get('company_name', '').strip() or None,
+                            customer_type=row.get('customer_type', 'individual').strip() or 'individual',
+                            status=row.get('status', 'active').strip() or 'active',
+                        )
+                        
+                        imported_count += 1
+                        
+                except Exception as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    skipped_count += 1
+            
+            # Log import to audit log
+            log_audit(
+                user=request.user,
+                action='import',
+                model_name='Customer',
+                object_repr=f'CSV Import: {filename}',
+                changes={
+                    'imported': imported_count,
+                    'skipped': skipped_count,
+                    'total_errors': len(errors),
+                    'filename': filename,
+                },
+                request=request
+            )
+            
+            return Response({
+                'imported': imported_count,
+                'skipped': skipped_count,
+                'errors': errors[:50]  # Limit errors to 50
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            # Log failed import
+            log_audit(
+                user=request.user,
+                action='import',
+                model_name='Customer',
+                object_repr=f'CSV Import Failed: {filename}',
+                changes={
+                    'error': str(e),
+                    'filename': filename,
+                },
+                request=request
+            )
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=True, methods=['get'])
     def stats(self, request, pk=None):

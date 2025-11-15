@@ -21,7 +21,7 @@ const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="fixed inset-0 bg-black/50"
+        className="fixed inset-0 bg-black/50 dark:bg-black/70"
         onClick={() => onOpenChange(false)}
       />
       <div className="relative z-50">{children}</div>
@@ -35,7 +35,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
       <div
         ref={ref}
         className={cn(
-          "relative bg-white rounded-lg shadow-lg max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto",
+          "relative bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-lg w-full mx-4 border border-gray-200 dark:border-gray-800",
           className
         )}
         {...props}
@@ -52,7 +52,7 @@ const DialogHeader = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("flex flex-col space-y-1.5 text-center sm:text-left p-6 pb-4", className)}
+    className={cn("flex flex-col space-y-1.5 text-left p-6", className)}
     {...props}
   />
 );
@@ -63,7 +63,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h2
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+    className={cn("text-lg font-semibold leading-none tracking-tight text-gray-900 dark:text-gray-100", className)}
     {...props}
   />
 ));
@@ -75,7 +75,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-gray-500", className)}
+    className={cn("text-sm text-gray-500 dark:text-gray-400", className)}
     {...props}
   />
 ));

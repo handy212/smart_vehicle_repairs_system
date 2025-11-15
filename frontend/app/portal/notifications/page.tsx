@@ -1,0 +1,345 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { notificationsApi, Notification } from "@/lib/api/notifications";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Bell, 
+  CheckCircle, 
+  Circle, 
+  Calendar,
+  Wrench,
+  Receipt,
+  CreditCard,
+  FileText,
+  Car,
+  ArrowRight,
+  Settings
+} from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { format, formatDistanceToNow } from "date-fns";
+import { useToast } from "@/lib/hooks/useToast";
+import { cn } from "@/lib/utils/cn";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Select } from "@/components/ui/select";
+
+export default function NotificationsPage() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  const { data: notificationsData, isLoading } = useQuery({
+    queryKey: ["portal", "notifications", filter, typeFilter],
+    queryFn: () =>
+      notificationsApi.list({
+        is_read: filter === "unread" ? false : undefined,
+        notification_type: typeFilter !== "all" ? typeFilter : undefined,
+      }),
+  });
+
+  const { data: unreadCountData } = useQuery({
+    queryKey: ["portal", "notifications", "unread-count"],
+    queryFn: () => notificationsApi.unreadCount(),
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  const notifications = (notificationsData?.results || notificationsData || []) as Notification[];
+  const unreadCount = unreadCountData?.count || 0;
+
+  const markAsReadMutation = useMutation({
+    mutationFn: (id: number) => notificationsApi.markAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portal", "notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["portal", "notifications", "unread-count"] });
+    },
+  });
+
+  const markAllAsReadMutation = useMutation({
+    mutationFn: () => notificationsApi.markAllAsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portal", "notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["portal", "notifications", "unread-count"] });
+      toast({
+        title: "Success",
+        description: "All notifications marked as read",
+      });
+    },
+  });
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case "appointment":
+        return Calendar;
+      case "work_order":
+        return Wrench;
+      case "invoice":
+        return Receipt;
+      case "payment":
+        return CreditCard;
+      case "vehicle":
+        return Car;
+      default:
+        return Bell;
+    }
+  };
+
+  const getNotificationLink = (notification: Notification): string | null => {
+    const data = notification.data || {};
+    if (data.appointment_id) return `/portal/appointments/${data.appointment_id}`;
+    if (data.invoice_id) return `/portal/invoices/${data.invoice_id}`;
+    if (data.estimate_id) return `/portal/estimates/${data.estimate_id}`;
+    if (data.vehicle_id) return `/portal/vehicles/${data.vehicle_id}`;
+    if (data.payment_id) return `/portal/payments`;
+    return null;
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "urgent":
+        return "danger";
+      case "high":
+        return "warning";
+      case "normal":
+        return "info";
+      case "low":
+        return "secondary";
+      default:
+        return "secondary";
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <Skeleton className="h-6 w-48 mb-4" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-3/4" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Notifications</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Stay updated with your account activity
+          </p>
+        </div>
+        {unreadCount > 0 && (
+          <div className="flex items-center space-x-4">
+            <Badge variant="warning">{unreadCount} unread</Badge>
+            <Button
+              variant="outline"
+              onClick={() => markAllAsReadMutation.mutate()}
+              disabled={markAllAsReadMutation.isPending}
+            >
+              Mark All as Read
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Total Notifications
+            </CardTitle>
+            <Bell className="h-5 w-5 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {notifications.length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Unread
+            </CardTitle>
+            <Circle className="h-5 w-5 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {unreadCount}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+              Read
+            </CardTitle>
+            <CheckCircle className="h-5 w-5 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {notifications.length - unreadCount}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-4">
+            <Select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value as "all" | "unread")}
+              className="w-48"
+            >
+              <option value="all">All Notifications</option>
+              <option value="unread">Unread Only</option>
+            </Select>
+            <Select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="w-48"
+            >
+              <option value="all">All Types</option>
+              <option value="appointment">Appointments</option>
+              <option value="invoice">Invoices</option>
+              <option value="payment">Payments</option>
+              <option value="vehicle">Vehicles</option>
+              <option value="work_order">Work Orders</option>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notifications List */}
+      {notifications.length > 0 ? (
+        <div className="space-y-4">
+          {notifications.map((notification) => {
+            const Icon = getNotificationIcon(notification.notification_type);
+            const link = getNotificationLink(notification);
+            const isRead = notification.is_read;
+
+            return (
+              <Card
+                key={notification.id}
+                className={cn(
+                  "transition-all hover:shadow-md",
+                  !isRead && "border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-900/10"
+                )}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-start space-x-4">
+                    <div
+                      className={cn(
+                        "p-3 rounded-lg",
+                        !isRead
+                          ? "bg-blue-100 dark:bg-blue-900/30"
+                          : "bg-gray-100 dark:bg-gray-800"
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "w-5 h-5",
+                          !isRead
+                            ? "text-blue-600 dark:text-blue-400"
+                            : "text-gray-600 dark:text-gray-400"
+                        )}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h3
+                              className={cn(
+                                "font-semibold text-gray-900 dark:text-gray-100",
+                                !isRead && "font-bold"
+                              )}
+                            >
+                              {notification.title}
+                            </h3>
+                            {!isRead && (
+                              <Circle className="w-2 h-2 fill-blue-600 text-blue-600" />
+                            )}
+                            {notification.priority && notification.priority !== "normal" && (
+                              <Badge variant={getPriorityColor(notification.priority) as any}>
+                                {notification.priority}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                            {notification.message}
+                          </p>
+                          <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
+                            <span>
+                              {formatDistanceToNow(new Date(notification.created_at), {
+                                addSuffix: true,
+                              })}
+                            </span>
+                            <span className="capitalize">{notification.notification_type}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 ml-4">
+                          {!isRead && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => markAsReadMutation.mutate(notification.id)}
+                              disabled={markAsReadMutation.isPending}
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {link && (
+                            <Link href={link}>
+                              <Button variant="outline" size="sm">
+                                View <ArrowRight className="w-4 h-4 ml-1" />
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400 mb-2">No notifications found</p>
+            <p className="text-sm text-gray-500 dark:text-gray-500">
+              {filter === "unread"
+                ? "You're all caught up! No unread notifications."
+                : "You don't have any notifications yet."}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+

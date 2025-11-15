@@ -90,6 +90,8 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         # Check if date is in the past
         from datetime import datetime
         appointment_datetime = datetime.combine(appointment_date, appointment_time)
+        # Make the datetime timezone-aware for comparison
+        appointment_datetime = timezone.make_aware(appointment_datetime)
         if appointment_datetime < timezone.now():
             raise serializers.ValidationError({
                 'appointment_date': 'Cannot schedule appointments in the past'

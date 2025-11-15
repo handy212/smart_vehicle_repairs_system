@@ -135,6 +135,38 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
             'top_users': list(by_user),
             'top_models': list(by_model),
         })
+    
+    @action(detail=False, methods=['get'])
+    def import_history(self, request):
+        """Get import history (filtered audit logs for import actions)"""
+        logs = self.get_queryset().filter(action='import')
+        
+        # Filter by model if provided
+        model_name = request.query_params.get('model_name')
+        if model_name:
+            logs = logs.filter(model_name=model_name)
+        
+        # Filter by date range if provided
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        if date_from:
+            logs = logs.filter(timestamp__gte=date_from)
+        if date_to:
+            logs = logs.filter(timestamp__lte=date_to)
+        
+        # Filter by user if provided
+        user_id = request.query_params.get('user')
+        if user_id:
+            logs = logs.filter(user_id=user_id)
+        
+        # Paginate
+        page = self.paginate_queryset(logs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(logs, many=True)
+        return Response(serializer.data)
 
 
 class SystemBackupViewSet(viewsets.ModelViewSet):

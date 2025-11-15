@@ -276,6 +276,127 @@ class VehicleViewSet(viewsets.ModelViewSet):
         response_data['full_data'] = data
         
         return Response(response_data)
+    
+    @action(detail=False, methods=['post'])
+    def import_csv(self, request):
+        """Import vehicles from CSV file"""
+        import csv
+        from django.db import transaction
+        from apps.accounts.admin_views import log_audit
+        from apps.customers.models import Customer
+        
+        if 'file' not in request.FILES:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        csv_file = request.FILES['file']
+        filename = csv_file.name
+        
+        try:
+            imported_count = 0
+            skipped_count = 0
+            errors = []
+            
+            # Read CSV file
+            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            reader = csv.DictReader(decoded_file)
+            
+            # Required headers
+            required_headers = ['vin', 'make', 'model', 'year', 'owner']
+            
+            # Check if required headers exist
+            if not all(header in reader.fieldnames for header in required_headers):
+                return Response({
+                    'error': f'CSV file must contain these columns: {", ".join(required_headers)}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Process each row
+            for row_num, row in enumerate(reader, start=2):
+                try:
+                    vin = row.get('vin', '').strip().upper()
+                    make = row.get('make', '').strip()
+                    model = row.get('model', '').strip()
+                    year = row.get('year', '').strip()
+                    owner = row.get('owner', '').strip()
+                    
+                    # Validate required fields
+                    if not vin or not make or not model or not year or not owner:
+                        errors.append(f"Row {row_num}: Missing required fields")
+                        skipped_count += 1
+                        continue
+                    
+                    # Check if VIN already exists
+                    if Vehicle.objects.filter(vin=vin).exists():
+                        errors.append(f"Row {row_num}: VIN {vin} already exists")
+                        skipped_count += 1
+                        continue
+                    
+                    # Find owner (customer) by email or ID
+                    try:
+                        if '@' in owner:
+                            customer = Customer.objects.get(user__email=owner.lower())
+                        else:
+                            customer = Customer.objects.get(id=int(owner))
+                    except (Customer.DoesNotExist, ValueError):
+                        errors.append(f"Row {row_num}: Owner '{owner}' not found")
+                        skipped_count += 1
+                        continue
+                    
+                    # Create vehicle
+                    with transaction.atomic():
+                        Vehicle.objects.create(
+                            vin=vin,
+                            make=make,
+                            model=model,
+                            year=int(year),
+                            owner=customer,
+                            license_plate=row.get('license_plate', '').strip() or None,
+                            exterior_color=row.get('exterior_color', '').strip() or None,
+                            current_mileage=int(row.get('current_mileage', 0)) if row.get('current_mileage') else None,
+                            engine_type=row.get('engine_type', '').strip() or None,
+                            transmission_type=row.get('transmission_type', '').strip() or None,
+                            status=row.get('status', 'active').strip() or 'active',
+                        )
+                        imported_count += 1
+                        
+                except Exception as e:
+                    errors.append(f"Row {row_num}: {str(e)}")
+                    skipped_count += 1
+            
+            # Log import to audit log
+            log_audit(
+                user=request.user,
+                action='import',
+                model_name='Vehicle',
+                object_repr=f'CSV Import: {filename}',
+                changes={
+                    'imported': imported_count,
+                    'skipped': skipped_count,
+                    'total_errors': len(errors),
+                    'filename': filename,
+                },
+                request=request
+            )
+            
+            return Response({
+                'imported': imported_count,
+                'skipped': skipped_count,
+                'errors': errors[:50]  # Limit errors to 50
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            # Log failed import
+            log_audit(
+                user=request.user,
+                action='import',
+                model_name='Vehicle',
+                object_repr=f'CSV Import Failed: {filename}',
+                changes={
+                    'error': str(e),
+                    'filename': filename,
+                },
+                request=request
+            )
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class VehicleMileageHistoryViewSet(viewsets.ModelViewSet):

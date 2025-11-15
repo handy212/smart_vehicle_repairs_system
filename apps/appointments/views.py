@@ -70,7 +70,11 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         'customer__user__last_name', 'customer__company_name',
         'vehicle__vin', 'vehicle__license_plate', 'customer_concerns'
     ]
-    ordering_fields = ['appointment_date', 'appointment_time', 'priority', 'created_at']
+    ordering_fields = [
+        'appointment_date', 'appointment_time', 'priority', 'created_at',
+        'appointment_number', 'customer__user__last_name', 'customer__user__first_name',
+        'service_type', 'status'
+    ]
     ordering = ['appointment_date', 'appointment_time']
     
     def get_queryset(self):
@@ -79,14 +83,35 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             'customer', 'customer__user', 'vehicle', 'service_bay',
             'confirmed_by', 'created_by', 'branch'
         ).prefetch_related('assigned_technicians').all()
-        # Check if user wants to see all branches (for admins) or just active branch
-        show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
-        return filter_queryset_for_user_branches(
-            queryset, 
-            self.request.user, 
-            request=self.request, 
-            use_active_branch=not show_all
-        )
+        
+        # For customers, filter by their customer profile
+        if hasattr(self.request.user, 'role') and self.request.user.role == 'customer':
+            from apps.customers.models import Customer
+            try:
+                customer = Customer.objects.get(user=self.request.user)
+                queryset = queryset.filter(customer=customer)
+            except Customer.DoesNotExist:
+                queryset = queryset.none()
+        else:
+            # For staff, use branch filtering
+            show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
+            queryset = filter_queryset_for_user_branches(
+                queryset, 
+                self.request.user, 
+                request=self.request, 
+                use_active_branch=not show_all
+            )
+        
+        # Date range filtering for appointments
+        if self.action == 'list':
+            date_from = self.request.query_params.get('appointment_date__gte') or self.request.query_params.get('date_from')
+            date_to = self.request.query_params.get('appointment_date__lte') or self.request.query_params.get('date_to')
+            if date_from:
+                queryset = queryset.filter(appointment_date__gte=date_from)
+            if date_to:
+                queryset = queryset.filter(appointment_date__lte=date_to)
+        
+        return queryset
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""
@@ -104,9 +129,18 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         branch_id = request.data.get('branch') or request.data.get('branch_id')
         branch = resolve_branch(request, branch_id=branch_id)
         
+        # If no branch provided, try to get default branch (for customer portal bookings)
+        if branch is None:
+            from apps.branches.models import Branch
+            # Try to get headquarters branch first
+            branch = Branch.objects.filter(is_headquarters=True, is_active=True).first()
+            # If no headquarters, get first active branch
+            if branch is None:
+                branch = Branch.objects.filter(is_active=True).first()
+        
         if branch is None:
             from rest_framework.exceptions import ValidationError
-            raise ValidationError({'branch': 'A valid branch assignment is required.'})
+            raise ValidationError({'branch': 'A valid branch assignment is required. Please contact support.'})
         
         serializer.save(branch=branch, created_by=request.user)
     
@@ -230,15 +264,26 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         # Validate new date/time
         try:
             new_date = datetime.strptime(new_date, '%Y-%m-%d').date()
-            new_time = datetime.strptime(new_time, '%H:%M:%S').time()
+            # Accept both HH:MM and HH:MM:SS formats
+            try:
+                new_time = datetime.strptime(new_time, '%H:%M:%S').time()
+            except ValueError:
+                try:
+                    new_time = datetime.strptime(new_time, '%H:%M').time()
+                except ValueError:
+                    return Response(
+                        {'error': 'Invalid time format. Use HH:MM or HH:MM:SS'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
         except ValueError:
             return Response(
                 {'error': 'Invalid date or time format'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Check if in past
+        # Check if in past - make datetime timezone-aware for comparison
         new_datetime = datetime.combine(new_date, new_time)
+        new_datetime = timezone.make_aware(new_datetime)
         if new_datetime < timezone.now():
             return Response(
                 {'error': 'Cannot reschedule to past date/time'},

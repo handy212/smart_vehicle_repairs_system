@@ -342,6 +342,8 @@ class Appointment(models.Model):
             return False
         from datetime import datetime
         appointment_datetime = datetime.combine(self.appointment_date, self.appointment_time)
+        # Make the datetime timezone-aware for comparison
+        appointment_datetime = timezone.make_aware(appointment_datetime)
         return appointment_datetime < timezone.now()
     
     @property

@@ -17,12 +17,17 @@ interface SubNavProps {
   title: string;
   onToggle?: (collapsed: boolean) => void;
   isCollapsed?: boolean;
+  sidebarCollapsed?: boolean;
 }
 
-export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed }: SubNavProps) {
+export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed, sidebarCollapsed = false }: SubNavProps) {
   const pathname = usePathname();
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const isCollapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
+  
+  // Calculate left position based on sidebar state
+  // Sidebar: 256px (w-64) when expanded, 80px (w-20) when collapsed
+  const sidebarLeft = sidebarCollapsed ? 80 : 256;
 
   const handleToggle = () => {
     const newState = !isCollapsed;
@@ -35,14 +40,15 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed 
   return (
     <aside
       className={cn(
-        "fixed left-64 top-16 bottom-0 bg-gray-50 border-r border-gray-200 overflow-y-auto z-10 transition-all duration-300",
+        "fixed top-16 bottom-0 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto z-10 transition-all duration-300",
         isCollapsed ? "w-12" : "w-56"
       )}
+      style={{ left: `${sidebarLeft}px` }}
     >
       <div className={cn("p-4", isCollapsed && "px-2")}>
         <div className={cn("flex items-center mb-3", isCollapsed ? "justify-center" : "justify-between")}>
           {!isCollapsed && (
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               {title}
             </h2>
           )}
@@ -75,8 +81,8 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed 
                 className={cn(
                   "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
                   isActive
-                    ? "bg-blue-100 text-blue-700 font-semibold"
-                    : "text-gray-700 hover:bg-gray-100",
+                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",
                   isCollapsed && "justify-center"
                 )}
                 title={isCollapsed ? item.name : undefined}
@@ -103,14 +109,6 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Suppliers", href: "/inventory/suppliers" },
     { name: "Purchase Orders", href: "/inventory/purchase-orders" },
   ],
-  workorders: [
-    { name: "List View", href: "/workorders" },
-    { name: "Kanban Board", href: "/workorders/kanban" },
-  ],
-  appointments: [
-    { name: "List View", href: "/appointments" },
-    { name: "Calendar", href: "/appointments/calendar" },
-  ],
   billing: [
     { name: "Invoices", href: "/billing" },
     { name: "Estimates", href: "/billing/estimates" },
@@ -123,6 +121,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Backups", href: "/admin/backups" },
     { name: "Settings", href: "/admin/settings" },
     { name: "Audit Log", href: "/admin/audit-log" },
+    { name: "Import History", href: "/admin/import-history" },
   ],
 };
 
@@ -137,19 +136,6 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
     };
   }
 
-  if (pathname.startsWith("/workorders")) {
-    return {
-      items: subNavConfig.workorders,
-      title: "Work Orders",
-    };
-  }
-
-  if (pathname.startsWith("/appointments")) {
-    return {
-      items: subNavConfig.appointments,
-      title: "Appointments",
-    };
-  }
 
   if (pathname.startsWith("/billing")) {
     return {

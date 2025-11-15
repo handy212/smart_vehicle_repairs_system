@@ -1,0 +1,355 @@
+"use client";
+
+import React, { useState, useRef, useEffect } from "react";
+import { Button } from "./button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "./dialog";
+import { Label } from "./label";
+import { Upload, FileText, AlertCircle, CheckCircle, X, Download, Eye, EyeOff } from "lucide-react";
+import { useToast } from "@/lib/hooks/useToast";
+import { previewCSV, validateCSVFile, CSVPreview } from "@/lib/utils/csv-preview";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./table";
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+  errors?: string[];
+}
+
+interface ImportDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onImport: (file: File) => Promise<ImportResult>;
+  title: string;
+  description?: string;
+  accept?: string;
+  downloadTemplateUrl?: string;
+  templateFileName?: string;
+  onDownloadTemplate?: () => void;
+}
+
+export function ImportDialog({
+  isOpen,
+  onClose,
+  onImport,
+  title,
+  description = "Upload a CSV file to import data. Make sure the file matches the required format.",
+  accept = ".csv",
+  downloadTemplateUrl,
+  templateFileName = "template.csv",
+  onDownloadTemplate,
+}: ImportDialogProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const [preview, setPreview] = useState<CSVPreview | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      // Validate file
+      const validation = validateCSVFile(selectedFile);
+      if (!validation.valid) {
+        setValidationError(validation.error || "Invalid file");
+        setFile(null);
+        setPreview(null);
+        setShowPreview(false);
+        toast({
+          title: "Invalid File",
+          description: validation.error,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setValidationError(null);
+      setFile(selectedFile);
+      setResult(null);
+      setPreview(null);
+      setShowPreview(false);
+      
+      // Load preview
+      setIsLoadingPreview(true);
+      try {
+        const csvPreview = await previewCSV(selectedFile, 5);
+        setPreview(csvPreview);
+      } catch (error: any) {
+        toast({
+          title: "Preview Error",
+          description: error?.message || "Failed to preview CSV file",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingPreview(false);
+      }
+    }
+  };
+
+  const handleImport = async () => {
+    if (!file) {
+      toast({
+        title: "No File Selected",
+        description: "Please select a file to import",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsImporting(true);
+    setResult(null);
+
+    try {
+      const importResult = await onImport(file);
+      setResult(importResult);
+      
+      if (importResult.imported > 0) {
+        toast({
+          title: "Import Successful",
+          description: `Successfully imported ${importResult.imported} record(s)`,
+        });
+      }
+      
+      if (importResult.skipped > 0) {
+        toast({
+          title: "Import Completed with Warnings",
+          description: `Imported ${importResult.imported} record(s), skipped ${importResult.skipped} record(s)`,
+          variant: "warning",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Import Failed",
+        description: error?.message || "An error occurred during import",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleClose = () => {
+    setFile(null);
+    setResult(null);
+    setPreview(null);
+    setShowPreview(false);
+    setValidationError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    onClose();
+  };
+  
+  // Reset preview when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setFile(null);
+      setResult(null);
+      setPreview(null);
+      setShowPreview(false);
+      setValidationError(null);
+    }
+  }, [isOpen]);
+
+  const handleDownloadTemplate = () => {
+    if (onDownloadTemplate) {
+      onDownloadTemplate();
+    } else if (downloadTemplateUrl) {
+      window.open(downloadTemplateUrl, "_blank");
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="border-b pb-4">
+          <div className="flex items-center justify-between pr-8">
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</DialogTitle>
+            <DialogClose onOpenChange={handleClose} />
+          </div>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {description && (
+            <p className="text-sm text-gray-600">{description}</p>
+          )}
+
+          {(downloadTemplateUrl || onDownloadTemplate) && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-start gap-2 flex-1">
+                <FileText className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium text-blue-900 block">Download CSV Template</span>
+                  <span className="text-xs text-blue-700">Includes sample data and required column structure</span>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadTemplate}
+                type="button"
+                className="flex-shrink-0"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="file-upload" className="text-sm font-medium text-gray-700">Select File</Label>
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                id="file-upload"
+                type="file"
+                accept={accept}
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                type="button"
+                className="flex-1"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {file ? file.name : "Choose File"}
+              </Button>
+            </div>
+            {file && (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500">
+                  Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                </p>
+                {preview && (
+                  <div className="mt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowPreview(!showPreview)}
+                      className="w-full"
+                    >
+                      {showPreview ? (
+                        <>
+                          <EyeOff className="w-4 h-4 mr-2" />
+                          Hide Preview
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-4 h-4 mr-2" />
+                          Preview ({preview.totalRows} rows)
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+                {isLoadingPreview && (
+                  <p className="text-xs text-gray-500">Loading preview...</p>
+                )}
+              </div>
+            )}
+            {validationError && (
+              <p className="text-xs text-red-600 mt-1">{validationError}</p>
+            )}
+          </div>
+          
+          {showPreview && preview && (
+            <div className="space-y-2 border border-gray-200 dark:border-gray-700 rounded-md p-3 bg-gray-50 dark:bg-gray-900">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">CSV Preview</h4>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Showing first {preview.rows.length} of {preview.totalRows} rows
+                </span>
+              </div>
+              <div className="overflow-x-auto max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded bg-white dark:bg-gray-800">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {preview.headers.map((header, idx) => (
+                        <TableHead key={idx} className="text-xs font-semibold bg-gray-50 dark:bg-gray-800 sticky top-0">
+                          {header}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {preview.rows.map((row, rowIdx) => (
+                      <TableRow key={rowIdx}>
+                        {preview.headers.map((header, colIdx) => (
+                          <TableCell key={colIdx} className="text-xs">
+                            {row.data[header] || <span className="text-gray-400 dark:text-gray-500">-</span>}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          {result && (
+            <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                {result.imported > 0 ? (
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                )}
+                <span className="font-medium text-sm">
+                  Import Results
+                </span>
+              </div>
+              <div className="text-sm space-y-1 ml-7">
+                <p className="text-green-700">
+                  ✓ Imported: {result.imported} record(s)
+                </p>
+                {result.skipped > 0 && (
+                  <p className="text-yellow-700">
+                    ⚠ Skipped: {result.skipped} record(s)
+                  </p>
+                )}
+                {result.errors && result.errors.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-red-700 font-medium mb-1">Errors:</p>
+                    <ul className="list-disc list-inside text-xs text-red-600 space-y-1 max-h-32 overflow-y-auto">
+                      {result.errors.slice(0, 10).map((error, idx) => (
+                        <li key={idx}>{error}</li>
+                      ))}
+                      {result.errors.length > 10 && (
+                        <li className="text-gray-500 dark:text-gray-400">
+                          ... and {result.errors.length - 10} more errors
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="border-t pt-4 mt-4">
+          <Button variant="outline" onClick={handleClose} type="button" disabled={isImporting}>
+            {result ? "Close" : "Cancel"}
+          </Button>
+          {!result && (
+            <Button
+              onClick={handleImport}
+              disabled={!file || isImporting || !!validationError}
+              type="button"
+            >
+              {isImporting ? "Importing..." : "Import"}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+

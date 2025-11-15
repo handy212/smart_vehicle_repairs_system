@@ -49,8 +49,12 @@ export default function LoginPage() {
       const user = await authApi.getCurrentUser();
       setUser(user);
 
-      // Redirect to dashboard
-      router.push("/dashboard");
+      // Redirect based on user role
+      if (user.role === "customer") {
+        router.push("/portal");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err: any) {
       setError(
         err.response?.data?.detail || "Invalid email or password. Please try again."

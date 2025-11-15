@@ -8,11 +8,15 @@ from django.utils import timezone
 from django.db.models import Sum, Q, F
 from decimal import Decimal
 from datetime import timedelta
+import logging
 
 # Notification triggers
 from apps.notifications_app.triggers import notification_triggers
 
+logger = logging.getLogger(__name__)
+
 from apps.billing.models import TaxRate, Estimate, EstimateLineItem, Invoice, Payment
+from apps.billing.payment_gateways import get_payment_gateway
 from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
 from apps.billing.serializers import (
     TaxRateSerializer, TaxRateCreateSerializer,
@@ -125,7 +129,10 @@ class EstimateViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'customer', 'vehicle', 'estimate_date']
     search_fields = ['estimate_number', 'title', 'description', 'customer__first_name', 'customer__last_name']
-    ordering_fields = ['estimate_number', 'estimate_date', 'valid_until', 'total', 'created_at']
+    ordering_fields = [
+        'estimate_number', 'estimate_date', 'valid_until', 'total', 'created_at',
+        'customer__user__last_name', 'customer__user__first_name', 'status'
+    ]
     ordering = ['-created_at']
     
     def get_queryset(self):
@@ -133,12 +140,23 @@ class EstimateViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         # Check if user wants to see all branches (for admins) or just active branch
         show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
-        return filter_queryset_for_user_branches(
+        queryset = filter_queryset_for_user_branches(
             queryset, 
             self.request.user, 
             request=self.request, 
             use_active_branch=not show_all
         )
+        
+        # Date range filtering for estimates
+        if self.action == 'list':
+            date_from = self.request.query_params.get('estimate_date__gte') or self.request.query_params.get('date_from')
+            date_to = self.request.query_params.get('estimate_date__lte') or self.request.query_params.get('date_to')
+            if date_from:
+                queryset = queryset.filter(estimate_date__gte=date_from)
+            if date_to:
+                queryset = queryset.filter(estimate_date__lte=date_to)
+        
+        return queryset
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -385,7 +403,11 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'customer', 'vehicle', 'work_order', 'invoice_date', 'due_date']
     search_fields = ['invoice_number', 'description', 'customer__first_name', 'customer__last_name', 'work_order__work_order_number']
-    ordering_fields = ['invoice_number', 'invoice_date', 'due_date', 'total', 'amount_due', 'created_at']
+    ordering_fields = [
+        'invoice_number', 'invoice_date', 'due_date', 'total', 'amount_due', 'created_at',
+        'customer__user__last_name', 'customer__user__first_name', 'status',
+        'amount_paid', 'balance_due'
+    ]
     ordering = ['-created_at']
     
     def get_queryset(self):
@@ -393,12 +415,23 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         # Check if user wants to see all branches (for admins) or just active branch
         show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
-        return filter_queryset_for_user_branches(
+        queryset = filter_queryset_for_user_branches(
             queryset, 
             self.request.user, 
             request=self.request, 
             use_active_branch=not show_all
         )
+        
+        # Date range filtering for invoices
+        if self.action == 'list':
+            date_from = self.request.query_params.get('invoice_date__gte') or self.request.query_params.get('date_from')
+            date_to = self.request.query_params.get('invoice_date__lte') or self.request.query_params.get('date_to')
+            if date_from:
+                queryset = queryset.filter(invoice_date__gte=date_from)
+            if date_to:
+                queryset = queryset.filter(invoice_date__lte=date_to)
+        
+        return queryset
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -649,6 +682,33 @@ class PaymentViewSet(viewsets.ModelViewSet):
     ordering_fields = ['payment_number', 'payment_date', 'amount', 'created_at']
     ordering = ['-payment_date']
     
+    def get_queryset(self):
+        """Filter payments by customer for customer users"""
+        queryset = super().get_queryset()
+        
+        # For customers, filter by their customer profile
+        if hasattr(self.request.user, 'role') and self.request.user.role == 'customer':
+            from apps.customers.models import Customer
+            try:
+                customer = Customer.objects.get(user=self.request.user)
+                queryset = queryset.filter(customer=customer)
+            except Customer.DoesNotExist:
+                queryset = queryset.none()
+        else:
+            # For staff, use branch filtering if needed
+            from apps.branches.utils import filter_queryset_for_user_branches
+            # Filter by invoice's branch
+            invoice_ids = filter_queryset_for_user_branches(
+                Invoice.objects.all(), 
+                self.request.user, 
+                request=self.request, 
+                use_active_branch=True
+            ).values_list('id', flat=True)
+            if invoice_ids.exists():
+                queryset = queryset.filter(invoice_id__in=invoice_ids)
+        
+        return queryset
+    
     def get_serializer_class(self):
         if self.action == 'create':
             return PaymentCreateSerializer
@@ -741,4 +801,204 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 "end_date": end_date
             }
         })
+    
+    @action(detail=False, methods=['post'])
+    def create_payment_intent(self, request):
+        """
+        Create a payment intent using payment gateway (Paystack/Stripe/Square)
+        
+        POST /api/billing/payments/create_payment_intent/
+        Body: {
+            "invoice_id": 123,
+            "amount": "100.00",
+            "gateway": "paystack",  # optional, defaults to settings (paystack)
+            "currency": "GHS",  # optional, defaults to GHS for Paystack
+            "callback_url": "https://..."  # optional, for redirect-based payments
+        }
+        """
+        invoice_id = request.data.get('invoice_id')
+        amount = request.data.get('amount')
+        gateway_name = request.data.get('gateway', 'paystack')
+        currency = request.data.get('currency', 'GHS')
+        callback_url = request.data.get('callback_url')
+        
+        if not invoice_id:
+            return Response(
+                {"error": "invoice_id is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not amount:
+            return Response(
+                {"error": "amount is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            invoice = Invoice.objects.get(id=invoice_id)
+            amount_decimal = Decimal(str(amount))
+            
+            # Get payment gateway
+            gateway = get_payment_gateway(gateway_name)
+            
+            # Create payment intent
+            metadata = {
+                'invoice_id': str(invoice.id),
+                'invoice_number': invoice.invoice_number,
+                'customer_id': str(invoice.customer.id),
+                'customer_name': invoice.customer.full_name if hasattr(invoice.customer, 'full_name') else str(invoice.customer),
+            }
+            
+            # Get customer email (required for Paystack)
+            customer_email = None
+            if hasattr(invoice.customer, 'email'):
+                customer_email = invoice.customer.email
+            elif hasattr(invoice.customer, 'user') and invoice.customer.user:
+                customer_email = invoice.customer.user.email
+            
+            success, result = gateway.create_payment_intent(
+                amount=amount_decimal,
+                currency=currency,
+                metadata=metadata,
+                email=customer_email,
+                callback_url=callback_url
+            )
+            
+            if success:
+                response_data = {
+                    "success": True,
+                    "gateway": gateway_name,
+                    "payment_intent_id": result.get('payment_intent_id') or result.get('reference'),
+                    "status": result.get('status'),
+                }
+                
+                # Add gateway-specific fields
+                if gateway_name == 'paystack':
+                    response_data['authorization_url'] = result.get('authorization_url')
+                    response_data['access_code'] = result.get('access_code')
+                    response_data['reference'] = result.get('reference')
+                elif gateway_name == 'stripe':
+                    response_data['client_secret'] = result.get('client_secret')
+                
+                return Response(response_data)
+            else:
+                return Response(
+                    {"error": result},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Invoice.DoesNotExist:
+            return Response(
+                {"error": "Invoice not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['post'])
+    def confirm_payment_intent(self, request):
+        """
+        Confirm a payment intent and create payment record
+        
+        POST /api/billing/payments/confirm_payment_intent/
+        Body: {
+            "payment_intent_id": "pi_xxx" or "INV-xxx-123" (reference),
+            "invoice_id": 123,
+            "gateway": "paystack"  # optional, defaults to paystack
+        }
+        """
+        payment_intent_id = request.data.get('payment_intent_id') or request.data.get('reference')
+        invoice_id = request.data.get('invoice_id')
+        gateway_name = request.data.get('gateway', 'paystack')
+        
+        if not payment_intent_id or not invoice_id:
+            return Response(
+                {"error": "payment_intent_id (or reference) and invoice_id are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            invoice = Invoice.objects.get(id=invoice_id)
+            gateway = get_payment_gateway(gateway_name)
+            
+            # Confirm/verify payment
+            success, result = gateway.confirm_payment(payment_intent_id)
+            
+            if not success:
+                return Response(
+                    {"error": result},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Check if payment already exists
+            existing_payment = Payment.objects.filter(
+                transaction_id=payment_intent_id
+            ).first()
+            
+            if existing_payment:
+                return Response({
+                    "success": True,
+                    "message": "Payment already recorded",
+                    "payment": PaymentSerializer(existing_payment).data
+                })
+            
+            # Determine payment method based on gateway
+            payment_method_map = {
+                'paystack': 'paystack',
+                'stripe': 'credit_card',
+                'square': 'credit_card',
+            }
+            payment_method = payment_method_map.get(gateway_name, 'credit_card')
+            
+            # Get payment amount
+            payment_amount = result.get('amount') or invoice.amount_due
+            
+            # Create payment record
+            payment = Payment.objects.create(
+                invoice=invoice,
+                customer=invoice.customer,
+                amount=payment_amount,
+                payment_method=payment_method,
+                status='completed',
+                transaction_id=payment_intent_id,
+                processed_by=request.user,
+                notes=f"Payment via {gateway_name} gateway" + (f" - {result.get('channel', '')}" if result.get('channel') else ''),
+                payment_date=result.get('paid_at') if result.get('paid_at') else timezone.now()
+            )
+            
+            # Update invoice
+            invoice.amount_paid += payment.amount
+            invoice.amount_due = invoice.total - invoice.amount_paid
+            
+            if invoice.amount_due <= 0:
+                invoice.status = 'paid'
+            elif invoice.amount_paid > 0:
+                invoice.status = 'partial'
+            
+            invoice.save()
+            
+            # Send payment notification
+            try:
+                notification_triggers.payment_received(payment)
+            except Exception as e:
+                logger.error(f"Failed to send payment notification: {e}")
+            
+            return Response({
+                "success": True,
+                "message": "Payment confirmed and recorded",
+                "payment": PaymentSerializer(payment).data
+            })
+        except Invoice.DoesNotExist:
+            return Response(
+                {"error": "Invoice not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error confirming payment: {str(e)}")
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 

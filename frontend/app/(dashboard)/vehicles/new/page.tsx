@@ -15,6 +15,7 @@ import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { AxiosError } from "axios";
+import { VINDecoderButton } from "@/components/ui/vin-decoder-button";
 
 const vehicleSchema = z.object({
   vin: z.string().min(1, "VIN is required"),
@@ -50,6 +51,7 @@ export default function NewVehiclePage() {
     formState: { errors, isSubmitting },
     setValue,
     setError,
+    watch,
   } = useForm<VehicleFormData>({
     resolver: zodResolver(vehicleSchema),
     defaultValues: {
@@ -60,6 +62,23 @@ export default function NewVehiclePage() {
       year: new Date().getFullYear(),
     },
   });
+
+  const vinValue = watch("vin");
+
+  const handleVinDecode = (decodedData: {
+    year?: number;
+    make?: string;
+    model?: string;
+    trim?: string;
+    engine_type?: string;
+    engine_size?: string;
+    transmission_type?: string;
+  }) => {
+    if (decodedData.year) setValue("year", decodedData.year);
+    if (decodedData.make) setValue("make", decodedData.make);
+    if (decodedData.model) setValue("model", decodedData.model);
+    if (decodedData.engine_type) setValue("engine_type", decodedData.engine_type as any);
+  };
 
   const createMutation = useMutation({
     mutationFn: (data: VehicleFormData) => vehiclesApi.create(data),
@@ -156,15 +175,29 @@ export default function NewVehiclePage() {
                   <label htmlFor="vin" className="block text-sm font-medium text-gray-700 mb-1">
                     VIN (Vehicle Identification Number) *
                   </label>
-                  <Input
-                    id="vin"
-                    {...register("vin")}
-                    className={errors.vin ? "border-red-500" : ""}
-                    placeholder="1HGBH41JXMN109186"
-                  />
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id="vin"
+                      {...register("vin")}
+                      className={errors.vin ? "border-red-500" : ""}
+                      placeholder="1HGBH41JXMN109186"
+                      maxLength={17}
+                      onChange={(e) => {
+                        setValue("vin", e.target.value.toUpperCase());
+                      }}
+                    />
+                    <VINDecoderButton
+                      vin={vinValue || ""}
+                      onDecode={handleVinDecode}
+                      disabled={isSubmitting}
+                    />
+                  </div>
                   {errors.vin && (
                     <p className="mt-1 text-sm text-red-600">{errors.vin.message}</p>
                   )}
+                  <p className="mt-1 text-xs text-gray-500">
+                    Enter a 17-character VIN and click "Decode VIN" to auto-fill vehicle information
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">

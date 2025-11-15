@@ -13,23 +13,122 @@ import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
+import { useDebounce } from "@/lib/hooks/useDebounce";
 import { exportToCSV } from "@/lib/utils/export";
+import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
+import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 
 export default function WorkOrdersPage() {
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 500); // Debounce search by 500ms
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [newStatus, setNewStatus] = useState<string>("in_progress");
+  const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Advanced filter options
+  const filterOptions: FilterOption[] = [
+    {
+      key: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "draft", label: "Draft" },
+        { value: "pending", label: "Pending" },
+        { value: "in_progress", label: "In Progress" },
+        { value: "completed", label: "Completed" },
+        { value: "cancelled", label: "Cancelled" },
+      ],
+    },
+    {
+      key: "priority",
+      label: "Priority",
+      type: "select",
+      options: [
+        { value: "low", label: "Low" },
+        { value: "normal", label: "Normal" },
+        { value: "high", label: "High" },
+        { value: "urgent", label: "Urgent" },
+      ],
+    },
+    {
+      key: "created_at",
+      label: "Created Date",
+      type: "daterange",
+    },
+  ];
+
+  const quickFilters: QuickFilter[] = [
+    {
+      label: "Last 7 Days",
+      value: "last_7_days",
+      filters: {
+        created_at_from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        created_at_to: new Date().toISOString().split("T")[0],
+      },
+    },
+    {
+      label: "This Month",
+      value: "this_month",
+      filters: {
+        created_at_from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
+        created_at_to: new Date().toISOString().split("T")[0],
+      },
+    },
+    {
+      label: "In Progress",
+      value: "in_progress",
+      filters: {
+        status: "in_progress",
+      },
+    },
+  ];
+
+  const handleSort = (field: string) => {
+    setSortConfig((current) => {
+      if (current?.field === field) {
+        if (current.direction === "asc") {
+          return { field, direction: "desc" };
+        } else if (current.direction === "desc") {
+          return null;
+        }
+      }
+      return { field, direction: "asc" };
+    });
+    setPage(1);
+  };
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["workorders", page, search, statusFilter],
-    queryFn: () =>
-      workordersApi.list({
+    queryKey: ["workorders", page, debouncedSearch, statusFilter, startDate, endDate, advancedFilters, sortConfig],
+    queryFn: () => {
+      const ordering = sortConfig
+        ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
+        : undefined;
+      return workordersApi.list({
         page,
-        status: statusFilter || undefined,
-      }),
+        search: debouncedSearch || undefined,
+        status: advancedFilters.status || statusFilter || undefined,
+        priority: advancedFilters.priority || undefined,
+        created_at__gte: advancedFilters.created_at_from || startDate || undefined,
+        created_at__lte: advancedFilters.created_at_to || endDate || undefined,
+        ordering,
+      });
+    },
   });
+
+  const workOrders = data?.results || [];
+  const bulkSelection = useBulkSelection(workOrders);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => workordersApi.delete(id),
@@ -50,6 +149,66 @@ export default function WorkOrdersPage() {
     if (confirm(`Are you sure you want to delete work order "${workOrder.work_order_number}"? This action cannot be undone.`)) {
       deleteMutation.mutate(workOrder.id);
     }
+  };
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await Promise.all(ids.map((id) => workordersApi.delete(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workorders"] });
+      bulkSelection.clearSelection();
+      toast({ title: "Success", description: `${bulkSelection.selectedCount} work orders deleted successfully` });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to delete work orders",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkStatusUpdateMutation = useMutation({
+    mutationFn: async ({ ids, status }: { ids: number[]; status: string }) => {
+      await Promise.all(
+        ids.map((id) =>
+          workordersApi.update(id, {
+            status: status as any,
+          })
+        )
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workorders"] });
+      bulkSelection.clearSelection();
+      setShowStatusDialog(false);
+      toast({ title: "Success", description: `Status updated for ${bulkSelection.selectedCount} work orders` });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to update status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleBulkDelete = () => {
+    if (confirm(`Are you sure you want to delete ${bulkSelection.selectedCount} work order(s)? This action cannot be undone.`)) {
+      bulkDeleteMutation.mutate(bulkSelection.selectedIds);
+    }
+  };
+
+  const handleBulkStatusUpdate = () => {
+    setShowStatusDialog(true);
+  };
+
+  const confirmBulkStatusUpdate = () => {
+    bulkStatusUpdateMutation.mutate({
+      ids: bulkSelection.selectedIds,
+      status: newStatus,
+    });
   };
 
   const handleExport = () => {
@@ -79,10 +238,20 @@ export default function WorkOrdersPage() {
     toast({ title: "Success", description: "Work orders exported successfully" });
   };
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
+            <div className="h-5 w-64 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <TableSkeleton rows={8} columns={8} />
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -157,37 +326,87 @@ export default function WorkOrdersPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <Input
-                type="text"
-                placeholder="Search work orders..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Input
+                  type="text"
+                  placeholder="Search work orders..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="pl-10"
+                />
+              </div>
+              <AdvancedFilters
+                filters={filterOptions}
+                quickFilters={quickFilters}
+                activeFilters={advancedFilters}
+                onFiltersChange={(filters) => {
+                  setAdvancedFilters(filters);
                   setPage(1);
                 }}
-                className="pl-10"
+                onClear={() => {
+                  setAdvancedFilters({});
+                  setStatusFilter("");
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                title="Advanced Work Order Filters"
               />
             </div>
-            <Select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </Select>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <Select
+                  id="status-filter"
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="pending">Pending</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </Select>
+              </div>
+              <div className="md:col-span-2">
+                <DateRangePicker
+                  startDate={startDate}
+                  endDate={endDate}
+                  onStartDateChange={(date) => {
+                    setStartDate(date);
+                    setPage(1);
+                  }}
+                  onEndDateChange={(date) => {
+                    setEndDate(date);
+                    setPage(1);
+                  }}
+                  label="Created Date Range"
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Action Toolbar */}
+      <BulkActionToolbar
+        selectedCount={bulkSelection.selectedCount}
+        onClearSelection={bulkSelection.clearSelection}
+        onBulkDelete={handleBulkDelete}
+        onBulkStatusUpdate={handleBulkStatusUpdate}
+        showStatusUpdate={true}
+      />
 
       {/* Work Orders Table */}
       <Card>
@@ -197,24 +416,81 @@ export default function WorkOrdersPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {data?.results && data.results.length > 0 ? (
+          {isLoading ? (
+            <TableSkeleton rows={8} columns={9} />
+          ) : data?.results && data.results.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Work Order #</TableHead>
-                    <TableHead>Customer</TableHead>
+                    <TableHead>
+                      <input
+                        type="checkbox"
+                        checked={bulkSelection.isAllSelected}
+                        ref={(input) => {
+                          if (input) input.indeterminate = bulkSelection.isIndeterminate;
+                        }}
+                        onChange={bulkSelection.toggleSelectAll}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </TableHead>
+                    <SortableHeader
+                      field="work_order_number"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Work Order #
+                    </SortableHeader>
+                    <SortableHeader
+                      field="customer__user__last_name"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Customer
+                    </SortableHeader>
                     <TableHead>Vehicle</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Total Cost</TableHead>
-                    <TableHead>Created</TableHead>
+                    <SortableHeader
+                      field="priority"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Priority
+                    </SortableHeader>
+                    <SortableHeader
+                      field="status"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Status
+                    </SortableHeader>
+                    <SortableHeader
+                      field="estimated_total"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Total Cost
+                    </SortableHeader>
+                    <SortableHeader
+                      field="created_at"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Created
+                    </SortableHeader>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.results.map((workorder) => (
-                    <TableRow key={workorder.id}>
+                    <TableRow key={workorder.id} className="transition-colors duration-150 hover:bg-gray-50">
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={bulkSelection.isSelected(workorder.id)}
+                          onChange={() => bulkSelection.toggleSelection(workorder.id)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-sm">
                         {workorder.work_order_number || "-"}
                       </TableCell>
@@ -303,6 +579,45 @@ export default function WorkOrdersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Bulk Status Update Dialog */}
+      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Status for {bulkSelection.selectedCount} Work Order(s)</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              New Status
+            </label>
+            <Select
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value)}
+            >
+              <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowStatusDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={confirmBulkStatusUpdate}
+              disabled={bulkStatusUpdateMutation.isPending}
+            >
+              {bulkStatusUpdateMutation.isPending ? "Updating..." : "Update Status"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

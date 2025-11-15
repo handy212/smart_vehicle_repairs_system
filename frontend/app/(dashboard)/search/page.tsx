@@ -10,6 +10,7 @@ import { Search, Users, Car, Wrench, Calendar, Receipt, Package } from "lucide-r
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import { useDebounce } from "@/lib/hooks/useDebounce";
 
 const typeIcons: Record<string, React.ReactNode> = {
   customer: <Users className="w-5 h-5" />,
@@ -30,15 +31,52 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function SearchPage() {
-  const searchParams = useSearchParams();
+  const urlSearchParams = useSearchParams();
   const router = useRouter();
-  const [query, setQuery] = useState(searchParams.get("q") || "");
-  const [searchInput, setSearchInput] = useState(searchParams.get("q") || "");
+  const [query, setQuery] = useState(urlSearchParams.get("q") || "");
+  const [searchInput, setSearchInput] = useState(urlSearchParams.get("q") || "");
+  const debouncedQuery = useDebounce(query, 500); // Debounce search by 500ms
 
-  const { data: searchData, isLoading } = useQuery({
-    queryKey: ["search", query],
-    queryFn: () => searchApi.global(query),
-    enabled: query.length >= 2,
+  // Extract search type and actual query from input
+  const getSearchParams = (searchQuery: string) => {
+    if (!searchQuery || searchQuery.trim().length === 0) {
+      return { type: 'all', query: '' };
+    }
+    
+    const parts = searchQuery.split(':');
+    if (parts.length > 1 && parts[0].trim() in typeLabels) {
+      const actualQuery = parts.slice(1).join(':').trim();
+      // If query after colon is empty, search for all of that type
+      if (actualQuery.length === 0) {
+        return {
+          type: parts[0].trim(),
+          query: '*', // Special marker to search all of this type
+        };
+      }
+      return {
+        type: parts[0].trim(),
+        query: actualQuery,
+      };
+    }
+    return {
+      type: 'all',
+      query: searchQuery.trim(),
+    };
+  };
+
+  const searchParams = getSearchParams(debouncedQuery);
+  
+  const { data: searchData, isLoading, error } = useQuery({
+    queryKey: ["search", searchParams.query, searchParams.type],
+    queryFn: async () => {
+      // If query is '*', use empty string to get all results of that type
+      const actualQuery = searchParams.query === '*' ? '' : searchParams.query;
+      console.log("Search page calling API:", { actualQuery, type: searchParams.type });
+      const result = await searchApi.global(actualQuery, searchParams.type);
+      console.log("Search page received:", result);
+      return result;
+    },
+    enabled: debouncedQuery.length >= 2 || (debouncedQuery.includes(':') && debouncedQuery.split(':')[0].trim() in typeLabels),
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -67,27 +105,84 @@ export default function SearchPage() {
       {/* Search Form */}
       <Card>
         <CardContent className="pt-6">
-          <form onSubmit={handleSearch} className="flex gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <Input
-                type="text"
-                placeholder="Search customers, vehicles, work orders, appointments..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-10"
-                autoFocus
-              />
+          <form onSubmit={handleSearch} className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Input
+                  type="text"
+                  placeholder="Search customers, vehicles, work orders, appointments, invoices, parts..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  className="pl-10"
+                  autoFocus
+                />
+              </div>
+              <Button type="submit" disabled={searchInput.length < 2}>
+                Search
+              </Button>
             </div>
-            <Button type="submit" disabled={searchInput.length < 2}>
-              Search
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-gray-600">Quick filters:</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newQuery = "customer:";
+                  setSearchInput(newQuery);
+                  setQuery(newQuery);
+                  router.push(`/search?q=${encodeURIComponent(newQuery)}`);
+                }}
+              >
+                Customers
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newQuery = "vehicle:";
+                  setSearchInput(newQuery);
+                  setQuery(newQuery);
+                  router.push(`/search?q=${encodeURIComponent(newQuery)}`);
+                }}
+              >
+                Vehicles
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newQuery = "workorder:";
+                  setSearchInput(newQuery);
+                  setQuery(newQuery);
+                  router.push(`/search?q=${encodeURIComponent(newQuery)}`);
+                }}
+              >
+                Work Orders
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newQuery = "appointment:";
+                  setSearchInput(newQuery);
+                  setQuery(newQuery);
+                  router.push(`/search?q=${encodeURIComponent(newQuery)}`);
+                }}
+              >
+                Appointments
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
 
       {/* Search Results */}
-      {query.length < 2 ? (
+      {debouncedQuery.length < 2 && !debouncedQuery.includes(':') ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
@@ -104,10 +199,21 @@ export default function SearchPage() {
             </div>
           </CardContent>
         </Card>
+      ) : error ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <p className="text-red-600 font-medium mb-2">Search Error</p>
+              <p className="text-gray-500 text-sm">
+                {error instanceof Error ? error.message : "An error occurred while searching"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       ) : searchData && searchData.results.length > 0 ? (
         <div className="space-y-6">
           <div className="text-sm text-gray-600">
-            Found {searchData.total} result{searchData.total !== 1 ? "s" : ""} for &quot;{query}&quot;
+            Found {searchData.total} result{searchData.total !== 1 ? "s" : ""} for &quot;{debouncedQuery}&quot;
           </div>
 
           {Object.entries(groupedResults).map(([type, results]) => (

@@ -223,67 +223,246 @@ def mobile_quick_update(request):
 @login_required
 def mobile_search_api(request):
     """API endpoint for mobile search functionality"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     query = request.GET.get('q', '').strip()
     search_type = request.GET.get('type', 'all')
     
-    if len(query) < 2:
+    logger.info(f"Search API called: query='{query}', type='{search_type}'")
+    
+    # Allow empty query if searching a specific type (to get all of that type)
+    if len(query) < 2 and search_type == 'all':
         return JsonResponse({'results': []})
     
     results = []
     
     if search_type in ['all', 'workorders']:
-        workorders = WorkOrder.objects.select_related('customer', 'vehicle').filter(
-            Q(customer__first_name__icontains=query) |
-            Q(customer__last_name__icontains=query) |
-            Q(vehicle__license_plate__icontains=query) |
-            Q(description__icontains=query)
-        )[:5]
+        if query:
+            workorders = WorkOrder.objects.select_related('customer', 'customer__user', 'vehicle').filter(
+                Q(work_order_number__icontains=query) |
+                Q(customer__user__first_name__icontains=query) |
+                Q(customer__user__last_name__icontains=query) |
+                Q(customer__user__email__icontains=query) |
+                Q(vehicle__make__icontains=query) |
+                Q(vehicle__model__icontains=query) |
+                Q(vehicle__license_plate__icontains=query) |
+                Q(vehicle__vin__icontains=query) |
+                Q(customer_concerns__icontains=query) |
+                Q(diagnosis_notes__icontains=query) |
+                Q(special_instructions__icontains=query) |
+                Q(approval_notes__icontains=query)
+            ).order_by('-created_at')[:5]
+        else:
+            # Empty query for specific type - return all
+            workorders = WorkOrder.objects.select_related('customer', 'customer__user', 'vehicle').order_by('-created_at')[:10]
         
         for wo in workorders:
+            customer_name = wo.customer.full_name if hasattr(wo.customer, 'full_name') else (
+                wo.customer.user.get_full_name() if wo.customer and wo.customer.user else 'Unknown'
+            )
+            vehicle_info = f'{wo.vehicle.year or ""} {wo.vehicle.make or ""} {wo.vehicle.model or ""}'.strip() if wo.vehicle else 'No vehicle'
+            
+            # Get description from customer_concerns or diagnosis_notes
+            description = wo.customer_concerns[:50] if wo.customer_concerns else (
+                wo.diagnosis_notes[:50] if wo.diagnosis_notes else "No description"
+            )
+            
             results.append({
                 'type': 'workorder',
                 'id': wo.id,
-                'title': f'WO-{wo.id:04d} - {wo.customer.user.get_full_name()}',
-                'subtitle': f'{wo.vehicle.year} {wo.vehicle.make} {wo.vehicle.model}',
+                'title': f'{wo.work_order_number or f"WO-{wo.id:04d}"} - {customer_name}',
+                'subtitle': f'{vehicle_info} • {description}',
                 'url': f'/workorders/{wo.id}/',
-                'status': wo.get_status_display(),
+                'status': wo.status if hasattr(wo, 'status') else None,
             })
     
     if search_type in ['all', 'customers']:
-        customers = Customer.objects.select_related('user').filter(
-            Q(user__first_name__icontains=query) |
-            Q(user__last_name__icontains=query) |
-            Q(user__email__icontains=query) |
-            Q(user__phone__icontains=query) |
-            Q(company_name__icontains=query)
-        )[:5]
+        if query:
+            # Split query into words for better matching
+            query_words = query.strip().split()
+            
+            # Build Q object for customer search
+            customer_q = Q()
+            
+            # Search in individual fields (icontains is already case-insensitive)
+            customer_q |= Q(user__first_name__icontains=query)
+            customer_q |= Q(user__last_name__icontains=query)
+            customer_q |= Q(user__email__icontains=query)
+            customer_q |= Q(user__phone__icontains=query)
+            customer_q |= Q(company_name__icontains=query)
+            customer_q |= Q(customer_number__icontains=query)
+            
+            # If query has multiple words, search for full name combinations
+            if len(query_words) >= 2:
+                # Search for "first last" combination (most common)
+                # This handles "Demo Customer" -> first_name="Demo", last_name="Customer"
+                customer_q |= Q(
+                    user__first_name__icontains=query_words[0],
+                    user__last_name__icontains=query_words[-1]
+                )
+                # Search for "last first" combination (less common but possible)
+                customer_q |= Q(
+                    user__first_name__icontains=query_words[-1],
+                    user__last_name__icontains=query_words[0]
+                )
+                # Search for first word in first_name and remaining words in last_name
+                if len(query_words) > 2:
+                    customer_q |= Q(
+                        user__first_name__icontains=query_words[0],
+                        user__last_name__icontains=' '.join(query_words[1:])
+                    )
+            
+            customers = Customer.objects.select_related('user').filter(customer_q).distinct()[:10]
+            customers_list = list(customers)  # Evaluate queryset to get count
+            logger.info(f"Found {len(customers_list)} customers for query '{query}'")
+            if len(customers_list) > 0:
+                logger.info(f"First customer: {customers_list[0].user.first_name} {customers_list[0].user.last_name}")
+            customers = customers_list
+        else:
+            # Empty query for specific type - return all
+            customers = Customer.objects.select_related('user').order_by('-created_at')[:10]
         
         for customer in customers:
+            customer_name = customer.full_name if hasattr(customer, 'full_name') else (
+                customer.user.get_full_name() if customer.user else 'Unknown'
+            )
+            subtitle_parts = []
+            if customer.user and customer.user.email:
+                subtitle_parts.append(customer.user.email)
+            if customer.user and customer.user.phone:
+                subtitle_parts.append(customer.user.phone)
+            if customer.company_name:
+                subtitle_parts.append(customer.company_name)
+            
             results.append({
                 'type': 'customer',
                 'id': customer.id,
-                'title': customer.user.get_full_name(),
-                'subtitle': f'{customer.user.email} • {customer.user.phone or "No phone"}',
+                'title': customer_name,
+                'subtitle': ' • '.join(subtitle_parts) if subtitle_parts else 'No contact info',
                 'url': f'/customers/{customer.id}/',
+                'status': customer.status if hasattr(customer, 'status') else None,
             })
     
     if search_type in ['all', 'vehicles']:
-        vehicles = Vehicle.objects.select_related('customer').filter(
-            Q(make__icontains=query) |
-            Q(model__icontains=query) |
-            Q(license_plate__icontains=query) |
-            Q(vin__icontains=query)
-        )[:5]
+        if query:
+            vehicles = Vehicle.objects.select_related('owner', 'owner__user').filter(
+                Q(make__icontains=query) |
+                Q(model__icontains=query) |
+                Q(license_plate__icontains=query) |
+                Q(vin__icontains=query)
+            )[:5]
+        else:
+            # Empty query for specific type - return all
+            vehicles = Vehicle.objects.select_related('owner', 'owner__user').order_by('-created_at')[:10]
         
         for vehicle in vehicles:
+            owner_name = 'Unknown'
+            if vehicle.owner and hasattr(vehicle.owner, 'user'):
+                owner_name = vehicle.owner.user.get_full_name() or vehicle.owner.user.email
+            elif vehicle.owner and hasattr(vehicle.owner, 'company_name'):
+                owner_name = vehicle.owner.company_name or vehicle.owner.full_name
+            
             results.append({
                 'type': 'vehicle',
                 'id': vehicle.id,
-                'title': f'{vehicle.year} {vehicle.make} {vehicle.model}',
-                'subtitle': f'{vehicle.license_plate} • {vehicle.customer.user.get_full_name()}',
+                'title': f'{vehicle.year or ""} {vehicle.make or ""} {vehicle.model or ""}'.strip(),
+                'subtitle': f'{vehicle.license_plate or "No plate"} • {owner_name}',
                 'url': f'/vehicles/{vehicle.id}/',
+                'status': vehicle.status if hasattr(vehicle, 'status') else None,
             })
     
+    if search_type in ['all', 'appointments']:
+        from apps.appointments.models import Appointment
+        if query:
+            appointments = Appointment.objects.select_related('customer', 'customer__user', 'vehicle').filter(
+                Q(customer__user__first_name__icontains=query) |
+                Q(customer__user__last_name__icontains=query) |
+                Q(customer__user__email__icontains=query) |
+                Q(vehicle__make__icontains=query) |
+                Q(vehicle__model__icontains=query) |
+                Q(vehicle__license_plate__icontains=query) |
+                Q(vehicle__vin__icontains=query) |
+                Q(service_type__icontains=query) |
+                Q(customer_concerns__icontains=query) |
+                Q(special_instructions__icontains=query) |
+                Q(appointment_number__icontains=query)
+            ).order_by('-appointment_date', '-appointment_time')[:5]
+        else:
+            # Empty query for specific type - return all
+            appointments = Appointment.objects.select_related('customer', 'customer__user', 'vehicle').order_by('-appointment_date', '-appointment_time')[:10]
+        
+        for apt in appointments:
+            customer_name = apt.customer.full_name if hasattr(apt.customer, 'full_name') else (
+                apt.customer.user.get_full_name() if apt.customer and apt.customer.user else 'Unknown'
+            )
+            vehicle_info = f'{apt.vehicle.year or ""} {apt.vehicle.make or ""} {apt.vehicle.model or ""}'.strip() if apt.vehicle else 'No vehicle'
+            
+            results.append({
+                'type': 'appointment',
+                'id': apt.id,
+                'title': f'{customer_name} - {apt.service_type or "Service"}',
+                'subtitle': f'{apt.appointment_date} at {apt.appointment_time} • {vehicle_info}',
+                'url': f'/appointments/{apt.id}/',
+                'status': apt.status if hasattr(apt, 'status') else None,
+            })
+    
+    if search_type in ['all', 'invoices']:
+        from apps.billing.models import Invoice
+        if query:
+            invoices = Invoice.objects.select_related('customer', 'customer__user').filter(
+                Q(invoice_number__icontains=query) |
+                Q(customer__user__first_name__icontains=query) |
+                Q(customer__user__last_name__icontains=query) |
+                Q(customer__user__email__icontains=query) |
+                Q(customer__company_name__icontains=query)
+            ).order_by('-invoice_date')[:5]
+        else:
+            # Empty query for specific type - return all
+            invoices = Invoice.objects.select_related('customer', 'customer__user').order_by('-invoice_date')[:10]
+        
+        for inv in invoices:
+            customer_name = inv.customer.full_name if hasattr(inv.customer, 'full_name') else (
+                inv.customer.user.get_full_name() if inv.customer and inv.customer.user else 'Unknown'
+            )
+            
+            results.append({
+                'type': 'invoice',
+                'id': inv.id,
+                'title': f'{inv.invoice_number} - {customer_name}',
+                'subtitle': f'${float(inv.total or 0):.2f} • {inv.invoice_date}',
+                'url': f'/billing/invoices/{inv.id}/',
+                'status': inv.status if hasattr(inv, 'status') else None,
+            })
+    
+    if search_type in ['all', 'parts']:
+        from apps.inventory.models import Part
+        if query:
+            parts = Part.objects.select_related('category').filter(
+                Q(part_number__icontains=query) |
+                Q(name__icontains=query) |
+                Q(description__icontains=query) |
+                Q(manufacturer__icontains=query) |
+                Q(manufacturer_part_number__icontains=query)
+            )[:5]
+        else:
+            # Empty query for specific type - return all
+            parts = Part.objects.select_related('category').filter(is_active=True).order_by('part_number')[:10]
+        
+        for part in parts:
+            category_name = part.category.name if part.category else 'Uncategorized'
+            stock_status = f'{part.quantity_in_stock or 0} in stock'
+            
+            results.append({
+                'type': 'part',
+                'id': part.id,
+                'title': f'{part.part_number} - {part.name}',
+                'subtitle': f'{category_name} • {stock_status}',
+                'url': f'/inventory/{part.id}/',
+                'status': 'low_stock' if part.is_low_stock else 'in_stock' if (part.quantity_in_stock or 0) > 0 else 'out_of_stock',
+            })
+    
+    logger.info(f"Returning {len(results)} total results")
     return JsonResponse({'results': results})
 
 

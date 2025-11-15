@@ -14,22 +14,115 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { exportToCSV } from "@/lib/utils/export";
+import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
+import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
+import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 
 export default function BillingPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [newStatus, setNewStatus] = useState<string>("sent");
+  const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  // Advanced filter options
+  const filterOptions: FilterOption[] = [
+    {
+      key: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "draft", label: "Draft" },
+        { value: "sent", label: "Sent" },
+        { value: "viewed", label: "Viewed" },
+        { value: "partial", label: "Partial" },
+        { value: "paid", label: "Paid" },
+        { value: "overdue", label: "Overdue" },
+      ],
+    },
+    {
+      key: "invoice_date",
+      label: "Invoice Date",
+      type: "daterange",
+    },
+  ];
+
+  const quickFilters: QuickFilter[] = [
+    {
+      label: "This Month",
+      value: "this_month",
+      filters: {
+        invoice_date_from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0],
+        invoice_date_to: new Date().toISOString().split("T")[0],
+      },
+    },
+    {
+      label: "Last 30 Days",
+      value: "last_30_days",
+      filters: {
+        invoice_date_from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        invoice_date_to: new Date().toISOString().split("T")[0],
+      },
+    },
+    {
+      label: "Unpaid",
+      value: "unpaid",
+      filters: {
+        status: "sent",
+      },
+    },
+    {
+      label: "Overdue",
+      value: "overdue",
+      filters: {
+        status: "overdue",
+      },
+    },
+  ];
+
+  const handleSort = (field: string) => {
+    setSortConfig((current) => {
+      if (current?.field === field) {
+        if (current.direction === "asc") {
+          return { field, direction: "desc" };
+        } else if (current.direction === "desc") {
+          return null;
+        }
+      }
+      return { field, direction: "asc" };
+    });
+    setPage(1);
+  };
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["invoices", page, search, statusFilter],
-    queryFn: () =>
-      billingApi.invoices.list({
+    queryKey: ["invoices", page, search, statusFilter, startDate, endDate, advancedFilters, sortConfig],
+    queryFn: () => {
+      const ordering = sortConfig
+        ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
+        : undefined;
+      return billingApi.invoices.list({
         page,
-        status: statusFilter || undefined,
-      }),
+        search: search || undefined,
+        status: advancedFilters.status || statusFilter || undefined,
+        invoice_date__gte: advancedFilters.invoice_date_from || startDate || undefined,
+        invoice_date__lte: advancedFilters.invoice_date_to || endDate || undefined,
+        ordering,
+      });
+    },
   });
+
+  const invoices = data?.results || [];
+  const bulkSelection = useBulkSelection(invoices);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => billingApi.invoices.delete(id),
@@ -50,6 +143,66 @@ export default function BillingPage() {
     if (confirm(`Are you sure you want to delete invoice "${invoice.invoice_number}"? This action cannot be undone.`)) {
       deleteMutation.mutate(invoice.id);
     }
+  };
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await Promise.all(ids.map((id) => billingApi.invoices.delete(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      bulkSelection.clearSelection();
+      toast({ title: "Success", description: `${bulkSelection.selectedCount} invoices deleted successfully` });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to delete invoices",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkStatusUpdateMutation = useMutation({
+    mutationFn: async ({ ids, status }: { ids: number[]; status: string }) => {
+      await Promise.all(
+        ids.map((id) =>
+          billingApi.invoices.update(id, {
+            status: status as any,
+          })
+        )
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      bulkSelection.clearSelection();
+      setShowStatusDialog(false);
+      toast({ title: "Success", description: `Status updated for ${bulkSelection.selectedCount} invoices` });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to update status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleBulkDelete = () => {
+    if (confirm(`Are you sure you want to delete ${bulkSelection.selectedCount} invoice(s)? This action cannot be undone.`)) {
+      bulkDeleteMutation.mutate(bulkSelection.selectedIds);
+    }
+  };
+
+  const handleBulkStatusUpdate = () => {
+    setShowStatusDialog(true);
+  };
+
+  const confirmBulkStatusUpdate = () => {
+    bulkStatusUpdateMutation.mutate({
+      ids: bulkSelection.selectedIds,
+      status: newStatus,
+    });
   };
 
   const handleExport = () => {
@@ -79,10 +232,20 @@ export default function BillingPage() {
     toast({ title: "Success", description: "Invoices exported successfully" });
   };
 
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
+            <div className="h-5 w-64 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <TableSkeleton rows={8} columns={8} />
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -195,38 +358,88 @@ export default function BillingPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <Input
-                type="text"
-                placeholder="Search invoices..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Input
+                  type="text"
+                  placeholder="Search invoices..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="pl-10"
+                />
+              </div>
+              <AdvancedFilters
+                filters={filterOptions}
+                quickFilters={quickFilters}
+                activeFilters={advancedFilters}
+                onFiltersChange={(filters) => {
+                  setAdvancedFilters(filters);
                   setPage(1);
                 }}
-                className="pl-10"
+                onClear={() => {
+                  setAdvancedFilters({});
+                  setStatusFilter("");
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                title="Advanced Invoice Filters"
               />
             </div>
-            <Select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="sent">Sent</option>
-              <option value="viewed">Viewed</option>
-              <option value="partial">Partial</option>
-              <option value="paid">Paid</option>
-              <option value="overdue">Overdue</option>
-            </Select>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div>
+                <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <Select
+                  id="status-filter"
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="draft">Draft</option>
+                  <option value="sent">Sent</option>
+                  <option value="viewed">Viewed</option>
+                  <option value="partial">Partial</option>
+                  <option value="paid">Paid</option>
+                  <option value="overdue">Overdue</option>
+                </Select>
+              </div>
+              <div className="md:col-span-2">
+                <DateRangePicker
+                  startDate={startDate}
+                  endDate={endDate}
+                  onStartDateChange={(date) => {
+                    setStartDate(date);
+                    setPage(1);
+                  }}
+                  onEndDateChange={(date) => {
+                    setEndDate(date);
+                    setPage(1);
+                  }}
+                  label="Invoice Date Range"
+                />
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Action Toolbar */}
+      <BulkActionToolbar
+        selectedCount={bulkSelection.selectedCount}
+        onClearSelection={bulkSelection.clearSelection}
+        onBulkDelete={handleBulkDelete}
+        onBulkStatusUpdate={handleBulkStatusUpdate}
+        showStatusUpdate={true}
+      />
 
       {/* Invoices Table */}
       <Card>
@@ -236,25 +449,94 @@ export default function BillingPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {data?.results && data.results.length > 0 ? (
+          {isLoading ? (
+            <TableSkeleton rows={8} columns={10} />
+          ) : data?.results && data.results.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Paid</TableHead>
-                    <TableHead>Balance</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>
+                      <input
+                        type="checkbox"
+                        checked={bulkSelection.isAllSelected}
+                        ref={(input) => {
+                          if (input) input.indeterminate = bulkSelection.isIndeterminate;
+                        }}
+                        onChange={bulkSelection.toggleSelectAll}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </TableHead>
+                    <SortableHeader
+                      field="invoice_number"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Invoice #
+                    </SortableHeader>
+                    <SortableHeader
+                      field="customer__user__last_name"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Customer
+                    </SortableHeader>
+                    <SortableHeader
+                      field="invoice_date"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Date
+                    </SortableHeader>
+                    <SortableHeader
+                      field="due_date"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Due Date
+                    </SortableHeader>
+                    <SortableHeader
+                      field="total"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Total
+                    </SortableHeader>
+                    <SortableHeader
+                      field="amount_paid"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Paid
+                    </SortableHeader>
+                    <SortableHeader
+                      field="balance_due"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Balance
+                    </SortableHeader>
+                    <SortableHeader
+                      field="status"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    >
+                      Status
+                    </SortableHeader>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.results.map((invoice) => (
-                    <TableRow key={invoice.id}>
+                    <TableRow key={invoice.id} className="transition-colors duration-150 hover:bg-gray-50">
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={bulkSelection.isSelected(invoice.id)}
+                          onChange={() => bulkSelection.toggleSelection(invoice.id)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-sm">
                         {invoice.invoice_number || "-"}
                       </TableCell>
@@ -348,6 +630,47 @@ export default function BillingPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Bulk Status Update Dialog */}
+      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Status for {bulkSelection.selectedCount} Invoice(s)</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              New Status
+            </label>
+            <Select
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value)}
+            >
+              <option value="draft">Draft</option>
+              <option value="sent">Sent</option>
+              <option value="viewed">Viewed</option>
+              <option value="partial">Partial</option>
+              <option value="paid">Paid</option>
+              <option value="overdue">Overdue</option>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowStatusDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={confirmBulkStatusUpdate}
+              disabled={bulkStatusUpdateMutation.isPending}
+            >
+              {bulkStatusUpdateMutation.isPending ? "Updating..." : "Update Status"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
