@@ -1,7 +1,7 @@
 {% load static %}
 
 <!-- Invoice Preview Component -->
-<div class="invoice-preview-container">
+<div class="invoice-preview-container print-surface">
     <div class="invoice-header-print">
         <div class="row">
             <div class="col-6">
@@ -257,12 +257,5 @@
         border-top: 2px solid #dee2e6;
         margin-top: 2rem;
         padding-top: 1rem;
-    }
-    
-    @media print {
-        .invoice-preview-container {
-            padding: 0;
-            box-shadow: none;
-        }
     }
 </style>

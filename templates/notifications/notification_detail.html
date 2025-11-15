@@ -3,39 +3,20 @@
 
 {% block title %}{{ notification.title }}{% endblock %}
 
-{% block extra_css %}
-<style>
-    .notification-icon-large {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        margin-right: 1rem;
-    }
-    .notification-icon-large.appointment { background: #e3f2fd; color: #1976d2; }
-    .notification-icon-large.work_order { background: #fff3e0; color: #f57c00; }
-    .notification-icon-large.invoice { background: #e8f5e9; color: #388e3c; }
-    .notification-icon-large.payment { background: #fce4ec; color: #c2185b; }
-    .notification-icon-large.inspection { background: #f3e5f5; color: #7b1fa2; }
-    .notification-icon-large.inventory { background: #e0f2f1; color: #00796b; }
-    .notification-icon-large.system { background: #f5f5f5; color: #616161; }
-    .priority-badge.low { background: #e3f2fd; color: #1976d2; }
-    .priority-badge.normal { background: #f3e5f5; color: #7b1fa2; }
-    .priority-badge.high { background: #fff3e0; color: #f57c00; }
-    .priority-badge.urgent { background: #ffebee; color: #c62828; }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <!-- Header -->
-    <div class="notification-detail-header">
-        <div class="d-flex justify-content-between align-items-start">
-            <div class="d-flex">
-                <div class="notification-icon-large {{ notification.notification_type }}">
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+        <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
+            <div class="flex items-start gap-4">
+                <div class="w-16 h-16 rounded-full flex items-center justify-center text-2xl flex-shrink-0
+                    {% if notification.notification_type == 'appointment' %}bg-blue-100 text-blue-600
+                    {% elif notification.notification_type == 'work_order' %}bg-amber-100 text-amber-600
+                    {% elif notification.notification_type == 'invoice' %}bg-emerald-100 text-emerald-600
+                    {% elif notification.notification_type == 'payment' %}bg-rose-100 text-rose-600
+                    {% elif notification.notification_type == 'inspection' %}bg-purple-100 text-purple-600
+                    {% elif notification.notification_type == 'inventory' %}bg-teal-100 text-teal-600
+                    {% else %}bg-slate-100 text-slate-600{% endif %}">
                     <i class="fas {% if notification.notification_type == 'appointment' %}fa-calendar
                                   {% elif notification.notification_type == 'work_order' %}fa-wrench
                                   {% elif notification.notification_type == 'invoice' %}fa-file-invoice
@@ -45,126 +26,142 @@
                                   {% else %}fa-bell{% endif %}"></i>
                 </div>
                 <div>
-                    <h2 class="mb-2">{{ notification.title }}</h2>
-                    <p class="mb-0 opacity-75">
-                        <i class="fas fa-clock me-2"></i>{{ notification.created_at|date:"F d, Y g:i A" }}
+                    <h2 class="text-xl font-bold text-slate-900 mb-2">{{ notification.title }}</h2>
+                    <p class="text-slate-500 text-sm flex items-center gap-2">
+                        <i class="fas fa-clock"></i>
+                        {{ notification.created_at|date:"F d, Y g:i A" }}
                     </p>
                 </div>
             </div>
             <div>
-                <span class="badge priority-badge {{ notification.priority }}">
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold
+                    {% if notification.priority == 'low' %}bg-blue-50 text-blue-700 border border-blue-200
+                    {% elif notification.priority == 'normal' %}bg-purple-50 text-purple-700 border border-purple-200
+                    {% elif notification.priority == 'high' %}bg-amber-50 text-amber-700 border border-amber-200
+                    {% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
                     {{ notification.get_priority_display }}
                 </span>
             </div>
         </div>
     </div>
 
-    <div class="row">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Notification Content -->
-        <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="mb-4">
-                        <h5 class="mb-3">Message</h5>
-                        <div class="notification-message">
-                            {{ notification.message|linebreaks }}
-                        </div>
+        <div class="lg:col-span-2 space-y-4">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                <div class="mb-6">
+                    <h5 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Message</h5>
+                    <div class="text-slate-700 whitespace-pre-line">
+                        {{ notification.message|linebreaks }}
                     </div>
-
-                    {% if notification.metadata %}
-                    <hr>
-                    <div class="mb-4">
-                        <h5 class="mb-3">Details</h5>
-                        <dl class="row">
-                            {% for key, value in notification.metadata.items %}
-                            <dt class="col-sm-4 text-muted">{{ key|title }}:</dt>
-                            <dd class="col-sm-8">{{ value }}</dd>
-                            {% endfor %}
-                        </dl>
-                    </div>
-                    {% endif %}
-
-                    {% if notification.action_url %}
-                    <hr>
-                    <div>
-                        <a href="{{ notification.action_url }}" class="btn btn-primary">
-                            <i class="fas fa-external-link-alt me-2"></i>View Details
-                        </a>
-                    </div>
-                    {% endif %}
                 </div>
+
+                {% if notification.metadata %}
+                <hr class="my-6 border-slate-200">
+                <div class="mb-6">
+                    <h5 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-3">Details</h5>
+                    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {% for key, value in notification.metadata.items %}
+                        <div>
+                            <dt class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">{{ key|title }}:</dt>
+                            <dd class="text-sm text-slate-900">{{ value }}</dd>
+                        </div>
+                        {% endfor %}
+                    </dl>
+                </div>
+                {% endif %}
+
+                {% if notification.action_url %}
+                <hr class="my-6 border-slate-200">
+                <div>
+                    <a href="{{ notification.action_url }}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                        <i class="fas fa-external-link-alt"></i>
+                        View Details
+                    </a>
+                </div>
+                {% endif %}
             </div>
 
             <!-- Actions -->
-            <div class="d-flex gap-2">
-                <a href="{% url 'notifications:notification-center' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-2"></i>Back to Notifications
+            <div class="flex flex-wrap items-center gap-3">
+                <a href="{% url 'notifications:notification-center' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Notifications
                 </a>
                 {% if not notification.is_read %}
-                <button type="button" class="btn btn-success" onclick="markAsRead()">
-                    <i class="fas fa-check me-2"></i>Mark as Read
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium" onclick="markAsRead()">
+                    <i class="fas fa-check"></i>
+                    Mark as Read
                 </button>
                 {% endif %}
-                <button type="button" class="btn btn-danger" onclick="deleteNotification()">
-                    <i class="fas fa-trash me-2"></i>Delete
+                <button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors text-sm font-medium" onclick="deleteNotification()">
+                    <i class="fas fa-trash"></i>
+                    Delete
                 </button>
             </div>
         </div>
 
         <!-- Sidebar -->
-        <div class="col-lg-4">
+        <div class="lg:col-span-1 space-y-4">
             <!-- Info Card -->
-            <div class="card mb-3">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0">
-                        <i class="fas fa-info-circle me-2"></i>Notification Info
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                    <h6 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-info-circle text-primary"></i>
+                        Notification Info
                     </h6>
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <small class="text-muted">Type</small>
-                        <div>{{ notification.get_notification_type_display }}</div>
+                <div class="p-4 space-y-4">
+                    <div>
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Type</div>
+                        <div class="text-sm font-medium text-slate-900">{{ notification.get_notification_type_display }}</div>
                     </div>
-                    <div class="mb-3">
-                        <small class="text-muted">Priority</small>
+                    <div>
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Priority</div>
                         <div>
-                            <span class="badge priority-badge {{ notification.priority }}">
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold
+                                {% if notification.priority == 'low' %}bg-blue-50 text-blue-700 border border-blue-200
+                                {% elif notification.priority == 'normal' %}bg-purple-50 text-purple-700 border border-purple-200
+                                {% elif notification.priority == 'high' %}bg-amber-50 text-amber-700 border border-amber-200
+                                {% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
                                 {{ notification.get_priority_display }}
                             </span>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <small class="text-muted">Status</small>
+                    <div>
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Status</div>
                         <div>
                             {% if notification.is_read %}
-                                <span class="badge bg-success">
-                                    <i class="fas fa-check-circle me-1"></i>Read
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <i class="fas fa-check-circle"></i>
+                                    Read
                                 </span>
                             {% else %}
-                                <span class="badge bg-primary">
-                                    <i class="fas fa-envelope me-1"></i>Unread
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                                    <i class="fas fa-envelope"></i>
+                                    Unread
                                 </span>
                             {% endif %}
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <small class="text-muted">Received</small>
-                        <div>{{ notification.created_at|date:"F d, Y" }}</div>
-                        <small class="text-muted">{{ notification.created_at|date:"g:i A" }}</small>
+                    <div>
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Received</div>
+                        <div class="text-sm font-medium text-slate-900">{{ notification.created_at|date:"F d, Y" }}</div>
+                        <div class="text-xs text-slate-500">{{ notification.created_at|date:"g:i A" }}</div>
                     </div>
                     {% if notification.is_read %}
-                    <div class="mb-3">
-                        <small class="text-muted">Read</small>
-                        <div>{{ notification.read_at|date:"F d, Y" }}</div>
-                        <small class="text-muted">{{ notification.read_at|date:"g:i A" }}</small>
+                    <div>
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Read</div>
+                        <div class="text-sm font-medium text-slate-900">{{ notification.read_at|date:"F d, Y" }}</div>
+                        <div class="text-xs text-slate-500">{{ notification.read_at|date:"g:i A" }}</div>
                     </div>
                     {% endif %}
                     {% if notification.sent_via %}
                     <div>
-                        <small class="text-muted">Sent via</small>
-                        <div>
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Sent via</div>
+                        <div class="flex flex-wrap gap-1">
                             {% for channel in notification.sent_via %}
-                                <span class="badge bg-info me-1">{{ channel }}</span>
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">{{ channel }}</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -174,15 +171,17 @@
 
             <!-- Related Actions -->
             {% if notification.action_url %}
-            <div class="card">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0">
-                        <i class="fas fa-link me-2"></i>Quick Actions
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                    <h6 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-link text-primary"></i>
+                        Quick Actions
                     </h6>
                 </div>
-                <div class="card-body">
-                    <a href="{{ notification.action_url }}" class="btn btn-primary w-100 mb-2">
-                        <i class="fas fa-external-link-alt me-2"></i>View Related Item
+                <div class="p-4">
+                    <a href="{{ notification.action_url }}" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                        <i class="fas fa-external-link-alt"></i>
+                        View Related Item
                     </a>
                 </div>
             </div>

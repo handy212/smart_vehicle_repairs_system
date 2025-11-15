@@ -21,6 +21,7 @@ import json
 from .models import Appointment, ServiceBay, AppointmentReminder
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
+from apps.branches.utils import filter_queryset_for_user_branches
 
 
 class AppointmentListView(LoginRequiredMixin, ListView):
@@ -31,9 +32,12 @@ class AppointmentListView(LoginRequiredMixin, ListView):
     paginate_by = 20
     
     def get_queryset(self):
-        queryset = Appointment.objects.select_related('customer__user', 'vehicle', 'service_bay').prefetch_related(
+        queryset = Appointment.objects.select_related('customer__user', 'vehicle', 'service_bay', 'branch').prefetch_related(
             'vehicle__owner__user'
         ).order_by('-appointment_date', '-appointment_time')
+        
+        # Filter by active branch from session
+        queryset = filter_queryset_for_user_branches(queryset, self.request.user, request=self.request, use_active_branch=True)
         
         # Search functionality
         search_query = self.request.GET.get('search')
@@ -83,12 +87,14 @@ class AppointmentListView(LoginRequiredMixin, ListView):
             'date_to': self.request.GET.get('date_to', ''),
         })
         
-        # Statistics
+        # Statistics - filter by active branch
+        stats_queryset = Appointment.objects.all()
+        stats_queryset = filter_queryset_for_user_branches(stats_queryset, self.request.user, request=self.request, use_active_branch=True)
         context.update({
-            'total_appointments': Appointment.objects.count(),
-            'pending_appointments': Appointment.objects.filter(status='pending').count(),
-            'confirmed_appointments': Appointment.objects.filter(status='confirmed').count(),
-            'today_appointments': Appointment.objects.filter(appointment_date=timezone.now().date()).count(),
+            'total_appointments': stats_queryset.count(),
+            'pending_appointments': stats_queryset.filter(status='pending').count(),
+            'confirmed_appointments': stats_queryset.filter(status='confirmed').count(),
+            'today_appointments': stats_queryset.filter(appointment_date=timezone.now().date()).count(),
         })
         
         return context
@@ -101,11 +107,13 @@ class AppointmentDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'appointment'
     
     def get_queryset(self):
-        return Appointment.objects.select_related(
-            'customer__user', 'vehicle', 'service_bay'
+        queryset = Appointment.objects.select_related(
+            'customer__user', 'vehicle', 'service_bay', 'branch'
         ).prefetch_related(
             'reminders', 'vehicle__owner__user'
         )
+        # Filter by active branch from session
+        return filter_queryset_for_user_branches(queryset, self.request.user, request=self.request, use_active_branch=True)
 
 
 class AppointmentCreateView(LoginRequiredMixin, CreateView):
@@ -198,7 +206,9 @@ def calendar_view(request):
     
     appointments = Appointment.objects.filter(
         appointment_date__range=[start_date, end_date]
-    ).select_related('customer__user', 'vehicle', 'service_bay')
+    ).select_related('customer__user', 'vehicle', 'service_bay', 'branch')
+    # Filter by active branch from session
+    appointments = filter_queryset_for_user_branches(appointments, request.user, request=request, use_active_branch=True)
     
     # Get service bays for the bay selector
     service_bays = ServiceBay.objects.filter(is_active=True)
@@ -233,7 +243,9 @@ def get_calendar_events(request):
     
     appointments = Appointment.objects.filter(
         appointment_date__range=[start_date, end_date]
-    ).select_related('customer__user', 'vehicle', 'service_bay')
+    ).select_related('customer__user', 'vehicle', 'service_bay', 'branch')
+    # Filter by active branch from session
+    appointments = filter_queryset_for_user_branches(appointments, request.user, request=request, use_active_branch=True)
     
     events = []
     for appointment in appointments:

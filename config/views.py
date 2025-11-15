@@ -141,6 +141,7 @@ def dashboard_view(request):
     from apps.billing.models import Invoice, Payment
     from apps.inventory.models import Part
     from apps.notifications_app.models import Notification
+    from apps.branches.utils import filter_queryset_for_user_branches
     from django.contrib.auth import get_user_model
     
     User = get_user_model()
@@ -152,66 +153,98 @@ def dashboard_view(request):
     start_of_month = today.replace(day=1)
     start_of_week = today - timedelta(days=today.weekday())
     
-    # Get counts
-    total_customers = Customer.objects.count()
-    total_vehicles = Vehicle.objects.count()
-    total_appointments = Appointment.objects.filter(appointment_date__gte=today).count()
-    today_appointments = Appointment.objects.filter(appointment_date=today).count()
+    # Get counts - filter by active branch
+    total_customers = Customer.objects.count()  # Customers are not branch-specific
+    total_vehicles = Vehicle.objects.count()  # Vehicles are not branch-specific
     
-    # Work orders by status
-    active_workorders = WorkOrder.objects.filter(
+    appointments_qs = Appointment.objects.filter(appointment_date__gte=today)
+    appointments_qs = filter_queryset_for_user_branches(appointments_qs, user, request=request, use_active_branch=True)
+    total_appointments = appointments_qs.count()
+    today_appointments = appointments_qs.filter(appointment_date=today).count()
+    
+    # Work orders by status - filter by active branch
+    workorders_qs = WorkOrder.objects.filter(
         status__in=['pending', 'in_progress', 'awaiting_parts']
-    ).count()
+    )
+    workorders_qs = filter_queryset_for_user_branches(workorders_qs, user, request=request, use_active_branch=True)
+    active_workorders = workorders_qs.count()
     
-    # Financial metrics
-    monthly_revenue = Payment.objects.filter(
+    # Financial metrics - filter by active branch
+    # Payments are linked via invoices which have branches
+    payments_qs = Payment.objects.filter(
         payment_date__gte=start_of_month,
         status='completed'
-    ).aggregate(total=Sum('amount'))['total'] or 0
+    ).select_related('invoice', 'invoice__branch')
+    # Filter payments by invoice's branch - get active branch IDs
+    active_branch_ids = filter_queryset_for_user_branches(
+        Invoice.objects.all(), user, request=request, use_active_branch=True
+    ).values_list('branch_id', flat=True).distinct()
+    if active_branch_ids.exists():
+        payments_qs = payments_qs.filter(invoice__branch_id__in=active_branch_ids)
+    monthly_revenue = payments_qs.aggregate(total=Sum('amount'))['total'] or 0
     
     pending_invoices_qs = Invoice.objects.filter(
         status__in=['sent', 'viewed', 'partial', 'overdue']
     )
+    pending_invoices_qs = filter_queryset_for_user_branches(pending_invoices_qs, user, request=request, use_active_branch=True)
     pending_invoices_count = pending_invoices_qs.count()
     pending_invoices_amount = pending_invoices_qs.aggregate(total=Sum('total'))['total'] or 0
     
-    # Appointments this week
-    appointments_this_week = Appointment.objects.filter(
+    # Appointments this week - filter by active branch
+    appointments_this_week_qs = Appointment.objects.filter(
         appointment_date__range=[start_of_week, today + timedelta(days=7)]
-    ).count()
+    )
+    appointments_this_week_qs = filter_queryset_for_user_branches(appointments_this_week_qs, user, request=request, use_active_branch=True)
+    appointments_this_week = appointments_this_week_qs.count()
     
-    # Low stock items
-    low_stock_items = Part.objects.filter(
+    # Low stock items - filter by active branch if Part has branch field
+    low_stock_items_qs = Part.objects.filter(
         Q(quantity_in_stock__lte=F('minimum_stock')) | Q(quantity_in_stock=0)
-    ).order_by('quantity_in_stock')[:10]
+    )
+    if hasattr(Part, 'branch'):
+        low_stock_items_qs = filter_queryset_for_user_branches(low_stock_items_qs, user, request=request, use_active_branch=True)
+    low_stock_items = low_stock_items_qs.order_by('quantity_in_stock')[:10]
     low_stock_count = low_stock_items.count()
     
-    # Recent appointments (next 5)
-    recent_appointments = Appointment.objects.filter(
+    # Recent appointments (next 5) - filter by active branch
+    recent_appointments_qs = Appointment.objects.filter(
         appointment_date__gte=today
-    ).select_related('customer__user', 'vehicle').order_by('appointment_date', 'appointment_time')[:5]
+    ).select_related('customer__user', 'vehicle', 'branch')
+    recent_appointments_qs = filter_queryset_for_user_branches(recent_appointments_qs, user, request=request, use_active_branch=True)
+    recent_appointments = recent_appointments_qs.order_by('appointment_date', 'appointment_time')[:5]
     
-    # Recent work orders (last 5 active)
-    recent_workorders = WorkOrder.objects.filter(
+    # Recent work orders (last 5 active) - filter by active branch
+    recent_workorders_qs = WorkOrder.objects.filter(
         status__in=['pending', 'in_progress', 'awaiting_parts']
-    ).select_related('customer__user', 'vehicle').order_by('-created_at')[:5]
+    ).select_related('customer__user', 'vehicle', 'branch')
+    recent_workorders_qs = filter_queryset_for_user_branches(recent_workorders_qs, user, request=request, use_active_branch=True)
+    recent_workorders = recent_workorders_qs.order_by('-created_at')[:5]
     
     # Recent notifications (using 'recipient' field, not 'user')
     recent_notifications = Notification.objects.filter(
         recipient=user
     ).order_by('-created_at')[:10]
     
-    # Chart data - Work orders by status
-    workorder_stats = list(WorkOrder.objects.values('status').annotate(count=Count('id')))
+    # Chart data - Work orders by status - filter by active branch
+    workorders_chart_qs = WorkOrder.objects.all()
+    workorders_chart_qs = filter_queryset_for_user_branches(workorders_chart_qs, user, request=request, use_active_branch=True)
+    workorder_stats = list(workorders_chart_qs.values('status').annotate(count=Count('id')))
     
-    # Chart data - Revenue last 7 days
+    # Chart data - Revenue last 7 days - filter by active branch
     revenue_chart_data = []
+    # Get active branch IDs for filtering payments via invoices
+    active_branch_ids = filter_queryset_for_user_branches(
+        Invoice.objects.all(), user, request=request, use_active_branch=True
+    ).values_list('branch_id', flat=True).distinct()
     for i in range(6, -1, -1):
         date = today - timedelta(days=i)
-        daily_revenue = Payment.objects.filter(
+        daily_payments_qs = Payment.objects.filter(
             payment_date=date,
             status='completed'
-        ).aggregate(total=Sum('amount'))['total'] or 0
+        )
+        if active_branch_ids.exists():
+            daily_payments_qs = daily_payments_qs.filter(invoice__branch_id__in=active_branch_ids)
+        daily_revenue = daily_payments_qs.aggregate(total=Sum('amount'))['total'] or 0
         revenue_chart_data.append({
             'date': date.strftime('%b %d'),
             'revenue': float(daily_revenue)
@@ -271,21 +304,27 @@ def dashboard_view(request):
         if role == 'admin':
             template = 'dashboard/admin_dashboard.html'
         else:
-            # Manager-specific data
-            week_revenue = Payment.objects.filter(
+            # Manager-specific data - filter by active branch
+            week_payments_qs = Payment.objects.filter(
                 payment_date__gte=start_of_week,
                 status='completed'
-            ).aggregate(total=Sum('amount'))['total'] or 0
+            )
+            # Filter payments by invoice's branch - get active branch IDs
+            week_active_branch_ids = filter_queryset_for_user_branches(
+                Invoice.objects.all(), user, request=request, use_active_branch=True
+            ).values_list('branch_id', flat=True).distinct()
+            if week_active_branch_ids.exists():
+                week_payments_qs = week_payments_qs.filter(invoice__branch_id__in=week_active_branch_ids)
+            week_revenue = week_payments_qs.aggregate(total=Sum('amount'))['total'] or 0
             
-            avg_job_value = WorkOrder.objects.filter(
-                status='completed'
-            ).aggregate(avg=Avg('final_total'))['avg'] or 0
+            completed_workorders_qs = WorkOrder.objects.filter(status='completed')
+            completed_workorders_qs = filter_queryset_for_user_branches(completed_workorders_qs, user, request=request, use_active_branch=True)
+            avg_job_value = completed_workorders_qs.aggregate(avg=Avg('final_total'))['avg'] or 0
             
             context.update({
                 'week_revenue': week_revenue,
                 'avg_job_value': avg_job_value,
-                'completed_week': WorkOrder.objects.filter(
-                    status='completed',
+                'completed_week': completed_workorders_qs.filter(
                     completed_at__gte=start_of_week
                 ).count(),
                 'satisfaction_score': '4.8/5',  # TODO: Implement reviews
@@ -296,32 +335,41 @@ def dashboard_view(request):
             template = 'dashboard/manager_dashboard.html'
             
     elif role == 'technician':
-        # Technician-specific context
-        my_workorders = WorkOrder.objects.filter(
+        # Technician-specific context - filter by active branch
+        my_workorders_qs = WorkOrder.objects.filter(
             assigned_technicians=user,
             status__in=['pending', 'in_progress', 'awaiting_parts']
-        ).select_related('customer__user', 'vehicle').order_by('-priority', 'created_at')
+        ).select_related('customer__user', 'vehicle', 'branch')
+        my_workorders_qs = filter_queryset_for_user_branches(my_workorders_qs, user, request=request, use_active_branch=True)
+        my_workorders = my_workorders_qs.order_by('-priority', 'created_at')
         
-        today_schedule = Appointment.objects.filter(
+        today_schedule_qs = Appointment.objects.filter(
             appointment_date=today,
             assigned_technicians=user
-        ).select_related('customer__user', 'vehicle').order_by('appointment_time')
+        ).select_related('customer__user', 'vehicle', 'branch')
+        today_schedule_qs = filter_queryset_for_user_branches(today_schedule_qs, user, request=request, use_active_branch=True)
+        today_schedule = today_schedule_qs.order_by('appointment_time')
         
-        completed_today = WorkOrder.objects.filter(
+        completed_today_qs = WorkOrder.objects.filter(
             assigned_technicians=user,
             status='completed',
             completed_at__date=today
-        ).count()
+        )
+        completed_today_qs = filter_queryset_for_user_branches(completed_today_qs, user, request=request, use_active_branch=True)
+        completed_today = completed_today_qs.count()
+        
+        pending_approvals_qs = WorkOrder.objects.filter(
+            assigned_technicians=user,
+            status='awaiting_approval'
+        )
+        pending_approvals_qs = filter_queryset_for_user_branches(pending_approvals_qs, user, request=request, use_active_branch=True)
         
         context.update({
             'my_workorders': my_workorders,
             'my_active_workorders': my_workorders.count(),
             'today_appointments': today_schedule,
             'completed_today': completed_today,
-            'pending_approvals': WorkOrder.objects.filter(
-                assigned_technicians=user,
-                status='awaiting_approval'
-            ).count(),
+            'pending_approvals': pending_approvals_qs.count(),
             'hours_logged': '32h',  # TODO: Calculate from time logs
             'parts_needed': [],  # TODO: Get parts on backorder for my jobs
         })

@@ -465,7 +465,13 @@ function loadCustomerVehicles(customerId) {
         })
         .catch(error => {
             console.error('Error loading vehicles:', error);
-            alert('Error loading customer vehicles');
+            if (window.showErrorToast) {
+                window.showErrorToast('Error loading customer vehicles');
+            } else if (window.ToastSystem) {
+                window.ToastSystem.error('Error loading customer vehicles');
+            } else {
+                alert('Error loading customer vehicles');
+            }
         });
 }
 

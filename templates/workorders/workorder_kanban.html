@@ -393,38 +393,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function showToast(type, message) {
-        // Create toast element
-        const bgColor = type === 'success' ? 'bg-emerald-600' : type === 'danger' ? 'bg-rose-600' : 'bg-blue-600';
-        const toastHtml = `
-            <div class="flex items-center gap-3 px-4 py-3 ${bgColor} text-white rounded-lg shadow-lg min-w-[300px]" role="alert">
-                <div class="flex-1 text-sm">${message}</div>
-                <button type="button" class="text-white/80 hover:text-white" onclick="this.parentElement.remove()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-        
-        // Add to toast container (create if doesn't exist)
-        let toastContainer = document.getElementById('toast-container');
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.id = 'toast-container';
-            toastContainer.className = 'fixed top-4 right-4 z-50 space-y-2';
-            document.body.appendChild(toastContainer);
+        if (window.showToast && window.ToastSystem) {
+            // Use centralized ToastSystem
+            const toastType = type === 'danger' ? 'error' : type;
+            window.ToastSystem.show({ message, type: toastType });
+        } else {
+            // Fallback if ToastSystem not loaded
+            console.warn('ToastSystem not available');
+            alert(message);
         }
-        
-        // Create toast element
-        const toastDiv = document.createElement('div');
-        toastDiv.innerHTML = toastHtml;
-        const toastElement = toastDiv.firstElementChild;
-        toastContainer.appendChild(toastElement);
-        
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            toastElement.style.opacity = '0';
-            toastElement.style.transition = 'opacity 0.3s';
-            setTimeout(() => toastElement.remove(), 300);
-        }, 5000);
     }
 });
 </script>

@@ -1,76 +1,75 @@
 <!-- Appointment Card Component -->
-<div class="card appointment-card border-brand-left mb-3">
-    <div class="card-body">
-        <div class="row align-items-center">
-            <div class="col-auto">
-                <div class="appointment-date-badge gradient-primary text-center">
-                    <div class="month">{{ appointment.appointment_date|date:"M" }}</div>
-                    <div class="day">{{ appointment.appointment_date|date:"d" }}</div>
-                    <div class="year">{{ appointment.appointment_date|date:"Y" }}</div>
+<div class="group bg-white/80 backdrop-blur-sm rounded-2xl border-l-4 border-primary border border-slate-200/50 shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all">
+    <div class="p-6">
+        <div class="flex items-start gap-4">
+            <div class="flex-shrink-0">
+                <div class="w-20 h-20 bg-gradient-to-br from-primary to-primary/70 text-white rounded-xl flex flex-col items-center justify-center shadow-lg">
+                    <div class="text-xs font-bold uppercase">{{ appointment.appointment_date|date:"M" }}</div>
+                    <div class="text-2xl font-bold">{{ appointment.appointment_date|date:"d" }}</div>
+                    <div class="text-xs opacity-80">{{ appointment.appointment_date|date:"Y" }}</div>
                 </div>
             </div>
             
-            <div class="col">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="mb-1">
-                        <i class="fas fa-calendar-alt text-primary me-2"></i>
-                        {{ appointment.service_type|default:'Service Appointment' }}
+            <div class="flex-1 min-w-0">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                    <h6 class="font-bold text-slate-900 mb-0 flex items-center gap-2">
+                        <i class="fas fa-calendar-alt text-primary"></i>
+                        <span>{{ appointment.service_type|default:'Service Appointment' }}</span>
                     </h6>
-                    {% if appointment.status == 'confirmed' %}
-                        <span class="badge bg-success">
-                    {% elif appointment.status == 'pending' %}
-                        <span class="badge bg-warning">
-                    {% elif appointment.status == 'cancelled' %}
-                        <span class="badge bg-danger">
-                    {% elif appointment.status == 'completed' %}
-                        <span class="badge bg-info">
-                    {% else %}
-                        <span class="badge bg-secondary">
-                    {% endif %}
+                    <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold 
+                        {% if appointment.status == 'confirmed' %}bg-emerald-100 text-emerald-700
+                        {% elif appointment.status == 'pending' %}bg-amber-100 text-amber-700
+                        {% elif appointment.status == 'cancelled' %}bg-rose-100 text-rose-700
+                        {% elif appointment.status == 'completed' %}bg-blue-100 text-blue-700
+                        {% else %}bg-slate-100 text-slate-700{% endif %}">
                         {{ appointment.get_status_display }}
                     </span>
                 </div>
                 
-                <div class="appointment-details">
-                    <p class="mb-1">
-                        <i class="fas fa-clock text-muted me-2"></i>
+                <div class="space-y-2 mb-4">
+                    <p class="text-sm text-slate-600 mb-0 flex items-center gap-2">
+                        <i class="fas fa-clock text-slate-400"></i>
                         <strong>{{ appointment.appointment_time|time:"g:i A" }}</strong>
                     </p>
                     
                     {% if appointment.vehicle %}
-                    <p class="mb-1">
-                        <i class="fas fa-car text-muted me-2"></i>
-                        {{ appointment.vehicle.year }} {{ appointment.vehicle.make }} {{ appointment.vehicle.model }}
-                        <span class="text-muted">({{ appointment.vehicle.license_plate }})</span>
+                    <p class="text-sm text-slate-600 mb-0 flex items-center gap-2">
+                        <i class="fas fa-car text-slate-400"></i>
+                        <span>{{ appointment.vehicle.year }} {{ appointment.vehicle.make }} {{ appointment.vehicle.model }}</span>
+                        <span class="text-slate-400">({{ appointment.vehicle.license_plate }})</span>
                     </p>
                     {% endif %}
                     
                     {% if appointment.service_bay %}
-                    <p class="mb-1">
-                        <i class="fas fa-map-marker-alt text-muted me-2"></i>
-                        Bay {{ appointment.service_bay.bay_number }}
+                    <p class="text-sm text-slate-600 mb-0 flex items-center gap-2">
+                        <i class="fas fa-map-marker-alt text-slate-400"></i>
+                        <span>Bay {{ appointment.service_bay.bay_number }}</span>
                     </p>
                     {% endif %}
                     
                     {% if appointment.notes %}
-                    <p class="mb-0 small text-muted">
-                        <i class="fas fa-comment text-muted me-2"></i>
-                        {{ appointment.notes|truncatewords:15 }}
+                    <p class="text-sm text-slate-500 mb-0 flex items-start gap-2">
+                        <i class="fas fa-comment text-slate-400 mt-0.5"></i>
+                        <span>{{ appointment.notes|truncatewords:15 }}</span>
                     </p>
                     {% endif %}
                 </div>
                 
-                <div class="mt-3">
-                    <!-- Appointment details visible in card, no detail view needed for customer portal -->
+                <div class="flex flex-wrap items-center gap-2">
                     {% if appointment.status == 'pending' or appointment.status == 'confirmed' %}
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelAppointment({{ appointment.id }})">
-                        <i class="fas fa-times me-1"></i> Request Cancellation
+                    <button type="button" 
+                            onclick="cancelAppointment({{ appointment.id }})" 
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-rose-600 border-2 border-rose-200 rounded-xl hover:bg-rose-50 transition-all">
+                        <i class="fas fa-times"></i>
+                        <span>Request Cancellation</span>
                     </button>
                     {% endif %}
                     
                     {% if appointment.vehicle %}
-                    <a href="{% url 'portal:vehicle-detail' appointment.vehicle.id %}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-car me-1"></i> View Vehicle
+                    <a href="{% url 'portal:vehicle-detail' appointment.vehicle.id %}" 
+                       class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-primary border-2 border-primary/20 rounded-xl hover:bg-primary/10 transition-all">
+                        <i class="fas fa-car"></i>
+                        <span>View Vehicle</span>
                     </a>
                     {% endif %}
                 </div>
@@ -79,39 +78,9 @@
     </div>
 </div>
 
-<style>
-.appointment-date-badge {
-    color: white;
-    border-radius: 10px;
-    padding: 10px 15px;
-    min-width: 80px;
-}
-.appointment-date-badge .month {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-.appointment-date-badge .day {
-    font-size: 2rem;
-    font-weight: 700;
-    line-height: 1;
-}
-.appointment-date-badge .year {
-    font-size: 0.75rem;
-    opacity: 0.8;
-}
-.appointment-card {
-    transition: box-shadow 0.2s;
-}
-.appointment-card:hover {
-    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
-}
-</style>
-
 <script>
 function cancelAppointment(appointmentId) {
     if (confirm('Are you sure you want to cancel this appointment?')) {
-        // AJAX call to cancel appointment
         fetch(`/appointments/${appointmentId}/cancel/`, {
             method: 'POST',
             headers: {
@@ -124,7 +93,7 @@ function cancelAppointment(appointmentId) {
             if (data.success) {
                 location.reload();
             } else {
-                alert('Error cancelling appointment: ' + data.error);
+                alert('Error cancelling appointment: ' + (data.error || 'Unknown error'));
             }
         })
         .catch(error => {

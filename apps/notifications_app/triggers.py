@@ -210,6 +210,155 @@ Please review and approve to proceed with repairs.''',
         )
         self.service.send_notification(notification)
     
+    def work_order_started(self, work_order):
+        """Notify technicians when work order starts"""
+        # Notify all assigned technicians
+        technicians = []
+        if work_order.primary_technician:
+            technicians.append(work_order.primary_technician)
+        technicians.extend(work_order.assigned_technicians.all())
+        
+        for tech in set(technicians):  # Remove duplicates
+            notification = Notification.objects.create(
+                recipient=tech,
+                notification_type='work_order',
+                channel='in_app',
+                priority='normal',
+                title=f'Work Started - {work_order.work_order_number}',
+                message=f'''Work order {work_order.work_order_number} has started.
+
+Vehicle: {work_order.vehicle}
+Customer: {work_order.customer}
+
+You can now begin work on this order.''',
+                data={
+                    'work_order_id': work_order.id,
+                    'work_order_number': work_order.work_order_number,
+                },
+                related_object_type='work_order',
+                related_object_id=work_order.id
+            )
+            self.service.send_notification(notification)
+    
+    def work_order_paused(self, work_order, reason=''):
+        """Notify when work order is paused"""
+        # Notify customer if they're waiting
+        if work_order.is_customer_waiting and work_order.customer.user:
+            notification = Notification.objects.create(
+                recipient=work_order.customer.user,
+                notification_type='work_order',
+                channel='email',
+                priority='normal',
+                title=f'Work Order Paused - {work_order.work_order_number}',
+                message=f'''Work on your vehicle has been temporarily paused.
+
+Work Order: {work_order.work_order_number}
+Vehicle: {work_order.vehicle}
+{f"Reason: {reason}" if reason else ""}
+
+We'll resume work shortly.''',
+                data={
+                    'work_order_id': work_order.id,
+                    'work_order_number': work_order.work_order_number,
+                },
+                related_object_type='work_order',
+                related_object_id=work_order.id
+            )
+            self.service.send_notification(notification)
+    
+    def work_order_quality_check_failed(self, work_order):
+        """Notify when quality check fails"""
+        # Notify assigned technicians
+        technicians = []
+        if work_order.primary_technician:
+            technicians.append(work_order.primary_technician)
+        technicians.extend(work_order.assigned_technicians.all())
+        
+        for tech in set(technicians):
+            notification = Notification.objects.create(
+                recipient=tech,
+                notification_type='work_order',
+                channel='in_app',
+                priority='high',
+                title=f'Quality Check Failed - {work_order.work_order_number}',
+                message=f'''Quality check failed for work order {work_order.work_order_number}.
+
+Vehicle: {work_order.vehicle}
+Notes: {work_order.quality_check_notes or "See work order for details"}
+
+Please review and make necessary corrections.''',
+                data={
+                    'work_order_id': work_order.id,
+                    'work_order_number': work_order.work_order_number,
+                },
+                related_object_type='work_order',
+                related_object_id=work_order.id
+            )
+            self.service.send_notification(notification)
+    
+    def work_order_invoiced(self, work_order):
+        """Notify customer when work order is invoiced"""
+        if not work_order.customer.user:
+            return
+        
+        notification = Notification.objects.create(
+            recipient=work_order.customer.user,
+            notification_type='work_order',
+            channel='email',
+            priority='normal',
+            title=f'Invoice Ready - {work_order.work_order_number}',
+            message=f'''Your invoice is ready for work order {work_order.work_order_number}.
+
+Vehicle: {work_order.vehicle}
+Total: ${work_order.actual_total or work_order.estimated_total}
+
+Please review and make payment when ready.''',
+            data={
+                'work_order_id': work_order.id,
+                'work_order_number': work_order.work_order_number,
+                'total': str(work_order.actual_total or work_order.estimated_total),
+            },
+            related_object_type='work_order',
+            related_object_id=work_order.id
+        )
+        self.service.send_notification(notification)
+    
+    def work_order_overdue(self, work_order):
+        """Notify when work order becomes overdue"""
+        # Notify manager and assigned technicians
+        from apps.accounts.models import User
+        
+        managers = User.objects.filter(role='manager')
+        technicians = []
+        if work_order.primary_technician:
+            technicians.append(work_order.primary_technician)
+        technicians.extend(work_order.assigned_technicians.all())
+        
+        recipients = list(managers) + list(set(technicians))
+        
+        for recipient in recipients:
+            notification = Notification.objects.create(
+                recipient=recipient,
+                notification_type='work_order',
+                channel='in_app',
+                priority='high',
+                title=f'Work Order Overdue - {work_order.work_order_number}',
+                message=f'''Work order {work_order.work_order_number} is overdue.
+
+Vehicle: {work_order.vehicle}
+Customer: {work_order.customer}
+Estimated Completion: {work_order.estimated_completion.strftime("%Y-%m-%d %H:%M") if work_order.estimated_completion else "N/A"}
+
+Please review and update status.''',
+                data={
+                    'work_order_id': work_order.id,
+                    'work_order_number': work_order.work_order_number,
+                },
+                related_object_type='work_order',
+                related_object_id=work_order.id
+            )
+            self.service.send_notification(notification)
+    
     # ==================== INVOICE NOTIFICATIONS ====================
     
     def invoice_generated(self, invoice):

@@ -3,214 +3,182 @@
 
 {% block title %}Profile Settings - {{ customer.full_name }}{% endblock %}
 
-{% block portal_content %}
-<div class="container-fluid py-4">
-    <!-- Page Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2>
-                <i class="fas fa-user-cog me-2"></i>
-                Profile Settings
-            </h2>
-            <p class="text-muted">Manage your account information and preferences</p>
+{% block content %}
+<!-- Page Header -->
+<div class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent"></div>
+    <div class="relative px-4 lg:px-8 py-12 max-w-7xl mx-auto">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center text-white shadow-lg">
+                <i class="fas fa-user-cog text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-3xl lg:text-4xl font-bold text-slate-900 mb-1">Profile Settings</h1>
+                <p class="text-slate-600 text-sm">Manage your account information and preferences</p>
+            </div>
         </div>
     </div>
-    
-    <!-- Profile Form -->
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-user me-2"></i>
-                        Personal Information
+</div>
+
+<!-- Main Content -->
+<div class="px-4 lg:px-8 pb-12 max-w-7xl mx-auto">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Form -->
+        <div class="lg:col-span-2">
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+                <div class="px-6 py-5 bg-gradient-to-r from-primary to-primary/80 text-white">
+                    <h5 class="text-sm font-bold mb-0 flex items-center gap-2">
+                        <i class="fas fa-user"></i>
+                        <span>Personal Information</span>
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <form method="post">
                         {% csrf_token %}
                         
-                        <div class="row">
-                            <!-- First Name -->
-                            <div class="col-md-6 mb-3">
-                                <label for="id_first_name" class="form-label">First Name *</label>
-                                <input 
-                                    type="text" 
-                                    name="first_name" 
-                                    id="id_first_name"
-                                    class="form-control" 
-                                    value="{{ form.first_name.value|default:'' }}"
-                                    {% if not can_edit %}readonly disabled{% endif %}
-                                    required
-                                >
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="id_first_name" class="block text-sm font-semibold text-slate-700 mb-2">First Name *</label>
+                                <input type="text" 
+                                       name="first_name" 
+                                       id="id_first_name"
+                                       class="w-full px-4 py-3 border-2 border-slate-200/50 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all {% if not can_edit %}bg-slate-50 cursor-not-allowed{% endif %}" 
+                                       value="{{ form.first_name.value|default:'' }}"
+                                       {% if not can_edit %}readonly disabled{% endif %}
+                                       required>
                             </div>
                             
-                            <!-- Last Name -->
-                            <div class="col-md-6 mb-3">
-                                <label for="id_last_name" class="form-label">Last Name *</label>
-                                <input 
-                                    type="text" 
-                                    name="last_name" 
-                                    id="id_last_name"
-                                    class="form-control" 
-                                    value="{{ form.last_name.value|default:'' }}"
-                                    {% if not can_edit %}readonly disabled{% endif %}
-                                    required
-                                >
+                            <div>
+                                <label for="id_last_name" class="block text-sm font-semibold text-slate-700 mb-2">Last Name *</label>
+                                <input type="text" 
+                                       name="last_name" 
+                                       id="id_last_name"
+                                       class="w-full px-4 py-3 border-2 border-slate-200/50 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all {% if not can_edit %}bg-slate-50 cursor-not-allowed{% endif %}" 
+                                       value="{{ form.last_name.value|default:'' }}"
+                                       {% if not can_edit %}readonly disabled{% endif %}
+                                       required>
                             </div>
                         </div>
                         
-                        <div class="row">
-                            <!-- Email -->
-                            <div class="col-md-6 mb-3">
-                                <label for="id_email" class="form-label">Email Address *</label>
-                                <input 
-                                    type="email" 
-                                    name="email" 
-                                    id="id_email"
-                                    class="form-control" 
-                                    value="{{ form.email.value|default:'' }}"
-                                    {% if not can_edit %}readonly disabled{% endif %}
-                                    required
-                                >
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="id_email" class="block text-sm font-semibold text-slate-700 mb-2">Email Address *</label>
+                                <input type="email" 
+                                       name="email" 
+                                       id="id_email"
+                                       class="w-full px-4 py-3 border-2 border-slate-200/50 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all {% if not can_edit %}bg-slate-50 cursor-not-allowed{% endif %}" 
+                                       value="{{ form.email.value|default:'' }}"
+                                       {% if not can_edit %}readonly disabled{% endif %}
+                                       required>
                             </div>
                             
-                            <!-- Phone -->
-                            <div class="col-md-6 mb-3">
-                                <label for="id_phone" class="form-label">Phone Number *</label>
-                                <input 
-                                    type="tel" 
-                                    name="phone" 
-                                    id="id_phone"
-                                    class="form-control" 
-                                    value="{{ form.phone.value|default:'' }}"
-                                    {% if not can_edit %}readonly disabled{% endif %}
-                                    required
-                                >
+                            <div>
+                                <label for="id_phone" class="block text-sm font-semibold text-slate-700 mb-2">Phone Number *</label>
+                                <input type="tel" 
+                                       name="phone" 
+                                       id="id_phone"
+                                       class="w-full px-4 py-3 border-2 border-slate-200/50 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all {% if not can_edit %}bg-slate-50 cursor-not-allowed{% endif %}" 
+                                       value="{{ form.phone.value|default:'' }}"
+                                       {% if not can_edit %}readonly disabled{% endif %}
+                                       required>
                             </div>
                         </div>
                         
-                        <!-- Address -->
-                        <div class="mb-3">
-                            <label for="id_address" class="form-label">Address</label>
-                            <textarea 
-                                name="address" 
-                                id="id_address"
-                                class="form-control" 
-                                rows="3"
-                                {% if not can_edit %}readonly disabled{% endif %}
-                            >{{ form.address.value|default:'' }}</textarea>
+                        <div class="mb-4">
+                            <label for="id_address" class="block text-sm font-semibold text-slate-700 mb-2">Address</label>
+                            <textarea name="address" 
+                                      id="id_address"
+                                      class="w-full px-4 py-3 border-2 border-slate-200/50 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all {% if not can_edit %}bg-slate-50 cursor-not-allowed{% endif %}" 
+                                      rows="3"
+                                      {% if not can_edit %}readonly disabled{% endif %}>{{ form.address.value|default:'' }}</textarea>
                         </div>
                         
-                        <div class="row">
-                            <!-- City -->
-                            <div class="col-md-4 mb-3">
-                                <label for="id_city" class="form-label">City</label>
-                                <input 
-                                    type="text" 
-                                    name="city" 
-                                    id="id_city"
-                                    class="form-control" 
-                                    value="{{ form.city.value|default:'' }}"
-                                    {% if not can_edit %}readonly disabled{% endif %}
-                                >
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                            <div>
+                                <label for="id_city" class="block text-sm font-semibold text-slate-700 mb-2">City</label>
+                                <input type="text" 
+                                       name="city" 
+                                       id="id_city"
+                                       class="w-full px-4 py-3 border-2 border-slate-200/50 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all {% if not can_edit %}bg-slate-50 cursor-not-allowed{% endif %}" 
+                                       value="{{ form.city.value|default:'' }}"
+                                       {% if not can_edit %}readonly disabled{% endif %}>
                             </div>
                             
-                            <!-- State -->
-                            <div class="col-md-4 mb-3">
-                                <label for="id_state" class="form-label">State</label>
-                                <input 
-                                    type="text" 
-                                    name="state" 
-                                    id="id_state"
-                                    class="form-control" 
-                                    value="{{ form.state.value|default:'' }}"
-                                    {% if not can_edit %}readonly disabled{% endif %}
-                                >
+                            <div>
+                                <label for="id_state" class="block text-sm font-semibold text-slate-700 mb-2">State</label>
+                                <input type="text" 
+                                       name="state" 
+                                       id="id_state"
+                                       class="w-full px-4 py-3 border-2 border-slate-200/50 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all {% if not can_edit %}bg-slate-50 cursor-not-allowed{% endif %}" 
+                                       value="{{ form.state.value|default:'' }}"
+                                       {% if not can_edit %}readonly disabled{% endif %}>
                             </div>
                             
-                            <!-- ZIP Code -->
-                            <div class="col-md-4 mb-3">
-                                <label for="id_zip_code" class="form-label">ZIP Code</label>
-                                <input 
-                                    type="text" 
-                                    name="zip_code" 
-                                    id="id_zip_code"
-                                    class="form-control" 
-                                    value="{{ form.zip_code.value|default:'' }}"
-                                    {% if not can_edit %}readonly disabled{% endif %}
-                                >
+                            <div>
+                                <label for="id_zip_code" class="block text-sm font-semibold text-slate-700 mb-2">ZIP Code</label>
+                                <input type="text" 
+                                       name="zip_code" 
+                                       id="id_zip_code"
+                                       class="w-full px-4 py-3 border-2 border-slate-200/50 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all {% if not can_edit %}bg-slate-50 cursor-not-allowed{% endif %}" 
+                                       value="{{ form.zip_code.value|default:'' }}"
+                                       {% if not can_edit %}readonly disabled{% endif %}>
                             </div>
                         </div>
                         
-                        <hr class="my-4">
+                        <hr class="my-6 border-slate-200/50">
                         
-                        <h5 class="mb-3">
-                            <i class="fas fa-bell me-2"></i>
-                            Communication Preferences
+                        <h5 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <i class="fas fa-bell text-primary"></i>
+                            <span>Communication Preferences</span>
                         </h5>
                         
-                        <!-- Preferred Contact Method -->
-                        <div class="mb-3">
-                            <label for="id_preferred_contact_method" class="form-label">Preferred Contact Method</label>
-                            <select 
-                                name="preferred_contact_method" 
-                                id="id_preferred_contact_method"
-                                class="form-select"
-                                {% if not can_edit %}disabled{% endif %}
-                            >
+                        <div class="mb-4">
+                            <label for="id_preferred_contact_method" class="block text-sm font-semibold text-slate-700 mb-2">Preferred Contact Method</label>
+                            <select name="preferred_contact_method" 
+                                    id="id_preferred_contact_method"
+                                    class="w-full px-4 py-3 border-2 border-slate-200/50 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all {% if not can_edit %}bg-slate-50 cursor-not-allowed{% endif %}"
+                                    {% if not can_edit %}disabled{% endif %}>
                                 <option value="email" {% if form.preferred_contact_method.value == 'email' %}selected{% endif %}>Email</option>
                                 <option value="phone" {% if form.preferred_contact_method.value == 'phone' %}selected{% endif %}>Phone</option>
                                 <option value="sms" {% if form.preferred_contact_method.value == 'sms' %}selected{% endif %}>SMS</option>
                             </select>
                         </div>
                         
-                        <!-- Marketing Preferences -->
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input 
-                                    type="checkbox" 
-                                    name="marketing_emails" 
-                                    id="id_marketing_emails"
-                                    class="form-check-input" 
-                                    {% if form.marketing_emails.value %}checked{% endif %}
-                                    {% if not can_edit %}disabled{% endif %}
-                                >
-                                <label class="form-check-label" for="id_marketing_emails">
-                                    Receive marketing emails and special offers
-                                </label>
-                            </div>
+                        <div class="space-y-3 mb-6">
+                            <label class="flex items-center gap-3 cursor-pointer p-3 bg-slate-50/50 rounded-xl hover:bg-slate-100/50 transition-colors">
+                                <input type="checkbox" 
+                                       name="marketing_emails" 
+                                       id="id_marketing_emails"
+                                       class="w-5 h-5 border-2 border-slate-300 rounded text-primary focus:ring-primary {% if not can_edit %}cursor-not-allowed{% endif %}" 
+                                       {% if form.marketing_emails.value %}checked{% endif %}
+                                       {% if not can_edit %}disabled{% endif %}>
+                                <span class="text-sm text-slate-700">Receive marketing emails and special offers</span>
+                            </label>
+                            
+                            <label class="flex items-center gap-3 cursor-pointer p-3 bg-slate-50/50 rounded-xl hover:bg-slate-100/50 transition-colors">
+                                <input type="checkbox" 
+                                       name="marketing_sms" 
+                                       id="id_marketing_sms"
+                                       class="w-5 h-5 border-2 border-slate-300 rounded text-primary focus:ring-primary {% if not can_edit %}cursor-not-allowed{% endif %}" 
+                                       {% if form.marketing_sms.value %}checked{% endif %}
+                                       {% if not can_edit %}disabled{% endif %}>
+                                <span class="text-sm text-slate-700">Receive marketing SMS messages</span>
+                            </label>
                         </div>
                         
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input 
-                                    type="checkbox" 
-                                    name="marketing_sms" 
-                                    id="id_marketing_sms"
-                                    class="form-check-input" 
-                                    {% if form.marketing_sms.value %}checked{% endif %}
-                                    {% if not can_edit %}disabled{% endif %}
-                                >
-                                <label class="form-check-label" for="id_marketing_sms">
-                                    Receive marketing SMS messages
-                                </label>
-                            </div>
-                        </div>
+                        <hr class="my-6 border-slate-200/50">
                         
-                        <hr class="my-4">
-                        
-                        <!-- Submit Button -->
-                        <div class="d-flex gap-2">
+                        <div class="flex flex-col sm:flex-row gap-3">
                             {% if can_edit %}
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>
-                                Save Changes
+                            <button type="submit" class="group inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all shadow-lg shadow-primary/20">
+                                <i class="fas fa-save"></i>
+                                <span>Save Changes</span>
+                                <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                             </button>
                             {% endif %}
-                            <a href="{% url 'portal:home' %}" class="btn btn-secondary">
-                                <i class="fas fa-{% if can_edit %}times{% else %}arrow-left{% endif %} me-2"></i>
-                                {% if can_edit %}Cancel{% else %}Back to Dashboard{% endif %}
+                            <a href="{% url 'portal:home' %}" class="inline-flex items-center justify-center gap-2 px-6 py-3 border-2 border-slate-200/50 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-all">
+                                <i class="fas fa-{% if can_edit %}times{% else %}arrow-left{% endif %}"></i>
+                                <span>{% if can_edit %}Cancel{% else %}Back to Dashboard{% endif %}</span>
                             </a>
                         </div>
                     </form>
@@ -219,38 +187,50 @@
         </div>
         
         <!-- Sidebar -->
-        <div class="col-lg-4">
+        <div class="lg:col-span-1 space-y-6">
             <!-- Account Info Card -->
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-info text-white">
-                    <h6 class="mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Account Information
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+                <div class="px-6 py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                    <h6 class="text-sm font-bold mb-0 flex items-center gap-2">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Account Information</span>
                     </h6>
                 </div>
-                <div class="card-body">
-                    <p><strong>Customer Number:</strong><br>{{ customer.customer_number }}</p>
-                    <p><strong>Customer Since:</strong><br>{{ customer.customer_since|date:"F d, Y" }}</p>
-                    <p><strong>Account Status:</strong><br>
-                        <span class="badge bg-success">{{ customer.status|title }}</span>
-                    </p>
-                    <p class="mb-0"><strong>Customer Type:</strong><br>{{ customer.customer_type|title }}</p>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Customer Number</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ customer.customer_number }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Customer Since</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ customer.customer_since|date:"F d, Y" }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Account Status</p>
+                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                            {{ customer.status|title }}
+                        </span>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Customer Type</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ customer.customer_type|title }}</p>
+                    </div>
                 </div>
             </div>
             
             <!-- Security Card -->
-            <div class="card shadow-sm">
-                <div class="card-header bg-warning text-dark">
-                    <h6 class="mb-0">
-                        <i class="fas fa-lock me-2"></i>
-                        Security
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+                <div class="px-6 py-5 bg-gradient-to-r from-amber-500 to-amber-600 text-white">
+                    <h6 class="text-sm font-bold mb-0 flex items-center gap-2">
+                        <i class="fas fa-lock"></i>
+                        <span>Security</span>
                     </h6>
                 </div>
-                <div class="card-body">
-                    <p class="text-muted mb-3">Keep your account secure by regularly updating your password.</p>
-                    <a href="{% url 'portal:change-password' %}" class="btn btn-warning btn-sm w-100">
-                        <i class="fas fa-key me-2"></i>
-                        Change Password
+                <div class="p-6">
+                    <p class="text-sm text-slate-600 mb-4">Keep your account secure by regularly updating your password.</p>
+                    <a href="{% url 'portal:change-password' %}" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:scale-105 transition-all">
+                        <i class="fas fa-key"></i>
+                        <span>Change Password</span>
                     </a>
                 </div>
             </div>

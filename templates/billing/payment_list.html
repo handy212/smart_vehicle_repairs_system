@@ -602,23 +602,14 @@ function bulkReceipts() {
 }
 
 function showToast(message, type = 'info') {
-    const bgColor = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-blue-600';
-    const toast = document.createElement('div');
-    toast.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2`;
-    toast.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'exclamation-triangle' : 'info'}"></i>
-        <span>${message}</span>
-    `;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
-        setTimeout(() => {
-            if (document.body.contains(toast)) {
-                document.body.removeChild(toast);
-            }
-        }, 300);
-    }, 3000);
+    if (window.showToast && window.ToastSystem) {
+        // Use centralized ToastSystem
+        window.ToastSystem.show({ message, type });
+    } else {
+        // Fallback if ToastSystem not loaded
+        console.warn('ToastSystem not available');
+        alert(message);
+    }
 }
 
 function getCookie(name) {

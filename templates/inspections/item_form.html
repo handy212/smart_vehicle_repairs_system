@@ -4,28 +4,6 @@
 
 {% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} Item - {{ category.name }}{% endblock %}
 
-{% block extra_css %}
-<style>
-    .form-container {
-        max-width: 800px;
-        margin: 0 auto;
-    }
-    .checkbox-wrapper {
-        display: flex;
-        gap: 2rem;
-        flex-wrap: wrap;
-    }
-    .checkbox-item {
-        flex: 0 0 auto;
-    }
-    .help-text {
-        font-size: 0.875rem;
-        color: #6c757d;
-        margin-top: 0.25rem;
-    }
-</style>
-{% endblock %}
-
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -33,12 +11,16 @@
         const measurementUnitField = document.getElementById('div_id_measurement_unit');
         
         function toggleMeasurementUnit() {
-            if (itemTypeField.value === 'measurement') {
-                measurementUnitField.style.display = 'block';
-                measurementUnitField.querySelector('input').required = true;
-            } else {
-                measurementUnitField.style.display = 'none';
-                measurementUnitField.querySelector('input').required = false;
+            if (itemTypeField && measurementUnitField) {
+                if (itemTypeField.value === 'measurement') {
+                    measurementUnitField.style.display = 'block';
+                    const input = measurementUnitField.querySelector('input');
+                    if (input) input.required = true;
+                } else {
+                    measurementUnitField.style.display = 'none';
+                    const input = measurementUnitField.querySelector('input');
+                    if (input) input.required = false;
+                }
             }
         }
         
@@ -46,120 +28,122 @@
         toggleMeasurementUnit();
         
         // Listen for changes
-        itemTypeField.addEventListener('change', toggleMeasurementUnit);
+        if (itemTypeField) {
+            itemTypeField.addEventListener('change', toggleMeasurementUnit);
+        }
     });
 </script>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="form-container">
-        <!-- Page Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2>
-                    <i class="fas fa-list-check me-2 text-primary"></i>
-                    {% if is_edit %}Edit{% else %}Add{% endif %} Item
-                </h2>
-                <p class="text-muted mb-0">
-                    Category: <strong>{{ category.name }}</strong>
-                    <span class="text-muted mx-2">|</span>
-                    Template: <strong>{{ category.template.name }}</strong>
-                </p>
-            </div>
-            <a href="{% url 'inspections:template-detail' category.template.id %}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Back
-            </a>
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Page Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2 mb-2">
+                <i class="fas fa-list-check text-primary"></i>
+                {% if is_edit %}Edit{% else %}Add{% endif %} Item
+            </h2>
+            <p class="text-slate-600 text-sm">
+                Category: <strong>{{ category.name }}</strong>
+                <span class="text-slate-400 mx-2">|</span>
+                Template: <strong>{{ category.template.name }}</strong>
+            </p>
         </div>
-
-        <!-- Form -->
-        <div class="card">
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    
-                    <!-- Basic Information -->
-                    <h5 class="mb-3">Basic Information</h5>
-                    
-                    {{ form.name|as_crispy_field }}
-                    {{ form.description|as_crispy_field }}
-                    
-                    <hr class="my-4">
-                    
-                    <!-- Item Configuration -->
-                    <h5 class="mb-3">Item Configuration</h5>
-                    
-                    {{ form.item_type|as_crispy_field }}
-                    {{ form.measurement_unit|as_crispy_field }}
-                    
-                    <hr class="my-4">
-                    
-                    <!-- Item Properties -->
-                    <h5 class="mb-3">Item Properties</h5>
-                    
-                    <div class="checkbox-wrapper mb-3">
-                        <div class="checkbox-item">
-                            <div class="form-check">
-                                {{ form.is_required }}
-                                <label class="form-check-label" for="{{ form.is_required.id_for_label }}">
-                                    <strong>Required</strong>
-                                    <br>
-                                    <small class="help-text">Must be checked during inspection</small>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="checkbox-item">
-                            <div class="form-check">
-                                {{ form.is_critical }}
-                                <label class="form-check-label" for="{{ form.is_critical.id_for_label }}">
-                                    <strong>Critical</strong>
-                                    <br>
-                                    <small class="help-text">Affects safety or compliance</small>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {{ form.order|as_crispy_field }}
-                    
-                    <hr class="my-4">
-                    
-                    <!-- Action Buttons -->
-                    <div class="d-flex justify-content-between">
-                        <a href="{% url 'inspections:template-detail' category.template.id %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-1"></i> Cancel
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i>
-                            {% if is_edit %}Update Item{% else %}Add Item{% endif %}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        {% if is_edit %}
-        <div class="card mt-3">
-            <div class="card-body bg-light">
-                <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>Item Type Guide</h6>
-                <div class="row">
-                    <div class="col-md-6 mb-2">
-                        <strong>Checkbox:</strong> Simple yes/no check (e.g., "Seatbelts functional")
-                    </div>
-                    <div class="col-md-6 mb-2">
-                        <strong>Rating:</strong> 1-5 scale assessment (e.g., "Tire condition")
-                    </div>
-                    <div class="col-md-6 mb-2">
-                        <strong>Measurement:</strong> Numeric value with unit (e.g., "Brake pad thickness")
-                    </div>
-                    <div class="col-md-6 mb-2">
-                        <strong>Text:</strong> Free-form notes (e.g., "Additional observations")
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
+        <a href="{% url 'inspections:template-detail' category.template.id %}" 
+           class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+            <i class="fas fa-arrow-left"></i>
+            Back
+        </a>
     </div>
+
+    <!-- Form -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <div class="mb-6">
+                <h5 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4 pb-2 border-b border-slate-200">Basic Information</h5>
+                {{ form.name|as_crispy_field }}
+                {{ form.description|as_crispy_field }}
+            </div>
+            
+            <hr class="my-6 border-slate-200">
+            
+            <!-- Item Configuration -->
+            <div class="mb-6">
+                <h5 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4 pb-2 border-b border-slate-200">Item Configuration</h5>
+                {{ form.item_type|as_crispy_field }}
+                {{ form.measurement_unit|as_crispy_field }}
+            </div>
+            
+            <hr class="my-6 border-slate-200">
+            
+            <!-- Item Properties -->
+            <div class="mb-6">
+                <h5 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4 pb-2 border-b border-slate-200">Item Properties</h5>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <label class="flex items-start gap-3 p-4 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors">
+                        {{ form.is_required }}
+                        <div>
+                            <div class="text-sm font-semibold text-slate-900">Required</div>
+                            <p class="text-xs text-slate-500 mt-1">Must be checked during inspection</p>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start gap-3 p-4 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors">
+                        {{ form.is_critical }}
+                        <div>
+                            <div class="text-sm font-semibold text-slate-900">Critical</div>
+                            <p class="text-xs text-slate-500 mt-1">Affects safety or compliance</p>
+                        </div>
+                    </label>
+                </div>
+                
+                {{ form.order|as_crispy_field }}
+            </div>
+            
+            <hr class="my-6 border-slate-200">
+            
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <a href="{% url 'inspections:template-detail' category.template.id %}" 
+                   class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                    <i class="fas fa-times"></i>
+                    Cancel
+                </a>
+                <button type="submit" 
+                        class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-semibold shadow-lg shadow-primary/20">
+                    <i class="fas fa-save"></i>
+                    {% if is_edit %}Update Item{% else %}Add Item{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    {% if is_edit %}
+    <div class="mt-6 bg-slate-50 rounded-xl border border-slate-200 p-6">
+        <h6 class="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <i class="fas fa-info-circle text-primary"></i>
+            Item Type Guide
+        </h6>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-700">
+            <div>
+                <strong>Checkbox:</strong> Simple yes/no check (e.g., "Seatbelts functional")
+            </div>
+            <div>
+                <strong>Rating:</strong> 1-5 scale assessment (e.g., "Tire condition")
+            </div>
+            <div>
+                <strong>Measurement:</strong> Numeric value with unit (e.g., "Brake pad thickness")
+            </div>
+            <div>
+                <strong>Text:</strong> Free-form notes (e.g., "Additional observations")
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

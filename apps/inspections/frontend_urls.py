@@ -28,6 +28,8 @@ urlpatterns = [
     path('templates/<int:pk>/', frontend_views.template_detail, name='template-detail'),
     path('templates/<int:pk>/edit/', frontend_views.template_edit, name='template-edit'),
     path('templates/create/', frontend_views.template_create, name='template-create'),
+    path('templates/<int:pk>/delete/', frontend_views.template_delete, name='template-delete'),
+    path('templates/seed/', frontend_views.template_seed_defaults, name='template-seed'),
     
     # Template Categories
     path('templates/<int:template_pk>/categories/add/', frontend_views.category_create, name='category-create'),

@@ -9,6 +9,14 @@ body {
     height: 100%;
 }
 
+.brand-logo {
+    max-height: 48px;
+    width: auto;
+    height: auto !important;
+    display: inline-block;
+    object-fit: contain;
+}
+
 body {
     background-color: var(--bg-body, #f4f6f8);
     color: var(--gray-900, #111827);

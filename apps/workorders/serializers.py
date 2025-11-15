@@ -144,6 +144,9 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
         # Extract many-to-many field
         assigned_technicians = validated_data.pop('assigned_technicians', [])
         
+        if not validated_data.get('branch'):
+            raise serializers.ValidationError({'branch': 'Branch is required.'})
+
         # Set created_by
         request = self.context.get('request')
         if request and request.user:

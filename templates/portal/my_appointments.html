@@ -3,90 +3,77 @@
 
 {% block title %}My Appointments{% endblock %}
 
-{% block extra_css %}
-{{ block.super }}
-<style>
-    .appointments-header {
-        background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
-        color: white;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
-    }
-    .filter-tabs .nav-link {
-        color: #6c757d;
-    }
-    .filter-tabs .nav-link.active {
-        color: var(--primary-color);
-        border-bottom: 3px solid var(--primary-color);
-    }
-</style>
-{% endblock %}
-
-{% block portal_content %}
-<div class="appointments-header">
-    <div class="container">
-        <h1>
-            <i class="fas fa-calendar-alt me-2"></i>
-            My Appointments
-        </h1>
-        <p class="mb-0 opacity-75">View and manage your appointments</p>
+{% block content %}
+<!-- Page Header -->
+<div class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent"></div>
+    <div class="relative px-4 lg:px-8 py-12 max-w-7xl mx-auto">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center text-white shadow-lg">
+                    <i class="fas fa-calendar-alt text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl lg:text-4xl font-bold text-slate-900 mb-1">My Appointments</h1>
+                    <p class="text-slate-600 text-sm">View and manage your appointments</p>
+                </div>
+            </div>
+            <a href="{% url 'portal:book-appointment' %}" class="group inline-flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-primary to-primary/80 text-white rounded-2xl font-semibold hover:shadow-xl hover:scale-105 transition-all shadow-lg shadow-primary/20">
+                <i class="fas fa-calendar-plus text-lg"></i>
+                <span>Book New Appointment</span>
+                <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+            </a>
+        </div>
     </div>
 </div>
 
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'portal:home' %}">Portal Home</a></li>
-                    <li class="breadcrumb-item active">My Appointments</li>
-                </ol>
-            </nav>
-        </div>
-        <div class="col-md-4 text-end">
-            <a href="{% url 'portal:book-appointment' %}" class="btn btn-primary">
-                <i class="fas fa-calendar-plus me-2"></i>Book New Appointment
-            </a>
+<!-- Main Content -->
+<div class="px-4 lg:px-8 pb-12 max-w-7xl mx-auto space-y-6">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-slate-500">
+        <a href="{% url 'portal:home' %}" class="hover:text-primary transition-colors">Portal Home</a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span class="text-slate-700 font-medium">My Appointments</span>
+    </nav>
+    
+    <!-- Filter Tabs -->
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+        <div class="border-b border-slate-200/50">
+            <div class="flex overflow-x-auto">
+                <a href="?status=all" 
+                   class="flex-shrink-0 px-6 py-4 text-sm font-medium border-b-2 transition-all {% if status_filter == 'all' %}border-primary text-primary bg-primary/5{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    All Appointments
+                </a>
+                <a href="?status=pending" 
+                   class="flex-shrink-0 px-6 py-4 text-sm font-medium border-b-2 transition-all {% if status_filter == 'pending' %}border-primary text-primary bg-primary/5{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    Pending
+                </a>
+                <a href="?status=confirmed" 
+                   class="flex-shrink-0 px-6 py-4 text-sm font-medium border-b-2 transition-all {% if status_filter == 'confirmed' %}border-primary text-primary bg-primary/5{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    Confirmed
+                </a>
+                <a href="?status=completed" 
+                   class="flex-shrink-0 px-6 py-4 text-sm font-medium border-b-2 transition-all {% if status_filter == 'completed' %}border-primary text-primary bg-primary/5{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    Completed
+                </a>
+                <a href="?status=cancelled" 
+                   class="flex-shrink-0 px-6 py-4 text-sm font-medium border-b-2 transition-all {% if status_filter == 'cancelled' %}border-primary text-primary bg-primary/5{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50{% endif %}">
+                    Cancelled
+                </a>
+            </div>
         </div>
     </div>
     
-    <!-- Filter Tabs -->
-    <ul class="nav nav-tabs filter-tabs mb-4">
-        <li class="nav-item">
-            <a class="nav-link {% if status_filter == 'all' %}active{% endif %}" href="?status=all">
-                All Appointments
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if status_filter == 'pending' %}active{% endif %}" href="?status=pending">
-                Pending
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if status_filter == 'confirmed' %}active{% endif %}" href="?status=confirmed">
-                Confirmed
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if status_filter == 'completed' %}active{% endif %}" href="?status=completed">
-                Completed
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if status_filter == 'cancelled' %}active{% endif %}" href="?status=cancelled">
-                Cancelled
-            </a>
-        </li>
-    </ul>
-    
+    <!-- Upcoming Appointments -->
     {% if upcoming %}
-    <div class="card mb-4">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-clock me-2"></i>Upcoming Appointments
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+        <div class="px-6 py-5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white flex items-center justify-between">
+            <h5 class="text-sm font-bold mb-0 flex items-center gap-2">
+                <i class="fas fa-clock"></i>
+                <span>Upcoming Appointments</span>
             </h5>
         </div>
-        <div class="card-body p-0">
+        <div class="p-6 space-y-4">
             {% for appointment in upcoming %}
                 {% include 'portal/partials/appointment_card.html' with appointment=appointment %}
             {% endfor %}
@@ -94,14 +81,16 @@
     </div>
     {% endif %}
     
+    <!-- Past Appointments -->
     {% if past %}
-    <div class="card">
-        <div class="card-header bg-secondary text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-history me-2"></i>Past Appointments
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+        <div class="px-6 py-5 bg-gradient-to-r from-slate-600 to-slate-700 text-white flex items-center justify-between">
+            <h5 class="text-sm font-bold mb-0 flex items-center gap-2">
+                <i class="fas fa-history"></i>
+                <span>Past Appointments</span>
             </h5>
         </div>
-        <div class="card-body p-0">
+        <div class="p-6 space-y-4">
             {% for appointment in past %}
                 {% include 'portal/partials/appointment_card.html' with appointment=appointment %}
             {% endfor %}
@@ -109,14 +98,19 @@
     </div>
     {% endif %}
     
-    {% if not appointments %}
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <i class="fas fa-calendar-times fa-4x text-muted mb-4"></i>
-            <h4>No Appointments</h4>
-            <p class="text-muted">You haven't booked any appointments yet</p>
-            <a href="{% url 'portal:book-appointment' %}" class="btn btn-primary btn-lg">
-                <i class="fas fa-calendar-plus me-2"></i>Book Your First Appointment
+    <!-- Empty State -->
+    {% if not appointments and not upcoming and not past %}
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm">
+        <div class="p-12 text-center">
+            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-calendar-times text-3xl text-slate-400"></i>
+            </div>
+            <h4 class="text-lg font-semibold text-slate-900 mb-2">No Appointments</h4>
+            <p class="text-sm text-slate-500 mb-6">You haven't booked any appointments yet</p>
+            <a href="{% url 'portal:book-appointment' %}" class="group inline-flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-primary to-primary/80 text-white rounded-2xl font-semibold hover:shadow-xl hover:scale-105 transition-all shadow-lg shadow-primary/20">
+                <i class="fas fa-calendar-plus"></i>
+                <span>Book Your First Appointment</span>
+                <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
             </a>
         </div>
     </div>

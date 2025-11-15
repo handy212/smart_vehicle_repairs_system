@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -21,31 +22,9 @@
     
     <!-- Font Awesome for icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link href="{% static 'css/print.css' %}" rel="stylesheet">
     
     <style>
-        @media print {
-            body { 
-                font-size: 12px;
-                line-height: 1.3;
-            }
-            .no-print { 
-                display: none !important; 
-            }
-            .page-break { 
-                page-break-before: always; 
-            }
-            .max-w-7xl {
-                margin: 0;
-                padding: 0;
-            }
-            .grid {
-                margin: 0;
-            }
-            .grid > * {
-                padding: 0 5px;
-            }
-        }
-        
         .status-badge {
             display: inline-block;
             padding: 4px 8px;
@@ -82,8 +61,8 @@
         .priority-urgent { background-color: #dc3545; color: white; }
     </style>
 </head>
-<body class="bg-white p-4">
-    <div class="max-w-7xl mx-auto">
+<body class="print-page">
+    <div class="print-container print-surface p-6 max-w-7xl">
         <!-- Print Button (hidden when printing) -->
         <div class="no-print text-center mb-6">
             <button onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
@@ -96,30 +75,33 @@
             </button>
         </div>
 
-        <!-- Header -->
-        <div class="border-b-4 border-primary mb-5 pb-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <div class="text-2xl font-bold text-primary mb-2">WORK ORDER</div>
-                    <div class="text-xl font-semibold text-slate-900 mb-2">{{ workorder.work_order_number }}</div>
-                    <div>
+        {% include 'print/standard_header.html' with document_title='Work Order' document_number=workorder.work_order_number document_date=workorder.created_at|date:"F d, Y" print_branch=print_branch %}
+
+        <div class="print-body space-y-8">
+
+        <!-- Work Order Overview -->
+        <div class="print-card">
+            <div class="flex flex-col md:flex-row md:justify-between gap-6">
+                <div class="space-y-2">
+                    <div class="print-section-title">Work Order</div>
+                    <div class="text-xl font-semibold text-slate-900">{{ workorder.work_order_number }}</div>
+                    <div class="flex flex-wrap items-center gap-2">
                         <span class="status-badge status-{{ workorder.status }}">{{ workorder.get_status_display }}</span>
-                        <span class="priority-badge priority-{{ workorder.priority }} ml-2">{{ workorder.get_priority_display }} Priority</span>
+                        <span class="priority-badge priority-{{ workorder.priority }}">{{ workorder.get_priority_display }} Priority</span>
                     </div>
                 </div>
-                <div class="text-right">
-                    <div class="text-lg font-semibold text-slate-900 mb-1">Smart Vehicle Repairs</div>
-                    <div class="text-sm text-slate-700">123 Auto Service Lane</div>
-                    <div class="text-sm text-slate-700">Your City, ST 12345</div>
-                    <div class="text-sm text-slate-700">Phone: (555) 123-4567</div>
-                    <div class="text-sm text-slate-700">Email: info@smartvehiclerepairs.com</div>
+                <div class="text-sm text-slate-700 space-y-1 md:text-right">
+                    <div><span class="font-semibold">Created:</span> {{ workorder.created_at|date:"F d, Y g:i A" }}</div>
+                    {% if workorder.started_at %}<div><span class="font-semibold">Started:</span> {{ workorder.started_at|date:"F d, Y g:i A" }}</div>{% endif %}
+                    {% if workorder.completed_at %}<div><span class="font-semibold">Completed:</span> {{ workorder.completed_at|date:"F d, Y g:i A" }}</div>{% endif %}
+                    {% if workorder.estimated_completion %}<div><span class="font-semibold">Est. Completion:</span> {{ workorder.estimated_completion|date:"F d, Y g:i A" }}</div>{% endif %}
                 </div>
             </div>
         </div>
 
         <!-- Customer and Vehicle Information -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-            <div class="border border-slate-300 rounded-lg p-4 bg-slate-50">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="print-card">
                 <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
                     <i class="fas fa-user"></i>
                     Customer Information
@@ -147,7 +129,7 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="border border-slate-300 rounded-lg p-4 bg-slate-50">
+            <div class="print-card">
                 <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
                     <i class="fas fa-car"></i>
                     Vehicle Information
@@ -178,8 +160,8 @@
         </div>
 
         <!-- Work Order Details -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-            <div class="border border-slate-300 rounded-lg p-4 bg-slate-50">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="print-card">
                 <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
                     <i class="fas fa-clipboard"></i>
                     Work Order Details
@@ -209,7 +191,7 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="border border-slate-300 rounded-lg p-4 bg-slate-50">
+            <div class="print-card">
                 <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
                     <i class="fas fa-wrench"></i>
                     Technician Assignment
@@ -243,7 +225,7 @@
 
         <!-- Customer Concerns -->
         {% if workorder.customer_concerns %}
-        <div class="border border-slate-300 rounded-lg p-4 bg-slate-50 mb-5">
+        <div class="print-card">
             <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
                 <i class="fas fa-comment"></i>
                 Customer Concerns
@@ -254,7 +236,7 @@
 
         <!-- Diagnosis Notes -->
         {% if workorder.diagnosis_notes %}
-        <div class="border border-slate-300 rounded-lg p-4 bg-slate-50 mb-5">
+        <div class="print-card">
             <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
                 <i class="fas fa-search"></i>
                 Diagnosis Notes
@@ -265,12 +247,12 @@
 
         <!-- Service Tasks -->
         {% if workorder.tasks.exists %}
-        <div class="mb-5">
+        <div class="print-card">
             <h6 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                 <i class="fas fa-tasks"></i>
                 Service Tasks
             </h6>
-            <table class="w-full border-collapse mb-5">
+            <table class="print-table">
                 <thead>
                     <tr class="bg-slate-100">
                         <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 15%;">Type</th>
@@ -312,12 +294,12 @@
 
         <!-- Parts Used -->
         {% if workorder.parts.exists %}
-        <div class="mb-5">
+        <div class="print-card">
             <h6 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                 <i class="fas fa-cogs"></i>
                 Parts Used
             </h6>
-            <table class="w-full border-collapse mb-5">
+            <table class="print-table">
                 <thead>
                     <tr class="bg-slate-100">
                         <th class="border border-slate-300 p-2 text-left text-xs font-bold" style="width: 15%;">Part Number</th>
@@ -354,32 +336,32 @@
         {% endif %}
 
         <!-- Cost Summary -->
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-5">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div class="md:col-span-8"></div>
             <div class="md:col-span-4">
-                <div class="border-2 border-primary rounded-lg p-4 bg-slate-50">
+                <div class="print-card">
                     <h6 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                         <i class="fas fa-calculator"></i>
                         Cost Summary
                     </h6>
-                    <div class="space-y-2">
-                        <div class="flex justify-between text-xs">
+                    <div class="space-y-2 text-sm text-slate-700">
+                        <div class="flex justify-between">
                             <span>Labor Cost:</span>
                             <span>${{ total_labor_cost|floatformat:2 }}</span>
                         </div>
-                        <div class="flex justify-between text-xs">
+                        <div class="flex justify-between">
                             <span>Parts Cost:</span>
                             <span>${{ total_parts_cost|floatformat:2 }}</span>
                         </div>
-                        <div class="flex justify-between text-xs">
+                        <div class="flex justify-between">
                             <span>Subtotal:</span>
                             <span>${{ total_labor_cost|add:total_parts_cost|floatformat:2 }}</span>
                         </div>
-                        <div class="flex justify-between text-xs">
+                        <div class="flex justify-between">
                             <span>Tax (0%):</span>
                             <span>$0.00</span>
                         </div>
-                        <div class="flex justify-between text-xs font-bold border-t-2 border-primary pt-2 mt-2 text-base">
+                        <div class="flex justify-between font-semibold border-t border-slate-300 pt-2 mt-2 text-base">
                             <span>Total:</span>
                             <span>${{ total_labor_cost|add:total_parts_cost|floatformat:2 }}</span>
                         </div>
@@ -390,7 +372,7 @@
 
         <!-- Special Instructions -->
         {% if workorder.special_instructions %}
-        <div class="border border-slate-300 rounded-lg p-4 bg-slate-50 mb-5">
+        <div class="print-card">
             <h6 class="text-sm font-bold text-slate-700 border-b border-slate-300 pb-1 mb-3 flex items-center gap-2">
                 <i class="fas fa-sticky-note"></i>
                 Special Instructions
@@ -400,7 +382,7 @@
         {% endif %}
 
         <!-- Signature Section -->
-        <div class="border border-slate-300 rounded-lg p-4 mt-8 h-32">
+        <div class="print-card">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <div class="text-sm font-medium text-slate-700 mb-2">Customer Signature:</div>
@@ -415,10 +397,8 @@
             </div>
         </div>
 
-        <!-- Print Timestamp -->
-        <div class="text-center text-slate-500 text-xs mt-5 pt-3 border-t border-slate-300">
-            Work Order printed on {{ print_date|date:"M d, Y \a\\t H:i" }}
-        </div>
+        {% include 'print/standard_footer.html' with print_branch=print_branch print_generated_at=print_generated_at %}
+        </div> <!-- /.print-body -->
     </div>
     
     <!-- Auto-print when loaded (optional) -->

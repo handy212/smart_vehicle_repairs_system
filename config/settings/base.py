@@ -282,6 +282,11 @@ HUBTEL_API_SECRET = env('HUBTEL_API_SECRET', default='')
 HUBTEL_PAYMENT_ENABLED = env.bool('HUBTEL_PAYMENT_ENABLED', default=False)
 HUBTEL_SANDBOX = env.bool('HUBTEL_SANDBOX', default=True)
 
+# Paystack Payment Gateway Configuration (Ghana)
+PAYSTACK_PUBLIC_KEY = env('PAYSTACK_PUBLIC_KEY', default='')
+PAYSTACK_SECRET_KEY = env('PAYSTACK_SECRET_KEY', default='')
+PAYSTACK_PAYMENT_ENABLED = env.bool('PAYSTACK_PAYMENT_ENABLED', default=False)
+
 # Site URL for payment callbacks
 SITE_URL = env('SITE_URL', default='http://localhost:8000')
 

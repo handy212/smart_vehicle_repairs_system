@@ -4,51 +4,51 @@
 
 {% block title %}{% if inspection %}Edit{% else %}New{% endif %} Inspection - Smart Vehicle Repairs{% endblock %}
 
-{% block extra_css %}
-<style>
-    /* Original styles remain unchanged */
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
             {% if inspection %}
-                <i class="fas fa-edit me-2"></i>Edit Inspection
+                <i class="fas fa-edit text-primary"></i>Edit Inspection
             {% else %}
-                <i class="fas fa-clipboard-check me-2"></i>New Inspection
+                <i class="fas fa-clipboard-check text-primary"></i>New Inspection
             {% endif %}
         </h1>
-        <div>
-            <a href="{% url 'inspections:inspection-list' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-list me-2"></i>All Inspections
+        <div class="flex items-center gap-2">
+            <a href="{% url 'inspections:inspection-list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                <i class="fas fa-list"></i>All Inspections
             </a>
             
             {% if workorder %}
-            <a href="{% url 'workorders:detail' workorder.id %}" class="btn btn-outline-secondary ms-2">
-                <i class="fas fa-arrow-left me-2"></i>Back to Work Order
+            <a href="{% url 'workorders:detail' workorder.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                <i class="fas fa-arrow-left"></i>Back to Work Order
             </a>
             {% endif %}
         </div>
     </div>
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-white">
-            <div class="step-indicator">
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm mb-6 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+            <div class="flex items-center justify-between">
                 {% if not workorder %}
-                <div class="step {% if currentStep == 1 %}active{% elif currentStep > 1 %}completed{% endif %}" data-step="1">
-                    <div class="step-number">1</div>
-                    <div>Vehicle Selection</div>
+                <div class="flex-1 text-center {% if currentStep == 1 %}border-b-2 border-primary pb-2{% elif currentStep > 1 %}border-b-2 border-emerald-500 pb-2{% else %}border-b-2 border-slate-300 pb-2{% endif %}">
+                    <div class="inline-flex items-center justify-center w-8 h-8 rounded-full {% if currentStep == 1 %}bg-primary text-white{% elif currentStep > 1 %}bg-emerald-500 text-white{% else %}bg-slate-300 text-white{% endif %} mb-2">
+                        1
+                    </div>
+                    <div class="text-xs font-semibold {% if currentStep == 1 %}text-primary{% elif currentStep > 1 %}text-emerald-600{% else %}text-slate-500{% endif %}">Vehicle Selection</div>
                 </div>
                 {% endif %}
-                <div class="step {% if workorder and currentStep == 1 or currentStep == 2 %}active{% elif currentStep > 2 or workorder and currentStep > 1 %}completed{% endif %}" data-step="2">
-                    <div class="step-number">{% if workorder %}1{% else %}2{% endif %}</div>
-                    <div>Basic Details</div>
+                <div class="flex-1 text-center {% if workorder and currentStep == 1 or currentStep == 2 %}border-b-2 border-primary pb-2{% elif currentStep > 2 or workorder and currentStep > 1 %}border-b-2 border-emerald-500 pb-2{% else %}border-b-2 border-slate-300 pb-2{% endif %}">
+                    <div class="inline-flex items-center justify-center w-8 h-8 rounded-full {% if workorder and currentStep == 1 or currentStep == 2 %}bg-primary text-white{% elif currentStep > 2 or workorder and currentStep > 1 %}bg-emerald-500 text-white{% else %}bg-slate-300 text-white{% endif %} mb-2">
+                        {% if workorder %}1{% else %}2{% endif %}
+                    </div>
+                    <div class="text-xs font-semibold {% if workorder and currentStep == 1 or currentStep == 2 %}text-primary{% elif currentStep > 2 or workorder and currentStep > 1 %}text-emerald-600{% else %}text-slate-500{% endif %}">Basic Details</div>
                 </div>
-                <div class="step {% if workorder and currentStep == 2 or currentStep == 3 %}active{% endif %}" data-step="3">
-                    <div class="step-number">{% if workorder %}2{% else %}3{% endif %}</div>
-                    <div>Inspection Checklist</div>
+                <div class="flex-1 text-center {% if workorder and currentStep == 2 or currentStep == 3 %}border-b-2 border-primary pb-2{% else %}border-b-2 border-slate-300 pb-2{% endif %}">
+                    <div class="inline-flex items-center justify-center w-8 h-8 rounded-full {% if workorder and currentStep == 2 or currentStep == 3 %}bg-primary text-white{% else %}bg-slate-300 text-white{% endif %} mb-2">
+                        {% if workorder %}2{% else %}3{% endif %}
+                    </div>
+                    <div class="text-xs font-semibold {% if workorder and currentStep == 2 or currentStep == 3 %}text-primary{% else %}text-slate-500{% endif %}">Inspection Checklist</div>
                 </div>
             </div>
         </div>
@@ -67,61 +67,55 @@
         
         <!-- Step 1: Vehicle Selection - Only if not from workorder -->
         {% if not workorder %}
-        <div class="form-step {% if currentStep == 1 %}active{% endif %}" id="step1">
+        <div class="{% if currentStep == 1 %}block{% else %}hidden{% endif %}" id="step1">
             <!-- Customer selection content -->
         </div>
         {% endif %}
 
         <!-- Step 2: Basic Details -->
-        <div class="form-step {% if workorder %}active{% elif currentStep == 2 %}active{% endif %}" id="step2">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>{% if workorder %}Step 1: Inspection Details{% else %}Step 2: Inspection Details{% endif %}</h5>
+        <div class="{% if workorder %}block{% elif currentStep == 2 %}block{% else %}hidden{% endif %}" id="step2">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gradient-to-r from-primary to-primary/80 text-white">
+                    <h5 class="text-sm font-semibold flex items-center gap-2">
+                        <i class="fas fa-info-circle"></i>
+                        {% if workorder %}Step 1: Inspection Details{% else %}Step 2: Inspection Details{% endif %}
+                    </h5>
                 </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            {{ form.template|as_crispy_field }}
-                        </div>
-                        <div class="col-md-6">
-                            {{ form.inspection_date|as_crispy_field }}
-                        </div>
-                        <div class="col-md-6">
-                            {{ form.performed_by|as_crispy_field }}
-                        </div>
-                        <div class="col-md-6">
-                            {{ form.odometer_reading|as_crispy_field }}
-                        </div>
-                        <div class="col-12">
-                            {{ form.notes|as_crispy_field }}
-                        </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>{{ form.template|as_crispy_field }}</div>
+                        <div>{{ form.inspection_date|as_crispy_field }}</div>
+                        <div>{{ form.performed_by|as_crispy_field }}</div>
+                        <div>{{ form.odometer_reading|as_crispy_field }}</div>
+                        <div class="md:col-span-2">{{ form.notes|as_crispy_field }}</div>
                     </div>
                     
                     <!-- Vehicle Damage Assessment -->
-                    <div class="mt-4">
+                    <div class="mt-6">
                         {% include 'inspections/vehicle_damage_marker.html' %}
                         {{ form.vehicle_damage }}
                     </div>
                 </div>
-                <div class="card-footer d-flex justify-content-between">
+                <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4">
                     {% if not workorder %}
-                    <button type="button" class="btn btn-secondary" id="step2Back">
-                        <i class="fas fa-arrow-left me-2"></i>Back
+                    <button type="button" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors text-sm font-medium" id="step2Back">
+                        <i class="fas fa-arrow-left"></i>Back
                     </button>
                     {% else %}
-                    <a href="{% url 'workorders:detail' workorder.id %}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left me-2"></i>Back to Work Order
+                    <a href="{% url 'workorders:detail' workorder.id %}" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors text-sm font-medium">
+                        <i class="fas fa-arrow-left"></i>Back to Work Order
                     </a>
                     {% endif %}
-                    <button type="button" class="btn btn-primary" id="step2Next">
-                        Next: Start Checklist <i class="fas fa-arrow-right ms-2"></i>
+                    <button type="button" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-semibold shadow-lg shadow-primary/20" id="step2Next">
+                        Next: Start Checklist
+                        <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- Step 3: Inspection Checklist -->
-        <div class="form-step" id="step3">
+        <div class="hidden" id="step3">
             <!-- Inspection checklist content -->
         </div>
     </form>
@@ -133,22 +127,20 @@
 {% if inspection and inspection.vehicle_damage %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize vehicle damage data from database
     setTimeout(function() {
-        // Make sure vehicleDamageMarker has been initialized
         if (window.vehicleDamageMarker) {
             const damageData = {{ inspection.vehicle_damage|safe }};
             window.vehicleDamageMarker.loadDamageData(damageData);
         }
-    }, 1000); // Wait for vehicle damage marker to initialize
+    }, 1000);
 });
 </script>
 {% endif %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Original script content
-    // ...
+    // Step navigation logic
+    // (Keep existing JavaScript functionality)
 });
 </script>
 {% endblock %}

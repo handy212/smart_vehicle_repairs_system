@@ -1,24 +1,31 @@
 """
 Frontend views for Vehicle Inspections
 """
+import io
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.db.models import Q, Count, Avg
 from django.utils import timezone
+from django.core.management import call_command
 from .models import VehicleInspection, InspectionTemplate, InspectionItem, InspectionResult, InspectionCategory
 from .forms import InspectionForm, InspectionCategoryForm, InspectionItemForm
 from apps.vehicles.models import Vehicle
 from apps.accounts.models import User
+from apps.branches.utils import filter_queryset_for_user_branches
 
 
 @login_required
 def inspection_list(request):
     """List all inspections with filters"""
     inspections = VehicleInspection.objects.select_related(
-        'vehicle', 'vehicle__owner__user', 'performed_by', 'template'
+        'vehicle', 'vehicle__owner__user', 'performed_by', 'template', 'branch'
     ).all()
+    
+    # Filter by active branch from session
+    inspections = filter_queryset_for_user_branches(inspections, request.user, request=request, use_active_branch=True)
     
     # Filters
     status = request.GET.get('status')
@@ -87,14 +94,24 @@ def inspection_create(request):
     """Create a new inspection"""
     from django.utils import timezone
     from apps.customers.models import Customer
+    from apps.branches.utils import resolve_branch
     
+    selected_customer_id = ''
+    selected_vehicle_id = ''
+
     if request.method == 'POST':
         form = InspectionForm(request.POST)
+        selected_customer_id = request.POST.get('customer', '')
+        selected_vehicle_id = request.POST.get('vehicle', '')
         
         if form.is_valid():
             try:
                 # Create inspection with form data
                 inspection = form.save(commit=False)
+                
+                # Assign branch from user's active branch
+                if not inspection.branch:
+                    inspection.branch = resolve_branch(request)
                 
                 # Process vehicle damage data
                 vehicle_damage_json = request.POST.get('vehicle_damage', '')
@@ -166,6 +183,7 @@ def inspection_create(request):
             try:
                 customer = Customer.objects.get(pk=customer_id)
                 initial_data['customer'] = customer
+                selected_customer_id = str(customer.id)
             except Customer.DoesNotExist:
                 pass
         
@@ -175,6 +193,7 @@ def inspection_create(request):
             try:
                 vehicle = Vehicle.objects.get(pk=vehicle_id)
                 initial_data['vehicle'] = vehicle
+                selected_vehicle_id = str(vehicle.id)
             except Vehicle.DoesNotExist:
                 pass
         
@@ -183,6 +202,8 @@ def inspection_create(request):
     # Get templates and customers for the form
     templates = InspectionTemplate.objects.filter(is_active=True).prefetch_related('categories__items')
     customers = Customer.objects.select_related('user').filter(user__is_active=True).order_by('user__first_name')
+
+    prefilled_customer_vehicle = bool(selected_customer_id and selected_vehicle_id)
     
     # Get work order ID if provided (to link back after inspection)
     workorder_id = request.GET.get('workorder')
@@ -200,6 +221,9 @@ def inspection_create(request):
         'customers': customers,
         'workorder_id': workorder_id,
         'workorder': workorder,
+        'selected_customer_id': selected_customer_id,
+        'selected_vehicle_id': selected_vehicle_id,
+        'prefilled_customer_vehicle': prefilled_customer_vehicle,
     }
     
     return render(request, 'inspections/inspection_form_new.html', context)
@@ -208,12 +232,11 @@ def inspection_create(request):
 @login_required
 def inspection_detail(request, pk):
     """View inspection details"""
-    inspection = get_object_or_404(
-        VehicleInspection.objects.select_related(
-            'vehicle', 'vehicle__owner__user', 'performed_by', 'template'
-        ).prefetch_related('results', 'results__inspection_item'),
-        pk=pk
-    )
+    inspection_qs = VehicleInspection.objects.select_related(
+        'vehicle', 'vehicle__owner__user', 'performed_by', 'template', 'branch'
+    ).prefetch_related('results', 'results__inspection_item')
+    inspection_qs = filter_queryset_for_user_branches(inspection_qs, request.user, request=request, use_active_branch=True)
+    inspection = get_object_or_404(inspection_qs, pk=pk)
     
     # Calculate pass/fail counts
     results = inspection.results.all()
@@ -322,6 +345,8 @@ def inspection_print(request, pk):
         'fail_count': fail_count,
         'warning_count': warning_count,
         'results_by_item': results_by_item,
+        'print_generated_at': timezone.now(),
+        'print_branch': inspection.branch or (inspection.work_order.branch if inspection.work_order else None),
     }
     
     return render(request, 'inspections/inspection_print_clean.html', context)
@@ -470,6 +495,75 @@ def template_create(request):
     }
     
     return render(request, 'inspections/template_form.html', context)
+
+
+@login_required
+def template_seed_defaults(request):
+    """Seed the system with the built-in inspection templates via the UI"""
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method for seeding templates.')
+        return redirect('inspections:template-list')
+
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to seed templates.')
+        return redirect('inspections:template-list')
+
+    buffer = io.StringIO()
+    try:
+        call_command('create_inspection_templates', stdout=buffer)
+        output = buffer.getvalue().strip()
+
+        # Extract the final success line if available
+        message_lines = [line for line in output.splitlines() if line.strip()]
+        summary = message_lines[-1] if message_lines else 'Default inspection templates processed.'
+        messages.success(request, summary)
+    except Exception as exc:
+        messages.error(request, f'Error seeding templates: {exc}')
+    finally:
+        buffer.close()
+
+    return redirect('inspections:template-list')
+
+
+@login_required
+def template_delete(request, pk):
+    """Delete an inspection template (soft delete by marking as inactive)"""
+    template = get_object_or_404(InspectionTemplate, pk=pk)
+
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method for deleting templates.')
+        return redirect('inspections:template-detail', pk=pk)
+
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to delete templates.')
+        return redirect('inspections:template-detail', pk=pk)
+
+    # Check if template has been used in inspections
+    if template.inspections.exists():
+        # Soft delete: mark as inactive instead of deleting
+        template.is_active = False
+        template.save()
+        messages.warning(
+            request, 
+            f'Template "{template.name}" has been deactivated because it has been used in existing inspections. '
+            'It will no longer appear in the template list but existing inspection data is preserved.'
+        )
+    else:
+        # Hard delete: no inspections use this template
+        template_name = template.name
+        try:
+            template.delete()
+            messages.success(request, f'Template "{template_name}" deleted successfully.')
+        except Exception as e:
+            # Fallback to soft delete if deletion fails for any reason
+            template.is_active = False
+            template.save()
+            messages.warning(
+                request, 
+                f'Template "{template_name}" has been deactivated instead of deleted due to existing references.'
+            )
+    
+    return redirect('inspections:template-list')
 
 
 @login_required

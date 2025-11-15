@@ -8,6 +8,7 @@ from django.http import JsonResponse, HttpResponse, FileResponse
 from django.db.models import Q, Count
 from django.utils import timezone
 from django.core.paginator import Paginator
+from django.core.management import call_command
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from rolepermissions.decorators import has_permission_decorator
@@ -76,6 +77,14 @@ def admin_dashboard(request):
 def system_settings(request):
     """System settings management"""
     category = request.GET.get('category', 'company')
+    
+    # Initialize default settings for the category if none exist
+    from .settings_init import initialize_category_settings
+    settings_count = SystemSettings.objects.filter(category=category).count()
+    if settings_count == 0:
+        initialized = initialize_category_settings(category)
+        if initialized > 0:
+            messages.info(request, f'Initialized {initialized} default settings for {dict(SystemSettings.CATEGORY_CHOICES).get(category, category)}.')
     
     if request.method == 'POST':
         setting_id = request.POST.get('setting_id')
@@ -330,6 +339,24 @@ def user_detail(request, user_id):
 @user_passes_test(is_admin)
 def role_management(request):
     """Role and permissions management"""
+    # Auto-initialize roles and permissions if they don't exist
+    roles_count = Role.objects.count()
+    permissions_count = Permission.objects.count()
+    
+    if roles_count == 0 or permissions_count == 0:
+        # Run the initialization command
+        try:
+            # Capture output to avoid printing to console
+            out = StringIO()
+            call_command('init_permissions', stdout=out, stderr=out)
+            if roles_count == 0 and permissions_count == 0:
+                messages.success(request, 'Initialized default roles and permissions.')
+                # Redirect to refresh the page with new data
+                return redirect('admin_panel:role_management')
+        except Exception as e:
+            # If command fails, show warning
+            messages.warning(request, f'Could not auto-initialize permissions: {str(e)}. Please run: python manage.py init_permissions')
+    
     if request.method == 'POST':
         action = request.POST.get('action')
         
@@ -1114,12 +1141,50 @@ def upload_branding(request):
                 key='login_background',
                 defaults={'category': 'branding', 'description': 'Login page background image'}
             )
-            setting.value = f'login_bg_{bg_file.name}'
+            setting.value = f'branding/login_bg_{bg_file.name}'
             setting.updated_by = request.user
             setting.save()
             uploaded_count += 1
             
             log_audit(request.user, 'upload', 'BrandingAsset', '', 'login_background', request=request)
+        
+        # Handle customer portal background upload
+        if 'customer_login_background' in request.FILES:
+            bg_file = request.FILES['customer_login_background']
+            bg_path = os.path.join(branding_dir, f'customer_bg_{bg_file.name}')
+            with open(bg_path, 'wb+') as destination:
+                for chunk in bg_file.chunks():
+                    destination.write(chunk)
+            
+            setting, created = SystemSettings.objects.get_or_create(
+                key='customer_login_background',
+                defaults={'category': 'branding', 'description': 'Customer portal login page background image'}
+            )
+            setting.value = f'branding/customer_bg_{bg_file.name}'
+            setting.updated_by = request.user
+            setting.save()
+            uploaded_count += 1
+            
+            log_audit(request.user, 'upload', 'BrandingAsset', '', 'customer_login_background', request=request)
+        
+        # Handle staff portal background upload
+        if 'staff_login_background' in request.FILES:
+            bg_file = request.FILES['staff_login_background']
+            bg_path = os.path.join(branding_dir, f'staff_bg_{bg_file.name}')
+            with open(bg_path, 'wb+') as destination:
+                for chunk in bg_file.chunks():
+                    destination.write(chunk)
+            
+            setting, created = SystemSettings.objects.get_or_create(
+                key='staff_login_background',
+                defaults={'category': 'branding', 'description': 'Staff portal login page background image'}
+            )
+            setting.value = f'branding/staff_bg_{bg_file.name}'
+            setting.updated_by = request.user
+            setting.save()
+            uploaded_count += 1
+            
+            log_audit(request.user, 'upload', 'BrandingAsset', '', 'staff_login_background', request=request)
         
         if uploaded_count > 0:
             messages.success(request, f'{uploaded_count} branding assets uploaded successfully.')

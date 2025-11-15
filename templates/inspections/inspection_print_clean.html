@@ -1,48 +1,30 @@
 {% load inspection_tags %}
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-width=1.0">
     <title>Inspection Report - {{ inspection.template.name }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css">
+    <link rel="stylesheet" href="{% static 'css/print.css' %}">
     <style>
-        @page {
-            size: A4;
-            margin: 1.5cm;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
-            font-family: Arial, sans-serif;
+            font-family: "Inter", "Segoe UI", system-ui, sans-serif;
             font-size: 10pt;
             line-height: 1.5;
-            color: #333;
+            color: #1f2937;
         }
         
-        .no-print {
-            display: none;
-        }
-        
-        @media screen {
-            .no-print {
-                display: block;
-                text-align: center;
-                margin: 20px 0;
-            }
-            .no-print button {
-                padding: 12px 24px;
-                background: #2563eb;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 14px;
-            }
+        .no-print button {
+            padding: 12px 24px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
         }
         
         /* Header */
@@ -367,12 +349,16 @@
         }
     </style>
 </head>
-<body>
+<body class="print-page">
     <!-- Print Button -->
-    <div class="no-print">
+    <div class="no-print text-center my-6">
         <button onclick="window.print()">🖨 Print Report</button>
     </div>
 
+    <div class="print-container print-surface px-8 py-10">
+        {% include 'print/standard_header.html' with document_title='Inspection Report' document_number=inspection.inspection_number|default:inspection.id document_date=inspection.inspection_date|date:"F d, Y" print_branch=print_branch %}
+
+        <div class="print-body space-y-8">
     <!-- Header -->
     <div class="header">
         <h1>Vehicle Inspection Report</h1>
@@ -470,10 +456,12 @@
     </div>
 
     <!-- Vehicle Damage Assessment -->
-    {% if inspection.vehicle_damage %}
+    {% if inspection.vehicle_damage and inspection.vehicle_damage != '[]' and inspection.vehicle_damage != '{}' and inspection.vehicle_damage != '' %}
     <div class="damage-section">
         <h3>Vehicle Damage Assessment</h3>
-        <div class="vehicle-diagram" id="vehicleDamageContainer"></div>
+        <div class="vehicle-diagram" id="vehicleDamageContainer">
+            <div style="text-align: center; padding: 20px; color: #999;">Loading vehicle diagram...</div>
+        </div>
         <div class="damage-legend">
             <div class="legend-item">
                 <span class="legend-dot scratch"></span>
@@ -492,6 +480,11 @@
                 <span>Crack</span>
             </div>
         </div>
+        {% if inspection.vehicle_damage %}
+        <div style="margin-top: 10px; font-size: 9px; color: #666; text-align: center;">
+            Total damage points: <strong id="damageCount">0</strong>
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 
@@ -583,82 +576,248 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <div class="footer">
-        <div><strong>Smart Vehicle Repairs System</strong></div>
-        <div>Report Generated: {{ now|date:"F d, Y g:i A" }}</div>
-        <div style="margin-top: 5px; font-size: 8px;">This is a computer-generated document. For questions, please contact your service advisor.</div>
-    </div>
+    {% include 'print/standard_footer.html' with print_branch=print_branch print_generated_at=print_generated_at %}
+    </div> <!-- /.print-body -->
+
+    </div><!-- /.print-container -->
 
     <!-- JavaScript for Vehicle Damage -->
-    {% if inspection.vehicle_damage %}
+    {% if inspection.vehicle_damage and inspection.vehicle_damage != '[]' and inspection.vehicle_damage != '{}' and inspection.vehicle_damage != '' %}
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        try {
-            const damageData = JSON.parse('{{ inspection.vehicle_damage|escapejs }}');
-            if (damageData && damageData.length > 0) {
-                loadVehicleDamage(damageData);
-            }
-        } catch (e) {
-            console.error('Error loading damage data:', e);
-        }
-    });
-
-    function loadVehicleDamage(damageData) {
-        fetch('/media/scratch/scratch_dents.svg')
-            .then(response => response.text())
-            .then(svgText => {
-                const container = document.getElementById('vehicleDamageContainer');
-                container.innerHTML = svgText;
+    (function() {
+        'use strict';
+        
+        /**
+         * Load and display vehicle damage markers on the diagram
+         */
+        function loadVehicleDamage() {
+            try {
+                // Parse damage data from template
+                const damageDataStr = '{{ inspection.vehicle_damage|escapejs }}';
                 
-                const svg = container.querySelector('svg');
-                if (svg) {
-                    // Set SVG size
-                    svg.style.width = '100%';
-                    svg.style.height = 'auto';
-                    svg.style.maxHeight = '350px';
-                    
-                    // Add damage markers
-                    damageData.forEach((damage, index) => {
-                        // Create marker circle
-                        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                        marker.setAttribute('cx', damage.x + '%');
-                        marker.setAttribute('cy', damage.y + '%');
-                        marker.setAttribute('r', '8');
-                        marker.setAttribute('stroke', 'white');
-                        marker.setAttribute('stroke-width', '2');
-                        marker.setAttribute('opacity', '0.9');
-                        
-                        const colors = {
-                            'scratch': '#fbbf24',
-                            'dent': '#ef4444',
-                            'rust': '#6b7280',
-                            'crack': '#06b6d4'
-                        };
-                        marker.setAttribute('fill', colors[damage.type] || '#6b7280');
-                        
-                        // Add number
-                        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                        text.setAttribute('x', damage.x + '%');
-                        text.setAttribute('y', damage.y + '%');
-                        text.setAttribute('text-anchor', 'middle');
-                        text.setAttribute('dominant-baseline', 'central');
-                        text.setAttribute('fill', 'white');
-                        text.setAttribute('font-size', '10');
-                        text.setAttribute('font-weight', 'bold');
-                        text.textContent = (index + 1).toString();
-                        
-                        svg.appendChild(marker);
-                        svg.appendChild(text);
-                    });
+                if (!damageDataStr || damageDataStr.trim() === '' || 
+                    damageDataStr === '[]' || damageDataStr === '{}' || damageDataStr === 'null') {
+                    console.log('[Print] No damage data to display');
+                    return;
                 }
-            })
-            .catch(error => {
-                console.error('Error loading SVG:', error);
-                const container = document.getElementById('vehicleDamageContainer');
-                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">Vehicle diagram could not be loaded</div>';
+                
+                const damageData = JSON.parse(damageDataStr);
+                
+                if (!Array.isArray(damageData) || damageData.length === 0) {
+                    console.log('[Print] Empty damage data array');
+                    document.getElementById('vehicleDamageContainer').innerHTML = 
+                        '<div style="text-align: center; padding: 20px; color: #999;">No damage recorded</div>';
+                    return;
+                }
+                
+                console.log(`[Print] Loading ${damageData.length} damage marker(s)`);
+                
+                // Update damage count
+                const damageCountEl = document.getElementById('damageCount');
+                if (damageCountEl) {
+                    damageCountEl.textContent = damageData.length;
+                }
+                
+                // Load SVG diagram
+                loadSVGDiagram(damageData);
+                
+            } catch (error) {
+                console.error('[Print] Error parsing damage data:', error);
+                document.getElementById('vehicleDamageContainer').innerHTML = 
+                    '<div style="text-align: center; padding: 20px; color: #dc3545;">Error loading damage data</div>';
+            }
+        }
+        
+        /**
+         * Load SVG diagram and add damage markers
+         */
+        function loadSVGDiagram(damageData) {
+            // Try multiple possible SVG paths
+            const svgPaths = [
+                '{% static "images/vehicle-diagram.svg" %}',
+                '/static/images/vehicle-diagram.svg',
+                '/media/images/vehicle-diagram.svg',
+                '/static/vehicle-diagram.svg'
+            ];
+            
+            let currentPathIndex = 0;
+            
+            function tryLoadSVG() {
+                if (currentPathIndex >= svgPaths.length) {
+                    // All paths failed, create a placeholder
+                    createPlaceholderDiagram(damageData);
+                    return;
+                }
+                
+                const svgPath = svgPaths[currentPathIndex];
+                console.log(`[Print] Trying to load SVG from: ${svgPath}`);
+                
+                fetch(svgPath)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        return response.text();
+                    })
+                    .then(svgText => {
+                        renderDamageMarkers(svgText, damageData);
+                    })
+                    .catch(error => {
+                        console.warn(`[Print] Failed to load from ${svgPath}:`, error);
+                        currentPathIndex++;
+                        tryLoadSVG(); // Try next path
+                    });
+            }
+            
+            tryLoadSVG();
+        }
+        
+        /**
+         * Render damage markers on the SVG
+         */
+        function renderDamageMarkers(svgText, damageData) {
+            const container = document.getElementById('vehicleDamageContainer');
+            if (!container) {
+                console.error('[Print] Container not found');
+                return;
+            }
+            
+            container.innerHTML = svgText;
+            
+            const svg = container.querySelector('svg');
+            if (!svg) {
+                console.error('[Print] SVG element not found in loaded content');
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">SVG diagram format error</div>';
+                return;
+            }
+            
+            // Set SVG properties for print
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', 'auto');
+            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+            svg.style.width = '100%';
+            svg.style.height = 'auto';
+            svg.style.maxHeight = '350px';
+            
+            // Damage type colors (matching the legend)
+            const colors = {
+                'scratch': '#fbbf24',  // Amber
+                'dent': '#ef4444',      // Red
+                'rust': '#6b7280',      // Gray
+                'crack': '#06b6d4'      // Cyan
+            };
+            
+            // Group for damage markers (for better organization)
+            const markersGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            markersGroup.setAttribute('id', 'damage-markers');
+            
+            // Add damage markers
+            damageData.forEach((damage, index) => {
+                if (!damage || typeof damage.x !== 'number' || typeof damage.y !== 'number') {
+                    console.warn('[Print] Invalid damage data:', damage);
+                    return;
+                }
+                
+                // Validate coordinates
+                if (damage.x < 0 || damage.x > 100 || damage.y < 0 || damage.y > 100) {
+                    console.warn('[Print] Damage coordinates out of range:', damage);
+                    return;
+                }
+                
+                // Create marker circle
+                const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                marker.setAttribute('cx', `${damage.x}%`);
+                marker.setAttribute('cy', `${damage.y}%`);
+                marker.setAttribute('r', '10');
+                marker.setAttribute('stroke', '#ffffff');
+                marker.setAttribute('stroke-width', '2.5');
+                marker.setAttribute('opacity', '0.95');
+                marker.setAttribute('fill', colors[damage.type] || '#6b7280');
+                marker.setAttribute('class', `damage-marker damage-${damage.type}`);
+                
+                // Add tooltip/title
+                const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                title.textContent = `${damage.type.charAt(0).toUpperCase() + damage.type.slice(1)} - Point ${index + 1}`;
+                marker.appendChild(title);
+                
+                // Create number label
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', `${damage.x}%`);
+                text.setAttribute('y', `${damage.y}%`);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'central');
+                text.setAttribute('fill', '#ffffff');
+                text.setAttribute('font-size', '11');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('font-family', 'Arial, sans-serif');
+                text.setAttribute('pointer-events', 'none');
+                text.textContent = (index + 1).toString();
+                
+                markersGroup.appendChild(marker);
+                markersGroup.appendChild(text);
             });
-    }
+            
+            // Append markers group to SVG
+            svg.appendChild(markersGroup);
+            
+            console.log(`[Print] Successfully rendered ${damageData.length} damage marker(s)`);
+        }
+        
+        /**
+         * Create a placeholder diagram if SVG cannot be loaded
+         */
+        function createPlaceholderDiagram(damageData) {
+            const container = document.getElementById('vehicleDamageContainer');
+            
+            // Create a simple visual representation
+            const placeholder = document.createElement('div');
+            placeholder.style.cssText = 'text-align: center; padding: 40px; border: 2px dashed #ddd; background: #f9f9f9;';
+            
+            let html = '<div style="margin-bottom: 15px;"><strong>Vehicle Damage Points</strong></div>';
+            html += '<div style="font-size: 10px; color: #666; margin-bottom: 20px;">Diagram unavailable - showing damage list</div>';
+            
+            // Group by damage type
+            const damageByType = {};
+            damageData.forEach((damage, index) => {
+                const type = damage.type || 'unknown';
+                if (!damageByType[type]) {
+                    damageByType[type] = [];
+                }
+                damageByType[type].push({ ...damage, index: index + 1 });
+            });
+            
+            // Display grouped damage
+            Object.keys(damageByType).forEach(type => {
+                const items = damageByType[type];
+                const color = {
+                    'scratch': '#fbbf24',
+                    'dent': '#ef4444',
+                    'rust': '#6b7280',
+                    'crack': '#06b6d4'
+                }[type] || '#6b7280';
+                
+                html += `<div style="margin: 8px 0; padding: 8px; background: ${color}20; border-left: 3px solid ${color};">`;
+                html += `<strong style="text-transform: capitalize;">${type}</strong>: `;
+                html += items.map(item => `#${item.index} (${item.x.toFixed(1)}%, ${item.y.toFixed(1)}%)`).join(', ');
+                html += '</div>';
+            });
+            
+            placeholder.innerHTML = html;
+            container.innerHTML = '';
+            container.appendChild(placeholder);
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadVehicleDamage);
+        } else {
+            // DOM already loaded
+            loadVehicleDamage();
+        }
+        
+        // Also try loading after a short delay (for print preview)
+        setTimeout(loadVehicleDamage, 500);
+    })();
     </script>
     {% endif %}
 </body>

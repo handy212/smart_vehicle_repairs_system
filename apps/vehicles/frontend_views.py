@@ -183,6 +183,8 @@ class VehicleDetailView(LoginRequiredMixin, DetailView):
             'recent_documents': recent_documents,
             'recent_photos': recent_photos,
             'vehicle_age': vehicle_age,
+            'vehicle_photo_types': VehiclePhoto.PHOTO_TYPE_CHOICES,
+            'vehicle_document_types': VehicleDocument.DOCUMENT_TYPE_CHOICES,
         })
         
         return context

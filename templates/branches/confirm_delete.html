@@ -3,38 +3,66 @@
 {% block title %}Delete Branch • {{ block.super }}{% endblock %}
 
 {% block page_header %}
-<div class="bg-white border-b border-gray-200">
-    <div class="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-        <h1 class="text-2xl font-semibold text-gray-900">Delete Branch</h1>
+<div class="bg-gradient-to-r from-red-600 to-red-700 border-b border-red-800">
+    <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                <i class="fas fa-exclamation-triangle text-white text-2xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-white">Delete Branch</h1>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block content %}
 <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-    <div class="overflow-hidden rounded-lg border border-red-200 bg-white shadow-sm">
-        <div class="border-b border-red-100 bg-red-50 px-6 py-4">
-            <h2 class="text-sm font-semibold text-red-700">Confirm Deletion</h2>
+    <div class="overflow-hidden rounded-xl border-2 border-red-200 bg-white shadow-xl">
+        <div class="border-b-2 border-red-100 bg-gradient-to-r from-red-50 to-pink-50 px-6 py-5">
+            <h2 class="text-base font-bold text-red-800 flex items-center gap-2">
+                <i class="fas fa-exclamation-triangle"></i>
+                Confirm Deletion
+            </h2>
         </div>
-        <div class="space-y-4 px-6 py-6 text-sm text-gray-700">
-            <p>Are you sure you want to delete <span class="font-semibold text-gray-900">{{ object.name }}</span>?</p>
-            <p class="text-red-600">This action cannot be undone. All associated data will be permanently removed.</p>
-            <dl class="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                <div class="flex items-center justify-between">
-                    <dt class="font-medium text-gray-700">Branch</dt>
-                    <dd>{{ object.name }} ({{ object.code }})</dd>
+        <div class="space-y-6 px-6 py-6">
+            <div class="rounded-lg border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-5">
+                <p class="text-base font-semibold text-slate-900 mb-2">
+                    Are you sure you want to delete <span class="text-red-700 font-bold">{{ object.name }}</span>?
+                </p>
+                <p class="text-sm text-red-700 font-medium flex items-center gap-2">
+                    <i class="fas fa-exclamation-circle"></i>
+                    This action cannot be undone. All associated data will be permanently removed.
+                </p>
+            </div>
+            
+            <dl class="rounded-lg border-2 border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-5 space-y-3">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                    <dt class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <i class="fas fa-building text-indigo-600"></i>
+                        Branch
+                    </dt>
+                    <dd class="text-sm font-semibold text-slate-900">{{ object.name }} ({{ object.code }})</dd>
                 </div>
-                <div class="mt-2 flex items-center justify-between">
-                    <dt class="font-medium text-gray-700">Location</dt>
-                    <dd>{{ object.city }}, {{ object.country }}</dd>
+                <div class="flex items-center justify-between">
+                    <dt class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                        <i class="fas fa-map-marker-alt text-indigo-600"></i>
+                        Location
+                    </dt>
+                    <dd class="text-sm font-semibold text-slate-900">{{ object.city }}, {{ object.country }}</dd>
                 </div>
             </dl>
         </div>
-    <div class="flex flex-col-reverse gap-3 border-t border-red-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <a href="{% url 'branches:manage' %}" class="inline-flex items-center justify-center rounded-md border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:border-indigo-300 hover:text-indigo-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Cancel</a>
+        <div class="flex flex-col-reverse gap-3 border-t-2 border-red-100 bg-slate-50 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <a href="{% url 'branches:manage' %}" class="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:text-indigo-600 transition-all">
+                <i class="fas fa-times"></i>
+                Cancel
+            </a>
             <form method="post" class="inline-flex">
                 {% csrf_token %}
-                <button type="submit" class="inline-flex items-center justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600">Delete Branch</button>
+                <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-red-600 to-red-700 px-5 py-2.5 text-sm font-semibold text-white shadow-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 hover:scale-105">
+                    <i class="fas fa-trash"></i>
+                    Delete Branch
+                </button>
             </form>
         </div>
     </div>

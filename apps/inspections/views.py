@@ -10,6 +10,7 @@ from apps.inspections.models import (
     InspectionTemplate, InspectionCategory, InspectionItem,
     VehicleInspection, InspectionResult, InspectionPhoto
 )
+from apps.branches.utils import filter_queryset_for_user_branches, resolve_branch
 from apps.inspections.serializers import (
     InspectionTemplateListSerializer, InspectionTemplateDetailSerializer,
     InspectionTemplateCreateSerializer, InspectionCategorySerializer,
@@ -154,6 +155,30 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     search_fields = ['inspection_number', 'vehicle__vin', 'vehicle__license_plate', 'notes']
     ordering_fields = ['inspection_date', 'created_at', 'inspection_number']
     ordering = ['-inspection_date']
+    
+    def get_queryset(self):
+        """Filter inspections by active branch from session"""
+        queryset = super().get_queryset()
+        # Check if user wants to see all branches (for admins) or just active branch
+        show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
+        return filter_queryset_for_user_branches(
+            queryset, 
+            self.request.user, 
+            request=self.request, 
+            use_active_branch=not show_all
+        )
+    
+    def perform_create(self, serializer):
+        """Assign branch when creating inspection"""
+        request = self.request
+        branch_id = request.data.get('branch') or request.data.get('branch_id')
+        branch = resolve_branch(request, branch_id=branch_id)
+        
+        if branch is None:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'branch': 'A valid branch assignment is required.'})
+        
+        serializer.save(branch=branch)
     
     def get_serializer_class(self):
         if self.action == 'list':

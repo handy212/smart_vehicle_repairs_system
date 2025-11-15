@@ -5,80 +5,95 @@
 
 {% block content %}
 <!-- Page Header -->
-<div class="portal-header">
-    <div class="container-fluid px-4">
-        <h1>
-            <i class="fas fa-car me-2"></i>
-            My Vehicles
-        </h1>
-        <p class="mb-0 opacity-75">Manage your vehicles and view service history</p>
+<div class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent"></div>
+    <div class="relative px-4 lg:px-8 py-12 max-w-7xl mx-auto">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center text-white shadow-lg">
+                <i class="fas fa-car text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-3xl lg:text-4xl font-bold text-slate-900 mb-1">My Vehicles</h1>
+                <p class="text-slate-600 text-sm">Manage your vehicles and view service history</p>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- Main Content -->
-<div class="container-fluid px-4 py-4">
-    
+<div class="px-4 lg:px-8 pb-12 max-w-7xl mx-auto space-y-6">
     {% if vehicles %}
-    <div class="card">
-        <div class="card-body p-0">
-            <div class="list-group list-group-flush">
-                {% for vehicle in vehicles %}
-                <div class="list-group-item">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-center">
-                                <div class="me-3">
-                                    <i class="fas fa-car fa-2x text-primary"></i>
-                                </div>
-                                <div>
-                                    <h5 class="mb-1">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h5>
-                                    <p class="text-muted mb-0 small">
-                                        <strong>License:</strong> {{ vehicle.license_plate }} | 
-                                        <strong>VIN:</strong> {{ vehicle.vin|truncatechars:12 }}
-                                    </p>
-                                </div>
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+        <div class="divide-y divide-slate-100/50">
+            {% for vehicle in vehicles %}
+            <div class="p-6 hover:bg-slate-50/50 transition-all group">
+                <div class="flex flex-col lg:flex-row lg:items-center gap-6">
+                    <div class="flex items-center gap-4 flex-1">
+                        <div class="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i class="fas fa-car text-2xl text-primary"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h5 class="font-bold text-slate-900 mb-2 text-lg">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h5>
+                            <div class="flex flex-wrap items-center gap-4 text-sm text-slate-600">
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-barcode text-xs text-slate-400"></i>
+                                    <span><strong>License:</strong> {{ vehicle.license_plate }}</span>
+                                </span>
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-fingerprint text-xs text-slate-400"></i>
+                                    <span><strong>VIN:</strong> {{ vehicle.vin|truncatechars:12 }}</span>
+                                </span>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <small class="text-muted d-block">Details</small>
-                            <p class="mb-0 small">
-                                <strong>Mileage:</strong> {{ vehicle.mileage|default:0|floatformat:0 }} km<br>
+                    </div>
+                    <div class="flex flex-col lg:flex-row lg:items-center gap-4">
+                        <div class="text-sm text-slate-600 space-y-1">
+                            <div>
+                                <strong>Mileage:</strong> {{ vehicle.mileage|default:0|floatformat:0 }} km
+                            </div>
+                            <div>
                                 <strong>Color:</strong> {{ vehicle.color|default:'N/A' }}
-                            </p>
+                            </div>
                         </div>
-                        <div class="col-md-3 text-end">
+                        <div class="flex items-center gap-3">
                             {% if vehicle.status == 'active' or not vehicle.status %}
-                                <span class="badge bg-success mb-2">
+                                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
                                     {{ vehicle.status|default:'Active'|title }}
                                 </span>
                             {% else %}
-                                <span class="badge bg-secondary mb-2">
+                                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
                                     {{ vehicle.status|title }}
                                 </span>
                             {% endif %}
-                            <div class="btn-group" role="group">
-                                <a href="{% url 'portal:vehicle-detail' vehicle.id %}" class="btn btn-sm btn-primary">
-                                    <i class="fas fa-eye me-1"></i> View
+                            <div class="flex items-center gap-2">
+                                <a href="{% url 'portal:vehicle-detail' vehicle.id %}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-primary border border-primary/20 rounded-xl hover:bg-primary/10 transition-all">
+                                    <i class="fas fa-eye"></i>
+                                    <span>View</span>
                                 </a>
-                                <a href="{% url 'portal:book-appointment' %}?vehicle={{ vehicle.id }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-calendar me-1"></i> Book
+                                <a href="{% url 'portal:book-appointment' %}?vehicle={{ vehicle.id }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>Book</span>
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
-                {% endfor %}
             </div>
+            {% endfor %}
         </div>
     </div>
     {% else %}
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <i class="fas fa-car fa-4x text-muted mb-4"></i>
-            <h4>No Vehicles Yet</h4>
-            <p class="text-muted">Contact us to add your vehicle to your account</p>
-            <a href="{% url 'home' %}" class="btn btn-primary">
-                <i class="fas fa-phone me-2"></i>Contact Us
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm">
+        <div class="p-12 text-center">
+            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-car text-3xl text-slate-400"></i>
+            </div>
+            <h4 class="text-lg font-semibold text-slate-900 mb-2">No Vehicles Yet</h4>
+            <p class="text-sm text-slate-500 mb-6">Contact us to add your vehicle to your account</p>
+            <a href="{% url 'home' %}" class="group inline-flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-primary to-primary/80 text-white rounded-2xl font-semibold hover:shadow-xl hover:scale-105 transition-all shadow-lg shadow-primary/20">
+                <i class="fas fa-phone"></i>
+                <span>Contact Us</span>
+                <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
             </a>
         </div>
     </div>

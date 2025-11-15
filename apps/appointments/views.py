@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, time
 
 # Notification triggers
 from apps.notifications_app.triggers import notification_triggers
+from apps.branches.utils import filter_queryset_for_user_branches, resolve_branch
 
 from .models import Appointment, ServiceBay, AppointmentReminder
 from .serializers import (
@@ -73,11 +74,19 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     ordering = ['appointment_date', 'appointment_time']
     
     def get_queryset(self):
-        """Get queryset with optimizations"""
-        return Appointment.objects.select_related(
+        """Get queryset with optimizations and active branch filtering"""
+        queryset = Appointment.objects.select_related(
             'customer', 'customer__user', 'vehicle', 'service_bay',
-            'confirmed_by', 'created_by'
+            'confirmed_by', 'created_by', 'branch'
         ).prefetch_related('assigned_technicians').all()
+        # Check if user wants to see all branches (for admins) or just active branch
+        show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
+        return filter_queryset_for_user_branches(
+            queryset, 
+            self.request.user, 
+            request=self.request, 
+            use_active_branch=not show_all
+        )
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""
@@ -90,8 +99,16 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         return AppointmentDetailSerializer
     
     def perform_create(self, serializer):
-        """Create appointment with created_by tracking"""
-        serializer.save(created_by=self.request.user)
+        """Create appointment with branch assignment and created_by tracking"""
+        request = self.request
+        branch_id = request.data.get('branch') or request.data.get('branch_id')
+        branch = resolve_branch(request, branch_id=branch_id)
+        
+        if branch is None:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'branch': 'A valid branch assignment is required.'})
+        
+        serializer.save(branch=branch, created_by=request.user)
     
     @action(detail=True, methods=['post'])
     def confirm(self, request, pk=None):

@@ -1,0 +1,82 @@
+{% comment %}
+Reusable print header layout.
+Expected context variables:
+  - LOGO_PATH / MEDIA_URL (from settings context processor)
+  - COMPANY_* fields (name, address, phone, email, tax id, etc.)
+Optional parameters passed via include:
+  - document_title: e.g., "Invoice"
+  - document_number
+  - document_date
+  - print_branch: Branch instance or string describing branch
+{% endcomment %}
+
+<div class="print-header">
+    <div class="print-header-grid">
+        <div class="print-header-column print-header-logo">
+            {% if LOGO_PATH %}
+                <img src="{{ MEDIA_URL }}{{ LOGO_PATH }}" alt="{{ SITE_NAME }}">
+            {% else %}
+                <div class="print-header-placeholder">{{ SITE_NAME }}</div>
+            {% endif %}
+        </div>
+        <div class="print-header-column print-header-company">
+            <div class="print-company-name">{{ COMPANY_NAME|default:SITE_NAME }}</div>
+            {% if COMPANY_TAGLINE %}
+            <div class="print-company-tagline">{{ COMPANY_TAGLINE }}</div>
+            {% endif %}
+            <div class="print-company-info">
+                {% if COMPANY_ADDRESS %}<div>{{ COMPANY_ADDRESS }}</div>{% endif %}
+                {% if COMPANY_CITY or COMPANY_STATE or COMPANY_ZIP %}
+                <div>
+                    {% if COMPANY_CITY %}{{ COMPANY_CITY }}{% endif %}
+                    {% if COMPANY_CITY and COMPANY_STATE %}, {% endif %}
+                    {% if COMPANY_STATE %}{{ COMPANY_STATE }}{% endif %}
+                    {% if COMPANY_ZIP %} {{ COMPANY_ZIP }}{% endif %}
+                </div>
+                {% endif %}
+                {% if COMPANY_COUNTRY %}<div>{{ COMPANY_COUNTRY }}</div>{% endif %}
+                {% if COMPANY_PHONE %}<div>Phone: {{ COMPANY_PHONE }}</div>{% endif %}
+                {% if COMPANY_EMAIL %}<div>Email: {{ COMPANY_EMAIL }}</div>{% endif %}
+                {% if COMPANY_WEBSITE %}<div>Web: {{ COMPANY_WEBSITE }}</div>{% endif %}
+            </div>
+        </div>
+        <div class="print-header-column print-header-meta">
+            {% if COMPANY_TAX_ID %}
+            <div class="print-meta-item">
+                <span class="print-meta-label">TIN</span>
+                <span class="print-meta-value">{{ COMPANY_TAX_ID }}</span>
+            </div>
+            {% endif %}
+            {% if print_branch %}
+            <div class="print-meta-item">
+                <span class="print-meta-label">Branch</span>
+                <span class="print-meta-value">
+                    {% if print_branch.name %}{{ print_branch.name }}{% else %}{{ print_branch }}{% endif %}
+                    {% if print_branch.full_address %}
+                        <span class="print-meta-sub">{{ print_branch.full_address }}</span>
+                    {% elif print_branch.address %}
+                        <span class="print-meta-sub">{{ print_branch.address }}{% if print_branch.city %}, {{ print_branch.city }}{% endif %}{% if print_branch.state %}, {{ print_branch.state }}{% endif %}{% if print_branch.country %}, {{ print_branch.country }}{% endif %}</span>
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
+            {% if document_title or document_number or document_date %}
+            <div class="print-meta-divider"></div>
+            {% endif %}
+            {% if document_title %}
+            <div class="print-meta-item">
+                <span class="print-meta-label">{{ document_title|upper }}</span>
+                {% if document_number %}<span class="print-meta-value">{{ document_number }}</span>{% endif %}
+            </div>
+            {% endif %}
+            {% if document_date %}
+            <div class="print-meta-item">
+                <span class="print-meta-label">Date</span>
+                <span class="print-meta-value">{{ document_date }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="print-header-divider"></div>
+</div>
+

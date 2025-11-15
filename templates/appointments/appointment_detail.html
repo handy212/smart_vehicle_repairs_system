@@ -470,11 +470,23 @@ document.getElementById('confirmStatusUpdate').addEventListener('click', functio
         if (response.ok) {
             location.reload();
         } else {
-            alert('Failed to update appointment status');
+            if (window.showErrorToast) {
+                window.showErrorToast('Failed to update appointment status');
+            } else if (window.ToastSystem) {
+                window.ToastSystem.error('Failed to update appointment status');
+            } else {
+                alert('Failed to update appointment status');
+            }
         }
     }).catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while updating the appointment');
+        if (window.showErrorToast) {
+            window.showErrorToast('An error occurred while updating the appointment');
+        } else if (window.ToastSystem) {
+            window.ToastSystem.error('An error occurred while updating the appointment');
+        } else {
+            alert('An error occurred while updating the appointment');
+        }
     });
     
     closeStatusModal();

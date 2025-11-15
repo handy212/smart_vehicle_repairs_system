@@ -5,100 +5,115 @@
 {% block title %}My Profile - Smart Vehicle Repairs{% endblock %}
 
 {% block page_header %}
-<div class="page-header">
-    <h1><i class="fas fa-user me-2"></i> My Profile</h1>
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-            <li class="breadcrumb-item active">Profile</li>
-        </ol>
-    </nav>
+<div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                <i class="fas fa-user text-indigo-600"></i> My Profile
+            </h1>
+            <nav class="mt-2" aria-label="breadcrumb">
+                <ol class="flex items-center space-x-2 text-sm">
+                    <li><a href="{% url 'dashboard' %}" class="text-slate-500 hover:text-indigo-600 transition-colors">Dashboard</a></li>
+                    <li><i class="fas fa-chevron-right text-slate-400 text-xs"></i></li>
+                    <li class="text-slate-700 font-medium">Profile</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="row">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Profile Card -->
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body text-center">
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-6 text-center">
                 <!-- Profile Picture -->
-                <div class="mb-3">
+                <div class="mb-4">
                     {% if user.profile_picture %}
-                        <img src="{{ user.profile_picture.url }}" class="rounded-circle" width="150" height="150" alt="{{ user.get_full_name }}">
+                        <img src="{{ user.profile_picture.url }}" class="w-32 h-32 rounded-full mx-auto object-cover border-4 border-indigo-100" alt="{{ user.get_full_name }}">
                     {% else %}
-                        <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 150px; height: 150px; font-size: 3rem;">
+                        <div class="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-600 to-indigo-700 text-white mx-auto flex items-center justify-center text-4xl font-bold border-4 border-indigo-100">
                             {{ user.first_name.0|upper }}{{ user.last_name.0|upper }}
                         </div>
                     {% endif %}
                 </div>
                 
                 <!-- Name -->
-                <h3 class="mb-1">{{ user.get_full_name }}</h3>
-                <p class="text-muted mb-2">{{ user.email }}</p>
+                <h3 class="text-xl font-bold text-slate-900 mb-1">{{ user.get_full_name }}</h3>
+                <p class="text-slate-600 mb-3">{{ user.email }}</p>
                 
                 <!-- Role Badge -->
-                <span class="badge bg-primary mb-3">{{ user.get_role_display }}</span>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-indigo-100 text-indigo-700 mb-4">
+                    {{ user.get_role_display }}
+                </span>
                 
                 <!-- Quick Stats -->
-                <div class="row text-center border-top pt-3 mt-3">
-                    <div class="col-6">
-                        <h4 class="mb-0">{{ user.date_joined|date:"M Y" }}</h4>
-                        <small class="text-muted">Member Since</small>
+                <div class="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200 mt-4">
+                    <div class="text-center">
+                        <h4 class="text-lg font-bold text-slate-900 mb-1">{{ user.date_joined|date:"M Y" }}</h4>
+                        <small class="text-slate-500 text-xs">Member Since</small>
                     </div>
-                    <div class="col-6">
-                        <h4 class="mb-0">{{ user.last_login|timesince }}</h4>
-                        <small class="text-muted">Last Login</small>
+                    <div class="text-center">
+                        <h4 class="text-lg font-bold text-slate-900 mb-1">{{ user.last_login|timesince }}</h4>
+                        <small class="text-slate-500 text-xs">Last Login</small>
                     </div>
                 </div>
                 
                 <!-- Actions -->
-                <div class="d-grid gap-2 mt-3">
-                    <a href="{% url 'password_change' %}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-key me-2"></i> Change Password
+                <div class="mt-6">
+                    <a href="{% url 'password_change' %}" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-white border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-medium">
+                        <i class="fas fa-key"></i> Change Password
                     </a>
                 </div>
             </div>
         </div>
         
         <!-- Account Settings -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-cog me-2"></i> Account Settings</h6>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm mt-6 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
+                <h6 class="font-semibold text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-cog text-indigo-600"></i> Account Settings
+                </h6>
             </div>
-            <div class="card-body">
-                <div class="form-check form-switch mb-2">
-                    <input class="form-check-input" type="checkbox" id="emailNotif" {% if user.email_notifications %}checked{% endif %}>
-                    <label class="form-check-label" for="emailNotif">
-                        Email Notifications
-                    </label>
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <label for="emailNotif" class="text-sm font-medium text-slate-700 cursor-pointer">Email Notifications</label>
+                    <input type="checkbox" 
+                           class="w-11 h-6 bg-slate-200 rounded-full relative appearance-none cursor-pointer transition-colors checked:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" 
+                           id="emailNotif" 
+                           {% if user.email_notifications %}checked{% endif %}>
                 </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="smsNotif" {% if user.sms_notifications %}checked{% endif %}>
-                    <label class="form-check-label" for="smsNotif">
-                        SMS Notifications
-                    </label>
+                <div class="flex items-center justify-between">
+                    <label for="smsNotif" class="text-sm font-medium text-slate-700 cursor-pointer">SMS Notifications</label>
+                    <input type="checkbox" 
+                           class="w-11 h-6 bg-slate-200 rounded-full relative appearance-none cursor-pointer transition-colors checked:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" 
+                           id="smsNotif" 
+                           {% if user.sms_notifications %}checked{% endif %}>
                 </div>
             </div>
         </div>
     </div>
     
     <!-- Profile Details -->
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-edit me-2"></i> Edit Profile</h5>
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 bg-slate-50">
+                <h5 class="font-semibold text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-edit text-indigo-600"></i> Edit Profile
+                </h5>
             </div>
-            <div class="card-body">
+            <div class="p-6">
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     
-                    <div class="row">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <!-- First Name -->
-                        <div class="col-md-6 mb-3">
-                            <label for="id_first_name" class="form-label">First Name *</label>
+                        <div>
+                            <label for="id_first_name" class="block text-sm font-semibold text-slate-700 mb-2">First Name <span class="text-rose-600">*</span></label>
                             <input type="text" 
-                                   class="form-control" 
+                                   class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
                                    id="id_first_name" 
                                    name="first_name" 
                                    value="{{ user.first_name }}" 
@@ -106,10 +121,10 @@
                         </div>
                         
                         <!-- Last Name -->
-                        <div class="col-md-6 mb-3">
-                            <label for="id_last_name" class="form-label">Last Name *</label>
+                        <div>
+                            <label for="id_last_name" class="block text-sm font-semibold text-slate-700 mb-2">Last Name <span class="text-rose-600">*</span></label>
                             <input type="text" 
-                                   class="form-control" 
+                                   class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
                                    id="id_last_name" 
                                    name="last_name" 
                                    value="{{ user.last_name }}" 
@@ -118,71 +133,71 @@
                     </div>
                     
                     <!-- Email (Read-only) -->
-                    <div class="mb-3">
-                        <label for="id_email" class="form-label">Email Address</label>
+                    <div class="mb-4">
+                        <label for="id_email" class="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
                         <input type="email" 
-                               class="form-control" 
+                               class="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed" 
                                id="id_email" 
                                value="{{ user.email }}" 
                                disabled>
-                        <small class="text-muted">Contact admin to change email address</small>
+                        <small class="text-slate-500 text-sm mt-1 block">Contact admin to change email address</small>
                     </div>
                     
                     <!-- Phone -->
-                    <div class="mb-3">
-                        <label for="id_phone" class="form-label">Phone Number</label>
+                    <div class="mb-4">
+                        <label for="id_phone" class="block text-sm font-semibold text-slate-700 mb-2">Phone Number</label>
                         <input type="tel" 
-                               class="form-control" 
+                               class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
                                id="id_phone" 
                                name="phone" 
                                value="{{ user.phone|default:'' }}">
                     </div>
                     
                     <!-- Date of Birth -->
-                    <div class="mb-3">
-                        <label for="id_date_of_birth" class="form-label">Date of Birth</label>
+                    <div class="mb-4">
+                        <label for="id_date_of_birth" class="block text-sm font-semibold text-slate-700 mb-2">Date of Birth</label>
                         <input type="date" 
-                               class="form-control" 
+                               class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
                                id="id_date_of_birth" 
                                name="date_of_birth" 
                                value="{{ user.date_of_birth|date:'Y-m-d'|default:'' }}">
                     </div>
                     
                     <!-- Address -->
-                    <div class="mb-3">
-                        <label for="id_address" class="form-label">Street Address</label>
-                        <textarea class="form-control" 
+                    <div class="mb-4">
+                        <label for="id_address" class="block text-sm font-semibold text-slate-700 mb-2">Street Address</label>
+                        <textarea class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
                                   id="id_address" 
                                   name="address" 
                                   rows="2">{{ user.address|default:'' }}</textarea>
                     </div>
                     
-                    <div class="row">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <!-- City -->
-                        <div class="col-md-4 mb-3">
-                            <label for="id_city" class="form-label">City</label>
+                        <div>
+                            <label for="id_city" class="block text-sm font-semibold text-slate-700 mb-2">City</label>
                             <input type="text" 
-                                   class="form-control" 
+                                   class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
                                    id="id_city" 
                                    name="city" 
                                    value="{{ user.city|default:'' }}">
                         </div>
                         
                         <!-- State -->
-                        <div class="col-md-4 mb-3">
-                            <label for="id_state" class="form-label">State/Province</label>
+                        <div>
+                            <label for="id_state" class="block text-sm font-semibold text-slate-700 mb-2">State/Province</label>
                             <input type="text" 
-                                   class="form-control" 
+                                   class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
                                    id="id_state" 
                                    name="state" 
                                    value="{{ user.state|default:'' }}">
                         </div>
                         
                         <!-- Zip Code -->
-                        <div class="col-md-4 mb-3">
-                            <label for="id_zip_code" class="form-label">Zip/Postal Code</label>
+                        <div>
+                            <label for="id_zip_code" class="block text-sm font-semibold text-slate-700 mb-2">Zip/Postal Code</label>
                             <input type="text" 
-                                   class="form-control" 
+                                   class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
                                    id="id_zip_code" 
                                    name="zip_code" 
                                    value="{{ user.zip_code|default:'' }}">
@@ -190,33 +205,33 @@
                     </div>
                     
                     <!-- Country -->
-                    <div class="mb-3">
-                        <label for="id_country" class="form-label">Country</label>
+                    <div class="mb-4">
+                        <label for="id_country" class="block text-sm font-semibold text-slate-700 mb-2">Country</label>
                         <input type="text" 
-                               class="form-control" 
+                               class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" 
                                id="id_country" 
                                name="country" 
                                value="{{ user.country|default:'USA' }}">
                     </div>
                     
                     <!-- Profile Picture -->
-                    <div class="mb-3">
-                        <label for="id_profile_picture" class="form-label">Profile Picture</label>
+                    <div class="mb-6">
+                        <label for="id_profile_picture" class="block text-sm font-semibold text-slate-700 mb-2">Profile Picture</label>
                         <input type="file" 
-                               class="form-control" 
+                               class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" 
                                id="id_profile_picture" 
                                name="profile_picture" 
                                accept="image/*">
-                        <small class="text-muted">Upload a new profile picture (JPG, PNG, max 5MB)</small>
+                        <small class="text-slate-500 text-sm mt-1 block">Upload a new profile picture (JPG, PNG, max 5MB)</small>
                     </div>
                     
                     <!-- Submit Button -->
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i> Save Changes
+                    <div class="flex gap-3">
+                        <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                            <i class="fas fa-save mr-2"></i> Save Changes
                         </button>
-                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-2"></i> Cancel
+                        <a href="{% url 'dashboard' %}" class="px-6 py-3 bg-white border border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors">
+                            <i class="fas fa-times mr-2"></i> Cancel
                         </a>
                     </div>
                 </form>

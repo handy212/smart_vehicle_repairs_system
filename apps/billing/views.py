@@ -13,6 +13,7 @@ from datetime import timedelta
 from apps.notifications_app.triggers import notification_triggers
 
 from apps.billing.models import TaxRate, Estimate, EstimateLineItem, Invoice, Payment
+from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
 from apps.billing.serializers import (
     TaxRateSerializer, TaxRateCreateSerializer,
     EstimateListSerializer, EstimateDetailSerializer, EstimateCreateSerializer, EstimateUpdateSerializer,
@@ -127,6 +128,18 @@ class EstimateViewSet(viewsets.ModelViewSet):
     ordering_fields = ['estimate_number', 'estimate_date', 'valid_until', 'total', 'created_at']
     ordering = ['-created_at']
     
+    def get_queryset(self):
+        """Filter estimates by active branch from session"""
+        queryset = super().get_queryset()
+        # Check if user wants to see all branches (for admins) or just active branch
+        show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
+        return filter_queryset_for_user_branches(
+            queryset, 
+            self.request.user, 
+            request=self.request, 
+            use_active_branch=not show_all
+        )
+    
     def get_serializer_class(self):
         if self.action == 'list':
             return EstimateListSerializer
@@ -228,13 +241,22 @@ class EstimateViewSet(viewsets.ModelViewSet):
         # Import here to avoid circular imports
         from apps.workorders.models import WorkOrder
         
+        branch = estimate.branch or resolve_branch(request)
+        if branch is None:
+            return Response(
+                {"error": "Unable to determine branch for new work order."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         # Create work order from estimate
         work_order = WorkOrder.objects.create(
             customer=estimate.customer,
             vehicle=estimate.vehicle,
-            description=estimate.description,
-            notes=estimate.notes,
-            status='pending',
+            branch=branch,
+            customer_concerns=estimate.description or "Converted from estimate",
+            special_instructions=estimate.notes or "",
+            status='draft',
+            odometer_in=getattr(estimate.vehicle, 'current_mileage', 0) or 0,
             created_by=request.user
         )
         
@@ -301,6 +323,18 @@ class EstimateViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(expiring, many=True)
         return Response(serializer.data)
+    
+    def perform_create(self, serializer):
+        """Assign branch when creating estimate"""
+        request = self.request
+        branch_id = request.data.get('branch') or request.data.get('branch_id')
+        branch = resolve_branch(request, branch_id=branch_id)
+        
+        if branch is None:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'branch': 'A valid branch assignment is required.'})
+        
+        serializer.save(branch=branch, created_by=request.user)
 
 
 class EstimateLineItemViewSet(viewsets.ModelViewSet):
@@ -354,6 +388,18 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     ordering_fields = ['invoice_number', 'invoice_date', 'due_date', 'total', 'amount_due', 'created_at']
     ordering = ['-created_at']
     
+    def get_queryset(self):
+        """Filter invoices by active branch from session"""
+        queryset = super().get_queryset()
+        # Check if user wants to see all branches (for admins) or just active branch
+        show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
+        return filter_queryset_for_user_branches(
+            queryset, 
+            self.request.user, 
+            request=self.request, 
+            use_active_branch=not show_all
+        )
+    
     def get_serializer_class(self):
         if self.action == 'list':
             return InvoiceListSerializer
@@ -362,6 +408,18 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         elif self.action in ['update', 'partial_update']:
             return InvoiceUpdateSerializer
         return InvoiceDetailSerializer
+    
+    def perform_create(self, serializer):
+        """Assign branch when creating invoice"""
+        request = self.request
+        branch_id = request.data.get('branch') or request.data.get('branch_id')
+        branch = resolve_branch(request, branch_id=branch_id)
+        
+        if branch is None:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'branch': 'A valid branch assignment is required.'})
+        
+        serializer.save(branch=branch, created_by=request.user)
     
     @action(detail=True, methods=['post'])
     def send(self, request, pk=None):

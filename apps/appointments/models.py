@@ -127,6 +127,16 @@ class Appointment(models.Model):
         help_text="Unique appointment number"
     )
     
+    # Branch assignment
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        related_name='appointments',
+        null=True,  # Allow null for migration
+        blank=True,
+        help_text="Branch where this appointment is scheduled"
+    )
+    
     # References
     customer = models.ForeignKey(
         Customer,

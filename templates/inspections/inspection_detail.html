@@ -4,389 +4,229 @@
 
 {% block title %}Inspection Details - Smart Vehicle Repairs{% endblock %}
 
-{% block extra_css %}
-<style>
-    .info-card {
-        border: none;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .info-item {
-        padding: 0.75rem;
-        border-bottom: 1px solid #f0f0f0;
-    }
-    .info-item:last-child {
-        border-bottom: none;
-    }
-    .info-label {
-        font-size: 0.75rem;
-        color: #6c757d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0.25rem;
-    }
-    .info-value {
-        font-size: 1rem;
-        font-weight: 500;
-        color: #212529;
-    }
-    .result-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid #f0f0f0;
-        transition: background 0.2s;
-        min-height: 45px;
-    }
-    .result-item:last-child {
-        border-bottom: none;
-    }
-    .result-item:hover {
-        background: #f8f9fa;
-        border-radius: 0.25rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-        margin-left: -0.5rem;
-        margin-right: -0.5rem;
-    }
-    .result-pass {
-        border-left: 3px solid #10b981;
-        background: #f0fdf4;
-        padding-left: 0.75rem;
-        margin-left: -0.25rem;
-    }
-    .result-fail {
-        border-left: 3px solid #ef4444;
-        background: #fef2f2;
-        padding-left: 0.75rem;
-        margin-left: -0.25rem;
-    }
-    .result-warning {
-        border-left: 3px solid #f59e0b;
-        background: #fffbeb;
-        padding-left: 0.75rem;
-        margin-left: -0.25rem;
-    }
-    .result-name {
-        flex: 1;
-        font-size: 0.9rem;
-        font-weight: 500;
-        line-height: 1.4;
-        color: #333;
-    }
-    .result-name strong {
-        font-weight: 600;
-    }
-    .result-name small {
-        display: block;
-        margin-top: 0.15rem;
-        font-size: 0.8rem;
-        color: #6c757d;
-        line-height: 1.3;
-    }
-    .result-badge {
-        font-size: 0.813rem;
-        padding: 0.3rem 0.75rem;
-        font-weight: 500;
-    }
-    .categories-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-        margin-bottom: 1rem;
-    }
-    @media (max-width: 768px) {
-        .categories-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-    .category-section {
-        background: #fff;
-        border: 1px solid #dee2e6;
-        border-radius: 0.5rem;
-        padding: 1rem 1.25rem;
-        margin-bottom: 0;
-        height: 100%;
-    }
-    .category-header {
-        background: transparent;
-        padding: 0 0 0.5rem 0;
-        border-bottom: 2px solid var(--bs-primary);
-        margin-bottom: 0.75rem;
-        font-weight: 600;
-        font-size: 1rem;
-    }
-    .summary-stats {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-    .stat-card {
-        flex: 1;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        text-align: center;
-    }
-    .stat-number {
-        font-size: 2rem;
-        font-weight: 700;
-        line-height: 1;
-    }
-    .stat-label {
-        font-size: 0.85rem;
-        color: #6c757d;
-        margin-top: 0.5rem;
-    }
-    .photo-gallery {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 0.75rem;
-    }
-    .photo-item {
-        position: relative;
-        padding-top: 100%;
-        overflow: hidden;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        border: 2px solid #e5e7eb;
-    }
-    .photo-item:hover {
-        border-color: var(--bs-primary);
-    }
-    .photo-item img {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    .signature-box {
-        border: 2px dashed #dee2e6;
-        border-radius: 0.5rem;
-        padding: 1.5rem;
-        background: #f8f9fa;
-        min-height: 120px;
-        text-align: center;
-    }
-    .signature-box img {
-        max-width: 200px;
-        height: auto;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2><i class="fas fa-clipboard-check me-2"></i>Inspection Details</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'inspections:inspection-list' %}">Inspections</a></li>
-                    <li class="breadcrumb-item active">{{ inspection.id }}</li>
-                </ol>
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2 mb-2">
+                <i class="fas fa-clipboard-check text-primary"></i>
+                Inspection Details
+            </h2>
+            <nav class="flex items-center gap-2 text-sm text-slate-600">
+                <a href="{% url 'dashboard' %}" class="hover:text-primary transition-colors">Dashboard</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <a href="{% url 'inspections:inspection-list' %}" class="hover:text-primary transition-colors">Inspections</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <span class="text-slate-900 font-medium">{{ inspection.id }}</span>
             </nav>
         </div>
-        <div class="col-md-4 text-end">
+        <div class="flex items-center gap-2">
             {% if inspection.status != 'approved' %}
-            <a href="{% url 'inspections:inspection-edit' inspection.id %}" class="btn btn-primary">
-                <i class="fas fa-edit me-2"></i>Edit
+            <a href="{% url 'inspections:inspection-edit' inspection.id %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                <i class="fas fa-edit"></i>Edit
             </a>
             {% endif %}
-            <a href="{% url 'inspections:inspection-print' inspection.id %}" class="btn btn-outline-secondary" target="_blank">
-                <i class="fas fa-print me-2"></i>Print
+            <a href="{% url 'inspections:inspection-print' inspection.id %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium" target="_blank">
+                <i class="fas fa-print"></i>Print
             </a>
-            <div class="btn-group">
-                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+            <div class="relative">
+                <button type="button" class="p-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors" id="actionsMenuBtn">
                     <i class="fas fa-ellipsis-v"></i>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="#" onclick="emailInspection()">
-                        <i class="fas fa-envelope me-2"></i>Email to Customer
-                    </a></li>
-                    <li><a class="dropdown-item" href="{% url 'inspections:inspection-pdf' inspection.id %}">
-                        <i class="fas fa-file-pdf me-2"></i>Download PDF
-                    </a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteInspection()">
-                        <i class="fas fa-trash me-2"></i>Delete
-                    </a></li>
-                </ul>
+                <div id="actionsMenu" class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 hidden z-50">
+                    <div class="py-2">
+                        <a href="#" onclick="emailInspection(); return false;" class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+                            <i class="fas fa-envelope w-5 text-primary"></i>
+                            Email to Customer
+                        </a>
+                        <a href="{% url 'inspections:inspection-pdf' inspection.id %}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+                            <i class="fas fa-file-pdf w-5 text-primary"></i>
+                            Download PDF
+                        </a>
+                        <hr class="my-1 border-slate-200">
+                        <a href="#" onclick="deleteInspection(); return false;" class="flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors">
+                            <i class="fas fa-trash w-5"></i>
+                            Delete
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     
     <!-- Hidden Delete Form -->
-    <form id="deleteForm" method="post" action="{% url 'inspections:inspection-delete' inspection.id %}" style="display: none;">
+    <form id="deleteForm" method="post" action="{% url 'inspections:inspection-delete' inspection.id %}" class="hidden">
         {% csrf_token %}
     </form>
 
-    <div class="row">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Left Column -->
-        <div class="col-lg-8">
+        <div class="lg:col-span-2 space-y-6">
             <!-- Basic Information -->
-            <div class="card info-card mb-4">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Inspection Information</h5>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gradient-to-r from-primary to-primary/80 text-white flex justify-between items-center">
+                    <h5 class="text-sm font-semibold flex items-center gap-2">
+                        <i class="fas fa-info-circle"></i>
+                        Inspection Information
+                    </h5>
                     {% if inspection.status == 'completed' %}
-                    <span class="badge bg-white text-success">Completed</span>
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-white text-emerald-700">Completed</span>
                     {% elif inspection.status == 'in_progress' %}
-                    <span class="badge bg-white text-warning">In Progress</span>
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-white text-amber-700">In Progress</span>
                     {% elif inspection.status == 'approved' %}
-                    <span class="badge bg-white text-info">Approved</span>
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-white text-blue-700">Approved</span>
                     {% else %}
-                    <span class="badge bg-white text-secondary">Draft</span>
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-white text-slate-700">Draft</span>
                     {% endif %}
                 </div>
-                <div class="card-body p-0">
-                    <div class="info-item">
-                        <div class="info-label">Template</div>
-                        <div class="info-value">{{ inspection.template.name }}</div>
+                <div class="divide-y divide-slate-200">
+                    <div class="px-6 py-3">
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Template</div>
+                        <div class="text-sm font-medium text-slate-900">{{ inspection.template.name }}</div>
                     </div>
                     {% if inspection.work_order %}
-                    <div class="info-item">
-                        <div class="info-label">Work Order</div>
-                        <div class="info-value">
-                            <a href="{% url 'workorders:workorder-detail' inspection.work_order.id %}" class="text-decoration-none">
+                    <div class="px-6 py-3">
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Work Order</div>
+                        <div class="text-sm font-medium text-slate-900">
+                            <a href="{% url 'workorders:workorder-detail' inspection.work_order.id %}" class="text-primary hover:text-primary/80 transition-colors">
                                 #{{ inspection.work_order.work_order_number }}
                             </a>
                         </div>
                     </div>
                     {% endif %}
-                    <div class="row g-0">
-                        <div class="col-md-4">
-                            <div class="info-item">
-                                <div class="info-label">Date</div>
-                                <div class="info-value">{{ inspection.inspection_date|date:"M d, Y" }}</div>
-                            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+                        <div class="px-6 py-3">
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Date</div>
+                            <div class="text-sm font-medium text-slate-900">{{ inspection.inspection_date|date:"M d, Y" }}</div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="info-item">
-                                <div class="info-label">Technician</div>
-                                <div class="info-value">{{ inspection.performed_by.get_full_name }}</div>
-                            </div>
+                        <div class="px-6 py-3">
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Technician</div>
+                            <div class="text-sm font-medium text-slate-900">{{ inspection.performed_by.get_full_name }}</div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="info-item">
-                                <div class="info-label">Odometer</div>
-                                <div class="info-value">{{ inspection.odometer_reading|floatformat:0 }} mi</div>
-                            </div>
+                        <div class="px-6 py-3">
+                            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Odometer</div>
+                            <div class="text-sm font-medium text-slate-900">{{ inspection.odometer_reading|floatformat:0 }} mi</div>
                         </div>
                     </div>
                     {% if inspection.notes %}
-                    <div class="info-item">
-                        <div class="info-label">Notes</div>
-                        <div class="info-value">{{ inspection.notes }}</div>
+                    <div class="px-6 py-3">
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Notes</div>
+                        <div class="text-sm text-slate-900">{{ inspection.notes }}</div>
                     </div>
                     {% endif %}
                 </div>
             </div>
 
             <!-- Inspection Results -->
-            <div class="card info-card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Inspection Results</h5>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gradient-to-r from-primary to-primary/80 text-white">
+                    <h5 class="text-sm font-semibold flex items-center gap-2">
+                        <i class="fas fa-clipboard-check"></i>
+                        Inspection Results
+                    </h5>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <!-- Summary Statistics -->
-                    <div class="summary-stats">
-                        <div class="stat-card" style="background: #f0fdf4; border: 2px solid #10b981;">
-                            <div class="stat-number text-success">{{ pass_count|default:0 }}</div>
-                            <div class="stat-label">Passed</div>
+                    <div class="grid grid-cols-3 gap-4 mb-6">
+                        <div class="p-4 rounded-lg border-2 border-emerald-500 bg-emerald-50 text-center">
+                            <div class="text-3xl font-bold text-emerald-700 mb-1">{{ pass_count|default:0 }}</div>
+                            <div class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Passed</div>
                         </div>
-                        <div class="stat-card" style="background: #fef2f2; border: 2px solid #ef4444;">
-                            <div class="stat-number text-danger">{{ fail_count|default:0 }}</div>
-                            <div class="stat-label">Failed</div>
+                        <div class="p-4 rounded-lg border-2 border-rose-500 bg-rose-50 text-center">
+                            <div class="text-3xl font-bold text-rose-700 mb-1">{{ fail_count|default:0 }}</div>
+                            <div class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Failed</div>
                         </div>
-                        <div class="stat-card" style="background: #f3f4f6; border: 2px solid #9ca3af;">
-                            <div class="stat-number text-secondary">{{ inspection.results.count|default:0 }}</div>
-                            <div class="stat-label">Total Items</div>
+                        <div class="p-4 rounded-lg border-2 border-slate-400 bg-slate-50 text-center">
+                            <div class="text-3xl font-bold text-slate-700 mb-1">{{ inspection.results.count|default:0 }}</div>
+                            <div class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Total Items</div>
                         </div>
                     </div>
                     
                     <!-- Results by Category -->
-                    <div class="categories-grid">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {% for category in inspection.template.categories.all %}
-                        <div class="category-section">
-                            <div class="category-header">
-                                <i class="fas fa-folder me-2 text-primary"></i>{{ category.name }}
-                                <small class="text-muted ms-2">({{ category.items.count }} items)</small>
+                        <div class="bg-white border border-slate-200 rounded-lg p-4 h-full">
+                            <div class="flex items-center gap-2 mb-4 pb-2 border-b-2 border-primary">
+                                <i class="fas fa-folder text-primary"></i>
+                                <h6 class="text-sm font-semibold text-slate-900">{{ category.name }}</h6>
+                                <span class="text-xs text-slate-500">({{ category.items.count }} items)</span>
                             </div>
                             
+                            <div class="space-y-2">
                             {% for item in category.items.all %}
                             {% with result=results_by_item|get_item:item.id|default:None %}
-                            <div class="result-item {% if result.result == 'pass' %}result-pass{% elif result.result == 'fail' %}result-fail{% elif result.result == 'advisory' %}result-warning{% endif %}">
-                                <div class="result-name">
-                                    <strong>{{ item.name }}</strong>
-                                    {% if item.is_critical %}
-                                    <i class="fas fa-exclamation-triangle text-danger ms-1" title="Critical"></i>
-                                    {% endif %}
+                            <div class="flex items-center justify-between p-2 rounded-lg transition-colors min-h-[45px] hover:bg-slate-50
+                                {% if result.result == 'pass' %}border-l-4 border-l-emerald-500 bg-emerald-50/30 pl-3
+                                {% elif result.result == 'fail' %}border-l-4 border-l-rose-500 bg-rose-50/30 pl-3
+                                {% elif result.result == 'advisory' %}border-l-4 border-l-amber-500 bg-amber-50/30 pl-3{% endif %}">
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <strong class="text-sm font-semibold text-slate-900">{{ item.name }}</strong>
+                                        {% if item.is_critical %}
+                                        <i class="fas fa-exclamation-triangle text-rose-600 text-xs" title="Critical"></i>
+                                        {% endif %}
+                                    </div>
                                     {% if result.notes %}
-                                    <small>{{ result.notes }}</small>
+                                    <small class="text-xs text-slate-600 block mt-1">{{ result.notes }}</small>
                                     {% endif %}
                                 </div>
                             
-                            <div class="text-end">
-                                {% if result %}
-                                    {% if item.item_type == 'pass_fail' %}
-                                    <span class="badge result-badge {% if result.result == 'pass' %}bg-success{% else %}bg-danger{% endif %}">
-                                        <i class="fas {% if result.result == 'pass' %}fa-check{% else %}fa-times{% endif %} me-1"></i>
-                                        {{ result.get_result_display }}
-                                    </span>
-                                    {% elif item.item_type == 'rating' %}
-                                    <div>
-                                        {% for i in "12345" %}
-                                        <i class="fas fa-star {% if forloop.counter <= result.rating_value %}text-warning{% else %}text-muted{% endif %}" style="font-size: 0.75rem;"></i>
-                                        {% endfor %}
-                                    </div>
-                                    {% elif item.item_type == 'measurement' %}
-                                    <span class="badge bg-info result-badge">{{ result.measurement_value }} {{ item.measurement_unit }}</span>
-                                    {% elif item.item_type == 'condition' %}
-                                    <span class="badge bg-secondary result-badge">{{ result.condition }}</span>
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    {% if result %}
+                                        {% if item.item_type == 'pass_fail' %}
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold {% if result.result == 'pass' %}bg-emerald-50 text-emerald-700 border border-emerald-200{% else %}bg-rose-50 text-rose-700 border border-rose-200{% endif %}">
+                                            <i class="fas {% if result.result == 'pass' %}fa-check{% else %}fa-times{% endif %}"></i>
+                                            {{ result.get_result_display }}
+                                        </span>
+                                        {% elif item.item_type == 'rating' %}
+                                        <div class="flex items-center gap-0.5">
+                                            {% for i in "12345" %}
+                                            <i class="fas fa-star text-xs {% if forloop.counter <= result.rating_value %}text-amber-500{% else %}text-slate-300{% endif %}"></i>
+                                            {% endfor %}
+                                        </div>
+                                        {% elif item.item_type == 'measurement' %}
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">{{ result.measurement_value }} {{ item.measurement_unit }}</span>
+                                        {% elif item.item_type == 'condition' %}
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">{{ result.condition }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">Not checked</span>
                                     {% endif %}
-                                {% else %}
-                                <span class="badge bg-light text-muted result-badge">Not checked</span>
-                                {% endif %}
-                            </div>
-                            
-                            {% if result.photo %}
-                            <div class="ms-2">
-                                <img src="{{ result.photo.url }}" alt="Photo" style="width: 50px; height: 50px; object-fit: cover; border-radius: 0.25rem; border: 2px solid #e5e7eb;">
-                            </div>
-                            {% endif %}
+                                    
+                                    {% if result.photo %}
+                                    <img src="{{ result.photo.url }}" alt="Photo" class="w-12 h-12 object-cover rounded-lg border-2 border-slate-200">
+                                    {% endif %}
+                                </div>
                             </div>
                             {% endwith %}
                             {% endfor %}
+                            </div>
                         </div>
                     {% endfor %}
-                    </div><!-- Close categories-grid -->
+                    </div>
                 </div>
             </div>
 
             <!-- Vehicle Damage Assessment -->
             {% if inspection.vehicle_damage and inspection.vehicle_damage != '[]' and inspection.vehicle_damage != '{}' and inspection.vehicle_damage != '' %}
-            <div class="card info-card mb-4">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="fas fa-car-crash me-2"></i>Vehicle Damage Assessment</h5>
+            <div class="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 bg-gradient-to-r from-amber-50 to-amber-100 border-b border-amber-200">
+                    <h5 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-car-crash text-amber-600"></i>
+                        Vehicle Damage Assessment
+                    </h5>
                 </div>
-                <div class="card-body">
-                    <div class="vehicle-damage-display">
-                        <!-- Vehicle Diagram Container -->
-                        <div class="vehicle-diagram-container position-relative mb-3">
-                            <div id="vehicleDamageDisplay" class="vehicle-svg-container">
-                                <!-- SVG will be loaded here -->
-                            </div>
+                <div class="p-6">
+                    <div class="relative mb-4">
+                        <div id="vehicleDamageDisplay" class="bg-white border-2 border-slate-200 rounded-lg p-4">
+                            <!-- SVG will be loaded here -->
                         </div>
-                        
-                        <!-- Damage Summary -->
-                        <div class="damage-summary">
-                            <div class="row" id="damageSummary">
-                                <!-- Summary will be populated by JavaScript -->
-                            </div>
-                        </div>
+                    </div>
+                    
+                    <!-- Damage Summary -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="damageSummary">
+                        <!-- Summary will be populated by JavaScript -->
                     </div>
                 </div>
             </div>
@@ -429,12 +269,12 @@
                                 marker.setAttribute('stroke-width', '2');
                                 
                                 const colors = {
-                                    scratch: '#ffc107',
-                                    dent: '#dc3545',
-                                    rust: '#6c757d',
-                                    crack: '#0dcaf0'
+                                    scratch: '#f59e0b',
+                                    dent: '#dc2626',
+                                    rust: '#475569',
+                                    crack: '#3b82f6'
                                 };
-                                marker.setAttribute('fill', colors[damage.type] || '#6c757d');
+                                marker.setAttribute('fill', colors[damage.type] || '#475569');
                                 
                                 const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
                                 title.textContent = damage.type.charAt(0).toUpperCase() + damage.type.slice(1);
@@ -462,24 +302,24 @@
                 summaryContainer.innerHTML = '';
                 
                 const colors = {
-                    scratch: { bg: '#fff3cd', border: '#ffc107', icon: 'fa-exclamation-triangle' },
-                    dent: { bg: '#f8d7da', border: '#dc3545', icon: 'fa-circle' },
-                    rust: { bg: '#e2e3e5', border: '#6c757d', icon: 'fa-circle-notch' },
-                    crack: { bg: '#d1ecf1', border: '#0dcaf0', icon: 'fa-bolt' }
+                    scratch: { bg: 'bg-amber-50', border: 'border-amber-500', text: 'text-amber-700', icon: 'fa-exclamation-triangle' },
+                    dent: { bg: 'bg-rose-50', border: 'border-rose-500', text: 'text-rose-700', icon: 'fa-circle' },
+                    rust: { bg: 'bg-slate-100', border: 'border-slate-500', text: 'text-slate-700', icon: 'fa-circle-notch' },
+                    crack: { bg: 'bg-blue-50', border: 'border-blue-500', text: 'text-blue-700', icon: 'fa-bolt' }
                 };
                 
                 Object.entries(summary).forEach(([type, count]) => {
                     const color = colors[type] || colors.crack;
-                    const col = document.createElement('div');
-                    col.className = 'col-md-3 mb-2';
-                    col.innerHTML = `
-                        <div class="p-2 rounded" style="background: ${color.bg}; border-left: 4px solid ${color.border};">
-                            <i class="fas ${color.icon} me-2"></i>
-                            <strong>${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
-                            <span class="badge bg-secondary ms-2">${count}</span>
+                    const div = document.createElement('div');
+                    div.className = `p-3 rounded-lg border-l-4 ${color.bg} ${color.border}`;
+                    div.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <i class="fas ${color.icon} ${color.text}"></i>
+                            <strong class="text-sm ${color.text}">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+                            <span class="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">${count}</span>
                         </div>
                     `;
-                    summaryContainer.appendChild(col);
+                    summaryContainer.appendChild(div);
                 });
             }
             </script>
@@ -487,15 +327,15 @@
 
             <!-- Photos -->
             {% if inspection.photos.all %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Photos ({{ inspection.photos.count }})</h5>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900">Photos ({{ inspection.photos.count }})</h5>
                 </div>
-                <div class="card-body">
-                    <div class="photo-gallery">
+                <div class="p-6">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {% for photo in inspection.photos.all %}
-                        <div class="photo-item" data-bs-toggle="modal" data-bs-target="#photoModal" data-photo="{{ photo.image.url }}">
-                            <img src="{{ photo.image.url }}" alt="{{ photo.caption }}">
+                        <div class="relative aspect-square rounded-lg overflow-hidden border-2 border-slate-200 hover:border-primary cursor-pointer transition-colors" onclick="openPhotoModal('{{ photo.image.url }}')">
+                            <img src="{{ photo.image.url }}" alt="{{ photo.caption }}" class="absolute inset-0 w-full h-full object-cover">
                         </div>
                         {% endfor %}
                     </div>
@@ -504,31 +344,35 @@
             {% endif %}
 
             <!-- Signatures -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Signatures</h5>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900">Signatures</h5>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Technician Signature</h6>
-                            <div class="signature-box">
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h6 class="text-sm font-semibold text-slate-900 mb-3">Technician Signature</h6>
+                            <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 bg-slate-50 text-center min-h-[120px] flex items-center justify-center">
                                 {% if inspection.technician_signature %}
-                                <img src="{{ inspection.technician_signature.url }}" alt="Technician Signature">
-                                <p class="text-muted small mt-2 mb-0">Signed: {{ inspection.technician_signature_date|date:"M d, Y H:i" }}</p>
+                                <div>
+                                    <img src="{{ inspection.technician_signature.url }}" alt="Technician Signature" class="max-w-[200px] h-auto mx-auto">
+                                    <p class="text-xs text-slate-500 mt-2">Signed: {{ inspection.technician_signature_date|date:"M d, Y H:i" }}</p>
+                                </div>
                                 {% else %}
-                                <p class="text-muted mb-0">Not signed</p>
+                                <p class="text-slate-500 text-sm">Not signed</p>
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <h6>Customer Signature</h6>
-                            <div class="signature-box">
+                        <div>
+                            <h6 class="text-sm font-semibold text-slate-900 mb-3">Customer Signature</h6>
+                            <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 bg-slate-50 text-center min-h-[120px] flex items-center justify-center">
                                 {% if inspection.customer_signature %}
-                                <img src="{{ inspection.customer_signature.url }}" alt="Customer Signature">
-                                <p class="text-muted small mt-2 mb-0">Signed: {{ inspection.customer_signature_date|date:"M d, Y H:i" }}</p>
+                                <div>
+                                    <img src="{{ inspection.customer_signature.url }}" alt="Customer Signature" class="max-w-[200px] h-auto mx-auto">
+                                    <p class="text-xs text-slate-500 mt-2">Signed: {{ inspection.customer_signature_date|date:"M d, Y H:i" }}</p>
+                                </div>
                                 {% else %}
-                                <p class="text-muted mb-0">Not signed</p>
+                                <p class="text-slate-500 text-sm">Not signed</p>
                                 {% endif %}
                             </div>
                         </div>
@@ -538,75 +382,77 @@
         </div>
 
         <!-- Right Column -->
-        <div class="col-lg-4">
+        <div class="lg:col-span-1 space-y-6">
             <!-- Summary Stats -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Summary</h5>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900">Summary</h5>
                 </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-4">
-                            <div class="p-3 bg-success bg-opacity-10 rounded">
-                                <h3 class="mb-0 text-success">{{ inspection.pass_count }}</h3>
-                                <small class="text-muted">Pass</small>
-                            </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-3 gap-3 text-center">
+                        <div class="p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                            <h3 class="text-2xl font-bold text-emerald-700 mb-1">{{ inspection.pass_count }}</h3>
+                            <small class="text-xs text-slate-600 font-medium">Pass</small>
                         </div>
-                        <div class="col-4">
-                            <div class="p-3 bg-danger bg-opacity-10 rounded">
-                                <h3 class="mb-0 text-danger">{{ inspection.fail_count }}</h3>
-                                <small class="text-muted">Fail</small>
-                            </div>
+                        <div class="p-3 bg-rose-50 rounded-lg border border-rose-200">
+                            <h3 class="text-2xl font-bold text-rose-700 mb-1">{{ inspection.fail_count }}</h3>
+                            <small class="text-xs text-slate-600 font-medium">Fail</small>
                         </div>
-                        <div class="col-4">
-                            <div class="p-3 bg-warning bg-opacity-10 rounded">
-                                <h3 class="mb-0 text-warning">{{ advisory_count }}</h3>
-                                <small class="text-muted">Advisory</small>
-                            </div>
+                        <div class="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                            <h3 class="text-2xl font-bold text-amber-700 mb-1">{{ advisory_count }}</h3>
+                            <small class="text-xs text-slate-600 font-medium">Advisory</small>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Vehicle Information -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Vehicle Information</h5>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900">Vehicle Information</h5>
                 </div>
-                <div class="card-body">
-                    <h6><a href="{% url 'vehicles:vehicle-detail' inspection.vehicle.id %}">{{ inspection.vehicle }}</a></h6>
-                    <p class="text-muted small mb-2">VIN: {{ inspection.vehicle.vin }}</p>
-                    
-                    <hr>
-                    
-                    <p class="mb-1"><strong>Owner:</strong></p>
-                    <p class="mb-2">
-                        <a href="{% url 'customers:customer-detail' inspection.vehicle.owner.id %}">
-                            {{ inspection.vehicle.owner.full_name }}
+                <div class="p-6">
+                    <h6 class="text-sm font-semibold text-slate-900 mb-2">
+                        <a href="{% url 'vehicles:vehicle-detail' inspection.vehicle.id %}" class="text-primary hover:text-primary/80 transition-colors">
+                            {{ inspection.vehicle }}
                         </a>
-                    </p>
+                    </h6>
+                    <p class="text-xs text-slate-500 mb-4">VIN: {{ inspection.vehicle.vin }}</p>
                     
-                    <p class="mb-1"><strong>Contact:</strong></p>
-                    <p class="mb-0">
-                        <i class="fas fa-envelope me-2"></i>{{ inspection.vehicle.owner.email }}<br>
-                        <i class="fas fa-phone me-2"></i>{{ inspection.vehicle.owner.phone }}
-                    </p>
+                    <hr class="my-4 border-slate-200">
+                    
+                    <div class="mb-3">
+                        <p class="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">Owner</p>
+                        <p class="text-sm text-slate-900">
+                            <a href="{% url 'customers:customer-detail' inspection.vehicle.owner.id %}" class="text-primary hover:text-primary/80 transition-colors">
+                                {{ inspection.vehicle.owner.full_name }}
+                            </a>
+                        </p>
+                    </div>
+                    
+                    <div>
+                        <p class="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1">Contact</p>
+                        <p class="text-sm text-slate-900">
+                            <i class="fas fa-envelope text-slate-400 mr-2"></i>{{ inspection.vehicle.owner.email }}<br>
+                            <i class="fas fa-phone text-slate-400 mr-2"></i>{{ inspection.vehicle.owner.phone }}
+                        </p>
+                    </div>
                 </div>
             </div>
 
             <!-- Related Work Order -->
             {% if inspection.work_order %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Related Work Order</h5>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                    <h5 class="text-sm font-semibold text-slate-900">Related Work Order</h5>
                 </div>
-                <div class="card-body">
-                    <p class="mb-2">
-                        <a href="{% url 'workorders:workorder-detail' inspection.work_order.id %}">
+                <div class="p-6">
+                    <p class="text-sm text-slate-900 mb-2">
+                        <a href="{% url 'workorders:workorder-detail' inspection.work_order.id %}" class="text-primary hover:text-primary/80 transition-colors">
                             Work Order #{{ inspection.work_order.work_order_number }}
                         </a>
                     </p>
-                    <span class="badge bg-{{ inspection.work_order.get_status_color }}">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                         {{ inspection.work_order.get_status_display }}
                     </span>
                 </div>
@@ -617,25 +463,49 @@
 </div>
 
 <!-- Photo Modal -->
-<div class="modal fade" id="photoModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-body p-0">
-                <img src="" alt="Photo" class="w-100" id="modalPhoto">
-            </div>
-        </div>
+<div id="photoModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm" onclick="closePhotoModal()">
+    <div class="relative max-w-4xl w-full mx-4" onclick="event.stopPropagation()">
+        <button onclick="closePhotoModal()" class="absolute top-4 right-4 w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center text-slate-700 shadow-lg z-10">
+            <i class="fas fa-times"></i>
+        </button>
+        <img src="" alt="Photo" class="w-full h-auto rounded-lg" id="modalPhoto">
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+// Actions menu toggle
+const actionsMenuBtn = document.getElementById('actionsMenuBtn');
+const actionsMenu = document.getElementById('actionsMenu');
+
+if (actionsMenuBtn && actionsMenu) {
+    actionsMenuBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        actionsMenu.classList.toggle('hidden');
+    });
+    
+    document.addEventListener('click', function(event) {
+        if (!actionsMenuBtn.contains(event.target) && !actionsMenu.contains(event.target)) {
+            actionsMenu.classList.add('hidden');
+        }
+    });
+}
+
 // Photo modal
-document.getElementById('photoModal').addEventListener('show.bs.modal', function (event) {
-    const button = event.relatedTarget;
-    const photoUrl = button.getAttribute('data-photo');
-    document.getElementById('modalPhoto').src = photoUrl;
-});
+function openPhotoModal(photoUrl) {
+    const modal = document.getElementById('photoModal');
+    const img = document.getElementById('modalPhoto');
+    img.src = photoUrl;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closePhotoModal() {
+    const modal = document.getElementById('photoModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
 
 function emailInspection() {
     if (confirm('Send inspection report to customer?')) {
@@ -646,7 +516,6 @@ function emailInspection() {
 
 function deleteInspection() {
     if (confirm('Are you sure you want to delete this inspection? This cannot be undone.')) {
-        // Submit delete form
         document.getElementById('deleteForm').submit();
     }
 }

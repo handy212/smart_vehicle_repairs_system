@@ -6,73 +6,82 @@
 {% block title %}Staff Registration - Smart Vehicle Repairs{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <!-- Header -->
-            <div class="mb-4">
-                <h2><i class="fas fa-user-tie text-primary"></i> Add New Staff Member</h2>
-                <p class="text-muted mb-0">Create a new staff account</p>
+<div class="container mx-auto px-4 py-6 max-w-4xl">
+    <!-- Header -->
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <i class="fas fa-user-tie text-indigo-600"></i> Add New Staff Member
+        </h2>
+        <p class="text-slate-600 mt-1">Create a new staff account</p>
+    </div>
+    
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-indigo-600 to-indigo-700">
+            <h5 class="font-semibold text-white flex items-center gap-2">
+                <i class="fas fa-user-plus"></i> Staff Registration Form
+            </h5>
+        </div>
+        
+        <div class="p-6">
+            <!-- Alert: Admin Only -->
+            <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex items-start">
+                    <i class="fas fa-info-circle text-blue-600 mt-0.5 mr-2"></i>
+                    <div>
+                        <strong class="text-blue-900">Admin Only:</strong>
+                        <p class="text-blue-800 text-sm mt-1 mb-0">This form is for creating staff accounts. Staff members will receive an email with their login credentials.</p>
+                    </div>
+                </div>
             </div>
             
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-user-plus me-2"></i>Staff Registration Form
-                    </h5>
-                </div>
-            <div class="card-body p-4">
-                <!-- Alert: Admin Only -->
-                <div class="alert alert-info" role="alert">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Admin Only:</strong> This form is for creating staff accounts. Staff members will receive an email with their login credentials.
-                </div>
+            <form method="post" action="{% url 'staff-register' %}">
+                {% csrf_token %}
                 
-                <form method="post" action="{% url 'staff-register' %}">
-                    {% csrf_token %}
+                <!-- Personal Information -->
+                <div class="mb-6">
+                    <h6 class="text-indigo-600 font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-user"></i> Personal Information
+                    </h6>
                     
-                    <!-- Personal Information -->
-                    <h6 class="text-primary mb-3"><i class="fas fa-user me-2"></i>Personal Information</h6>
-                    
-                    <div class="row">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <!-- First Name -->
-                        <div class="col-md-6 mb-3">
-                            <label for="id_first_name" class="form-label">First Name <span class="text-danger">*</span></label>
+                        <div>
+                            <label for="id_first_name" class="block text-sm font-semibold text-slate-700 mb-2">First Name <span class="text-rose-600">*</span></label>
                             <input type="text" 
-                                   class="form-control {% if form.first_name.errors %}is-invalid{% endif %}" 
+                                   class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all {% if form.first_name.errors %}border-rose-500 focus:ring-rose-500 focus:border-rose-500{% endif %}" 
                                    id="id_first_name" 
                                    name="first_name" 
                                    value="{{ form.first_name.value|default:'' }}"
                                    placeholder="John" 
                                    required>
                             {% if form.first_name.errors %}
-                                <div class="invalid-feedback">{{ form.first_name.errors.0 }}</div>
+                                <div class="mt-1 text-sm text-rose-600">{{ form.first_name.errors.0 }}</div>
                             {% endif %}
                         </div>
                         
                         <!-- Last Name -->
-                        <div class="col-md-6 mb-3">
-                            <label for="id_last_name" class="form-label">Last Name <span class="text-danger">*</span></label>
+                        <div>
+                            <label for="id_last_name" class="block text-sm font-semibold text-slate-700 mb-2">Last Name <span class="text-rose-600">*</span></label>
                             <input type="text" 
-                                   class="form-control {% if form.last_name.errors %}is-invalid{% endif %}" 
+                                   class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all {% if form.last_name.errors %}border-rose-500 focus:ring-rose-500 focus:border-rose-500{% endif %}" 
                                    id="id_last_name" 
                                    name="last_name" 
                                    value="{{ form.last_name.value|default:'' }}"
                                    placeholder="Doe" 
                                    required>
                             {% if form.last_name.errors %}
-                                <div class="invalid-feedback">{{ form.last_name.errors.0 }}</div>
+                                <div class="mt-1 text-sm text-rose-600">{{ form.last_name.errors.0 }}</div>
                             {% endif %}
                         </div>
                     </div>
                     
                     <!-- Email -->
-                    <div class="mb-3">
-                        <label for="id_email" class="form-label">Email Address <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                    <div class="mb-4">
+                        <label for="id_email" class="block text-sm font-semibold text-slate-700 mb-2">Email Address <span class="text-rose-600">*</span></label>
+                        <div class="relative">
+                            <i class="fas fa-envelope absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
                             <input type="email" 
-                                   class="form-control {% if form.email.errors %}is-invalid{% endif %}" 
+                                   class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all {% if form.email.errors %}border-rose-500 focus:ring-rose-500 focus:border-rose-500{% endif %}" 
                                    id="id_email" 
                                    name="email" 
                                    value="{{ form.email.value|default:'' }}"
@@ -80,18 +89,18 @@
                                    required>
                         </div>
                         {% if form.email.errors %}
-                            <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
+                            <div class="mt-1 text-sm text-rose-600">{{ form.email.errors.0 }}</div>
                         {% endif %}
-                        <small class="text-muted">Login credentials will be sent to this email.</small>
+                        <small class="text-slate-500 text-sm mt-1 block">Login credentials will be sent to this email.</small>
                     </div>
                     
                     <!-- Username -->
-                    <div class="mb-3">
-                        <label for="id_username" class="form-label">Username <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                    <div class="mb-4">
+                        <label for="id_username" class="block text-sm font-semibold text-slate-700 mb-2">Username <span class="text-rose-600">*</span></label>
+                        <div class="relative">
+                            <i class="fas fa-user absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
                             <input type="text" 
-                                   class="form-control {% if form.username.errors %}is-invalid{% endif %}" 
+                                   class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all {% if form.username.errors %}border-rose-500 focus:ring-rose-500 focus:border-rose-500{% endif %}" 
                                    id="id_username" 
                                    name="username" 
                                    value="{{ form.username.value|default:'' }}"
@@ -99,18 +108,18 @@
                                    required>
                         </div>
                         {% if form.username.errors %}
-                            <div class="text-danger small mt-1">{{ form.username.errors.0 }}</div>
+                            <div class="mt-1 text-sm text-rose-600">{{ form.username.errors.0 }}</div>
                         {% endif %}
-                        <small class="text-muted">Letters, digits and @/./+/-/_ only.</small>
+                        <small class="text-slate-500 text-sm mt-1 block">Letters, digits and @/./+/-/_ only.</small>
                     </div>
                     
                     <!-- Phone -->
-                    <div class="mb-4">
-                        <label for="id_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                    <div class="mb-6">
+                        <label for="id_phone" class="block text-sm font-semibold text-slate-700 mb-2">Phone Number <span class="text-rose-600">*</span></label>
+                        <div class="relative">
+                            <i class="fas fa-phone absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
                             <input type="tel" 
-                                   class="form-control {% if form.phone.errors %}is-invalid{% endif %}" 
+                                   class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all {% if form.phone.errors %}border-rose-500 focus:ring-rose-500 focus:border-rose-500{% endif %}" 
                                    id="id_phone" 
                                    name="phone" 
                                    value="{{ form.phone.value|default:'' }}"
@@ -118,19 +127,23 @@
                                    required>
                         </div>
                         {% if form.phone.errors %}
-                            <div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>
+                            <div class="mt-1 text-sm text-rose-600">{{ form.phone.errors.0 }}</div>
                         {% endif %}
                     </div>
-                    
-                    <hr class="my-4">
-                    
-                    <!-- Role & Access -->
-                    <h6 class="text-primary mb-3"><i class="fas fa-shield-alt me-2"></i>Role & Permissions</h6>
+                </div>
+                
+                <hr class="my-6 border-slate-200">
+                
+                <!-- Role & Access -->
+                <div class="mb-6">
+                    <h6 class="text-indigo-600 font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-shield-alt"></i> Role & Permissions
+                    </h6>
                     
                     <!-- Role Selection -->
-                    <div class="mb-3">
-                        <label for="id_role" class="form-label">Staff Role <span class="text-danger">*</span></label>
-                        <select class="form-select {% if form.role.errors %}is-invalid{% endif %}" 
+                    <div class="mb-4">
+                        <label for="id_role" class="block text-sm font-semibold text-slate-700 mb-2">Staff Role <span class="text-rose-600">*</span></label>
+                        <select class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all {% if form.role.errors %}border-rose-500 focus:ring-rose-500 focus:border-rose-500{% endif %}" 
                                 id="id_role" 
                                 name="role" 
                                 required>
@@ -141,121 +154,134 @@
                             <option value="parts_manager">Parts Manager - Inventory management</option>
                         </select>
                         {% if form.role.errors %}
-                            <div class="invalid-feedback">{{ form.role.errors.0 }}</div>
+                            <div class="mt-1 text-sm text-rose-600">{{ form.role.errors.0 }}</div>
                         {% endif %}
-                        <small class="text-muted">This determines what the user can access in the system.</small>
+                        <small class="text-slate-500 text-sm mt-1 block">This determines what the user can access in the system.</small>
                     </div>
                     
                     <!-- Role Descriptions -->
-                    <div class="alert alert-light border" role="alert">
-                        <strong><i class="fas fa-info-circle me-2"></i>Role Descriptions:</strong>
-                        <ul class="mb-0 mt-2 small">
-                            <li><strong>Manager:</strong> Can manage customers, vehicles, appointments, work orders, billing, and view reports.</li>
-                            <li><strong>Receptionist:</strong> Can handle customer check-ins, appointments, and basic billing.</li>
-                            <li><strong>Technician:</strong> Can view work orders, update status, perform inspections.</li>
-                            <li><strong>Parts Manager:</strong> Can manage inventory, parts, suppliers, and purchase orders.</li>
-                        </ul>
+                    <div class="mb-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div class="flex items-start">
+                            <i class="fas fa-info-circle text-indigo-600 mt-0.5 mr-2"></i>
+                            <div class="flex-1">
+                                <strong class="text-slate-900 text-sm">Role Descriptions:</strong>
+                                <ul class="mt-2 mb-0 text-sm text-slate-700 space-y-1">
+                                    <li>• <strong>Manager:</strong> Can manage customers, vehicles, appointments, work orders, billing, and view reports.</li>
+                                    <li>• <strong>Receptionist:</strong> Can handle customer check-ins, appointments, and basic billing.</li>
+                                    <li>• <strong>Technician:</strong> Can view work orders, update status, perform inspections.</li>
+                                    <li>• <strong>Parts Manager:</strong> Can manage inventory, parts, suppliers, and purchase orders.</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Staff Status -->
-                    <div class="mb-4">
-                        <div class="form-check">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
+                    <div class="mb-6 space-y-3">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" 
+                                   class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" 
                                    id="id_is_staff" 
                                    name="is_staff" 
                                    checked 
                                    disabled>
-                            <label class="form-check-label" for="id_is_staff">
+                            <span class="ml-2 text-sm font-medium text-slate-700">
                                 <strong>Staff Access</strong> - Can access admin dashboard
-                            </label>
-                        </div>
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
+                            </span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" 
+                                   class="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500" 
                                    id="id_is_active" 
                                    name="is_active" 
                                    checked>
-                            <label class="form-check-label" for="id_is_active">
+                            <span class="ml-2 text-sm font-medium text-slate-700">
                                 <strong>Account Active</strong> - User can log in immediately
-                            </label>
-                        </div>
+                            </span>
+                        </label>
                     </div>
+                </div>
+                
+                <hr class="my-6 border-slate-200">
+                
+                <!-- Password Section -->
+                <div class="mb-6">
+                    <h6 class="text-indigo-600 font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-key"></i> Initial Password
+                    </h6>
                     
-                    <hr class="my-4">
-                    
-                    <!-- Password Section -->
-                    <h6 class="text-primary mb-3"><i class="fas fa-key me-2"></i>Initial Password</h6>
-                    
-                    <div class="row">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <!-- Password -->
-                        <div class="col-md-6 mb-3">
-                            <label for="id_password1" class="form-label">Password <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        <div>
+                            <label for="id_password1" class="block text-sm font-semibold text-slate-700 mb-2">Password <span class="text-rose-600">*</span></label>
+                            <div class="relative">
+                                <i class="fas fa-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
                                 <input type="password" 
-                                       class="form-control {% if form.password1.errors %}is-invalid{% endif %}" 
+                                       class="w-full pl-10 pr-12 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all {% if form.password1.errors %}border-rose-500 focus:ring-rose-500 focus:border-rose-500{% endif %}" 
                                        id="id_password1" 
                                        name="password1" 
                                        required>
-                                <button class="btn btn-outline-secondary" type="button" id="togglePassword1">
+                                <button class="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors" type="button" id="togglePassword1">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
                             {% if form.password1.errors %}
-                                <div class="text-danger small mt-1">{{ form.password1.errors.0 }}</div>
+                                <div class="mt-1 text-sm text-rose-600">{{ form.password1.errors.0 }}</div>
                             {% endif %}
                         </div>
                         
                         <!-- Confirm Password -->
-                        <div class="col-md-6 mb-3">
-                            <label for="id_password2" class="form-label">Confirm Password <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        <div>
+                            <label for="id_password2" class="block text-sm font-semibold text-slate-700 mb-2">Confirm Password <span class="text-rose-600">*</span></label>
+                            <div class="relative">
+                                <i class="fas fa-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
                                 <input type="password" 
-                                       class="form-control {% if form.password2.errors %}is-invalid{% endif %}" 
+                                       class="w-full pl-10 pr-12 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all {% if form.password2.errors %}border-rose-500 focus:ring-rose-500 focus:border-rose-500{% endif %}" 
                                        id="id_password2" 
                                        name="password2" 
                                        required>
-                                <button class="btn btn-outline-secondary" type="button" id="togglePassword2">
+                                <button class="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors" type="button" id="togglePassword2">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
                             {% if form.password2.errors %}
-                                <div class="text-danger small mt-1">{{ form.password2.errors.0 }}</div>
+                                <div class="mt-1 text-sm text-rose-600">{{ form.password2.errors.0 }}</div>
                             {% endif %}
                         </div>
                     </div>
                     
-                    <div class="alert alert-warning" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Note:</strong> The staff member will be sent an email with their username and a link to change their password on first login.
+                    <div class="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div class="flex items-start">
+                            <i class="fas fa-exclamation-triangle text-amber-600 mt-0.5 mr-2"></i>
+                            <div>
+                                <strong class="text-amber-900 text-sm">Note:</strong>
+                                <p class="text-amber-800 text-sm mt-1 mb-0">The staff member will be sent an email with their username and a link to change their password on first login.</p>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- Password Requirements -->
-                    <div class="small text-muted mb-4">
+                    <div class="mb-6 text-sm text-slate-600">
                         <strong>Password Requirements:</strong>
-                        <ul class="mb-0 mt-1">
-                            <li>At least 8 characters long</li>
-                            <li>Cannot be too similar to personal information</li>
-                            <li>Cannot be a commonly used password</li>
-                            <li>Cannot be entirely numeric</li>
+                        <ul class="mt-1 mb-0 space-y-1">
+                            <li>• At least 8 characters long</li>
+                            <li>• Cannot be too similar to personal information</li>
+                            <li>• Cannot be a commonly used password</li>
+                            <li>• Cannot be entirely numeric</li>
                         </ul>
                     </div>
-                    
-                    <!-- Submit Buttons -->
-                    <div class="d-flex justify-content-between align-items-center">
-                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
-                            <i class="fas fa-times me-2"></i>Cancel
-                        </a>
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-user-plus me-2"></i>Create Staff Account
-                        </button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                
+                <!-- Submit Buttons -->
+                <div class="flex justify-between items-center gap-4">
+                    <a href="{% url 'dashboard' %}" class="px-6 py-3 bg-white border border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition-colors">
+                        <i class="fas fa-times mr-2"></i> Cancel
+                    </a>
+                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        <i class="fas fa-user-plus mr-2"></i> Create Staff Account
+                    </button>
+                </div>
+            </form>
         </div>
-    </div>
     </div>
 </div>
 {% endblock %}

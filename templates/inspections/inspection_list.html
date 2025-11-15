@@ -3,240 +3,234 @@
 
 {% block title %}Vehicle Inspections - Smart Vehicle Repairs{% endblock %}
 
-{% block extra_css %}
-<style>
-    .table tbody tr {
-        transition: background-color 0.2s;
-    }
-    .table tbody tr:hover {
-        background-color: rgba(0,0,0,0.02);
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2><i class="fas fa-clipboard-check me-2"></i>Vehicle Inspections</h2>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                    <li class="breadcrumb-item active">Inspections</li>
-                </ol>
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2 mb-2">
+                <i class="fas fa-clipboard-check text-primary"></i>
+                Vehicle Inspections
+            </h2>
+            <nav class="flex items-center gap-2 text-sm text-slate-600">
+                <a href="{% url 'dashboard' %}" class="hover:text-primary transition-colors">Dashboard</a>
+                <i class="fas fa-chevron-right text-xs"></i>
+                <span class="text-slate-900 font-medium">Inspections</span>
             </nav>
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{% url 'inspections:inspection-create' %}" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i>New Inspection
+        <div class="flex items-center gap-2">
+            <a href="{% url 'inspections:inspection-create' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium shadow-lg shadow-primary/20">
+                <i class="fas fa-plus"></i>
+                New Inspection
             </a>
-            <a href="{% url 'inspections:template-list' %}" class="btn btn-outline-secondary">
-                <i class="fas fa-file-alt me-2"></i>Templates
+            <a href="{% url 'inspections:template-list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                <i class="fas fa-file-alt"></i>
+                Templates
             </a>
         </div>
     </div>
 
     <!-- Filters -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select">
-                        <option value="">All Status</option>
-                        <option value="draft">Draft</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="approved">Approved</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Template</label>
-                    <select name="template" class="form-select">
-                        <option value="">All Templates</option>
-                        {% for template in templates %}
-                        <option value="{{ template.id }}">{{ template.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Technician</label>
-                    <select name="technician" class="form-select">
-                        <option value="">All Technicians</option>
-                        {% for tech in technicians %}
-                        <option value="{{ tech.id }}">{{ tech.get_full_name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Search</label>
-                    <input type="text" name="search" class="form-control" placeholder="Vehicle or Customer...">
-                </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-filter me-2"></i>Apply Filters
-                    </button>
-                    <a href="{% url 'inspections:inspection-list' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-times me-2"></i>Clear
-                    </a>
-                </div>
-            </form>
-        </div>
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">Status</label>
+                <select name="status" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                    <option value="">All Status</option>
+                    <option value="draft">Draft</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="approved">Approved</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">Template</label>
+                <select name="template" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                    <option value="">All Templates</option>
+                    {% for template in templates %}
+                    <option value="{{ template.id }}">{{ template.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">Technician</label>
+                <select name="technician" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all">
+                    <option value="">All Technicians</option>
+                    {% for tech in technicians %}
+                    <option value="{{ tech.id }}">{{ tech.get_full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">Search</label>
+                <input type="text" name="search" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" placeholder="Vehicle or Customer...">
+            </div>
+            <div class="md:col-span-2 lg:col-span-4 flex items-center gap-2">
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium">
+                    <i class="fas fa-filter"></i>
+                    Apply Filters
+                </button>
+                <a href="{% url 'inspections:inspection-list' %}" class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                    <i class="fas fa-times"></i>
+                    Clear
+                </a>
+            </div>
+        </form>
     </div>
 
     <!-- Inspections Table -->
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead>
-                        <tr>
-                            <th>Template</th>
-                            <th>Vehicle</th>
-                            <th>Customer</th>
-                            <th>Technician</th>
-                            <th>Date</th>
-                            <th class="text-center">Odometer</th>
-                            <th class="text-center">Results</th>
-                            <th class="text-center">Status</th>
-                            <th class="text-end">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for inspection in inspections %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'inspections:inspection-detail' inspection.id %}" class="text-decoration-none">
-                                    <strong>{{ inspection.template.name }}</strong>
-                                </a>
-                            </td>
-                            <td>
-                                <i class="fas fa-car me-1 text-muted"></i>
-                                {{ inspection.vehicle }}
-                            </td>
-                            <td>
-                                <i class="fas fa-user me-1 text-muted"></i>
-                                {{ inspection.vehicle.owner.full_name }}
-                            </td>
-                            <td>
-                                <i class="fas fa-user-tie me-1 text-muted"></i>
-                                {{ inspection.performed_by.get_full_name }}
-                            </td>
-                            <td>
-                                <i class="fas fa-calendar me-1 text-muted"></i>
-                                {{ inspection.inspection_date|date:"M d, Y" }}
-                            </td>
-                            <td class="text-center">
-                                {% if inspection.odometer_reading %}
-                                <span class="badge bg-light text-dark">
-                                    {{ inspection.odometer_reading|floatformat:0 }} mi
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gradient-to-r from-slate-50 to-white border-b border-slate-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Template</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Vehicle</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Customer</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Technician</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wide">Date</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wide">Odometer</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wide">Results</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-700 uppercase tracking-wide">Status</th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-slate-700 uppercase tracking-wide">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for inspection in inspections %}
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4">
+                            <a href="{% url 'inspections:inspection-detail' inspection.id %}" class="text-sm font-semibold text-slate-900 hover:text-primary transition-colors">
+                                {{ inspection.template.name }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-700">
+                            <i class="fas fa-car text-slate-400 mr-1"></i>
+                            {{ inspection.vehicle }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-700">
+                            <i class="fas fa-user text-slate-400 mr-1"></i>
+                            {{ inspection.vehicle.owner.full_name }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-700">
+                            <i class="fas fa-user-tie text-slate-400 mr-1"></i>
+                            {{ inspection.performed_by.get_full_name }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-700">
+                            <i class="fas fa-calendar text-slate-400 mr-1"></i>
+                            {{ inspection.inspection_date|date:"M d, Y" }}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if inspection.odometer_reading %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                                {{ inspection.odometer_reading|floatformat:0 }} mi
+                            </span>
+                            {% else %}
+                            <span class="text-slate-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center justify-center gap-2">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Pass">
+                                    <i class="fas fa-check"></i>
+                                    {{ inspection.pass_count }}
                                 </span>
-                                {% else %}
-                                <span class="text-muted">-</span>
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200" title="Fail">
+                                    <i class="fas fa-times"></i>
+                                    {{ inspection.fail_count }}
+                                </span>
+                                {% if inspection.photos.count > 0 %}
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200" title="Photos">
+                                    <i class="fas fa-camera"></i>
+                                    {{ inspection.photos.count }}
+                                </span>
                                 {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <div class="d-flex justify-content-center gap-2">
-                                    <span class="badge bg-success" title="Pass">
-                                        <i class="fas fa-check"></i> {{ inspection.pass_count }}
-                                    </span>
-                                    <span class="badge bg-danger" title="Fail">
-                                        <i class="fas fa-times"></i> {{ inspection.fail_count }}
-                                    </span>
-                                    {% if inspection.photos.count > 0 %}
-                                    <span class="badge bg-info" title="Photos">
-                                        <i class="fas fa-camera"></i> {{ inspection.photos.count }}
-                                    </span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                {% if inspection.status == 'completed' %}
-                                <span class="badge bg-success">Completed</span>
-                                {% elif inspection.status == 'in_progress' %}
-                                <span class="badge bg-warning text-dark">In Progress</span>
-                                {% elif inspection.status == 'approved' %}
-                                <span class="badge bg-info">Approved</span>
-                                {% else %}
-                                <span class="badge bg-secondary">Draft</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if inspection.status == 'completed' %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Completed</span>
+                            {% elif inspection.status == 'in_progress' %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">In Progress</span>
+                            {% elif inspection.status == 'approved' %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">Approved</span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">Draft</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center justify-end gap-1">
+                                <a href="{% url 'inspections:inspection-detail' inspection.id %}" 
+                                   class="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors" 
+                                   title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if inspection.status != 'approved' %}
+                                <a href="{% url 'inspections:inspection-edit' inspection.id %}" 
+                                   class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" 
+                                   title="Edit Inspection">
+                                    <i class="fas fa-edit"></i>
+                                </a>
                                 {% endif %}
-                            </td>
-                            <td class="text-end">
-                                <div class="btn-group btn-group-sm">
-                                    <a href="{% url 'inspections:inspection-detail' inspection.id %}" 
-                                       class="btn btn-outline-primary" 
-                                       title="View Details">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    {% if inspection.status != 'approved' %}
-                                    <a href="{% url 'inspections:inspection-edit' inspection.id %}" 
-                                       class="btn btn-outline-secondary" 
-                                       title="Edit Inspection">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    {% endif %}
-                                    <a href="{% url 'inspections:inspection-print' inspection.id %}" 
-                                       class="btn btn-outline-info" 
-                                       target="_blank" 
-                                       title="Print Inspection">
-                                        <i class="fas fa-print"></i>
-                                    </a>
-                                    <a href="{% url 'inspections:inspection-pdf' inspection.id %}" 
-                                       class="btn btn-outline-danger" 
-                                       title="Download PDF">
-                                        <i class="fas fa-file-pdf"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="9" class="text-center py-4">
-                                <div class="text-muted">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    No inspections found. 
-                                    <a href="{% url 'inspections:inspection-create' %}">Create your first inspection</a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                                <a href="{% url 'inspections:inspection-print' inspection.id %}" 
+                                   class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" 
+                                   target="_blank" 
+                                   title="Print Inspection">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                                <a href="{% url 'inspections:inspection-pdf' inspection.id %}" 
+                                   class="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" 
+                                   title="Download PDF">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="px-6 py-12 text-center">
+                            <div class="text-slate-500">
+                                <i class="fas fa-info-circle text-2xl mb-2 block"></i>
+                                <p class="text-sm">No inspections found.</p>
+                                <a href="{% url 'inspections:inspection-create' %}" class="text-primary hover:text-primary/80 font-medium text-sm mt-2 inline-block">Create your first inspection</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
     <!-- Pagination -->
     {% if is_paginated %}
-    <nav aria-label="Inspection pagination">
-        <ul class="pagination justify-content-center">
+    <nav class="flex items-center justify-center mt-6">
+        <div class="flex items-center gap-2">
             {% if page_obj.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page=1">&laquo; First</a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
-            </li>
+            <a href="?page=1" class="px-3 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                &laquo; First
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                Previous
+            </a>
             {% endif %}
             
             {% for num in page_obj.paginator.page_range %}
             {% if page_obj.number == num %}
-            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            <span class="px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium">{{ num }}</span>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+            <a href="?page={{ num }}" class="px-3 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">{{ num }}</a>
             {% endif %}
             {% endfor %}
             
             {% if page_obj.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
-            </li>
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
-            </li>
+            <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                Next
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                Last &raquo;
+            </a>
             {% endif %}
-        </ul>
+        </div>
     </nav>
     {% endif %}
 </div>

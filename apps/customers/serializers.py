@@ -87,6 +87,25 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
             'referred_by', 'marketing_emails', 'marketing_sms'
         ]
     
+    def validate_email(self, value):
+        """Validate that email is unique"""
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+    
+    def validate(self, attrs):
+        """Additional validation"""
+        customer_type = attrs.get('customer_type', 'individual')
+        company_name = attrs.get('company_name', '')
+        
+        # Business and fleet customers must have company name
+        if customer_type in ['business', 'fleet'] and not company_name:
+            raise serializers.ValidationError({
+                'company_name': 'Company name is required for business and fleet customers.'
+            })
+        
+        return attrs
+    
     def create(self, validated_data):
         # Extract user data
         email = validated_data.pop('email')

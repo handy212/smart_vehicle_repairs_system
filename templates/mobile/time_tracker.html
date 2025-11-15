@@ -835,15 +835,14 @@ function formatDuration(seconds) {
 }
 
 function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} position-fixed bottom-0 start-50 translate-middle-x mb-2`;
-    toast.style.zIndex = '9999';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
+    if (window.showToast && window.ToastSystem) {
+        // Use centralized ToastSystem
+        window.ToastSystem.show({ message, type });
+    } else {
+        // Fallback if ToastSystem not loaded
+        console.warn('ToastSystem not available');
+        alert(message);
+    }
 }
 </script>
 {% endblock %}

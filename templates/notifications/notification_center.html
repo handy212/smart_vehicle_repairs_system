@@ -3,133 +3,95 @@
 
 {% block title %}Notifications{% endblock %}
 
-{% block extra_css %}
-<style>
-    .notification-item {
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-    .notification-item:hover {
-        background-color: #f8f9fa;
-        transform: translateX(5px);
-    }
-    .notification-item.unread {
-        background-color: #f0f4ff;
-        border-left-color: var(--primary-color);
-    }
-    .notification-item.unread .notification-title {
-        font-weight: 600;
-    }
-    .notification-badge {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-    .notification-badge.unread {
-        background-color: var(--primary-color);
-    }
-    .filter-pills .btn {
-        border-radius: 20px;
-        margin-right: 0.5rem;
-        margin-bottom: 0.5rem;
-    }
-    .notification-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-    }
-    .notification-icon.appointment { background: #e3f2fd; color: #1976d2; }
-    .notification-icon.work_order { background: #fff3e0; color: #f57c00; }
-    .notification-icon.invoice { background: #e8f5e9; color: #388e3c; }
-    .notification-icon.payment { background: #fce4ec; color: #c2185b; }
-    .notification-icon.inspection { background: #f3e5f5; color: #7b1fa2; }
-    .notification-icon.inventory { background: #e0f2f1; color: #00796b; }
-    .notification-icon.system { background: #f5f5f5; color: #616161; }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <!-- Header -->
-    <div class="page-header-primary rounded p-4 mb-4">
-        <div class="d-flex justify-content-between align-items-center">
+    <div class="bg-gradient-to-br from-primary to-primary/80 rounded-xl border border-primary/20 shadow-lg p-6 mb-6 text-white">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-                <h1 class="mb-2">
-                    <i class="fas fa-bell me-2"></i>Notifications
+                <h1 class="text-2xl font-bold mb-2 flex items-center gap-2">
+                    <i class="fas fa-bell"></i>
+                    Notifications
                 </h1>
-                <p class="mb-0 opacity-75">
+                <p class="text-primary-100 text-sm">
                     {{ total_count }} total · {{ unread_count }} unread
                 </p>
             </div>
-            <div>
+            <div class="flex items-center gap-2">
                 {% if unread_count > 0 %}
-                <button type="button" class="btn btn-light" onclick="markAllRead()">
-                    <i class="fas fa-check-double me-2"></i>Mark All as Read
+                <button type="button" class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors backdrop-blur-sm" onclick="markAllRead()">
+                    <i class="fas fa-check-double mr-2"></i>Mark All as Read
                 </button>
                 {% endif %}
-                <a href="{% url 'notifications:notification-preferences' %}" class="btn btn-light">
-                    <i class="fas fa-cog me-2"></i>Settings
+                <a href="{% url 'notifications:notification-preferences' %}" class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors backdrop-blur-sm">
+                    <i class="fas fa-cog mr-2"></i>Settings
                 </a>
             </div>
         </div>
     </div>
 
-    <div class="row">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Filters Sidebar -->
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0">
-                        <i class="fas fa-filter me-2"></i>Filters
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                    <h6 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-filter text-primary"></i>
+                        Filters
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="p-4">
                     <!-- Search -->
-                    <form method="get" class="mb-3">
-                        <div class="input-group">
-                            <input type="text" name="search" class="form-control" placeholder="Search..." value="{{ search_query }}">
-                            <button class="btn btn-outline-primary" type="submit">
+                    <form method="get" class="mb-4">
+                        <div class="flex gap-2">
+                            <input type="text" name="search" class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                                   placeholder="Search..." value="{{ search_query }}">
+                            <button class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors" type="submit">
                                 <i class="fas fa-search"></i>
                             </button>
                         </div>
                     </form>
 
                     <!-- Read Status -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Status</label>
-                        <div class="list-group">
+                    <div class="mb-4">
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">Status</label>
+                        <div class="space-y-1">
                             <a href="?{% if filter_type != 'all' %}type={{ filter_type }}&{% endif %}" 
-                               class="list-group-item list-group-item-action {% if not filter_read %}active{% endif %}">
-                                <i class="fas fa-inbox me-2"></i>All
+                               class="flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors {% if not filter_read %}bg-primary/10 text-primary font-medium border border-primary/20{% else %}text-slate-700 hover:bg-slate-50{% endif %}">
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-inbox text-sm"></i>
+                                    All
+                                </span>
                             </a>
                             <a href="?read=unread{% if filter_type != 'all' %}&type={{ filter_type }}{% endif %}" 
-                               class="list-group-item list-group-item-action {% if filter_read == 'unread' %}active{% endif %}">
-                                <i class="fas fa-envelope me-2"></i>Unread
-                                <span class="badge bg-primary float-end">{{ unread_count }}</span>
+                               class="flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors {% if filter_read == 'unread' %}bg-primary/10 text-primary font-medium border border-primary/20{% else %}text-slate-700 hover:bg-slate-50{% endif %}">
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-envelope text-sm"></i>
+                                    Unread
+                                </span>
+                                <span class="px-2 py-0.5 bg-primary text-white text-xs font-semibold rounded-full">{{ unread_count }}</span>
                             </a>
                             <a href="?read=read{% if filter_type != 'all' %}&type={{ filter_type }}{% endif %}" 
-                               class="list-group-item list-group-item-action {% if filter_read == 'read' %}active{% endif %}">
-                                <i class="fas fa-envelope-open me-2"></i>Read
+                               class="flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors {% if filter_read == 'read' %}bg-primary/10 text-primary font-medium border border-primary/20{% else %}text-slate-700 hover:bg-slate-50{% endif %}">
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-envelope-open text-sm"></i>
+                                    Read
+                                </span>
                             </a>
                         </div>
                     </div>
 
                     <!-- Type Filter -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Type</label>
-                        <div class="list-group">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">Type</label>
+                        <div class="space-y-1">
                             <a href="?{% if filter_read %}read={{ filter_read }}&{% endif %}" 
-                               class="list-group-item list-group-item-action {% if filter_type == 'all' %}active{% endif %}">
+                               class="block px-3 py-2 rounded-lg text-sm transition-colors {% if filter_type == 'all' %}bg-primary/10 text-primary font-medium border border-primary/20{% else %}text-slate-700 hover:bg-slate-50{% endif %}">
                                 All Types
                             </a>
                             {% for type_value, type_label in notification_types %}
                             <a href="?type={{ type_value }}{% if filter_read %}&read={{ filter_read }}{% endif %}" 
-                               class="list-group-item list-group-item-action {% if filter_type == type_value %}active{% endif %}">
+                               class="block px-3 py-2 rounded-lg text-sm transition-colors {% if filter_type == type_value %}bg-primary/10 text-primary font-medium border border-primary/20{% else %}text-slate-700 hover:bg-slate-50{% endif %}">
                                 {{ type_label }}
                             </a>
                             {% endfor %}
@@ -140,20 +102,20 @@
         </div>
 
         <!-- Notifications List -->
-        <div class="col-md-9">
-            <div class="card">
-                <div class="card-body p-0">
+        <div class="lg:col-span-3">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-0">
                     {% if notifications %}
-                        <div class="list-group list-group-flush">
+                        <div class="divide-y divide-slate-200">
                             {% for notification in notifications %}
                             {% include 'notifications/partials/notification_item.html' with notification=notification %}
                             {% endfor %}
                         </div>
                     {% else %}
-                        <div class="text-center py-5">
-                            <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">No notifications found</h5>
-                            <p class="text-muted">You're all caught up!</p>
+                        <div class="text-center py-12">
+                            <i class="fas fa-bell-slash text-5xl text-slate-300 mb-4"></i>
+                            <h5 class="text-slate-600 font-semibold mb-2">No notifications found</h5>
+                            <p class="text-slate-500 text-sm">You're all caught up!</p>
                         </div>
                     {% endif %}
                 </div>

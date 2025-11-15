@@ -1,100 +1,156 @@
 {% load static %}
-<footer class="bg-white border-top mt-auto">
-    <div class="container py-4">
-        <div class="row">
+<footer class="bg-white border-t border-slate-200 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 lg:px-8 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <!-- About Section -->
-            <div class="col-md-4 mb-3 mb-md-0">
-                <h5 class="text-primary mb-3">
-                    <i class="fas fa-car-side me-2"></i>Smart Vehicle Repairs
+            <div>
+                <h5 class="text-base font-bold text-primary mb-3 flex items-center gap-2">
+                    <i class="fas fa-car-side"></i>
+                    <span>Smart Vehicle Repairs</span>
                 </h5>
-                <p class="text-muted small">
+                <p class="text-sm text-slate-600 mb-4 leading-relaxed">
                     Your trusted partner for professional vehicle maintenance and repair services. 
                     Quality service, reliable results.
                 </p>
-                <div class="social-links mt-3">
-                    <a href="#" class="text-muted me-3" title="Facebook"><i class="fab fa-facebook fa-lg"></i></a>
-                    <a href="#" class="text-muted me-3" title="Twitter"><i class="fab fa-twitter fa-lg"></i></a>
-                    <a href="#" class="text-muted me-3" title="Instagram"><i class="fab fa-instagram fa-lg"></i></a>
-                    <a href="#" class="text-muted" title="LinkedIn"><i class="fab fa-linkedin fa-lg"></i></a>
+                <div class="flex items-center gap-3">
+                    <a href="#" class="w-10 h-10 flex items-center justify-center bg-slate-100 text-slate-600 rounded-lg hover:bg-primary hover:text-white transition-all" title="Facebook">
+                        <i class="fab fa-facebook"></i>
+                    </a>
+                    <a href="#" class="w-10 h-10 flex items-center justify-center bg-slate-100 text-slate-600 rounded-lg hover:bg-primary hover:text-white transition-all" title="Twitter">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="#" class="w-10 h-10 flex items-center justify-center bg-slate-100 text-slate-600 rounded-lg hover:bg-primary hover:text-white transition-all" title="Instagram">
+                        <i class="fab fa-instagram"></i>
+                    </a>
+                    <a href="#" class="w-10 h-10 flex items-center justify-center bg-slate-100 text-slate-600 rounded-lg hover:bg-primary hover:text-white transition-all" title="LinkedIn">
+                        <i class="fab fa-linkedin"></i>
+                    </a>
                 </div>
             </div>
             
             <!-- Quick Links -->
-            <div class="col-md-2 col-6 mb-3 mb-md-0">
-                <h6 class="text-uppercase text-dark mb-3">Quick Links</h6>
-                <ul class="list-unstyled">
-                    <li class="mb-2"><a href="{% url 'home' %}" class="text-muted text-decoration-none small"><i class="fas fa-chevron-right me-1"></i> Home</a></li>
-                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none small"><i class="fas fa-chevron-right me-1"></i> About Us</a></li>
-                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none small"><i class="fas fa-chevron-right me-1"></i> Services</a></li>
-                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none small"><i class="fas fa-chevron-right me-1"></i> Contact</a></li>
+            <div>
+                <h6 class="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4">Quick Links</h6>
+                <ul class="space-y-2">
+                    <li>
+                        <a href="{% url 'home' %}" class="flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                            <span>Home</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                            <span>About Us</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                            <span>Services</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                            <span>Contact</span>
+                        </a>
+                    </li>
                 </ul>
             </div>
             
             <!-- Customer Portal -->
-            <div class="col-md-2 col-6 mb-3 mb-md-0">
-                <h6 class="text-uppercase text-dark mb-3">Customer</h6>
-                <ul class="list-unstyled">
+            <div>
+                <h6 class="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4">Customer</h6>
+                <ul class="space-y-2">
                     {% if user.is_authenticated %}
-                        <li class="mb-2"><a href="{% url 'dashboard' %}" class="text-muted text-decoration-none small"><i class="fas fa-chevron-right me-1"></i> Dashboard</a></li>
-                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none small"><i class="fas fa-chevron-right me-1"></i> My Vehicles</a></li>
-                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none small"><i class="fas fa-chevron-right me-1"></i> Appointments</a></li>
-                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none small"><i class="fas fa-chevron-right me-1"></i> Invoices</a></li>
+                        <li>
+                            <a href="{% url 'dashboard' %}" class="flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+                                <i class="fas fa-chevron-right text-xs"></i>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+                                <i class="fas fa-chevron-right text-xs"></i>
+                                <span>My Vehicles</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+                                <i class="fas fa-chevron-right text-xs"></i>
+                                <span>Appointments</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+                                <i class="fas fa-chevron-right text-xs"></i>
+                                <span>Invoices</span>
+                            </a>
+                        </li>
                     {% else %}
-                        <li class="mb-2"><a href="{% url 'login' %}" class="text-muted text-decoration-none small"><i class="fas fa-chevron-right me-1"></i> Login</a></li>
-                        <li class="mb-2"><a href="{% url 'register' %}" class="text-muted text-decoration-none small"><i class="fas fa-chevron-right me-1"></i> Register</a></li>
-                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none small"><i class="fas fa-chevron-right me-1"></i> Book Service</a></li>
-                        <li class="mb-2"><a href="#" class="text-muted text-decoration-none small"><i class="fas fa-chevron-right me-1"></i> FAQ</a></li>
+                        <li>
+                            <a href="{% url 'login' %}" class="flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+                                <i class="fas fa-chevron-right text-xs"></i>
+                                <span>Login</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'register' %}" class="flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+                                <i class="fas fa-chevron-right text-xs"></i>
+                                <span>Register</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+                                <i class="fas fa-chevron-right text-xs"></i>
+                                <span>Book Service</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+                                <i class="fas fa-chevron-right text-xs"></i>
+                                <span>FAQ</span>
+                            </a>
+                        </li>
                     {% endif %}
                 </ul>
             </div>
             
             <!-- Contact Info -->
-            <!-- <div class="col-md-4 mb-3 mb-md-0">
-                <h6 class="text-uppercase text-dark mb-3">Contact Us</h6>
-                <ul class="list-unstyled small text-muted">
-                    <li class="mb-2">
-                        <i class="fas fa-map-marker-alt text-primary me-2"></i>
-                        123 Main Street, Accra, Ghana
+            <div>
+                <h6 class="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4">Contact Us</h6>
+                <ul class="space-y-3 text-sm text-slate-600">
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-map-marker-alt text-primary mt-0.5"></i>
+                        <span>123 Main Street, Accra, Ghana</span>
                     </li>
-                    <li class="mb-2">
-                        <i class="fas fa-phone text-primary me-2"></i>
-                        <a href="tel:+233201234567" class="text-muted text-decoration-none">+233 20 123 4567</a>
+                    <li class="flex items-center gap-2">
+                        <i class="fas fa-phone text-primary"></i>
+                        <a href="tel:+233201234567" class="hover:text-primary transition-colors">+233 20 123 4567</a>
                     </li>
-                    <li class="mb-2">
-                        <i class="fas fa-envelope text-primary me-2"></i>
-                        <a href="mailto:info@smartrepairs.com" class="text-muted text-decoration-none">info@smartrepairs.com</a>
+                    <li class="flex items-center gap-2">
+                        <i class="fas fa-envelope text-primary"></i>
+                        <a href="mailto:info@smartrepairs.com" class="hover:text-primary transition-colors">info@smartrepairs.com</a>
                     </li>
-                    <li class="mb-2">
-                        <i class="fas fa-clock text-primary me-2"></i>
-                        Mon - Fri: 8:00 AM - 6:00 PM<br>
-                        <span class="ms-4">Sat: 9:00 AM - 2:00 PM</span>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-clock text-primary mt-0.5"></i>
+                        <div>
+                            <div>Mon - Fri: 8:00 AM - 6:00 PM</div>
+                            <div>Sat: 9:00 AM - 2:00 PM</div>
+                        </div>
                     </li>
                 </ul>
-            </div> -->
+            </div>
         </div>
         
         <!-- Bottom Bar -->
-        <hr class="my-4">
+        <hr class="my-6 border-slate-200">
         
-        <!-- <div class="row align-items-center">
-            <div class="col-md-6 text-center text-md-start">
-                <p class="mb-0 small text-muted">
-                    &copy; 2025 Smart Vehicle Repairs System. All rights reserved.
-                </p>
-            </div>
-            <div class="col-md-6 text-center text-md-end">
-                <ul class="list-inline mb-0 small">
-                    <li class="list-inline-item"><a href="#" class="text-muted text-decoration-none">Privacy Policy</a></li>
-                    <li class="list-inline-item">•</li>
-                    <li class="list-inline-item"><a href="#" class="text-muted text-decoration-none">Terms of Service</a></li>
-                    <li class="list-inline-item">•</li>
-                    {% if user.is_staff %}
-                        <li class="list-inline-item"><a href="/admin/" class="text-muted text-decoration-none" target="_blank">Admin Panel</a></li>
-                        <li class="list-inline-item">•</li>
-                    {% endif %}
-                    <li class="list-inline-item"><a href="/api/docs/" class="text-muted text-decoration-none" target="_blank">API Docs</a></li>
-                </ul>
-            </div>
-        </div> -->
+        <div class="text-center">
+            <p class="text-sm text-slate-500 mb-0">
+                &copy; 2025 {{ COMPANY_NAME|default:SITE_NAME }}. All rights reserved.
+            </p>
+        </div>
     </div>
 </footer>

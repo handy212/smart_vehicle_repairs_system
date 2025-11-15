@@ -3,196 +3,181 @@
 
 {% block title %}{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}{% endblock %}
 
-{% block extra_css %}
-{{ block.super }}
-<style>
-    .vehicle-header {
-        background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
-        color: white;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
-    }
-    .info-card {
-        border-left: 4px solid var(--primary-color);
-    }
-</style>
-{% endblock %}
-
-{% block portal_content %}
-<div class="vehicle-header">
-    <div class="container">
-        <h1>
-            <i class="fas fa-car me-2"></i>
-            {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}
-        </h1>
-        <p class="mb-0 opacity-75">Vehicle Information and Service History</p>
+{% block content %}
+<!-- Page Header -->
+<div class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent"></div>
+    <div class="relative px-4 lg:px-8 py-12 max-w-7xl mx-auto">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center text-white shadow-lg">
+                    <i class="fas fa-car text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl lg:text-4xl font-bold text-slate-900 mb-1">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h1>
+                    <p class="text-slate-600 text-sm">Vehicle Information and Service History</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                {% if vehicle.status == 'active' or not vehicle.status %}
+                    <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700">
+                        <i class="fas fa-check-circle"></i>
+                        <span>{{ vehicle.status|default:'Active'|title }}</span>
+                    </span>
+                {% else %}
+                    <span class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold bg-slate-100 text-slate-700">
+                        <span>{{ vehicle.status|title }}</span>
+                    </span>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="container">
+<!-- Main Content -->
+<div class="px-4 lg:px-8 pb-12 max-w-7xl mx-auto space-y-6">
     <!-- Breadcrumb -->
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'portal:home' %}">Portal Home</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'portal:my-vehicles' %}">My Vehicles</a></li>
-                    <li class="breadcrumb-item active">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
+    <nav class="flex items-center gap-2 text-sm text-slate-500">
+        <a href="{% url 'portal:home' %}" class="hover:text-primary transition-colors">Portal Home</a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <a href="{% url 'portal:my-vehicles' %}" class="hover:text-primary transition-colors">My Vehicles</a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span class="text-slate-700 font-medium">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</span>
+    </nav>
     
-    <!-- Vehicle Status Badge -->
-    <div class="row mb-4">
-        <div class="col-12">
-            {% if vehicle.status == 'active' or not vehicle.status %}
-                <span class="badge bg-success fs-6">
-                    <i class="fas fa-check-circle me-1"></i>{{ vehicle.status|default:'Active'|title }}
-                </span>
-            {% else %}
-                <span class="badge bg-secondary fs-6">
-                    {{ vehicle.status|title }}
-                </span>
-            {% endif %}
-        </div>
-    </div>
-
     <!-- Vehicle Details -->
-    <div class="row g-4 mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Basic Information -->
-        <div class="col-md-6">
-            <div class="card info-card h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <small class="text-muted d-block">License Plate</small>
-                            <strong>{{ vehicle.license_plate }}</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">VIN</small>
-                            <strong>{{ vehicle.vin }}</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Year</small>
-                            <strong>{{ vehicle.year }}</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Make</small>
-                            <strong>{{ vehicle.make }}</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Model</small>
-                            <strong>{{ vehicle.model }}</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Color</small>
-                            <strong>{{ vehicle.color|default:'N/A' }}</strong>
-                        </div>
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl border-l-4 border-primary border border-slate-200/50 shadow-sm overflow-hidden">
+            <div class="px-6 py-5 bg-gradient-to-r from-primary to-primary/80 text-white">
+                <h5 class="text-sm font-bold mb-0 flex items-center gap-2">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Basic Information</span>
+                </h5>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">License Plate</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ vehicle.license_plate }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">VIN</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ vehicle.vin }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Year</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ vehicle.year }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Make</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ vehicle.make }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Model</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ vehicle.model }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Color</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ vehicle.color|default:'N/A' }}</p>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Technical Details -->
-        <div class="col-md-6">
-            <div class="card info-card h-100">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Technical Details</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <small class="text-muted d-block">Mileage</small>
-                            <strong>{{ vehicle.mileage|default:0|floatformat:0 }} km</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Engine Type</small>
-                            <strong>{{ vehicle.engine_type|default:'N/A' }}</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Transmission</small>
-                            <strong>{{ vehicle.transmission|default:'N/A' }}</strong>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Fuel Type</small>
-                            <strong>{{ vehicle.fuel_type|default:'N/A' }}</strong>
-                        </div>
-                        {% if vehicle.notes %}
-                        <div class="col-12">
-                            <small class="text-muted d-block">Notes</small>
-                            <p class="mb-0">{{ vehicle.notes }}</p>
-                        </div>
-                        {% endif %}
+        <div class="bg-white/80 backdrop-blur-sm rounded-2xl border-l-4 border-blue-500 border border-slate-200/50 shadow-sm overflow-hidden">
+            <div class="px-6 py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                <h5 class="text-sm font-bold mb-0 flex items-center gap-2">
+                    <i class="fas fa-cog"></i>
+                    <span>Technical Details</span>
+                </h5>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Mileage</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ vehicle.mileage|default:0|floatformat:0 }} km</p>
                     </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Engine Type</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ vehicle.engine_type|default:'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Transmission</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ vehicle.transmission|default:'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Fuel Type</p>
+                        <p class="text-sm font-bold text-slate-900 mb-0">{{ vehicle.fuel_type|default:'N/A' }}</p>
+                    </div>
+                    {% if vehicle.notes %}
+                    <div class="col-span-2">
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Notes</p>
+                        <p class="text-sm text-slate-600 mb-0">{{ vehicle.notes }}</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Quick Actions -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex gap-2">
-                        <a href="{% url 'portal:book-appointment' %}?vehicle={{ vehicle.id }}" class="btn btn-primary">
-                            <i class="fas fa-calendar-plus me-2"></i>Book Service Appointment
-                        </a>
-                        <a href="{% url 'portal:my-vehicles' %}" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-2"></i>Back to My Vehicles
-                        </a>
-                    </div>
-                </div>
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+        <div class="p-6">
+            <div class="flex flex-wrap items-center gap-3">
+                <a href="{% url 'portal:book-appointment' %}?vehicle={{ vehicle.id }}" class="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all shadow-lg shadow-primary/20">
+                    <i class="fas fa-calendar-plus"></i>
+                    <span>Book Service Appointment</span>
+                    <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                </a>
+                <a href="{% url 'portal:my-vehicles' %}" class="inline-flex items-center gap-2 px-6 py-3 border-2 border-slate-200/50 text-slate-700 rounded-xl font-semibold hover:bg-slate-50 transition-all">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to My Vehicles</span>
+                </a>
             </div>
         </div>
     </div>
 
     <!-- Recent Appointments -->
     {% if appointments %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="fas fa-calendar me-2"></i>Recent Appointments</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Time</th>
-                                    <th>Service Type</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for appointment in appointments %}
-                                <tr>
-                                    <td>{{ appointment.appointment_date|date:"M d, Y" }}</td>
-                                    <td>{{ appointment.appointment_time|time:"g:i A" }}</td>
-                                    <td>{{ appointment.service_type|default:'General Service' }}</td>
-                                    <td>
-                                        {% if appointment.status == 'confirmed' %}
-                                            <span class="badge bg-success">{{ appointment.get_status_display }}</span>
-                                        {% elif appointment.status == 'pending' %}
-                                            <span class="badge bg-warning">{{ appointment.get_status_display }}</span>
-                                        {% elif appointment.status == 'completed' %}
-                                            <span class="badge bg-info">{{ appointment.get_status_display }}</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">{{ appointment.get_status_display }}</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+        <div class="px-6 py-5 bg-gradient-to-r from-amber-500 to-amber-600 text-white">
+            <h5 class="text-sm font-bold mb-0 flex items-center gap-2">
+                <i class="fas fa-calendar"></i>
+                <span>Recent Appointments</span>
+            </h5>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Time</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Service Type</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 bg-white">
+                        {% for appointment in appointments %}
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-slate-900">{{ appointment.appointment_date|date:"M d, Y" }}</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-slate-900">{{ appointment.appointment_time|time:"g:i A" }}</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-slate-900">{{ appointment.service_type|default:'General Service' }}</td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold 
+                                    {% if appointment.status == 'confirmed' %}bg-emerald-100 text-emerald-700
+                                    {% elif appointment.status == 'pending' %}bg-amber-100 text-amber-700
+                                    {% elif appointment.status == 'completed' %}bg-blue-100 text-blue-700
+                                    {% else %}bg-slate-100 text-slate-700{% endif %}">
+                                    {{ appointment.get_status_display }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -200,64 +185,63 @@
 
     <!-- Service History -->
     {% if work_orders %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-wrench me-2"></i>Service History</h5>
-                </div>
-                <div class="card-body p-0">
-                    {% for work_order in work_orders %}
-                        {% include 'portal/partials/service_card.html' with service=work_order %}
-                    {% endfor %}
-                </div>
-            </div>
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+        <div class="px-6 py-5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+            <h5 class="text-sm font-bold mb-0 flex items-center gap-2">
+                <i class="fas fa-wrench"></i>
+                <span>Service History</span>
+            </h5>
+        </div>
+        <div class="p-6 space-y-4">
+            {% for work_order in work_orders %}
+                {% include 'portal/partials/service_card.html' with service=work_order %}
+            {% endfor %}
         </div>
     </div>
     {% endif %}
 
     <!-- Inspections -->
     {% if inspections %}
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Vehicle Inspections</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Technician</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for inspection in inspections %}
-                                <tr>
-                                    <td>{{ inspection.inspection_date|date:"M d, Y" }}</td>
-                                    <td>{{ inspection.technician.get_full_name|default:'N/A' }}</td>
-                                    <td>
-                                        {% if inspection.status == 'completed' %}
-                                            <span class="badge bg-success">{{ inspection.get_status_display }}</span>
-                                        {% else %}
-                                            <span class="badge bg-warning">{{ inspection.get_status_display }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <a href="{% url 'portal:inspection-detail' inspection.id %}" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-eye"></i> View
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+        <div class="px-6 py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <h5 class="text-sm font-bold mb-0 flex items-center gap-2">
+                <i class="fas fa-clipboard-check"></i>
+                <span>Vehicle Inspections</span>
+            </h5>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Date</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Technician</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 bg-white">
+                        {% for inspection in inspections %}
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-slate-900">{{ inspection.inspection_date|date:"M d, Y" }}</td>
+                            <td class="px-4 py-4 whitespace-nowrap text-sm text-slate-900">{{ inspection.technician.get_full_name|default:'N/A' }}</td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold 
+                                    {% if inspection.status == 'completed' %}bg-emerald-100 text-emerald-700
+                                    {% else %}bg-amber-100 text-amber-700{% endif %}">
+                                    {{ inspection.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <a href="{% url 'portal:inspection-detail' inspection.id %}" class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-semibold text-primary border-2 border-primary/20 rounded-xl hover:bg-primary/10 transition-all">
+                                    <i class="fas fa-eye"></i>
+                                    <span>View</span>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -265,18 +249,18 @@
 
     <!-- No Service History Message -->
     {% if not work_orders and not inspections and not appointments %}
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body text-center py-5">
-                    <i class="fas fa-wrench fa-4x text-muted mb-4"></i>
-                    <h4>No Service History</h4>
-                    <p class="text-muted">This vehicle has no service records yet</p>
-                    <a href="{% url 'portal:book-appointment' %}?vehicle={{ vehicle.id }}" class="btn btn-primary">
-                        <i class="fas fa-calendar-plus me-2"></i>Book First Service
-                    </a>
-                </div>
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm">
+        <div class="p-12 text-center">
+            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-wrench text-3xl text-slate-400"></i>
             </div>
+            <h4 class="text-lg font-semibold text-slate-900 mb-2">No Service History</h4>
+            <p class="text-sm text-slate-500 mb-6">This vehicle has no service records yet</p>
+            <a href="{% url 'portal:book-appointment' %}?vehicle={{ vehicle.id }}" class="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-primary/80 text-white rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all shadow-lg shadow-primary/20">
+                <i class="fas fa-calendar-plus"></i>
+                <span>Book First Service</span>
+                <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+            </a>
         </div>
     </div>
     {% endif %}

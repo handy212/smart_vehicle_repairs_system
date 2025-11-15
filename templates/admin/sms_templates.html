@@ -4,107 +4,155 @@
 {% block title %}SMS Templates - Admin{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2><i class="fas fa-sms text-primary"></i> SMS Templates</h2>
-            <p class="text-muted mb-0">Manage SMS notification templates (160 character limit)</p>
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-6 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-900 flex items-center gap-3">
+                        <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-sms text-white text-xl"></i>
+                        </div>
+                        SMS Templates
+                    </h1>
+                    <p class="text-slate-600 mt-2">Manage SMS notification templates (160 character limit)</p>
+                </div>
+                <button type="button" onclick="openTemplateModal()" 
+                        class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Template</span>
+                </button>
+            </div>
         </div>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#templateModal">
-            <i class="fas fa-plus"></i> Add Template
-        </button>
-    </div>
 
-    <!-- Templates List -->
-    <div class="card">
-        <div class="card-body">
+        <!-- Templates List -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             {% if templates %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-gradient-to-r from-slate-50 to-slate-100">
                         <tr>
-                            <th>Name</th>
-                            <th>Type</th>
-                            <th>Message</th>
-                            <th>Length</th>
-                            <th>Status</th>
-                            <th>Last Updated</th>
-                            <th class="text-end">Actions</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Message</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Length</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Last Updated</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="bg-white divide-y divide-slate-200">
                         {% for template in templates %}
-                        <tr>
-                            <td><strong>{{ template.name }}</strong></td>
-                            <td>
-                                <span class="badge bg-info">
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="font-semibold text-slate-900">{{ template.name }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                                     {{ template.get_template_type_display }}
                                 </span>
                             </td>
-                            <td>{{ template.message|truncatechars:50 }}</td>
-                            <td>
-                                <span class="badge {% if template.message|length > 160 %}bg-danger{% elif template.message|length > 140 %}bg-warning{% else %}bg-success{% endif %}">
+                            <td class="px-6 py-4">
+                                <div class="text-sm text-slate-900 max-w-md truncate">{{ template.message|truncatechars:50 }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if template.message|length > 160 %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
                                     {{ template.message|length }}/160
                                 </span>
-                            </td>
-                            <td>
-                                {% if template.is_active %}
-                                <span class="badge bg-success">Active</span>
+                                {% elif template.message|length > 140 %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                                    {{ template.message|length }}/160
+                                </span>
                                 {% else %}
-                                <span class="badge bg-secondary">Inactive</span>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    {{ template.message|length }}/160
+                                </span>
                                 {% endif %}
                             </td>
-                            <td>{{ template.updated_at|date:"Y-m-d H:i" }}</td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-outline-primary" 
-                                        onclick="editTemplate({{ template.id }}, '{{ template.name|escapejs }}', '{{ template.template_type }}', '{{ template.message|escapejs }}', {{ template.is_active|lower }})"
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#templateModal">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-info" 
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#previewModal{{ template.id }}">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if template.is_active %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
+                                    Active
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-800">
+                                    <span class="w-1.5 h-1.5 bg-slate-400 rounded-full mr-2"></span>
+                                    Inactive
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                {{ template.updated_at|date:"Y-m-d H:i" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    <button onclick="editTemplate({{ template.id }}, '{{ template.name|escapejs }}', '{{ template.template_type }}', `{{ template.message|escapejs }}`, {{ template.is_active|lower }})" 
+                                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                                        <i class="fas fa-edit"></i>
+                                        <span>Edit</span>
+                                    </button>
+                                    <button onclick="openPreviewModal('previewModal{{ template.id }}')" 
+                                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors">
+                                        <i class="fas fa-eye"></i>
+                                        <span>Preview</span>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
 
                         <!-- Preview Modal -->
-                        <div class="modal fade" id="previewModal{{ template.id }}" tabindex="-1">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Preview: {{ template.name }}</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <div id="previewModal{{ template.id }}" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                                <div class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" onclick="closePreviewModal('previewModal{{ template.id }}')"></div>
+                                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                                    <div class="bg-white px-6 py-4 border-b border-slate-200">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="text-lg font-semibold text-slate-900">Preview: {{ template.name }}</h3>
+                                            <button onclick="closePreviewModal('previewModal{{ template.id }}')" class="text-slate-400 hover:text-slate-600">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="modal-body">
-                                        <div class="card">
-                                            <div class="card-body bg-light">
-                                                <div class="d-flex align-items-start">
-                                                    <i class="fas fa-comment-dots fa-2x text-primary me-3"></i>
-                                                    <div>
-                                                        <p class="mb-2">{{ template.message }}</p>
-                                                        <small class="text-muted">
-                                                            Characters: {{ template.message|length }}/160
-                                                        </small>
+                                    <div class="bg-white px-6 py-4">
+                                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                                            <div class="flex items-start gap-4">
+                                                <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                                    <i class="fas fa-comment-dots text-white"></i>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <p class="text-slate-900 mb-2">{{ template.message }}</p>
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="text-xs text-slate-500">Characters:</span>
+                                                        {% if template.message|length > 160 %}
+                                                        <span class="text-xs font-semibold text-red-600">{{ template.message|length }}/160</span>
+                                                        {% elif template.message|length > 140 %}
+                                                        <span class="text-xs font-semibold text-yellow-600">{{ template.message|length }}/160</span>
+                                                        {% else %}
+                                                        <span class="text-xs font-semibold text-green-600">{{ template.message|length }}/160</span>
+                                                        {% endif %}
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
                                         
                                         {% if template.variables %}
-                                        <h6 class="mt-3">Available Variables:</h6>
-                                        <div class="d-flex flex-wrap gap-2">
-                                            {% for var in template.variables %}
-                                            <code class="badge bg-secondary">{‎{ {{ var }} }‎}</code>
-                                            {% endfor %}
+                                        <div class="mt-4 pt-4 border-t border-slate-200">
+                                            <h6 class="text-sm font-semibold text-slate-700 mb-2">Available Variables:</h6>
+                                            <div class="flex flex-wrap gap-2">
+                                                {% for var in template.variables %}
+                                                <code class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs">{‎{ {{ var }} }‎}</code>
+                                                {% endfor %}
+                                            </div>
                                         </div>
                                         {% endif %}
                                     </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end">
+                                        <button onclick="closePreviewModal('previewModal{{ template.id }}')" class="px-6 py-2 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-700 transition-colors">
+                                            Close
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -114,12 +162,19 @@
                 </table>
             </div>
             {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-sms fa-4x text-muted mb-3"></i>
-                <p class="text-muted">No SMS templates found.</p>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#templateModal">
-                    <i class="fas fa-plus"></i> Create First Template
-                </button>
+            <div class="px-6 py-12 text-center">
+                <div class="flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-sms text-slate-400 text-2xl"></i>
+                    </div>
+                    <p class="text-slate-600 font-medium mb-2">No SMS templates found</p>
+                    <p class="text-slate-500 text-sm mb-4">Create your first SMS template to get started</p>
+                    <button onclick="openTemplateModal()" 
+                            class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200">
+                        <i class="fas fa-plus"></i>
+                        <span>Create First Template</span>
+                    </button>
+                </div>
             </div>
             {% endif %}
         </div>
@@ -127,72 +182,103 @@
 </div>
 
 <!-- Add/Edit Template Modal -->
-<div class="modal fade" id="templateModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<div id="templateModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" onclick="closeTemplateModal()"></div>
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
             <form method="post">
                 {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Add SMS Template</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-white" id="modalTitle">Add SMS Template</h3>
+                        <button type="button" onclick="closeTemplateModal()" class="text-white hover:text-green-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="modal-body">
+                <div class="bg-white px-6 py-4 max-h-[70vh] overflow-y-auto">
                     <input type="hidden" name="template_id" id="template_id">
                     
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Template Name</label>
-                        <input type="text" class="form-control" name="name" id="name" 
-                               placeholder="e.g., Appointment Reminder SMS" required>
+                    <div class="mb-6">
+                        <label for="name" class="block text-sm font-medium text-slate-700 mb-2">Template Name</label>
+                        <input type="text" name="name" id="name" 
+                               placeholder="e.g., Appointment Reminder SMS" required
+                               class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors">
                     </div>
 
-                    <div class="mb-3">
-                        <label for="template_type" class="form-label">Template Type</label>
-                        <select class="form-select" name="template_type" id="template_type" required>
+                    <div class="mb-6">
+                        <label for="template_type" class="block text-sm font-medium text-slate-700 mb-2">Template Type</label>
+                        <select name="template_type" id="template_type" required
+                                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors">
                             {% for code, name in template_types %}
                             <option value="{{ code }}">{{ name }}</option>
                             {% endfor %}
                         </select>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="message" class="form-label">SMS Message</label>
-                        <textarea class="form-control" name="message" id="message" rows="4" 
-                                  maxlength="160" oninput="updateCharCount()" required></textarea>
-                        <div class="d-flex justify-content-between mt-1">
-                            <small class="text-muted">Use {customer_name}, {date}, {time} for variables</small>
-                            <small id="charCount" class="text-muted">0/160</small>
+                    <div class="mb-6">
+                        <label for="message" class="block text-sm font-medium text-slate-700 mb-2">SMS Message</label>
+                        <textarea name="message" id="message" rows="4" maxlength="160" 
+                                  oninput="updateCharCount()" required
+                                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"></textarea>
+                        <div class="flex justify-between items-center mt-2">
+                            <p class="text-xs text-slate-500">Use {customer_name}, {date}, {time} for variables</p>
+                            <span id="charCount" class="text-sm font-semibold text-slate-600">0/160</span>
                         </div>
-                        <div class="progress mt-2" style="height: 5px;">
-                            <div id="charProgress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        <div class="mt-2 w-full bg-slate-200 rounded-full h-2">
+                            <div id="charProgress" class="h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
                         </div>
                     </div>
 
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" name="is_active" id="is_active" checked>
-                        <label class="form-check-label" for="is_active">
-                            Active (template will be used for notifications)
+                    <div class="mb-6">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="is_active" id="is_active" checked
+                                   class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                            <span class="ml-3 text-sm font-medium text-slate-700">Active (template will be used for notifications)</span>
                         </label>
                     </div>
 
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Important:</strong> Keep messages concise. SMS messages are limited to 160 characters.
+                    <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded mb-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-yellow-700">
+                                    <strong>Important:</strong> Keep messages concise. SMS messages are limited to 160 characters.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="alert alert-info">
-                        <strong>Common Variables:</strong>
-                        <div class="mt-2">
-                            <code>{customer_name}</code>
-                            <code>{date}</code>
-                            <code>{time}</code>
-                            <code>{vehicle}</code>
-                            <code>{shop_phone}</code>
+                    <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle text-green-500"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h6 class="text-sm font-semibold text-green-900 mb-2">Common Variables:</h6>
+                                <div class="flex flex-wrap gap-2">
+                                    <code class="px-2 py-1 bg-white text-green-700 rounded text-xs">{customer_name}</code>
+                                    <code class="px-2 py-1 bg-white text-green-700 rounded text-xs">{date}</code>
+                                    <code class="px-2 py-1 bg-white text-green-700 rounded text-xs">{time}</code>
+                                    <code class="px-2 py-1 bg-white text-green-700 rounded text-xs">{vehicle}</code>
+                                    <code class="px-2 py-1 bg-white text-green-700 rounded text-xs">{shop_phone}</code>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Template</button>
+                <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                    <button type="button" onclick="closeTemplateModal()" 
+                            class="px-6 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200">
+                        Save Template
+                    </button>
                 </div>
             </form>
         </div>
@@ -202,6 +288,28 @@
 
 {% block extra_js %}
 <script>
+function openTemplateModal() {
+    document.getElementById('templateModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    resetForm();
+}
+
+function closeTemplateModal() {
+    document.getElementById('templateModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    resetForm();
+}
+
+function openPreviewModal(modalId) {
+    document.getElementById(modalId).classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closePreviewModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
 function editTemplate(id, name, templateType, message, isActive) {
     document.getElementById('modalTitle').textContent = 'Edit SMS Template';
     document.getElementById('template_id').value = id;
@@ -210,40 +318,56 @@ function editTemplate(id, name, templateType, message, isActive) {
     document.getElementById('message').value = message;
     document.getElementById('is_active').checked = isActive;
     updateCharCount();
+    openTemplateModal();
 }
 
 function updateCharCount() {
-    const message = document.getElementById('message').value;
-    const length = message.length;
+    const message = document.getElementById('message');
+    if (!message) return;
+    
+    const length = message.value.length;
     const charCount = document.getElementById('charCount');
     const charProgress = document.getElementById('charProgress');
     
-    charCount.textContent = length + '/160';
-    const percentage = (length / 160) * 100;
-    charProgress.style.width = percentage + '%';
+    if (charCount) {
+        charCount.textContent = length + '/160';
+        
+        if (length > 160) {
+            charCount.classList.remove('text-slate-600', 'text-yellow-600');
+            charCount.classList.add('text-red-600');
+        } else if (length > 140) {
+            charCount.classList.remove('text-slate-600', 'text-red-600');
+            charCount.classList.add('text-yellow-600');
+        } else {
+            charCount.classList.remove('text-yellow-600', 'text-red-600');
+            charCount.classList.add('text-slate-600');
+        }
+    }
     
-    // Update color based on length
-    charProgress.className = 'progress-bar';
-    if (length > 160) {
-        charProgress.classList.add('bg-danger');
-        charCount.classList.add('text-danger');
-    } else if (length > 140) {
-        charProgress.classList.add('bg-warning');
-        charCount.classList.remove('text-danger');
-    } else {
-        charProgress.classList.add('bg-success');
-        charCount.classList.remove('text-danger');
+    if (charProgress) {
+        const percentage = Math.min((length / 160) * 100, 100);
+        charProgress.style.width = percentage + '%';
+        
+        charProgress.classList.remove('bg-green-500', 'bg-yellow-500', 'bg-red-500');
+        if (length > 160) {
+            charProgress.classList.add('bg-red-500');
+        } else if (length > 140) {
+            charProgress.classList.add('bg-yellow-500');
+        } else {
+            charProgress.classList.add('bg-green-500');
+        }
     }
 }
 
-// Reset form when modal is closed
-document.getElementById('templateModal').addEventListener('hidden.bs.modal', function () {
+function resetForm() {
     document.getElementById('modalTitle').textContent = 'Add SMS Template';
     document.getElementById('template_id').value = '';
-    document.querySelector('#templateModal form').reset();
-    document.getElementById('is_active').checked = true;
+    const form = document.querySelector('#templateModal form');
+    if (form) form.reset();
+    const isActive = document.getElementById('is_active');
+    if (isActive) isActive.checked = true;
     updateCharCount();
-});
+}
 
 // Initialize character count on page load
 document.addEventListener('DOMContentLoaded', function() {

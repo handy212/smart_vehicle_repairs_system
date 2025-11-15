@@ -227,7 +227,13 @@ document.addEventListener('DOMContentLoaded', function() {
         droppable: true,
         eventSourceFailure: function(errorObj) {
             console.error('Calendar events failed to load:', errorObj);
-            alert('Failed to load calendar events. Please refresh the page or contact support.');
+            if (window.showErrorToast) {
+                window.showErrorToast('Failed to load calendar events. Please refresh the page or contact support.');
+            } else if (window.ToastSystem) {
+                window.ToastSystem.error('Failed to load calendar events. Please refresh the page or contact support.');
+            } else {
+                alert('Failed to load calendar events. Please refresh the page or contact support.');
+            }
         },
         loading: function(isLoading) {
             console.log('Calendar loading:', isLoading);
@@ -352,7 +358,13 @@ function submitQuickCreate() {
     // Basic validation
     if (!formData.get('date') || !formData.get('time') || !formData.get('customer') || 
         !formData.get('vehicle') || !formData.get('service_type')) {
-        alert('Please fill in all required fields');
+        if (window.showWarningToast) {
+            window.showWarningToast('Please fill in all required fields');
+        } else if (window.ToastSystem) {
+            window.ToastSystem.warning('Please fill in all required fields');
+        } else {
+            alert('Please fill in all required fields');
+        }
         return;
     }
     
@@ -374,12 +386,24 @@ function updateAppointmentDateTime(appointmentId, newStart) {
         })
     }).then(response => {
         if (!response.ok) {
-            alert('Failed to update appointment');
+            if (window.showErrorToast) {
+                window.showErrorToast('Failed to update appointment');
+            } else if (window.ToastSystem) {
+                window.ToastSystem.error('Failed to update appointment');
+            } else {
+                alert('Failed to update appointment');
+            }
             location.reload();
         }
     }).catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while updating the appointment');
+        if (window.showErrorToast) {
+            window.showErrorToast('An error occurred while updating the appointment');
+        } else if (window.ToastSystem) {
+            window.ToastSystem.error('An error occurred while updating the appointment');
+        } else {
+            alert('An error occurred while updating the appointment');
+        }
         location.reload();
     });
 }

@@ -36,6 +36,7 @@
     <!-- Legacy custom CSS -->
     <link href="{% static 'css/custom.css' %}" rel="stylesheet">
     <link href="{% static 'css/brand-colors.css' %}" rel="stylesheet">
+    <link href="{% static 'css/print.css' %}" rel="stylesheet">
     
     {% block extra_css %}{% endblock %}
     
@@ -636,6 +637,417 @@
     
     <!-- Custom JS -->
     {% block extra_js %}{% endblock %}
+    
+    <!-- Toast Notification System -->
+    <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col gap-4 pointer-events-none" style="max-width: 480px;"></div>
+    
+    <style>
+        /* Toast Notification Styles */
+        .toast-notification {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            min-width: 360px;
+            max-width: 480px;
+            pointer-events: auto;
+            position: relative;
+            overflow: hidden;
+            transform: translateX(500px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        
+        .toast-notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        
+        .toast-notification.hide {
+            transform: translateX(500px);
+            opacity: 0;
+            margin-bottom: -100px;
+            transition: all 0.3s ease-in;
+        }
+        
+        .toast-notification::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            background: var(--toast-color, var(--primary));
+            border-radius: 16px 0 0 16px;
+        }
+        
+        .toast-notification.success::before {
+            background: var(--success);
+        }
+        
+        .toast-notification.error::before {
+            background: var(--danger);
+        }
+        
+        .toast-notification.warning::before {
+            background: var(--warning);
+        }
+        
+        .toast-notification.info::before {
+            background: var(--info);
+        }
+        
+        .toast-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        
+        .toast-icon {
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .toast-notification.success .toast-icon {
+            background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 80%, black));
+        }
+        
+        .toast-notification.error .toast-icon {
+            background: linear-gradient(135deg, var(--danger), color-mix(in srgb, var(--danger) 80%, black));
+        }
+        
+        .toast-notification.warning .toast-icon {
+            background: linear-gradient(135deg, var(--warning), color-mix(in srgb, var(--warning) 80%, black));
+        }
+        
+        .toast-notification.info .toast-icon {
+            background: linear-gradient(135deg, var(--info), color-mix(in srgb, var(--info) 80%, black));
+        }
+        
+        .toast-body {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .toast-title {
+            font-weight: 700;
+            font-size: 16px;
+            color: #111827;
+            margin-bottom: 6px;
+            line-height: 1.4;
+            letter-spacing: -0.01em;
+        }
+        
+        .toast-message {
+            font-size: 15px;
+            color: #374151;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-weight: 500;
+        }
+        
+        .toast-close {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: transparent;
+            color: #9ca3af;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s;
+            padding: 0;
+            font-size: 20px;
+            line-height: 1;
+        }
+        
+        .toast-close:hover {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: var(--toast-color, var(--primary));
+            transition: width linear;
+            border-radius: 0 0 16px 16px;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .toast-notification.success .toast-progress {
+            background: var(--success);
+        }
+        
+        .toast-notification.error .toast-progress {
+            background: var(--danger);
+        }
+        
+        .toast-notification.warning .toast-progress {
+            background: var(--warning);
+        }
+        
+        .toast-notification.info .toast-progress {
+            background: var(--info);
+        }
+        
+        /* Add subtle glow effect for better visibility */
+        .toast-notification.success {
+            box-shadow: 0 20px 50px -12px rgba(16, 185, 129, 0.3), 0 0 0 1px rgba(16, 185, 129, 0.1), 0 0 20px rgba(16, 185, 129, 0.1);
+        }
+        
+        .toast-notification.error {
+            box-shadow: 0 20px 50px -12px rgba(239, 68, 68, 0.3), 0 0 0 1px rgba(239, 68, 68, 0.1), 0 0 20px rgba(239, 68, 68, 0.1);
+        }
+        
+        .toast-notification.warning {
+            box-shadow: 0 20px 50px -12px rgba(245, 158, 11, 0.3), 0 0 0 1px rgba(245, 158, 11, 0.1), 0 0 20px rgba(245, 158, 11, 0.1);
+        }
+        
+        .toast-notification.info {
+            box-shadow: 0 20px 50px -12px rgba(59, 130, 246, 0.3), 0 0 0 1px rgba(59, 130, 246, 0.1), 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+        
+        @media (max-width: 640px) {
+            #toast-container {
+                left: 16px;
+                right: 16px;
+                top: 16px;
+                max-width: none;
+            }
+            
+            .toast-notification {
+                min-width: auto;
+                max-width: none;
+                padding: 18px;
+            }
+        }
+    </style>
+    
+    <script>
+        // Enhanced Toast Notification System
+        (function() {
+            'use strict';
+            
+            const ToastSystem = {
+                container: null,
+                toasts: new Map(),
+                defaultDuration: 5000,
+                
+                init: function() {
+                    this.container = document.getElementById('toast-container');
+                    if (!this.container) {
+                    this.container = document.createElement('div');
+                    this.container.id = 'toast-container';
+                    this.container.className = 'fixed top-6 right-6 z-[9999] flex flex-col gap-4 pointer-events-none';
+                    this.container.style.maxWidth = '480px';
+                    document.body.appendChild(this.container);
+                    }
+                },
+                
+                show: function(options) {
+                    if (!this.container) this.init();
+                    
+                    const {
+                        title = '',
+                        message = '',
+                        type = 'info',
+                        duration = this.defaultDuration,
+                        persistent = false,
+                        action = null
+                    } = typeof options === 'string' ? { message: options } : options;
+                    
+                    const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                    const toast = this.createToast(toastId, title, message, type, persistent, action);
+                    
+                    this.container.appendChild(toast);
+                    this.toasts.set(toastId, { element: toast, timeout: null, progress: null });
+                    
+                    // Trigger animation
+                    requestAnimationFrame(() => {
+                        toast.classList.add('show');
+                    });
+                    
+                    // Auto-dismiss
+                    if (!persistent && duration > 0) {
+                        this.startDismissTimer(toastId, duration);
+                    }
+                    
+                    return toastId;
+                },
+                
+                createToast: function(id, title, message, type, persistent, action) {
+                    const toast = document.createElement('div');
+                    toast.id = id;
+                    toast.className = `toast-notification ${type}`;
+                    
+                    const icons = {
+                        success: '<i class="fas fa-check-circle"></i>',
+                        error: '<i class="fas fa-times-circle"></i>',
+                        warning: '<i class="fas fa-exclamation-triangle"></i>',
+                        info: '<i class="fas fa-info-circle"></i>'
+                    };
+                    
+                    const actionButton = action ? `
+                        <button class="mt-3 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors" 
+                                style="background: var(--${type === 'success' ? 'success' : type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'info'}); color: white;"
+                                onclick="${action.onClick}">
+                            ${action.label}
+                        </button>
+                    ` : '';
+                    
+                    toast.innerHTML = `
+                        <div class="toast-content">
+                            <div class="toast-icon">${icons[type] || icons.info}</div>
+                            <div class="toast-body">
+                                ${title ? `<div class="toast-title">${this.escapeHtml(title)}</div>` : ''}
+                                ${message ? `<div class="toast-message">${this.escapeHtml(message)}</div>` : ''}
+                                ${actionButton}
+                            </div>
+                            <button class="toast-close" onclick="ToastSystem.dismiss('${id}')" aria-label="Close">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        ${!persistent ? '<div class="toast-progress" style="width: 100%;"></div>' : ''}
+                    `;
+                    
+                    return toast;
+                },
+                
+                startDismissTimer: function(toastId, duration) {
+                    const toastData = this.toasts.get(toastId);
+                    if (!toastData) return;
+                    
+                    const progressBar = toastData.element.querySelector('.toast-progress');
+                    if (progressBar) {
+                        progressBar.style.transition = `width ${duration}ms linear`;
+                        requestAnimationFrame(() => {
+                            progressBar.style.width = '0%';
+                        });
+                    }
+                    
+                    toastData.timeout = setTimeout(() => {
+                        this.dismiss(toastId);
+                    }, duration);
+                },
+                
+                dismiss: function(toastId) {
+                    const toastData = this.toasts.get(toastId);
+                    if (!toastData) return;
+                    
+                    clearTimeout(toastData.timeout);
+                    if (toastData.progress) {
+                        clearInterval(toastData.progress);
+                    }
+                    
+                    toastData.element.classList.remove('show');
+                    toastData.element.classList.add('hide');
+                    
+                    setTimeout(() => {
+                        if (toastData.element.parentNode) {
+                            toastData.element.parentNode.removeChild(toastData.element);
+                        }
+                        this.toasts.delete(toastId);
+                    }, 300);
+                },
+                
+                dismissAll: function() {
+                    this.toasts.forEach((_, id) => {
+                        this.dismiss(id);
+                    });
+                },
+                
+                escapeHtml: function(text) {
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                }
+            };
+            
+            // Convenience methods
+            ToastSystem.success = function(message, options = {}) {
+                return ToastSystem.show({ ...options, message, type: 'success' });
+            };
+            
+            ToastSystem.error = function(message, options = {}) {
+                return ToastSystem.show({ ...options, message, type: 'error', duration: 7000 });
+            };
+            
+            ToastSystem.warning = function(message, options = {}) {
+                return ToastSystem.show({ ...options, message, type: 'warning', duration: 6000 });
+            };
+            
+            ToastSystem.info = function(message, options = {}) {
+                return ToastSystem.show({ ...options, message, type: 'info' });
+            };
+            
+            // Make it globally available
+            window.ToastSystem = ToastSystem;
+            window.showSuccessToast = ToastSystem.success.bind(ToastSystem);
+            window.showErrorToast = ToastSystem.error.bind(ToastSystem);
+            window.showWarningToast = ToastSystem.warning.bind(ToastSystem);
+            window.showInfoToast = ToastSystem.info.bind(ToastSystem);
+            
+            // Unified showToast function that handles different parameter orders
+            // Supports: showToast(message, type) or showToast(type, message) or showToast({message, type})
+            window.showToast = function(...args) {
+                if (args.length === 0) return;
+                
+                // If first arg is an object, use it directly
+                if (typeof args[0] === 'object' && args[0] !== null) {
+                    return ToastSystem.show(args[0]);
+                }
+                
+                // Handle different parameter orders
+                let message, type = 'info';
+                
+                if (args.length === 1) {
+                    // showToast(message) - default to info
+                    message = args[0];
+                } else if (args.length === 2) {
+                    // Could be showToast(message, type) or showToast(type, message)
+                    const first = args[0];
+                    const second = args[1];
+                    
+                    // Check if first is a type (success, error, warning, info, danger)
+                    const validTypes = ['success', 'error', 'warning', 'info', 'danger'];
+                    if (validTypes.includes(first)) {
+                        // showToast(type, message)
+                        type = first === 'danger' ? 'error' : first;
+                        message = second;
+                    } else {
+                        // showToast(message, type)
+                        message = first;
+                        type = second === 'danger' ? 'error' : second;
+                    }
+                }
+                
+                return ToastSystem.show({ message, type });
+            };
+            
+            // Initialize on DOM ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => ToastSystem.init());
+            } else {
+                ToastSystem.init();
+            }
+        })();
+    </script>
     
     <script>
         // Auto-dismiss alerts after 5 seconds

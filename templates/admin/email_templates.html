@@ -4,101 +4,137 @@
 {% block title %}Email Templates - Admin{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2><i class="fas fa-envelope text-primary"></i> Email Templates</h2>
-            <p class="text-muted mb-0">Manage email notification templates</p>
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-6 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-900 flex items-center gap-3">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-envelope text-white text-xl"></i>
+                        </div>
+                        Email Templates
+                    </h1>
+                    <p class="text-slate-600 mt-2">Manage email notification templates</p>
+                </div>
+                <button type="button" onclick="openTemplateModal()" 
+                        class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Template</span>
+                </button>
+            </div>
         </div>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#templateModal">
-            <i class="fas fa-plus"></i> Add Template
-        </button>
-    </div>
 
-    <!-- Templates List -->
-    <div class="card">
-        <div class="card-body">
+        <!-- Templates List -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             {% if templates %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-gradient-to-r from-slate-50 to-slate-100">
                         <tr>
-                            <th>Name</th>
-                            <th>Type</th>
-                            <th>Subject</th>
-                            <th>Status</th>
-                            <th>Last Updated</th>
-                            <th class="text-end">Actions</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Subject</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Last Updated</th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="bg-white divide-y divide-slate-200">
                         {% for template in templates %}
-                        <tr>
-                            <td><strong>{{ template.name }}</strong></td>
-                            <td>
-                                <span class="badge bg-info">
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="font-semibold text-slate-900">{{ template.name }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                                     {{ template.get_template_type_display }}
                                 </span>
                             </td>
-                            <td>{{ template.subject|truncatechars:50 }}</td>
-                            <td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm text-slate-900 max-w-md truncate">{{ template.subject|truncatechars:50 }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
                                 {% if template.is_active %}
-                                <span class="badge bg-success">Active</span>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
+                                    Active
+                                </span>
                                 {% else %}
-                                <span class="badge bg-secondary">Inactive</span>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-800">
+                                    <span class="w-1.5 h-1.5 bg-slate-400 rounded-full mr-2"></span>
+                                    Inactive
+                                </span>
                                 {% endif %}
                             </td>
-                            <td>{{ template.updated_at|date:"Y-m-d H:i" }}</td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-outline-primary" 
-                                        onclick="editTemplate({{ template.id }}, '{{ template.name|escapejs }}', '{{ template.template_type }}', '{{ template.subject|escapejs }}', '{{ template.body_html|escapejs }}', '{{ template.body_text|escapejs }}', {{ template.is_active|lower }})"
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#templateModal">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-info" 
-                                        onclick="previewTemplate({{ template.id }})"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#previewModal{{ template.id }}">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                {{ template.updated_at|date:"Y-m-d H:i" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    <button onclick="editTemplate({{ template.id }}, '{{ template.name|escapejs }}', '{{ template.template_type }}', '{{ template.subject|escapejs }}', '{{ template.body_html|escapejs }}', '{{ template.body_text|escapejs }}', {{ template.is_active|lower }})" 
+                                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                                        <i class="fas fa-edit"></i>
+                                        <span>Edit</span>
+                                    </button>
+                                    <button onclick="openPreviewModal('previewModal{{ template.id }}')" 
+                                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-cyan-600 bg-cyan-50 rounded-lg hover:bg-cyan-100 transition-colors">
+                                        <i class="fas fa-eye"></i>
+                                        <span>Preview</span>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
 
                         <!-- Preview Modal -->
-                        <div class="modal fade" id="previewModal{{ template.id }}" tabindex="-1">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Preview: {{ template.name }}</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <div id="previewModal{{ template.id }}" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                                <div class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" onclick="closePreviewModal('previewModal{{ template.id }}')"></div>
+                                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                                    <div class="bg-white px-6 py-4 border-b border-slate-200">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="text-lg font-semibold text-slate-900">Preview: {{ template.name }}</h3>
+                                            <button onclick="closePreviewModal('previewModal{{ template.id }}')" class="text-slate-400 hover:text-slate-600">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="modal-body">
-                                        <h6>Subject:</h6>
-                                        <p class="bg-light p-2 rounded">{{ template.subject }}</p>
+                                    <div class="bg-white px-6 py-4 max-h-[70vh] overflow-y-auto">
+                                        <div class="mb-4">
+                                            <h6 class="text-sm font-semibold text-slate-700 mb-2">Subject:</h6>
+                                            <p class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-slate-900">{{ template.subject }}</p>
+                                        </div>
                                         
-                                        <h6 class="mt-3">HTML Body:</h6>
-                                        <div class="border p-3 rounded bg-white" style="max-height: 400px; overflow-y: auto;">
-                                            {{ template.body_html|safe }}
+                                        <div class="mb-4">
+                                            <h6 class="text-sm font-semibold text-slate-700 mb-2">HTML Body:</h6>
+                                            <div class="border border-slate-200 p-4 rounded-lg bg-white max-h-96 overflow-y-auto">
+                                                {{ template.body_html|safe }}
+                                            </div>
                                         </div>
                                         
                                         {% if template.body_text %}
-                                        <h6 class="mt-3">Plain Text Body:</h6>
-                                        <pre class="bg-light p-3 rounded">{{ template.body_text }}</pre>
+                                        <div class="mb-4">
+                                            <h6 class="text-sm font-semibold text-slate-700 mb-2">Plain Text Body:</h6>
+                                            <pre class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs overflow-x-auto">{{ template.body_text }}</pre>
+                                        </div>
                                         {% endif %}
                                         
                                         {% if template.variables %}
-                                        <h6 class="mt-3">Available Variables:</h6>
-                                        <div class="d-flex flex-wrap gap-2">
-                                            {% for var in template.variables %}
-                                            <code class="badge bg-secondary">{‎{ {{ var }} }‎}</code>
-                                            {% endfor %}
+                                        <div>
+                                            <h6 class="text-sm font-semibold text-slate-700 mb-2">Available Variables:</h6>
+                                            <div class="flex flex-wrap gap-2">
+                                                {% for var in template.variables %}
+                                                <code class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs">{‎{ {{ var }} }‎}</code>
+                                                {% endfor %}
+                                            </div>
                                         </div>
                                         {% endif %}
                                     </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end">
+                                        <button onclick="closePreviewModal('previewModal{{ template.id }}')" class="px-6 py-2 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-700 transition-colors">
+                                            Close
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -108,12 +144,19 @@
                 </table>
             </div>
             {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-envelope fa-4x text-muted mb-3"></i>
-                <p class="text-muted">No email templates found.</p>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#templateModal">
-                    <i class="fas fa-plus"></i> Create First Template
-                </button>
+            <div class="px-6 py-12 text-center">
+                <div class="flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-envelope text-slate-400 text-2xl"></i>
+                    </div>
+                    <p class="text-slate-600 font-medium mb-2">No email templates found</p>
+                    <p class="text-slate-500 text-sm mb-4">Create your first email template to get started</p>
+                    <button onclick="openTemplateModal()" 
+                            class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200">
+                        <i class="fas fa-plus"></i>
+                        <span>Create First Template</span>
+                    </button>
+                </div>
             </div>
             {% endif %}
         </div>
@@ -121,74 +164,99 @@
 </div>
 
 <!-- Add/Edit Template Modal -->
-<div class="modal fade" id="templateModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+<div id="templateModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" onclick="closeTemplateModal()"></div>
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
             <form method="post">
                 {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Add Email Template</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-white" id="modalTitle">Add Email Template</h3>
+                        <button type="button" onclick="closeTemplateModal()" class="text-white hover:text-blue-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="modal-body">
+                <div class="bg-white px-6 py-4 max-h-[70vh] overflow-y-auto">
                     <input type="hidden" name="template_id" id="template_id">
                     
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Template Name</label>
-                        <input type="text" class="form-control" name="name" id="name" 
-                               placeholder="e.g., Appointment Confirmation Email" required>
+                    <div class="mb-6">
+                        <label for="name" class="block text-sm font-medium text-slate-700 mb-2">Template Name</label>
+                        <input type="text" name="name" id="name" 
+                               placeholder="e.g., Appointment Confirmation Email" required
+                               class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                     </div>
 
-                    <div class="mb-3">
-                        <label for="template_type" class="form-label">Template Type</label>
-                        <select class="form-select" name="template_type" id="template_type" required>
+                    <div class="mb-6">
+                        <label for="template_type" class="block text-sm font-medium text-slate-700 mb-2">Template Type</label>
+                        <select name="template_type" id="template_type" required
+                                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                             {% for code, name in template_types %}
                             <option value="{{ code }}">{{ name }}</option>
                             {% endfor %}
                         </select>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="subject" class="form-label">Email Subject</label>
-                        <input type="text" class="form-control" name="subject" id="subject" 
-                               placeholder="Use {customer_name} for variables" required>
-                        <small class="text-muted">You can use variables like {customer_name}, {appointment_date}, etc.</small>
+                    <div class="mb-6">
+                        <label for="subject" class="block text-sm font-medium text-slate-700 mb-2">Email Subject</label>
+                        <input type="text" name="subject" id="subject" 
+                               placeholder="Use {customer_name} for variables" required
+                               class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                        <p class="mt-1 text-xs text-slate-500">You can use variables like {customer_name}, {appointment_date}, etc.</p>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="body_html" class="form-label">HTML Body</label>
-                        <textarea class="form-control" name="body_html" id="body_html" rows="10" required></textarea>
-                        <small class="text-muted">HTML email content with variables in curly braces</small>
+                    <div class="mb-6">
+                        <label for="body_html" class="block text-sm font-medium text-slate-700 mb-2">HTML Body</label>
+                        <textarea name="body_html" id="body_html" rows="10" required
+                                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors font-mono text-sm"></textarea>
+                        <p class="mt-1 text-xs text-slate-500">HTML email content with variables in curly braces</p>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="body_text" class="form-label">Plain Text Body (Optional)</label>
-                        <textarea class="form-control" name="body_text" id="body_text" rows="5"></textarea>
-                        <small class="text-muted">Plain text fallback for email clients that don't support HTML</small>
+                    <div class="mb-6">
+                        <label for="body_text" class="block text-sm font-medium text-slate-700 mb-2">Plain Text Body (Optional)</label>
+                        <textarea name="body_text" id="body_text" rows="5"
+                                  class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors font-mono text-sm"></textarea>
+                        <p class="mt-1 text-xs text-slate-500">Plain text fallback for email clients that don't support HTML</p>
                     </div>
 
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="is_active" id="is_active" checked>
-                        <label class="form-check-label" for="is_active">
-                            Active (template will be used for notifications)
+                    <div class="mb-6">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="is_active" id="is_active" checked
+                                   class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            <span class="ml-3 text-sm font-medium text-slate-700">Active (template will be used for notifications)</span>
                         </label>
                     </div>
 
-                    <div class="alert alert-info mt-3">
-                        <strong>Common Variables:</strong>
-                        <div class="mt-2">
-                            <code>{customer_name}</code>
-                            <code>{appointment_date}</code>
-                            <code>{appointment_time}</code>
-                            <code>{vehicle}</code>
-                            <code>{invoice_number}</code>
-                            <code>{amount}</code>
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle text-blue-500"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h6 class="text-sm font-semibold text-blue-900 mb-2">Common Variables:</h6>
+                                <div class="flex flex-wrap gap-2">
+                                    <code class="px-2 py-1 bg-white text-blue-700 rounded text-xs">{customer_name}</code>
+                                    <code class="px-2 py-1 bg-white text-blue-700 rounded text-xs">{appointment_date}</code>
+                                    <code class="px-2 py-1 bg-white text-blue-700 rounded text-xs">{appointment_time}</code>
+                                    <code class="px-2 py-1 bg-white text-blue-700 rounded text-xs">{vehicle}</code>
+                                    <code class="px-2 py-1 bg-white text-blue-700 rounded text-xs">{invoice_number}</code>
+                                    <code class="px-2 py-1 bg-white text-blue-700 rounded text-xs">{amount}</code>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Template</button>
+                <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                    <button type="button" onclick="closeTemplateModal()" 
+                            class="px-6 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-6 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200">
+                        Save Template
+                    </button>
                 </div>
             </form>
         </div>
@@ -198,6 +266,28 @@
 
 {% block extra_js %}
 <script>
+function openTemplateModal() {
+    document.getElementById('templateModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    resetForm();
+}
+
+function closeTemplateModal() {
+    document.getElementById('templateModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    resetForm();
+}
+
+function openPreviewModal(modalId) {
+    document.getElementById(modalId).classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closePreviewModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
 function editTemplate(id, name, templateType, subject, bodyHtml, bodyText, isActive) {
     document.getElementById('modalTitle').textContent = 'Edit Email Template';
     document.getElementById('template_id').value = id;
@@ -205,20 +295,16 @@ function editTemplate(id, name, templateType, subject, bodyHtml, bodyText, isAct
     document.getElementById('template_type').value = templateType;
     document.getElementById('subject').value = subject;
     document.getElementById('body_html').value = bodyHtml;
-    document.getElementById('body_text').value = bodyText;
+    document.getElementById('body_text').value = bodyText || '';
     document.getElementById('is_active').checked = isActive;
+    openTemplateModal();
 }
 
-function previewTemplate(id) {
-    // Modal is already populated in the template
-}
-
-// Reset form when modal is closed
-document.getElementById('templateModal').addEventListener('hidden.bs.modal', function () {
+function resetForm() {
     document.getElementById('modalTitle').textContent = 'Add Email Template';
     document.getElementById('template_id').value = '';
     document.querySelector('#templateModal form').reset();
     document.getElementById('is_active').checked = true;
-});
+}
 </script>
 {% endblock %}

@@ -13,8 +13,8 @@
   <link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
   {% endif %}
   
-  <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
   
   <!-- Font Awesome 6 -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
@@ -28,395 +28,315 @@
 
     body {
       font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem 1rem;
     }
     
-    {% if LOGIN_BACKGROUND %}
-    body {
-      background: linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.85)), url('{{ MEDIA_URL }}{{ LOGIN_BACKGROUND }}') no-repeat center center fixed;
-      background-size: cover;
-    }
-    {% else %}
-    body {
-      background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
-    }
-    {% endif %}
-
-    .main-card {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-      max-width: 900px;
-      width: 100%;
-      padding: 3rem 2.5rem;
+    .hero-gradient {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
     
-    .logo-container {
-      text-align: center;
-      margin-bottom: 2rem;
-    }
-
-    .company-logo {
-      max-height: 60px;
-      margin-bottom: 1rem;
-    }
-
-    .logo-icon {
-      font-size: 3rem;
-      color: #6366f1;
-      margin-bottom: 1rem;
-    }
-    
-    .main-card h1 {
-      color: #1e293b;
-      font-weight: 700;
-      font-size: 2rem;
-      text-align: center;
-      margin-bottom: 0.5rem;
-    }
-    
-    .tagline {
-      color: #64748b;
-      text-align: center;
-      margin-bottom: 3rem;
-      font-size: 1.05rem;
-    }
-    
-    .portal-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 3rem;
-    }
-    
-    .portal-card {
-      background: #f8fafc;
-      border: 2px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 2rem 1.5rem;
-      text-align: center;
-      text-decoration: none;
-      display: block;
-      transition: all 0.2s ease;
-    }
-    
-    .portal-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-      border-color: #6366f1;
-    }
-
-    .portal-card.customer:hover {
-      border-color: #10b981;
-    }
-    
-    .portal-icon {
-      width: 70px;
-      height: 70px;
-      margin: 0 auto 1.25rem;
-      background: white;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      transition: transform 0.2s ease;
-    }
-
-    .portal-card:hover .portal-icon {
-      transform: scale(1.1);
-    }
-    
-    .portal-card.staff .portal-icon {
-      background: #eef2ff;
-      color: #6366f1;
-    }
-    
-    .portal-card.customer .portal-icon {
-      background: #ecfdf5;
-      color: #10b981;
-    }
-    
-    .portal-card h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-      color: #1e293b;
-    }
-    
-    .portal-card p {
-      color: #64748b;
-      margin-bottom: 1.25rem;
-      font-size: 0.9rem;
-      line-height: 1.5;
-    }
-    
-    .portal-btn {
-      padding: 0.75rem 1.5rem;
-      border-radius: 8px;
-      border: none;
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: white;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      transition: all 0.2s ease;
-    }
-    
-    .portal-btn.staff-btn {
-      background: #6366f1;
-    }
-    
-    .portal-btn.customer-btn {
-      background: #10b981;
-    }
-    
-    .portal-card:hover .portal-btn {
-      transform: translateY(-2px);
-    }
-    
-    .info-section {
-      background: #f8fafc;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1.25rem;
-    }
-    
-    .info-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    
-    .info-icon {
-      width: 40px;
-      height: 40px;
-      background: #6366f1;
-      color: white;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      flex-shrink: 0;
-    }
-    
-    .info-text h4 {
-      font-size: 0.7rem;
-      color: #64748b;
-      margin-bottom: 0.25rem;
-      text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-    
-    .info-text p {
-      margin: 0;
-      color: #1e293b;
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-
-    .info-text a {
-      color: #1e293b;
-      text-decoration: none;
-      transition: color 0.2s ease;
-    }
-
-    .info-text a:hover {
-      color: #6366f1;
-    }
-    
-    .footer-section {
-      text-align: center;
-      padding-top: 2rem;
-      border-top: 1px solid #e2e8f0;
-      color: #64748b;
-      font-size: 0.85rem;
-    }
-
-    .footer-section p {
-      margin-bottom: 0.25rem;
-    }
-
-    .footer-section a {
-      color: #6366f1;
-      text-decoration: none;
-      font-weight: 600;
-      transition: color 0.2s ease;
-    }
-
-    .footer-section a:hover {
-      color: #4f46e5;
-    }
-    
-    @media (max-width: 768px) {
-      body {
-        padding: 1rem;
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
       }
-
-      .main-card {
-        padding: 2rem 1.5rem;
+      to {
+        opacity: 1;
+        transform: translateY(0);
       }
-
-      .main-card h1 {
-        font-size: 1.75rem;
-      }
-      
-      .tagline {
-        font-size: 1rem;
-        margin-bottom: 2rem;
-      }
-      
-      .portal-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-      }
-      
-      .info-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-      }
-
-      .portal-icon {
-        width: 60px;
-        height: 60px;
-        font-size: 1.75rem;
-      }
+    }
+    
+    .fade-in-up {
+      animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .feature-card {
+      transition: all 0.3s ease;
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-5px);
     }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="row justify-content-center">
-      <div class="col-6">
-        <div class="main-card">
-          <!-- Logo -->
-          <div class="logo-container">
-            {% if LOGO_PATH %}
-              <img src="{{ MEDIA_URL }}{{ LOGO_PATH }}" alt="{{ SITE_NAME }}" class="company-logo">
-            {% else %}
-              <i class="fas fa-car-side logo-icon"></i>
-            {% endif %}
-          </div>
-          
-          <!-- <h1>{{ COMPANY_NAME|default:'Smart Vehicle Repairs' }}</h1> -->
-          <!-- <p class="tagline">{{ COMPANY_TAGLINE|default:'Your Trusted Auto Service Partner' }}</p> -->
-          
-          <!-- Portal Cards -->
-          <div class="portal-grid">
-            <!-- Staff Portal -->
-            <a href="{% url 'login' %}" class="portal-card staff">
-              <div class="portal-icon">
-                <i class="fas fa-user-tie"></i>
-              </div>
-              <h3>Staff Portal</h3>
-              <p>For managers, technicians, and administrators</p>
-              <span class="portal-btn staff-btn">
-                <i class="fas fa-sign-in-alt"></i>
-                <span>Staff Login</span>
-              </span>
-            </a>
-            
-            <!-- Customer Portal -->
-            <a href="{% url 'customer_login' %}" class="portal-card customer">
-              <div class="portal-icon">
-                <i class="fas fa-user"></i>
-              </div>
-              <h3>Customer Portal</h3>
-              <p>Book appointments and track your repairs</p>
-              <span class="portal-btn customer-btn">
-                <i class="fas fa-sign-in-alt"></i>
-                <span>Customer Login</span>
-              </span>
-            </a>
-          </div>
-          
-          <!-- Company Info -->
-          {% if COMPANY_EMAIL or COMPANY_PHONE or COMPANY_ADDRESS or COMPANY_WEBSITE %}
-          <div class="info-section">
-            <div class="info-grid">
-              {% if COMPANY_EMAIL %}
-              <div class="info-item">
-                <div class="info-icon">
-                  <i class="fas fa-envelope"></i>
-                </div>
-                <div class="info-text">
-                  <h4>Email</h4>
-                  <p><a href="mailto:{{ COMPANY_EMAIL }}">{{ COMPANY_EMAIL }}</a></p>
-                </div>
-              </div>
-              {% endif %}
-              
-              {% if COMPANY_PHONE %}
-              <div class="info-item">
-                <div class="info-icon">
-                  <i class="fas fa-phone"></i>
-                </div>
-                <div class="info-text">
-                  <h4>Phone</h4>
-                  <p><a href="tel:{{ COMPANY_PHONE }}">{{ COMPANY_PHONE }}</a></p>
-                </div>
-              </div>
-              {% endif %}
-              
-              {% if COMPANY_ADDRESS %}
-              <div class="info-item">
-                <div class="info-icon">
-                  <i class="fas fa-map-marker-alt"></i>
-                </div>
-                <div class="info-text">
-                  <h4>Address</h4>
-                  <p>{{ COMPANY_ADDRESS }}{% if COMPANY_CITY %}, {{ COMPANY_CITY }}{% endif %}</p>
-                </div>
-              </div>
-              {% endif %}
-              
-              {% if COMPANY_WEBSITE %}
-              <div class="info-item">
-                <div class="info-icon">
-                  <i class="fas fa-globe"></i>
-                </div>
-                <div class="info-text">
-                  <h4>Website</h4>
-                  <p><a href="{{ COMPANY_WEBSITE }}" target="_blank">Visit Website</a></p>
-                </div>
-              </div>
-              {% endif %}
+<body {% if LOGIN_BACKGROUND %}style="background: linear-gradient(rgba(15, 23, 42, {{ LOGIN_BACKGROUND_OVERLAY|default:'0.85' }}), rgba(15, 23, 42, {{ LOGIN_BACKGROUND_OVERLAY|default:'0.85' }})), url('{{ MEDIA_URL }}{{ LOGIN_BACKGROUND }}') no-repeat center center fixed; background-size: cover;"{% else %}class="bg-slate-50"{% endif %}>
+  
+  <!-- Top Navigation Bar with Login Buttons -->
+  <nav class="bg-white/95 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo -->
+        <div class="flex items-center gap-3">
+          {% if LOGO_PATH %}
+            <img src="{{ MEDIA_URL }}{{ LOGO_PATH }}" alt="{{ SITE_NAME }}" class="brand-logo h-10 w-auto">
+          {% else %}
+            <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <i class="fas fa-car-side text-white"></i>
             </div>
-          </div>
           {% endif %}
-          
-          <!-- Footer -->
-          <div class="footer-section">
-            <p>
-              <i class="fas fa-shield-alt"></i>
-              Secure and reliable service
-            </p>
-            <p>
-              &copy; 2025 {{ COMPANY_NAME }}. All rights reserved.
-            </p>
-            <p>
-              Developed by <a href="https://safetracksystems.com" target="_blank">SafeTrack Systems</a>
-            </p>
-          </div>
+          <span class="text-xl font-bold text-slate-900 hidden sm:inline">{{ COMPANY_NAME|default:'Smart Vehicle Repairs' }}</span>
+        </div>
+        
+        <!-- Login Buttons -->
+        <div class="flex items-center gap-3">
+          <a href="{% url 'customer_login' %}" class="px-4 py-2 text-sm font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-all">
+            <i class="fas fa-user mr-2"></i>
+            <span class="hidden sm:inline">Customer</span>
+            <span class="sm:hidden">Customer</span>
+          </a>
+          <a href="{% url 'login' %}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-all shadow-md hover:shadow-lg">
+            <i class="fas fa-user-tie mr-2"></i>
+            <span class="hidden sm:inline">Staff Login</span>
+            <span class="sm:hidden">Staff</span>
+          </a>
         </div>
       </div>
     </div>
-  </div>
-  
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero-gradient text-white relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+      <div class="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-3xl"></div>
+      <div class="absolute bottom-20 right-20 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+    </div>
+    
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 relative z-10">
+      <div class="text-center fade-in-up">
+        <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+          {{ COMPANY_NAME|default:'Smart Vehicle Repairs' }}
+        </h1>
+        <p class="text-xl md:text-2xl text-purple-100 mb-8 max-w-3xl mx-auto">
+          {{ COMPANY_TAGLINE|default:'Your Trusted Auto Service Partner' }}
+        </p>
+        <p class="text-lg text-purple-200 max-w-2xl mx-auto mb-10">
+          Professional vehicle maintenance and repair services with cutting-edge technology and expert technicians.
+        </p>
+        
+        <!-- CTA Buttons -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <a href="{% url 'customer_login' %}" class="w-full sm:w-auto px-8 py-4 bg-white text-indigo-600 font-semibold rounded-xl hover:bg-slate-50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+            <i class="fas fa-calendar-check mr-2"></i>
+            Book an Appointment
+          </a>
+          <a href="#services" class="w-full sm:w-auto px-8 py-4 bg-indigo-600/20 backdrop-blur-sm border-2 border-white/30 text-white font-semibold rounded-xl hover:bg-indigo-600/30 transition-all">
+            <i class="fas fa-info-circle mr-2"></i>
+            Learn More
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="services" class="py-16 md:py-24 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Why Choose Us</h2>
+        <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+          Experience excellence in vehicle service with our comprehensive solutions
+        </p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Feature 1 -->
+        <div class="feature-card bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 border border-blue-200">
+          <div class="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
+            <i class="fas fa-tools text-white text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-2">Expert Technicians</h3>
+          <p class="text-slate-600">Certified professionals with years of experience</p>
+        </div>
+        
+        <!-- Feature 2 -->
+        <div class="feature-card bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-6 border border-emerald-200">
+          <div class="w-14 h-14 bg-emerald-600 rounded-xl flex items-center justify-center mb-4">
+            <i class="fas fa-clock text-white text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-2">Fast Service</h3>
+          <p class="text-slate-600">Quick turnaround times without compromising quality</p>
+        </div>
+        
+        <!-- Feature 3 -->
+        <div class="feature-card bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-6 border border-purple-200">
+          <div class="w-14 h-14 bg-purple-600 rounded-xl flex items-center justify-center mb-4">
+            <i class="fas fa-shield-alt text-white text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-2">Quality Guarantee</h3>
+          <p class="text-slate-600">Warranty on all services and parts</p>
+        </div>
+        
+        <!-- Feature 4 -->
+        <div class="feature-card bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-6 border border-amber-200">
+          <div class="w-14 h-14 bg-amber-600 rounded-xl flex items-center justify-center mb-4">
+            <i class="fas fa-dollar-sign text-white text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-2">Fair Pricing</h3>
+          <p class="text-slate-600">Transparent and competitive rates</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services Section -->
+  <section class="py-16 md:py-24 bg-slate-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Our Services</h2>
+        <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+          Comprehensive vehicle maintenance and repair solutions
+        </p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg transition-shadow">
+          <div class="w-16 h-16 bg-indigo-100 rounded-xl flex items-center justify-center mb-6">
+            <i class="fas fa-wrench text-indigo-600 text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">General Repairs</h3>
+          <p class="text-slate-600">Complete diagnostic and repair services for all vehicle types</p>
+        </div>
+        
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg transition-shadow">
+          <div class="w-16 h-16 bg-emerald-100 rounded-xl flex items-center justify-center mb-6">
+            <i class="fas fa-oil-can text-emerald-600 text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Maintenance</h3>
+          <p class="text-slate-600">Regular maintenance to keep your vehicle running smoothly</p>
+        </div>
+        
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-lg transition-shadow">
+          <div class="w-16 h-16 bg-purple-100 rounded-xl flex items-center justify-center mb-6">
+            <i class="fas fa-clipboard-check text-purple-600 text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-bold text-slate-900 mb-3">Inspections</h3>
+          <p class="text-slate-600">Thorough vehicle inspections and safety checks</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  {% if COMPANY_EMAIL or COMPANY_PHONE or COMPANY_ADDRESS or COMPANY_WEBSITE %}
+  <section class="py-16 md:py-24 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-3xl p-8 md:p-12 text-white">
+        <div class="text-center mb-8">
+          <h2 class="text-3xl md:text-4xl font-bold mb-4">Get In Touch</h2>
+          <p class="text-indigo-100 text-lg">We're here to help with all your vehicle service needs</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {% if COMPANY_EMAIL %}
+          <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center border border-white/20">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-envelope text-2xl"></i>
+            </div>
+            <h4 class="font-semibold mb-2">Email</h4>
+            <a href="mailto:{{ COMPANY_EMAIL }}" class="text-indigo-100 hover:text-white transition-colors">
+              {{ COMPANY_EMAIL }}
+            </a>
+          </div>
+          {% endif %}
+          
+          {% if COMPANY_PHONE %}
+          <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center border border-white/20">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-phone text-2xl"></i>
+            </div>
+            <h4 class="font-semibold mb-2">Phone</h4>
+            <a href="tel:{{ COMPANY_PHONE }}" class="text-indigo-100 hover:text-white transition-colors">
+              {{ COMPANY_PHONE }}
+            </a>
+          </div>
+          {% endif %}
+          
+          {% if COMPANY_ADDRESS %}
+          <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center border border-white/20">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-map-marker-alt text-2xl"></i>
+            </div>
+            <h4 class="font-semibold mb-2">Address</h4>
+            <p class="text-indigo-100">
+              {{ COMPANY_ADDRESS }}{% if COMPANY_CITY %}, {{ COMPANY_CITY }}{% endif %}
+            </p>
+          </div>
+          {% endif %}
+          
+          {% if COMPANY_WEBSITE %}
+          <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center border border-white/20">
+            <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-globe text-2xl"></i>
+            </div>
+            <h4 class="font-semibold mb-2">Website</h4>
+            <a href="{{ COMPANY_WEBSITE }}" target="_blank" class="text-indigo-100 hover:text-white transition-colors">
+              Visit Website
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Footer -->
+  <footer class="bg-slate-900 text-slate-300 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            {% if LOGO_PATH %}
+              <img src="{{ MEDIA_URL }}{{ LOGO_PATH }}" alt="{{ SITE_NAME }}" class="brand-logo h-10 w-auto">
+            {% else %}
+              <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+                <i class="fas fa-car-side text-white"></i>
+              </div>
+            {% endif %}
+            <span class="text-xl font-bold text-white">{{ COMPANY_NAME|default:'Smart Vehicle Repairs' }}</span>
+          </div>
+          <p class="text-slate-400">
+            Your trusted partner for all vehicle maintenance and repair needs.
+          </p>
+        </div>
+        
+        <div>
+          <h4 class="text-white font-semibold mb-4">Quick Links</h4>
+          <ul class="space-y-2">
+            <li><a href="{% url 'customer_login' %}" class="hover:text-white transition-colors">Customer Portal</a></li>
+            <li><a href="{% url 'login' %}" class="hover:text-white transition-colors">Staff Portal</a></li>
+            <li><a href="#services" class="hover:text-white transition-colors">Our Services</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 class="text-white font-semibold mb-4">Contact</h4>
+          <ul class="space-y-2">
+            {% if COMPANY_EMAIL %}
+            <li class="flex items-center gap-2">
+              <i class="fas fa-envelope text-indigo-400"></i>
+              <a href="mailto:{{ COMPANY_EMAIL }}" class="hover:text-white transition-colors">{{ COMPANY_EMAIL }}</a>
+            </li>
+            {% endif %}
+            {% if COMPANY_PHONE %}
+            <li class="flex items-center gap-2">
+              <i class="fas fa-phone text-indigo-400"></i>
+              <a href="tel:{{ COMPANY_PHONE }}" class="hover:text-white transition-colors">{{ COMPANY_PHONE }}</a>
+            </li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+      
+      <div class="border-t border-slate-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-slate-400">
+          &copy; {{ now|date:"Y" }} {{ COMPANY_NAME }}. All rights reserved.
+        </p>
+        <p class="text-sm text-slate-400">
+          Developed by <a href="https://safetracksystems.com" target="_blank" class="text-indigo-400 hover:text-indigo-300 transition-colors font-semibold">SafeTrack Systems</a>
+        </p>
+      </div>
+    </div>
+  </footer>
+
 </body>
 </html>

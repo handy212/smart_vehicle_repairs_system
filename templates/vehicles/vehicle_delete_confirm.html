@@ -4,161 +4,186 @@
 {% block title %}Delete {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} - Smart Vehicle Repairs{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'vehicles:vehicle-list' %}">Vehicles</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'vehicles:vehicle-detail' vehicle.id %}">Vehicle Detail</a></li>
-            <li class="breadcrumb-item active">Delete Vehicle</li>
-        </ol>
+<div class="max-w-7xl mx-auto px-4 lg:px-8 py-6">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-slate-500 mb-6">
+        <a href="{% url 'dashboard' %}" class="hover:text-primary transition-colors">Dashboard</a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <a href="{% url 'vehicles:vehicle-list' %}" class="hover:text-primary transition-colors">Vehicles</a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="hover:text-primary transition-colors">Vehicle Detail</a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span class="text-slate-700 font-medium">Delete Vehicle</span>
     </nav>
 
-    <div class="delete-warning-card shadow-sm mb-4">
-        <div class="row g-4 align-items-center">
-            <div class="col-lg-7">
-                <div class="d-flex flex-column flex-md-row gap-3 align-items-md-center">
-                    <div class="hero-icon">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <div>
-                        <span class="badge-soft badge-soft-danger fw-semibold text-uppercase px-3 py-2">Danger Zone</span>
-                        <h1 class="mt-3 mb-2">Delete Vehicle Confirmation</h1>
-                        <p class="mb-0 text-white-50">This action is permanent and will erase the vehicle and every linked record from the system.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-5">
-                <div class="d-flex flex-wrap justify-content-lg-end gap-2">
-                    <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" class="btn btn-light">
-                        <i class="fas fa-edit me-2"></i>Edit Vehicle Instead
-                    </a>
-                    <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-outline-light">
-                        <i class="fas fa-times me-2"></i>Cancel Deletion
-                    </a>
-                </div>
-            </div>
+    <!-- Warning Header -->
+    <div class="bg-gradient-to-br from-rose-600 to-rose-700 rounded-2xl border border-rose-800 shadow-xl p-8 mb-6 text-center text-white">
+        <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+            <i class="fas fa-exclamation-triangle text-4xl"></i>
         </div>
+        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm uppercase tracking-wide mb-3">Danger Zone</span>
+        <h1 class="text-3xl font-bold mb-2">Delete Vehicle Confirmation</h1>
+        <p class="text-rose-100 mb-1">This action is permanent and will erase the vehicle and every linked record from the system.</p>
+        <p class="text-rose-100 font-semibold">This action cannot be undone.</p>
     </div>
 
-    <div class="row g-4">
-        <div class="col-xl-7">
-            <div class="vehicle-summary-panel mb-4 shadow-sm">
-                <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
-                    <div class="vehicle-avatar">
-                        {% if vehicle.image %}
-                            <img src="{{ vehicle.image.url }}" alt="{{ vehicle.display_name }}" onerror="this.remove(); this.parentNode.textContent='{{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}';">
-                        {% else %}
-                            {{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}
-                        {% endif %}
-                    </div>
-                    <div>
-                        <h4 class="mb-1">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h4>
-                        <p class="mb-0 text-muted small"><i class="fas fa-barcode me-2"></i>{{ vehicle.vin }}</p>
-                    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Vehicle Summary -->
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                    <h3 class="text-sm font-semibold text-slate-900">
+                        <i class="fas fa-car mr-2 text-primary"></i>
+                        Vehicle Information
+                    </h3>
                 </div>
-                <div class="row g-3">
-                    <div class="col-sm-6">
-                        {% if vehicle.trim %}
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Trim</span>
-                            <span class="fw-semibold">{{ vehicle.trim }}</span>
+                <div class="p-6">
+                    <div class="flex flex-wrap items-center gap-4 mb-6">
+                        <div class="w-20 h-20 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-white text-xl font-bold flex-shrink-0 overflow-hidden">
+                            {% if vehicle.image %}
+                                <img src="{{ vehicle.image.url }}" alt="{{ vehicle.display_name }}" class="w-full h-full object-cover" onerror="this.remove(); this.parentNode.textContent='{{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}';">
+                            {% else %}
+                                {{ vehicle.make.0|upper }}{{ vehicle.model.0|upper }}
+                            {% endif %}
                         </div>
-                        {% endif %}
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">License Plate</span>
-                            <span class="fw-semibold">{{ vehicle.license_plate }}</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Mileage</span>
-                            <span class="fw-semibold">{{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</span>
+                        <div>
+                            <h4 class="text-lg font-bold text-slate-900 mb-1">{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</h4>
+                            <p class="text-sm text-slate-500 mb-0 flex items-center gap-2">
+                                <i class="fas fa-barcode"></i>
+                                <span>{{ vehicle.vin }}</span>
+                            </p>
                         </div>
                     </div>
-                    <div class="col-sm-6">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Owner</span>
-                            <span class="fw-semibold">{{ vehicle.owner.user.get_full_name }}</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div class="space-y-3">
+                            {% if vehicle.trim %}
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-500">Trim</span>
+                                <span class="text-sm font-semibold text-slate-900">{{ vehicle.trim }}</span>
+                            </div>
+                            {% endif %}
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-500">License Plate</span>
+                                <span class="text-sm font-semibold text-slate-900">{{ vehicle.license_plate }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-500">Mileage</span>
+                                <span class="text-sm font-semibold text-slate-900">{{ vehicle.current_mileage|floatformat:0 }} {{ vehicle.mileage_unit }}</span>
+                            </div>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Status</span>
-                            <span class="fw-semibold">{{ vehicle.get_status_display }}</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Added On</span>
-                            <span class="fw-semibold">{{ vehicle.created_at|date:"M d, Y" }}</span>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-500">Owner</span>
+                                <span class="text-sm font-semibold text-slate-900">{{ vehicle.owner.user.get_full_name }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-500">Status</span>
+                                <span class="text-sm font-semibold text-slate-900">{{ vehicle.get_status_display }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-500">Added On</span>
+                                <span class="text-sm font-semibold text-slate-900">{{ vehicle.created_at|date:"M d, Y" }}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="impact-list mb-4 shadow-sm">
-                <h5 class="text-warning mb-3"><i class="fas fa-exclamation-triangle me-2"></i>What will be deleted</h5>
-                <ul class="list-unstyled mb-0">
-                    <li class="mb-2">
-                        <i class="fas fa-car text-warning me-2"></i>
-                        <strong>Vehicle Record:</strong> All specifications, ownership, and notes tied to this entry
-                    </li>
-                    <li class="mb-2">
-                        <i class="fas fa-wrench text-warning me-2"></i>
-                        <strong>Service History:</strong>
-                        {% if vehicle.work_orders.count > 0 %}
-                            {{ vehicle.work_orders.count }} work order{{ vehicle.work_orders.count|pluralize }} with technician notes and costs
-                        {% else %}
-                            No work orders found
-                        {% endif %}
-                    </li>
-                    <li class="mb-2">
-                        <i class="fas fa-tachometer-alt text-warning me-2"></i>
-                        <strong>Mileage Timeline:</strong>
-                        {% if vehicle.mileage_history.count > 0 %}
-                            {{ vehicle.mileage_history.count }} logged reading{{ vehicle.mileage_history.count|pluralize }}
-                        {% else %}
-                            No mileage records found
-                        {% endif %}
-                    </li>
-                    <li class="mb-2">
-                        <i class="fas fa-file-alt text-warning me-2"></i>
-                        <strong>Documents:</strong>
-                        {% if vehicle.documents.count > 0 %}
-                            {{ vehicle.documents.count }} supporting file{{ vehicle.documents.count|pluralize }} (insurance, registration, etc.)
-                        {% else %}
-                            No documents found
-                        {% endif %}
-                    </li>
-                    <li class="mb-2">
-                        <i class="fas fa-images text-warning me-2"></i>
-                        <strong>Photos:</strong>
-                        {% if vehicle.photos.count > 0 %}
-                            {{ vehicle.photos.count }} photo{{ vehicle.photos.count|pluralize }} stored in the gallery
-                        {% else %}
-                            No photos found
-                        {% endif %}
-                    </li>
-                    <li>
-                        <i class="fas fa-calendar text-warning me-2"></i>
-                        <strong>Appointments:</strong> All scheduled and historical appointments linked to this VIN
-                    </li>
-                </ul>
+            <!-- Impact List -->
+            <div class="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-amber-200 bg-gradient-to-r from-amber-50 to-white">
+                    <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-exclamation-triangle text-amber-600"></i>
+                        <span>What will be deleted</span>
+                    </h3>
+                </div>
+                <div class="p-6">
+                    <ul class="space-y-3 text-sm text-slate-700">
+                        <li class="flex items-start gap-3">
+                            <i class="fas fa-car text-amber-600 mt-0.5"></i>
+                            <div>
+                                <strong>Vehicle Record:</strong> All specifications, ownership, and notes tied to this entry
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="fas fa-wrench text-amber-600 mt-0.5"></i>
+                            <div>
+                                <strong>Service History:</strong>
+                                {% if vehicle.work_orders.count > 0 %}
+                                    {{ vehicle.work_orders.count }} work order{{ vehicle.work_orders.count|pluralize }} with technician notes and costs
+                                {% else %}
+                                    No work orders found
+                                {% endif %}
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="fas fa-tachometer-alt text-amber-600 mt-0.5"></i>
+                            <div>
+                                <strong>Mileage Timeline:</strong>
+                                {% if vehicle.mileage_history.count > 0 %}
+                                    {{ vehicle.mileage_history.count }} logged reading{{ vehicle.mileage_history.count|pluralize }}
+                                {% else %}
+                                    No mileage records found
+                                {% endif %}
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="fas fa-file-alt text-amber-600 mt-0.5"></i>
+                            <div>
+                                <strong>Documents:</strong>
+                                {% if vehicle.documents.count > 0 %}
+                                    {{ vehicle.documents.count }} supporting file{{ vehicle.documents.count|pluralize }} (insurance, registration, etc.)
+                                {% else %}
+                                    No documents found
+                                {% endif %}
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="fas fa-images text-amber-600 mt-0.5"></i>
+                            <div>
+                                <strong>Photos:</strong>
+                                {% if vehicle.photos.count > 0 %}
+                                    {{ vehicle.photos.count }} photo{{ vehicle.photos.count|pluralize }} stored in the gallery
+                                {% else %}
+                                    No photos found
+                                {% endif %}
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i class="fas fa-calendar text-amber-600 mt-0.5"></i>
+                            <div>
+                                <strong>Appointments:</strong> All scheduled and historical appointments linked to this VIN
+                            </div>
+                        </li>
+                    </ul>
+                </div>
             </div>
 
-            <div class="info-card">
-                <h6><i class="fas fa-lightbulb me-2 text-info"></i>Consider These Alternatives</h6>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="border rounded-3 p-3 h-100">
-                            <h6 class="text-info">Change Status</h6>
-                            <p class="small text-muted mb-3">Mark the vehicle as "Sold" or "Inactive" to preserve the full history.</p>
-                            <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" class="btn btn-outline-info w-100">
-                                <i class="fas fa-edit me-2"></i>Edit Vehicle
+            <!-- Alternatives -->
+            <div class="bg-white rounded-xl border border-blue-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-blue-200 bg-gradient-to-r from-blue-50 to-white">
+                    <h3 class="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-lightbulb text-blue-600"></i>
+                        <span>Consider These Alternatives</span>
+                    </h3>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 border-2 border-blue-200 rounded-xl">
+                            <h6 class="text-sm font-semibold text-blue-600 mb-2">Change Status</h6>
+                            <p class="text-xs text-slate-600 mb-3">Mark the vehicle as "Sold" or "Inactive" to preserve the full history.</p>
+                            <a href="{% url 'vehicles:vehicle-edit' vehicle.id %}" class="inline-flex items-center gap-2 px-4 py-2 border-2 border-blue-600 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors w-full justify-center">
+                                <i class="fas fa-edit"></i>
+                                <span>Edit Vehicle</span>
                             </a>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="border rounded-3 p-3 h-100">
-                            <h6 class="text-success">Export Records</h6>
-                            <p class="small text-muted mb-3">Download a PDF summary before removing this vehicle from the system.</p>
-                            <button class="btn btn-outline-success w-100" type="button" onclick="exportVehicleData()">
-                                <i class="fas fa-download me-2"></i>Export Data
+                        <div class="p-4 border-2 border-emerald-200 rounded-xl">
+                            <h6 class="text-sm font-semibold text-emerald-600 mb-2">Export Records</h6>
+                            <p class="text-xs text-slate-600 mb-3">Download a PDF summary before removing this vehicle from the system.</p>
+                            <button type="button" onclick="exportVehicleData()" class="inline-flex items-center gap-2 px-4 py-2 border-2 border-emerald-600 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-50 transition-colors w-full justify-center">
+                                <i class="fas fa-download"></i>
+                                <span>Export Data</span>
                             </button>
                         </div>
                     </div>
@@ -166,47 +191,63 @@
             </div>
         </div>
 
-        <div class="col-xl-5">
-            <div class="info-card confirmation-panel border border-danger-subtle shadow-sm">
-                <h5 class="text-danger mb-3"><i class="fas fa-shield-alt me-2"></i>Final Confirmation Required</h5>
-                <p class="text-muted small">Deletion removes this vehicle and every dependent record immediately. Confirm you understand these consequences.</p>
-
-                <div class="alert alert-danger d-flex align-items-start" role="alert">
-                    <i class="fas fa-exclamation-circle me-2 mt-1"></i>
-                    <div>
-                        <strong>Warning:</strong> This action cannot be undone. Make sure exports and communications are complete first.
-                    </div>
+        <!-- Right Column - Confirmation Panel -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-xl border-2 border-rose-300 shadow-sm overflow-hidden sticky top-20">
+                <div class="px-6 py-4 border-b border-rose-200 bg-gradient-to-r from-rose-50 to-white">
+                    <h5 class="text-sm font-bold text-rose-700 flex items-center gap-2">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Final Confirmation Required</span>
+                    </h5>
                 </div>
+                <div class="p-6">
+                    <p class="text-xs text-slate-600 mb-4">Deletion removes this vehicle and every dependent record immediately. Confirm you understand these consequences.</p>
 
-                <form method="post" id="vehicleDeleteForm" class="d-grid gap-3">
-                    {% csrf_token %}
-
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input" id="confirmDelete" required>
-                        <label class="form-check-label" for="confirmDelete">
-                            I understand that this will permanently delete <strong>{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</strong> and its historical data.
-                        </label>
+                    <div class="p-4 bg-rose-50 border border-rose-200 rounded-xl mb-4">
+                        <div class="flex items-start gap-2 text-sm text-rose-800">
+                            <i class="fas fa-exclamation-circle mt-0.5"></i>
+                            <div>
+                                <strong>Warning:</strong> This action cannot be undone. Make sure exports and communications are complete first.
+                            </div>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="form-label">Type <code>DELETE</code> to confirm:</label>
-                        <input type="text" class="form-control" id="deleteConfirmation" placeholder="DELETE" required>
-                    </div>
+                    <form method="post" id="vehicleDeleteForm" class="space-y-4">
+                        {% csrf_token %}
 
-                    <div>
-                        <label class="form-label">Reason for deletion (optional)</label>
-                        <textarea class="form-control" name="deletion_reason" rows="3" placeholder="Brief explanation for audit trail..."></textarea>
-                    </div>
+                        <div>
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" id="confirmDelete" required class="mt-1 w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary">
+                                <span class="text-xs text-slate-700">
+                                    I understand that this will permanently delete <strong>{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</strong> and its historical data.
+                                </span>
+                            </label>
+                        </div>
 
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-2"></i>Cancel
-                        </a>
-                        <button type="submit" class="btn btn-outline-danger" id="deleteButton" disabled>
-                            <i class="fas fa-trash-alt me-2"></i>Delete Vehicle Permanently
-                        </button>
-                    </div>
-                </form>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-2">Type <code class="px-1.5 py-0.5 bg-slate-100 rounded text-xs">DELETE</code> to confirm:</label>
+                            <input type="text" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                                   id="deleteConfirmation" placeholder="DELETE" required>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-2">Reason for deletion (optional)</label>
+                            <textarea class="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                                      name="deletion_reason" rows="3" placeholder="Brief explanation for audit trail..."></textarea>
+                        </div>
+
+                        <div class="space-y-2 pt-4 border-t border-slate-200">
+                            <a href="{% url 'vehicles:vehicle-detail' vehicle.id %}" class="block w-full text-center inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                                <i class="fas fa-arrow-left"></i>
+                                <span>Cancel</span>
+                            </a>
+                            <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-medium hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" id="deleteButton" disabled>
+                                <i class="fas fa-trash-alt"></i>
+                                <span>Delete Permanently</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -225,8 +266,13 @@
         const isReady = confirmCheckbox.checked && typedValue === 'DELETE';
 
         deleteButton.disabled = !isReady;
-        deleteButton.classList.toggle('btn-outline-danger', !isReady);
-        deleteButton.classList.toggle('btn-danger', isReady);
+        if (isReady) {
+            deleteButton.classList.remove('bg-rose-600');
+            deleteButton.classList.add('bg-rose-700', 'shadow-lg');
+        } else {
+            deleteButton.classList.remove('bg-rose-700', 'shadow-lg');
+            deleteButton.classList.add('bg-rose-600');
+        }
     }
 
     if (confirmCheckbox && deleteConfirmation) {
@@ -248,7 +294,7 @@
             }
 
             deleteButton.disabled = true;
-            deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Deleting...';
+            deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Deleting...';
         });
     }
 

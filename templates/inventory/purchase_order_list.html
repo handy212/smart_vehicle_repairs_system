@@ -703,37 +703,15 @@ function getCookie(name) {
 }
 
 function showToast(type, message) {
-    let toastContainer = document.getElementById('toast-container');
-    if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toast-container';
-        toastContainer.className = 'fixed top-4 right-4 z-50 space-y-2';
-        document.body.appendChild(toastContainer);
+    if (window.showToast && window.ToastSystem) {
+        // Use centralized ToastSystem
+        const toastType = type === 'danger' ? 'error' : type;
+        window.ToastSystem.show({ message, type: toastType });
+    } else {
+        // Fallback if ToastSystem not loaded
+        console.warn('ToastSystem not available');
+        alert(message);
     }
-    
-    const bgColors = {
-        'success': 'bg-emerald-600',
-        'danger': 'bg-rose-600',
-        'warning': 'bg-amber-600',
-        'info': 'bg-blue-600'
-    };
-    
-    const toast = document.createElement('div');
-    toast.className = `${bgColors[type] || 'bg-slate-600'} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px]`;
-    toast.innerHTML = `
-        <span class="flex-1">${message}</span>
-        <button onclick="this.parentElement.remove()" class="text-white/80 hover:text-white">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    
-    toastContainer.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
 }
 
 // Close dropdown menus when clicking outside

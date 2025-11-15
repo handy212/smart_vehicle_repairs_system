@@ -28,6 +28,7 @@ from apps.billing.models import Invoice, Estimate, Payment, TaxRate, EstimateLin
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.workorders.models import WorkOrder
+from apps.branches.utils import filter_queryset_for_user_branches
 from apps.inventory.models import Part
 from apps.accounts.models import User
 
@@ -117,8 +118,11 @@ def invoice_list(request):
         return redirect('dashboard')
     
     invoices = Invoice.objects.select_related(
-        'customer', 'vehicle', 'work_order'
+        'customer', 'vehicle', 'work_order', 'branch'
     ).order_by('-created_at')
+    
+    # Filter by active branch from session
+    invoices = filter_queryset_for_user_branches(invoices, request.user, request=request, use_active_branch=True)
     
     # Apply filters
     status_filter = request.GET.get('status')
@@ -172,12 +176,11 @@ def invoice_detail(request, invoice_id):
         messages.error(request, 'You do not have permission to access billing.')
         return redirect('dashboard')
     
-    invoice = get_object_or_404(
-        Invoice.objects.select_related(
-            'customer', 'vehicle', 'work_order', 'estimate'
-        ),
-        id=invoice_id
+    invoice_qs = Invoice.objects.select_related(
+        'customer', 'vehicle', 'work_order', 'estimate', 'branch'
     )
+    invoice_qs = filter_queryset_for_user_branches(invoice_qs, request.user, request=request, use_active_branch=True)
+    invoice = get_object_or_404(invoice_qs, id=invoice_id)
     
     # Get payments for this invoice
     payments = invoice.payments.order_by('-payment_date')
@@ -370,7 +373,7 @@ def invoice_print(request, invoice_id):
     
     invoice = get_object_or_404(
         Invoice.objects.select_related(
-            'customer', 'vehicle', 'work_order'
+            'customer', 'vehicle', 'work_order', 'branch'
         ),
         id=invoice_id
     )
@@ -378,6 +381,8 @@ def invoice_print(request, invoice_id):
     context = {
         'invoice': invoice,
         'page_title': f'Print Invoice {invoice.invoice_number}',
+        'print_generated_at': timezone.now(),
+        'print_branch': invoice.branch or (invoice.work_order.branch if invoice.work_order else None),
     }
     
     return render(request, 'billing/invoice_print.html', context)
@@ -393,8 +398,11 @@ def estimate_list(request):
         return redirect('dashboard')
     
     estimates = Estimate.objects.select_related(
-        'customer', 'vehicle'
+        'customer', 'vehicle', 'branch'
     ).order_by('-created_at')
+    
+    # Filter by active branch from session
+    estimates = filter_queryset_for_user_branches(estimates, request.user, request=request, use_active_branch=True)
     
     # Apply filters
     status_filter = request.GET.get('status')
@@ -528,12 +536,11 @@ def estimate_detail(request, estimate_id):
         messages.error(request, 'You do not have permission to access billing.')
         return redirect('dashboard')
     
-    estimate = get_object_or_404(
-        Estimate.objects.select_related(
-            'customer', 'vehicle', 'work_order'
-        ).prefetch_related('line_items'),
-        id=estimate_id
-    )
+    estimate_qs = Estimate.objects.select_related(
+        'customer', 'vehicle', 'work_order', 'branch'
+    ).prefetch_related('line_items')
+    estimate_qs = filter_queryset_for_user_branches(estimate_qs, request.user, request=request, use_active_branch=True)
+    estimate = get_object_or_404(estimate_qs, id=estimate_id)
     
     context = {
         'estimate': estimate,
@@ -642,8 +649,15 @@ def payment_list(request):
         return redirect('dashboard')
     
     payments = Payment.objects.select_related(
-        'customer', 'invoice'
+        'customer', 'invoice', 'invoice__branch'
     ).order_by('-payment_date')
+    
+    # Filter payments by invoice's branch - get active branch IDs
+    active_branch_ids = filter_queryset_for_user_branches(
+        Invoice.objects.all(), request.user, request=request, use_active_branch=True
+    ).values_list('branch_id', flat=True).distinct()
+    if active_branch_ids.exists():
+        payments = payments.filter(invoice__branch_id__in=active_branch_ids)
     
     # Apply filters
     status_filter = request.GET.get('status')

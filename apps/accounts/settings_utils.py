@@ -98,6 +98,9 @@ def get_branding_settings():
         'logo_dark_path',
         'favicon_path',
         'login_background',
+        'customer_login_background',  # Separate background for customer portal
+        'staff_login_background',      # Separate background for staff portal
+        'login_background_overlay',    # Overlay opacity (0.0 to 1.0)
         'primary_color',
         'secondary_color',
         'success_color',
@@ -105,7 +108,10 @@ def get_branding_settings():
         'theme_mode',
     ]
     
-    return get_settings(keys, {'theme_mode': 'light'})
+    return get_settings(keys, {
+        'theme_mode': 'light',
+        'login_background_overlay': '0.85',  # Default 85% opacity
+    })
 
 
 def get_email_settings():

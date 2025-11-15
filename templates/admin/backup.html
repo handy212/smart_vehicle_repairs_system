@@ -4,187 +4,217 @@
 {% block title %}Backup & Restore - Admin{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2><i class="fas fa-database text-primary"></i> Backup & Restore</h2>
-            <p class="text-muted mb-0">Manage system backups and restoration</p>
-        </div>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBackupModal">
-            <i class="fas fa-plus"></i> Create Backup
-        </button>
-    </div>
-
-    <!-- Info Cards -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-1">Total Backups</h6>
-                            <h3 class="mb-0">{{ page_obj.paginator.count }}</h3>
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 py-6 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-900 flex items-center gap-3">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-database text-white text-xl"></i>
                         </div>
-                        <div class="bg-primary bg-opacity-10 p-3 rounded">
-                            <i class="fas fa-archive fa-2x text-primary"></i>
-                        </div>
-                    </div>
+                        Backup & Restore
+                    </h1>
+                    <p class="text-slate-600 mt-2">Create and manage system backups</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-1">Last Backup</h6>
-                            <h3 class="mb-0">
-                                {% if page_obj %}
-                                {{ page_obj.0.started_at|date:"M d" }}
-                                {% else %}
-                                Never
-                                {% endif %}
-                            </h3>
-                        </div>
-                        <div class="bg-success bg-opacity-10 p-3 rounded">
-                            <i class="fas fa-clock fa-2x text-success"></i>
-                        </div>
+
+        <!-- Create Backup Form -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+            <h2 class="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <i class="fas fa-plus-circle text-blue-600"></i>
+                Create New Backup
+            </h2>
+            <form method="post" action="{% url 'admin_panel:backup_restore' %}" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_backup">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">
+                            <i class="fas fa-layer-group text-blue-600 mr-2"></i>
+                            Backup Type
+                        </label>
+                        <select name="backup_type" required
+                                class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            {% for value, label in backup_types %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">
+                            <i class="fas fa-sticky-note text-blue-600 mr-2"></i>
+                            Notes (Optional)
+                        </label>
+                        <input type="text" name="notes" 
+                               placeholder="Add notes about this backup..."
+                               class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="text-muted mb-1">Storage Used</h6>
-                            <h3 class="mb-0">
-                                {% widthratio page_obj|length 1 100 %} MB
-                            </h3>
-                        </div>
-                        <div class="bg-warning bg-opacity-10 p-3 rounded">
-                            <i class="fas fa-hdd fa-2x text-warning"></i>
-                        </div>
-                    </div>
+                
+                <div class="flex justify-end">
+                    <button type="submit" 
+                            class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200">
+                        <i class="fas fa-save"></i>
+                        <span>Create Backup</span>
+                    </button>
                 </div>
-            </div>
+            </form>
         </div>
-    </div>
 
-    <!-- Backup Schedule Info -->
-    <div class="alert alert-info mb-4">
-        <div class="d-flex align-items-center">
-            <i class="fas fa-info-circle fa-2x me-3"></i>
-            <div>
-                <h6 class="mb-1">Automated Backups</h6>
-                <p class="mb-0">
-                    Automated backups run daily at 2:00 AM. Manual backups can be created anytime.
-                    Backups are retained for 30 days by default.
-                </p>
+        <!-- Backups List -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+                <h2 class="text-xl font-semibold text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-list text-blue-600"></i>
+                    Backup History
+                </h2>
             </div>
-        </div>
-    </div>
-
-    <!-- Backups List -->
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+            
+            {% if page_obj %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-gradient-to-r from-slate-50 to-slate-100">
                         <tr>
-                            <th>Backup ID</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>File Size</th>
-                            <th>Created By</th>
-                            <th>Started</th>
-                            <th>Completed</th>
-                            <th class="text-end">Actions</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Created By</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">File Size</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Notes</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Duration</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody class="bg-white divide-y divide-slate-200">
                         {% for backup in page_obj %}
-                        <tr>
-                            <td>
-                                <code>#{{ backup.id }}</code>
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-slate-900">{{ backup.started_at|date:"Y-m-d H:i:s" }}</div>
+                                {% if backup.completed_at %}
+                                <div class="text-xs text-slate-500">Completed: {{ backup.completed_at|date:"H:i:s" }}</div>
+                                {% endif %}
                             </td>
-                            <td>
-                                <span class="badge bg-{% if backup.backup_type == 'full' %}primary{% elif backup.backup_type == 'database' %}info{% else %}secondary{% endif %}">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if backup.backup_type == 'full' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
+                                    <i class="fas fa-database mr-1"></i>
                                     {{ backup.get_backup_type_display }}
                                 </span>
-                            </td>
-                            <td>
-                                {% if backup.status == 'completed' %}
-                                <span class="badge bg-success">
-                                    <i class="fas fa-check"></i> Completed
+                                {% elif backup.backup_type == 'database' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                    <i class="fas fa-database mr-1"></i>
+                                    {{ backup.get_backup_type_display }}
                                 </span>
-                                {% elif backup.status == 'in_progress' %}
-                                <span class="badge bg-warning">
-                                    <i class="fas fa-spinner fa-spin"></i> In Progress
+                                {% else %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    <i class="fas fa-file-archive mr-1"></i>
+                                    {{ backup.get_backup_type_display }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if backup.status == 'completed' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                    <i class="fas fa-check-circle mr-1"></i>
+                                    {{ backup.get_status_display }}
                                 </span>
                                 {% elif backup.status == 'failed' %}
-                                <span class="badge bg-danger">
-                                    <i class="fas fa-times"></i> Failed
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                                    <i class="fas fa-times-circle mr-1"></i>
+                                    {{ backup.get_status_display }}
+                                </span>
+                                {% elif backup.status == 'in_progress' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                                    <i class="fas fa-spinner fa-spin mr-1"></i>
+                                    {{ backup.get_status_display }}
                                 </span>
                                 {% else %}
-                                <span class="badge bg-secondary">Pending</span>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-800">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    {{ backup.get_status_display }}
+                                </span>
                                 {% endif %}
-                            </td>
-                            <td>{{ backup.get_file_size_display }}</td>
-                            <td>
-                                {% if backup.created_by %}
-                                {{ backup.created_by.get_full_name }}
-                                {% else %}
-                                <span class="text-muted">System</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ backup.started_at|date:"Y-m-d H:i" }}</td>
-                            <td>
-                                {% if backup.completed_at %}
-                                {{ backup.completed_at|date:"Y-m-d H:i" }}
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end">
-                                <div class="btn-group btn-group-sm">
-                                    {% if backup.status == 'completed' %}
-                                    <button class="btn btn-outline-primary" 
-                                            onclick="viewBackupDetails({{ backup.id }})"
-                                            title="View Details">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-success" 
-                                            onclick="downloadBackup({{ backup.id }})"
-                                            title="Download">
-                                        <i class="fas fa-download"></i>
-                                    </button>
-                                    <button class="btn btn-outline-warning" 
-                                            onclick="restoreBackup({{ backup.id }})"
-                                            title="Restore">
-                                        <i class="fas fa-undo"></i>
-                                    </button>
-                                    {% endif %}
-                                    <button class="btn btn-outline-danger" 
-                                            onclick="deleteBackup({{ backup.id }})"
-                                            title="Delete">
-                                        <i class="fas fa-trash"></i>
+                                {% if backup.error_message %}
+                                <div class="mt-1">
+                                    <button onclick="openModal('errorModal{{ backup.id }}')" 
+                                            class="text-xs text-red-600 hover:text-red-800 underline">
+                                        View Error
                                     </button>
                                 </div>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if backup.created_by %}
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                        {{ backup.created_by.first_name.0|default:"" }}{{ backup.created_by.last_name.0|default:"" }}
+                                    </div>
+                                    <div>
+                                        <div class="font-semibold text-slate-900 text-sm">{{ backup.created_by.get_full_name|default:backup.created_by.username }}</div>
+                                        <div class="text-xs text-slate-500">{{ backup.created_by.email }}</div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="text-sm text-slate-500 italic">System</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-slate-900 font-medium">{{ backup.get_file_size_display }}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm text-slate-600 max-w-xs truncate">{{ backup.notes|default:"-" }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if backup.completed_at %}
+                                <div class="text-sm text-slate-600">
+                                    Completed
+                                </div>
+                                {% elif backup.status == 'in_progress' %}
+                                <div class="text-sm text-yellow-600">
+                                    <i class="fas fa-spinner fa-spin mr-1"></i>
+                                    Running...
+                                </div>
+                                {% else %}
+                                <span class="text-sm text-slate-400">-</span>
+                                {% endif %}
                             </td>
                         </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center py-5">
-                                <i class="fas fa-database fa-4x text-muted mb-3"></i>
-                                <p class="text-muted">No backups found. Create your first backup to get started.</p>
-                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createBackupModal">
-                                    <i class="fas fa-plus"></i> Create First Backup
-                                </button>
-                            </td>
-                        </tr>
+
+                        <!-- Error Modal -->
+                        {% if backup.error_message %}
+                        <div id="errorModal{{ backup.id }}" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                                <div class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" onclick="closeModal('errorModal{{ backup.id }}')"></div>
+                                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                                    <div class="bg-red-50 px-6 py-4 border-b border-red-200">
+                                        <div class="flex items-center justify-between">
+                                            <h3 class="text-lg font-semibold text-red-900 flex items-center gap-2">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                Backup Error
+                                            </h3>
+                                            <button onclick="closeModal('errorModal{{ backup.id }}')" class="text-red-400 hover:text-red-600">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white px-6 py-4">
+                                        <div class="mt-2">
+                                            <p class="text-sm text-slate-600 whitespace-pre-wrap font-mono bg-slate-50 p-4 rounded border border-slate-200">{{ backup.error_message }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end">
+                                        <button onclick="closeModal('errorModal{{ backup.id }}')" 
+                                                class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors">
+                                            Close
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
@@ -192,187 +222,79 @@
 
             <!-- Pagination -->
             {% if page_obj.has_other_pages %}
-            <nav class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page=1">First</a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
-                    </li>
-                    {% endif %}
-
-                    <li class="page-item active">
-                        <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-                    </li>
-
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-200">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-slate-600">
+                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} backups
+                    </div>
+                    <div class="flex gap-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}" 
+                           class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                            <i class="fas fa-chevron-left"></i>
+                            Previous
+                        </a>
+                        {% else %}
+                        <span class="px-4 py-2 text-sm font-medium text-slate-400 bg-slate-100 border border-slate-200 rounded-lg cursor-not-allowed">
+                            <i class="fas fa-chevron-left"></i>
+                            Previous
+                        </span>
+                        {% endif %}
+                        
+                        <span class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                        
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}" 
+                           class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+                            Next
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                        {% else %}
+                        <span class="px-4 py-2 text-sm font-medium text-slate-400 bg-slate-100 border border-slate-200 rounded-lg cursor-not-allowed">
+                            Next
+                            <i class="fas fa-chevron-right"></i>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="px-6 py-12 text-center">
+                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-database text-slate-400 text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-900 mb-2">No Backups Yet</h3>
+                <p class="text-slate-600 mb-4">Create your first backup using the form above.</p>
+            </div>
             {% endif %}
         </div>
     </div>
 </div>
 
-<!-- Create Backup Modal -->
-<div class="modal fade" id="createBackupModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="create_backup">
-                
-                <div class="modal-header">
-                    <h5 class="modal-title">Create New Backup</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Backup Type</label>
-                        <select class="form-select" name="backup_type" required>
-                            {% for code, name in backup_types %}
-                            <option value="{{ code }}">{{ name }}</option>
-                            {% endfor %}
-                        </select>
-                        <small class="text-muted">
-                            Full backup includes database and media files. Database-only backup is faster.
-                        </small>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Notes (Optional)</label>
-                        <textarea class="form-control" name="notes" rows="3" 
-                                  placeholder="Add notes about this backup..."></textarea>
-                    </div>
-
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Note:</strong> Backup creation may take several minutes depending on the size of your data.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Create Backup
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
 <script>
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+function openModal(modalId) {
+    document.getElementById(modalId).classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        document.querySelectorAll('[id^="errorModal"]').forEach(modal => {
+            if (!modal.classList.contains('hidden')) {
+                closeModal(modal.id);
             }
-        }
-    }
-    return cookieValue;
-}
-
-function viewBackupDetails(backupId) {
-    fetch(`/admin-panel/backup/${backupId}/details/`)
-        .then(response => response.json())
-        .then(data => {
-            let detailsHtml = `
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <tr><th>Backup ID:</th><td>#${data.id}</td></tr>
-                        <tr><th>Type:</th><td>${data.type}</td></tr>
-                        <tr><th>Status:</th><td>${data.status}</td></tr>
-                        <tr><th>File Size:</th><td>${data.file_size}</td></tr>
-                        <tr><th>Created By:</th><td>${data.created_by}</td></tr>
-                        <tr><th>Started:</th><td>${data.started}</td></tr>
-                        <tr><th>Completed:</th><td>${data.completed || 'N/A'}</td></tr>
-                        <tr><th>File Exists:</th><td>${data.file_exists ? 'Yes' : 'No'}</td></tr>
-                        ${data.notes ? `<tr><th>Notes:</th><td>${data.notes}</td></tr>` : ''}
-                        ${data.error ? `<tr><th>Error:</th><td class="text-danger">${data.error}</td></tr>` : ''}
-                    </table>
-                </div>
-            `;
-            
-            // Show in a modal or alert
-            alert('Backup Details:\n\n' + 
-                  `ID: #${data.id}\n` +
-                  `Type: ${data.type}\n` +
-                  `Status: ${data.status}\n` +
-                  `Size: ${data.file_size}\n` +
-                  `Created: ${data.started}\n` +
-                  `By: ${data.created_by}`
-            );
-        })
-        .catch(error => {
-            alert('Error loading backup details: ' + error);
         });
-}
-
-function downloadBackup(backupId) {
-    if (confirm('Download backup #' + backupId + '?')) {
-        window.location.href = `/admin-panel/backup/${backupId}/download/`;
     }
-}
-
-function restoreBackup(backupId) {
-    if (!confirm('⚠️ WARNING: Restoring this backup will replace ALL current data!\n\nA safety backup will be created automatically before restore.\n\nAre you absolutely sure you want to continue?')) {
-        return;
-    }
-    
-    if (!confirm('This is your FINAL confirmation. The restore process cannot be undone.\n\nClick OK to proceed with restore.')) {
-        return;
-    }
-    
-    // Create a form and submit it
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/admin-panel/backup/${backupId}/restore/`;
-    
-    const csrfToken = getCookie('csrftoken');
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrfmiddlewaretoken';
-    csrfInput.value = csrfToken;
-    form.appendChild(csrfInput);
-    
-    document.body.appendChild(form);
-    form.submit();
-}
-
-function deleteBackup(backupId) {
-    if (!confirm('Are you sure you want to delete backup #' + backupId + '?\n\nThis action cannot be undone.')) {
-        return;
-    }
-    
-    // Create a form and submit it
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/admin-panel/backup/${backupId}/delete/`;
-    
-    const csrfToken = getCookie('csrftoken');
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrfmiddlewaretoken';
-    csrfInput.value = csrfToken;
-    form.appendChild(csrfInput);
-    
-    document.body.appendChild(form);
-    form.submit();
-}
+});
 </script>
 {% endblock %}
+

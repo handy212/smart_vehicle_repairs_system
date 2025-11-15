@@ -71,8 +71,8 @@ def dashboard_overview(request):
     
     # Low stock items
     low_stock_count = Part.objects.filter(
-        quantity_on_hand__lte=F('reorder_point'),
-        status='active'
+        quantity_in_stock__lte=F('reorder_point'),
+        is_active=True
     ).count()
     
     # Pending estimates
@@ -114,8 +114,8 @@ def dashboard_overview(request):
             'work_orders': [
                 {
                     'id': wo.id,
-                    'wo_number': wo.wo_number,
-                    'customer': wo.customer.name,
+                    'wo_number': wo.work_order_number,
+                    'customer': wo.customer.company_name or wo.customer.full_name,
                     'vehicle': f"{wo.vehicle.year} {wo.vehicle.make} {wo.vehicle.model}",
                     'status': wo.status,
                     'created_at': wo.created_at.isoformat()
@@ -125,7 +125,7 @@ def dashboard_overview(request):
             'appointments': [
                 {
                     'id': apt.id,
-                    'customer': f"{apt.customer.first_name} {apt.customer.last_name}",
+                    'customer': apt.customer.full_name,
                     'vehicle': f"{apt.vehicle.year} {apt.vehicle.make} {apt.vehicle.model}",
                     'appointment_date': apt.appointment_date.isoformat(),
                     'status': apt.status
@@ -205,12 +205,17 @@ def revenue_report(request):
         invoice__invoice_date__gte=start_date,
         invoice__invoice_date__lte=end_date,
         invoice__status__in=['paid', 'partial']
-    ).select_related('assigned_to', 'invoice')
+    ).select_related('primary_technician', 'invoice').prefetch_related('assigned_technicians')
     
     revenue_by_tech = {}
     for wo in work_orders:
-        if wo.assigned_to:
-            tech_name = f"{wo.assigned_to.first_name} {wo.assigned_to.last_name}"
+        # Use primary technician or first assigned technician
+        tech = wo.primary_technician
+        if not tech and wo.assigned_technicians.exists():
+            tech = wo.assigned_technicians.first()
+        
+        if tech and hasattr(wo, 'invoice') and wo.invoice:
+            tech_name = f"{tech.first_name} {tech.last_name}"
             if tech_name not in revenue_by_tech:
                 revenue_by_tech[tech_name] = {
                     'revenue': Decimal('0'),
@@ -428,11 +433,12 @@ def technician_performance(request):
     
     performance_data = []
     for tech in technicians:
+        # Get work orders where tech is primary or assigned
         work_orders = WorkOrder.objects.filter(
-            assigned_to=tech,
+            Q(primary_technician=tech) | Q(assigned_technicians=tech),
             created_at__date__gte=start_date,
             created_at__date__lte=end_date
-        )
+        ).distinct()
         
         completed = work_orders.filter(status='completed')
         
@@ -547,31 +553,32 @@ def inventory_valuation(request):
     """
     Calculate total inventory value
     """
-    parts = Part.objects.filter(status='active')
+    parts = Part.objects.filter(is_active=True)
     
     total_value = Decimal('0')
     by_category = {}
     
     for part in parts:
-        value = part.quantity_on_hand * part.cost
-        total_value += value
-        
-        category = part.category.name if part.category else 'Uncategorized'
-        if category not in by_category:
-            by_category[category] = {
-                'value': Decimal('0'),
-                'items': 0,
-                'quantity': 0
-            }
-        by_category[category]['value'] += value
-        by_category[category]['items'] += 1
-        by_category[category]['quantity'] += part.quantity_on_hand
+        if part.cost_price and part.quantity_in_stock:
+            value = part.quantity_in_stock * part.cost_price
+            total_value += value
+            
+            category = part.category.name if part.category else 'Uncategorized'
+            if category not in by_category:
+                by_category[category] = {
+                    'value': Decimal('0'),
+                    'items': 0,
+                    'quantity': 0
+                }
+            by_category[category]['value'] += value
+            by_category[category]['items'] += 1
+            by_category[category]['quantity'] += part.quantity_in_stock
     
     return Response({
         'summary': {
             'total_value': float(total_value),
             'total_items': parts.count(),
-            'total_quantity': parts.aggregate(total=Sum('quantity_on_hand'))['total'] or 0
+            'total_quantity': parts.aggregate(total=Sum('quantity_in_stock'))['total'] or 0
         },
         'by_category': [
             {
@@ -601,7 +608,7 @@ def inventory_turnover(request):
     
     # Get parts with usage data
     parts_data = []
-    for part in Part.objects.filter(status='active'):
+    for part in Part.objects.filter(is_active=True):
         # Calculate usage from inventory transactions
         usage = InventoryTransaction.objects.filter(
             part=part,
@@ -611,7 +618,7 @@ def inventory_turnover(request):
         ).aggregate(total=Sum('quantity'))['total'] or 0
         
         # Calculate turnover rate
-        avg_inventory = part.quantity_on_hand  # Simplified
+        avg_inventory = part.quantity_in_stock or 0  # Simplified
         turnover_rate = (abs(usage) / avg_inventory) if avg_inventory > 0 else 0
         
         if usage != 0:  # Only include parts with movement
@@ -624,7 +631,7 @@ def inventory_turnover(request):
                 },
                 'metrics': {
                     'usage': abs(usage),
-                    'current_stock': part.quantity_on_hand,
+                    'current_stock': part.quantity_in_stock or 0,
                     'turnover_rate': float(turnover_rate),
                     'days_of_stock': int(90 / turnover_rate) if turnover_rate > 0 else 999
                 }
@@ -661,11 +668,11 @@ def low_stock_report(request):
     Get low stock items that need reordering
     """
     low_stock = Part.objects.filter(
-        quantity_on_hand__lte=F('reorder_point'),
-        status='active'
-    ).select_related('category', 'supplier').order_by('quantity_on_hand')
+        quantity_in_stock__lte=F('reorder_point'),
+        is_active=True
+    ).select_related('category', 'preferred_supplier').order_by('quantity_in_stock')
     
-    critical_stock = low_stock.filter(quantity_on_hand__lte=F('reorder_point') / 2)
+    critical_stock = low_stock.filter(quantity_in_stock__lte=F('reorder_point') / 2)
     
     return Response({
         'summary': {
@@ -681,15 +688,15 @@ def low_stock_report(request):
                     'category': part.category.name if part.category else None
                 },
                 'stock': {
-                    'current': part.quantity_on_hand,
+                    'current': part.quantity_in_stock or 0,
                     'reorder_point': part.reorder_point,
                     'reorder_quantity': part.reorder_quantity
                 },
                 'supplier': {
-                    'id': part.supplier.id if part.supplier else None,
-                    'name': part.supplier.name if part.supplier else None
+                    'id': part.preferred_supplier.id if part.preferred_supplier else None,
+                    'name': part.preferred_supplier.name if part.preferred_supplier else None
                 },
-                'is_critical': part.quantity_on_hand <= part.reorder_point / 2
+                'is_critical': (part.quantity_in_stock or 0) <= (part.reorder_point / 2)
             }
             for part in low_stock
         ]
@@ -713,7 +720,7 @@ def customer_statistics(request):
     # New customers (last 30 days)
     thirty_days_ago = timezone.now() - timedelta(days=30)
     new_customers = Customer.objects.filter(
-        customer_since__gte=thirty_days_ago
+        created_at__gte=thirty_days_ago
     ).count()
     
     # Customer lifetime value (top 10)
@@ -728,7 +735,7 @@ def customer_statistics(request):
             top_customers.append({
                 'customer': {
                     'id': customer.id,
-                    'name': customer.name,
+                    'name': customer.company_name or customer.full_name,
                     'type': customer.customer_type
                 },
                 'lifetime_value': float(total_spent),
@@ -739,12 +746,19 @@ def customer_statistics(request):
     top_customers.sort(key=lambda x: x['lifetime_value'], reverse=True)
     
     return Response({
-        'summary': {
-            'total_customers': total_customers,
-            'active_customers': active_customers,
-            'new_customers_30_days': new_customers
-        },
-        'top_customers': top_customers[:10]
+        'total_customers': total_customers,
+        'new_customers': new_customers,
+        'active_customers': active_customers,
+        'by_type': [],  # TODO: Add customer type breakdown
+        'top_customers': [
+            {
+                'id': item['customer']['id'],
+                'name': item['customer']['name'],
+                'revenue': item['lifetime_value'],
+                'work_orders': item['work_orders']
+            }
+            for item in top_customers[:10]
+        ]
     })
 
 
@@ -758,44 +772,89 @@ def vehicle_statistics(request):
     """
     Vehicle statistics by make, model, year
     """
-    vehicles = Vehicle.objects.all()
-    
-    by_make = vehicles.values('make').annotate(
-        count=Count('id')
-    ).order_by('-count')[:10]
-    
-    by_year = vehicles.values('year').annotate(
-        count=Count('id')
-    ).order_by('-year')
-    
-    # Vehicles by service frequency
-    most_serviced = []
-    for vehicle in vehicles:
-        wo_count = WorkOrder.objects.filter(vehicle=vehicle).count()
-        if wo_count > 0:
-            most_serviced.append({
-                'vehicle': {
-                    'id': vehicle.id,
-                    'year': vehicle.year,
-                    'make': vehicle.make,
-                    'model': vehicle.model,
-                    'vin': vehicle.vin,
-                    'license_plate': vehicle.license_plate
-                },
-                'customer': vehicle.customer.name,
-                'service_count': wo_count
-            })
-    
-    most_serviced.sort(key=lambda x: x['service_count'], reverse=True)
-    
-    return Response({
-        'summary': {
-            'total_vehicles': vehicles.count()
-        },
-        'by_make': list(by_make),
-        'by_year': list(by_year),
-        'most_serviced': most_serviced[:10]
-    })
+    try:
+        # Get statistics without loading all vehicles
+        try:
+            by_make = list(Vehicle.objects.values('make').annotate(
+                count=Count('id')
+            ).order_by('-count')[:10])
+        except Exception as e:
+            by_make = []
+        
+        try:
+            by_year = list(Vehicle.objects.values('year').annotate(
+                count=Count('id')
+            ).order_by('-year'))
+        except Exception as e:
+            by_year = []
+        
+        try:
+            total_vehicles = Vehicle.objects.count()
+        except Exception as e:
+            total_vehicles = 0
+        
+        # Vehicles by service frequency - get top 10
+        # Use aggregation to get work order counts efficiently
+        most_serviced = []
+        try:
+            vehicles_with_counts = Vehicle.objects.annotate(
+                wo_count=Count('work_orders')
+            ).filter(wo_count__gt=0).order_by('-wo_count')[:10].select_related('customer', 'customer__user')
+            
+            for vehicle in vehicles_with_counts:
+                try:
+                    wo_count = vehicle.wo_count
+                    
+                    # Get customer name safely
+                    customer_name = 'Unknown'
+                    try:
+                        if vehicle.customer:
+                            customer = vehicle.customer
+                            if customer.company_name:
+                                customer_name = customer.company_name
+                            elif hasattr(customer, 'full_name'):
+                                try:
+                                    customer_name = customer.full_name
+                                except:
+                                    if customer.user:
+                                        customer_name = f"{customer.user.first_name} {customer.user.last_name}".strip() or customer.user.username
+                            elif customer.user:
+                                customer_name = f"{customer.user.first_name} {customer.user.last_name}".strip() or customer.user.username
+                    except:
+                        pass
+                    
+                    most_serviced.append({
+                        'vehicle': {
+                            'id': vehicle.id,
+                            'year': vehicle.year if vehicle.year else 0,
+                            'make': vehicle.make if vehicle.make else '',
+                            'model': vehicle.model if vehicle.model else '',
+                            'vin': vehicle.vin if vehicle.vin else '',
+                            'license_plate': vehicle.license_plate if vehicle.license_plate else ''
+                        },
+                        'customer': customer_name,
+                        'service_count': wo_count
+                    })
+                except Exception as e:
+                    # Skip vehicles with errors
+                    continue
+        except Exception as e:
+            # If aggregation fails, return empty list
+            most_serviced = []
+        
+        return Response({
+            'total_vehicles': total_vehicles,
+            'average_age': None,  # TODO: Calculate average vehicle age
+            'by_make': by_make,
+            'by_year': by_year,
+            'most_serviced': most_serviced
+        })
+    except Exception as e:
+        import traceback
+        return Response({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -804,43 +863,72 @@ def service_due_report(request):
     """
     Vehicles due for service based on time/mileage
     """
-    # This would ideally use vehicle-specific service schedules
-    # For now, using a simplified approach
-    
-    today = timezone.now().date()
-    six_months_ago = today - timedelta(days=180)
-    
-    # Vehicles not serviced in 6 months
-    vehicles_due = []
-    for vehicle in Vehicle.objects.filter(status='active'):
-        last_service = WorkOrder.objects.filter(
-            vehicle=vehicle,
-            status='completed'
-        ).order_by('-completed_at').first()
+    try:
+        # This would ideally use vehicle-specific service schedules
+        # For now, using a simplified approach
         
-        if not last_service or last_service.completed_at.date() < six_months_ago:
-            vehicles_due.append({
-                'vehicle': {
-                    'id': vehicle.id,
-                    'year': vehicle.year,
-                    'make': vehicle.make,
-                    'model': vehicle.model,
-                    'vin': vehicle.vin,
-                    'license_plate': vehicle.license_plate
-                },
-                'customer': {
-                    'id': vehicle.customer.id,
-                    'name': vehicle.customer.name,
-                    'email': vehicle.customer.user.email if vehicle.customer.user else None,
-                    'phone': vehicle.customer.phone
-                },
-                'last_service_date': last_service.completed_at.date().isoformat() if last_service else None,
-                'days_since_service': (today - last_service.completed_at.date()).days if last_service else 999
-            })
-    
-    return Response({
-        'summary': {
-            'vehicles_due': len(vehicles_due)
-        },
-        'vehicles': vehicles_due
-    })
+        today = timezone.now().date()
+        six_months_ago = today - timedelta(days=180)
+        
+        # Vehicles not serviced in 6 months
+        vehicles_due = []
+        active_vehicles = Vehicle.objects.filter(status='active')
+        
+        for vehicle in active_vehicles:
+            try:
+                last_service = WorkOrder.objects.filter(
+                    vehicle=vehicle,
+                    status='completed'
+                ).order_by('-completed_at').first()
+                
+                last_service_date = None
+                if last_service and last_service.completed_at:
+                    try:
+                        last_service_date = last_service.completed_at.date()
+                    except:
+                        pass
+                
+                # Include vehicle if no service or service was more than 6 months ago
+                should_include = False
+                if not last_service:
+                    should_include = True
+                elif last_service_date and last_service_date < six_months_ago:
+                    should_include = True
+                
+                if should_include:
+                    # Build vehicle info safely
+                    parts = []
+                    if vehicle.year:
+                        parts.append(str(vehicle.year))
+                    if vehicle.make:
+                        parts.append(vehicle.make)
+                    if vehicle.model:
+                        parts.append(vehicle.model)
+                    vehicle_info = ' '.join(parts) if parts else f"Vehicle #{vehicle.id}"
+                    if vehicle.license_plate:
+                        vehicle_info += f" ({vehicle.license_plate})"
+                    
+                    vehicles_due.append({
+                        'id': vehicle.id,
+                        'year': vehicle.year if vehicle.year else None,
+                        'make': vehicle.make or '',
+                        'model': vehicle.model or '',
+                        'license_plate': vehicle.license_plate or '',
+                        'vehicle_info': vehicle_info,
+                        'last_service_date': last_service_date.isoformat() if last_service_date else None,
+                        'next_service_due': None,  # TODO: Calculate based on service schedule
+                        'mileage': vehicle.current_mileage if vehicle.current_mileage else None
+                    })
+            except Exception as e:
+                # Skip vehicles with errors
+                continue
+        
+        return Response({
+            'vehicles': vehicles_due
+        })
+    except Exception as e:
+        import traceback
+        return Response({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

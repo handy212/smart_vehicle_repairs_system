@@ -3,247 +3,196 @@
 
 {% block title %}{% if is_edit %}Edit{% else %}Create{% endif %} Inspection Template{% endblock %}
 
-{% block extra_css %}
-<style>
-    .template-form-container {
-        max-width: 800px;
-        margin: 0 auto;
-    }
-    
-    .form-section {
-        background: white;
-        border-radius: 8px;
-        padding: 2rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .form-section h5 {
-        color: var(--primary-color);
-        margin-bottom: 1.5rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #f0f0f0;
-    }
-    
-    .form-label {
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 0.5rem;
-    }
-    
-    .form-control:focus,
-    .form-select:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-    }
-    
-    .btn-primary {
-                background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 80%, black) 100%);
-        border: none;
-        padding: 0.75rem 2rem;
-    }
-    
-    .btn-primary:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
-    }
-    
-    .form-check-input:checked {
-        background-color: var(--primary-color);
-        border-color: var(--primary-color);
-    }
-    
-    .required::after {
-        content: " *";
-        color: #dc3545;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="template-form-container">
-        <!-- Page Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2>
-                    <i class="fas fa-clipboard-list text-primary me-2"></i>
-                    {% if is_edit %}Edit{% else %}Create{% endif %} Inspection Template
-                </h2>
-                <p class="text-muted mb-0">
-                    {% if is_edit %}
-                        Update template details and settings
-                    {% else %}
-                        Create a new inspection checklist template
-                    {% endif %}
-                </p>
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Page Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+            <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2 mb-2">
+                <i class="fas fa-clipboard-list text-primary"></i>
+                {% if is_edit %}Edit{% else %}Create{% endif %} Inspection Template
+            </h2>
+            <p class="text-slate-600 text-sm">
+                {% if is_edit %}
+                    Update template details and settings
+                {% else %}
+                    Create a new inspection checklist template
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% if is_edit %}{% url 'inspections:template-detail' template.id %}{% else %}{% url 'inspections:template-list' %}{% endif %}" 
+           class="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+            <i class="fas fa-arrow-left"></i>
+            Back
+        </a>
+    </div>
+
+    <!-- Form -->
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Basic Information -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <h5 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2 pb-2 border-b border-slate-200">
+                <i class="fas fa-info-circle text-primary"></i>
+                Basic Information
+            </h5>
+            
+            <div class="mb-4">
+                <label for="name" class="block text-sm font-semibold text-slate-700 mb-2">
+                    Template Name <span class="text-rose-600">*</span>
+                </label>
+                <input type="text" 
+                       class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                       id="name" 
+                       name="name" 
+                       value="{{ template.name|default:'' }}"
+                       placeholder="e.g., Pre-Purchase Inspection, Safety Inspection"
+                       required>
+                <p class="text-xs text-slate-500 mt-1">A descriptive name for this inspection template</p>
             </div>
-            <a href="{% if is_edit %}{% url 'inspections:template-detail' template.id %}{% else %}{% url 'inspections:template-list' %}{% endif %}" 
-               class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Back
-            </a>
+            
+            <div>
+                <label for="description" class="block text-sm font-semibold text-slate-700 mb-2">Description</label>
+                <textarea class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all" 
+                          id="description" 
+                          name="description" 
+                          rows="4"
+                          placeholder="Describe the purpose and scope of this inspection template...">{{ template.description|default:'' }}</textarea>
+                <p class="text-xs text-slate-500 mt-1">Optional: Add details about when to use this template</p>
+            </div>
         </div>
 
-        <!-- Form -->
-        <form method="post">
-            {% csrf_token %}
+        <!-- Settings -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <h5 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2 pb-2 border-b border-slate-200">
+                <i class="fas fa-cog text-primary"></i>
+                Template Settings
+            </h5>
             
-            <!-- Basic Information -->
-            <div class="form-section">
-                <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
-                
-                <div class="mb-3">
-                    <label for="name" class="form-label required">Template Name</label>
-                    <input type="text" 
-                           class="form-control" 
-                           id="name" 
-                           name="name" 
-                           value="{{ template.name|default:'' }}"
-                           placeholder="e.g., Pre-Purchase Inspection, Safety Inspection"
-                           required>
-                    <small class="text-muted">A descriptive name for this inspection template</small>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="description" class="form-label">Description</label>
-                    <textarea class="form-control" 
-                              id="description" 
-                              name="description" 
-                              rows="4"
-                              placeholder="Describe the purpose and scope of this inspection template...">{{ template.description|default:'' }}</textarea>
-                    <small class="text-muted">Optional: Add details about when to use this template</small>
-                </div>
-            </div>
-
-            <!-- Settings -->
-            <div class="form-section">
-                <h5><i class="fas fa-cog me-2"></i>Template Settings</h5>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
-                                   id="is_active" 
-                                   name="is_active"
-                                   {% if not is_edit or template.is_active %}checked{% endif %}>
-                            <label class="form-check-label" for="is_active">
-                                <strong>Active</strong>
-                                <br>
-                                <small class="text-muted">Available for use in inspections</small>
-                            </label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" 
+                               class="mt-1 w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary" 
+                               id="is_active" 
+                               name="is_active"
+                               {% if not is_edit or template.is_active %}checked{% endif %}>
+                        <div>
+                            <div class="text-sm font-semibold text-slate-900">Active</div>
+                            <p class="text-xs text-slate-500">Available for use in inspections</p>
                         </div>
-                        
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
-                                   id="is_default" 
-                                   name="is_default"
-                                   {% if template.is_default %}checked{% endif %}>
-                            <label class="form-check-label" for="is_default">
-                                <strong>Default Template</strong>
-                                <br>
-                                <small class="text-muted">Pre-selected when creating inspections</small>
-                            </label>
-                        </div>
-                        
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
-                                   id="requires_odometer" 
-                                   name="requires_odometer"
-                                   {% if not is_edit or template.requires_odometer %}checked{% endif %}>
-                            <label class="form-check-label" for="requires_odometer">
-                                <strong>Requires Odometer Reading</strong>
-                                <br>
-                                <small class="text-muted">Technician must enter mileage</small>
-                            </label>
-                        </div>
-                    </div>
+                    </label>
                     
-                    <div class="col-md-6">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
-                                   id="requires_technician_signature" 
-                                   name="requires_technician_signature"
-                                   {% if not is_edit or template.requires_technician_signature %}checked{% endif %}>
-                            <label class="form-check-label" for="requires_technician_signature">
-                                <strong>Requires Technician Signature</strong>
-                                <br>
-                                <small class="text-muted">Technician must sign inspection</small>
-                            </label>
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" 
+                               class="mt-1 w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary" 
+                               id="is_default" 
+                               name="is_default"
+                               {% if template.is_default %}checked{% endif %}>
+                        <div>
+                            <div class="text-sm font-semibold text-slate-900">Default Template</div>
+                            <p class="text-xs text-slate-500">Pre-selected when creating inspections</p>
                         </div>
-                        
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
-                                   id="requires_customer_signature" 
-                                   name="requires_customer_signature"
-                                   {% if template.requires_customer_signature %}checked{% endif %}>
-                            <label class="form-check-label" for="requires_customer_signature">
-                                <strong>Requires Customer Signature</strong>
-                                <br>
-                                <small class="text-muted">Customer must sign inspection</small>
-                            </label>
+                    </label>
+                    
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" 
+                               class="mt-1 w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary" 
+                               id="requires_odometer" 
+                               name="requires_odometer"
+                               {% if not is_edit or template.requires_odometer %}checked{% endif %}>
+                        <div>
+                            <div class="text-sm font-semibold text-slate-900">Requires Odometer Reading</div>
+                            <p class="text-xs text-slate-500">Technician must enter mileage</p>
                         </div>
-                        
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
-                                   id="allows_photos" 
-                                   name="allows_photos"
-                                   {% if not is_edit or template.allows_photos %}checked{% endif %}>
-                            <label class="form-check-label" for="allows_photos">
-                                <strong>Allow Photos</strong>
-                                <br>
-                                <small class="text-muted">Technicians can attach photos</small>
-                            </label>
-                        </div>
-                        
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" 
-                                   type="checkbox" 
-                                   id="allows_video" 
-                                   name="allows_video"
-                                   {% if template.allows_video %}checked{% endif %}>
-                            <label class="form-check-label" for="allows_video">
-                                <strong>Allow Video</strong>
-                                <br>
-                                <small class="text-muted">Technicians can attach videos</small>
-                            </label>
-                        </div>
-                    </div>
+                    </label>
                 </div>
-            </div>
-
-            {% if is_edit %}
-            <!-- Inspection Items Info -->
-            <div class="form-section">
-                <h5><i class="fas fa-tasks me-2"></i>Inspection Items</h5>
-                <div class="alert alert-info mb-0">
-                    <i class="fas fa-info-circle me-2"></i>
-                    This template has <strong>{{ template.items.count }}</strong> inspection item(s).
-                    <br>
-                    <small>To manage inspection items, save changes here first, then use the template detail page.</small>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Action Buttons -->
-            <div class="d-flex justify-content-between align-items-center">
-                <a href="{% if is_edit %}{% url 'inspections:template-detail' template.id %}{% else %}{% url 'inspections:template-list' %}{% endif %}" 
-                   class="btn btn-outline-secondary">
-                    <i class="fas fa-times me-1"></i> Cancel
-                </a>
                 
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save me-1"></i>
-                    {% if is_edit %}Update Template{% else %}Create Template{% endif %}
-                </button>
+                <div class="space-y-4">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" 
+                               class="mt-1 w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary" 
+                               id="requires_technician_signature" 
+                               name="requires_technician_signature"
+                               {% if not is_edit or template.requires_technician_signature %}checked{% endif %}>
+                        <div>
+                            <div class="text-sm font-semibold text-slate-900">Requires Technician Signature</div>
+                            <p class="text-xs text-slate-500">Technician must sign inspection</p>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" 
+                               class="mt-1 w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary" 
+                               id="requires_customer_signature" 
+                               name="requires_customer_signature"
+                               {% if template.requires_customer_signature %}checked{% endif %}>
+                        <div>
+                            <div class="text-sm font-semibold text-slate-900">Requires Customer Signature</div>
+                            <p class="text-xs text-slate-500">Customer must sign inspection</p>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" 
+                               class="mt-1 w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary" 
+                               id="allows_photos" 
+                               name="allows_photos"
+                               {% if not is_edit or template.allows_photos %}checked{% endif %}>
+                        <div>
+                            <div class="text-sm font-semibold text-slate-900">Allow Photos</div>
+                            <p class="text-xs text-slate-500">Technicians can attach photos</p>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" 
+                               class="mt-1 w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary" 
+                               id="allows_video" 
+                               name="allows_video"
+                               {% if template.allows_video %}checked{% endif %}>
+                        <div>
+                            <div class="text-sm font-semibold text-slate-900">Allow Video</div>
+                            <p class="text-xs text-slate-500">Technicians can attach videos</p>
+                        </div>
+                    </label>
+                </div>
             </div>
-        </form>
-    </div>
+        </div>
+
+        {% if is_edit %}
+        <!-- Inspection Items Info -->
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div class="flex items-start gap-3">
+                <i class="fas fa-info-circle text-blue-600 mt-0.5"></i>
+                <div>
+                    <p class="text-sm font-semibold text-blue-900 mb-1">Inspection Items</p>
+                    <p class="text-sm text-blue-700 mb-2">
+                        This template has <strong>{{ template.items.count }}</strong> inspection item(s).
+                    </p>
+                    <p class="text-xs text-blue-600">
+                        To manage inspection items, save changes here first, then use the template detail page.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <a href="{% if is_edit %}{% url 'inspections:template-detail' template.id %}{% else %}{% url 'inspections:template-list' %}{% endif %}" 
+               class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+                <i class="fas fa-times"></i>
+                Cancel
+            </a>
+            
+            <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-semibold shadow-lg shadow-primary/20">
+                <i class="fas fa-save"></i>
+                {% if is_edit %}Update Template{% else %}Create Template{% endif %}
+            </button>
+        </div>
+    </form>
 </div>
 {% endblock %}
 

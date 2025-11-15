@@ -23,6 +23,7 @@ class AppointmentListSerializer(serializers.ModelSerializer):
     vehicle_display = serializers.CharField(source='vehicle.display_name', read_only=True)
     vehicle_plate = serializers.CharField(source='vehicle.license_plate', read_only=True)
     service_bay_name = serializers.CharField(source='service_bay.name', read_only=True)
+    branch_name = serializers.CharField(source='branch.name', read_only=True)
     technician_names = serializers.CharField(read_only=True)
     is_today = serializers.BooleanField(read_only=True)
     is_overdue = serializers.BooleanField(read_only=True)
@@ -34,7 +35,7 @@ class AppointmentListSerializer(serializers.ModelSerializer):
             'id', 'appointment_number', 'customer', 'customer_name', 'customer_number',
             'vehicle', 'vehicle_display', 'vehicle_plate', 'appointment_date',
             'appointment_time', 'end_time', 'estimated_duration', 'service_type',
-            'priority', 'status', 'service_bay', 'service_bay_name',
+            'priority', 'status', 'service_bay', 'service_bay_name', 'branch', 'branch_name',
             'technician_names', 'estimated_cost', 'is_today', 'is_overdue',
             'checked_in', 'created_at'
         ]
@@ -50,6 +51,7 @@ class AppointmentDetailSerializer(serializers.ModelSerializer):
     vehicle_vin = serializers.CharField(source='vehicle.vin', read_only=True)
     vehicle_plate = serializers.CharField(source='vehicle.license_plate', read_only=True)
     service_bay_name = serializers.CharField(source='service_bay.name', read_only=True)
+    branch_name = serializers.CharField(source='branch.name', read_only=True)
     confirmed_by_name = serializers.CharField(source='confirmed_by.get_full_name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
     technician_names = serializers.CharField(read_only=True)
@@ -74,7 +76,7 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = [
-            'customer', 'vehicle', 'appointment_date', 'appointment_time',
+            'customer', 'vehicle', 'branch', 'appointment_date', 'appointment_time',
             'estimated_duration', 'service_type', 'priority', 'customer_concerns',
             'special_instructions', 'estimated_cost', 'service_bay',
             'assigned_technicians'
@@ -128,7 +130,7 @@ class AppointmentUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = [
-            'appointment_date', 'appointment_time', 'estimated_duration',
+            'branch', 'appointment_date', 'appointment_time', 'estimated_duration',
             'service_type', 'priority', 'customer_concerns', 'special_instructions',
             'estimated_cost', 'status', 'service_bay', 'assigned_technicians',
             'confirmation_method', 'cancellation_reason'

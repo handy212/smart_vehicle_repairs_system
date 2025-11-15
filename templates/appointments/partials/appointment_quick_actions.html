@@ -437,27 +437,39 @@ function hideLoadingState() {
 }
 
 function showSuccess(message) {
-    // Use your preferred notification system
-    if (typeof showToast === 'function') {
-        showToast(message, 'success');
+    // Use centralized ToastSystem
+    if (window.showSuccessToast) {
+        window.showSuccessToast(message);
+    } else if (window.ToastSystem) {
+        window.ToastSystem.success(message);
+    } else if (window.showToast) {
+        window.showToast(message, 'success');
     } else {
         alert(message);
     }
 }
 
 function showError(message) {
-    // Use your preferred notification system
-    if (typeof showToast === 'function') {
-        showToast(message, 'error');
+    // Use centralized ToastSystem
+    if (window.showErrorToast) {
+        window.showErrorToast(message);
+    } else if (window.ToastSystem) {
+        window.ToastSystem.error(message);
+    } else if (window.showToast) {
+        window.showToast(message, 'error');
     } else {
         alert('Error: ' + message);
     }
 }
 
 function showInfo(message) {
-    // Use your preferred notification system
-    if (typeof showToast === 'function') {
-        showToast(message, 'info');
+    // Use centralized ToastSystem
+    if (window.showInfoToast) {
+        window.showInfoToast(message);
+    } else if (window.ToastSystem) {
+        window.ToastSystem.info(message);
+    } else if (window.showToast) {
+        window.showToast(message, 'info');
     } else {
         alert(message);
     }

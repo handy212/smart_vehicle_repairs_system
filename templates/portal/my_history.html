@@ -3,142 +3,111 @@
 
 {% block title %}Service History{% endblock %}
 
-{% block extra_css %}
-{{ block.super }}
-<style>
-    .history-header {
-        background: linear-gradient(135deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 80%, black) 100%);
-        color: white;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
-    }
-    .timeline {
-        position: relative;
-        padding: 20px 0;
-    }
-    .timeline::before {
-        content: '';
-        position: absolute;
-        left: 30px;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: #e0e0e0;
-    }
-</style>
-{% endblock %}
-
-{% block portal_content %}
-<div class="history-header">
-    <div class="container">
-        <h1>
-            <i class="fas fa-history me-2"></i>
-            Service History
-        </h1>
-        <p class="mb-0 opacity-75">Complete history of all services for your vehicles</p>
+{% block content %}
+<!-- Page Header -->
+<div class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent"></div>
+    <div class="relative px-4 lg:px-8 py-12 max-w-7xl mx-auto">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-gradient-to-br from-primary to-primary/70 rounded-xl flex items-center justify-center text-white shadow-lg">
+                <i class="fas fa-history text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-3xl lg:text-4xl font-bold text-slate-900 mb-1">Service History</h1>
+                <p class="text-slate-600 text-sm">Complete history of all services for your vehicles</p>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'portal:home' %}">Portal Home</a></li>
-                    <li class="breadcrumb-item active">Service History</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
+<!-- Main Content -->
+<div class="px-4 lg:px-8 pb-12 max-w-7xl mx-auto space-y-6">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-sm text-slate-500">
+        <a href="{% url 'portal:home' %}" class="hover:text-primary transition-colors">Portal Home</a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span class="text-slate-700 font-medium">Service History</span>
+    </nav>
     
     <!-- Vehicle Filter -->
     {% if vehicles.count > 1 %}
-    <div class="card mb-4">
-        <div class="card-body">
-            <h6 class="mb-3">Filter by Vehicle:</h6>
-            <div class="d-flex flex-wrap gap-2">
-                <a href="?" class="btn btn-sm {% if not selected_vehicle %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                    All Vehicles
-                </a>
-                {% for vehicle in vehicles %}
-                <a href="?vehicle={{ vehicle.id }}" class="btn btn-sm {% if selected_vehicle == vehicle.id|stringformat:'s' %}btn-primary{% else %}btn-outline-primary{% endif %}">
-                    {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}
-                </a>
-                {% endfor %}
-            </div>
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm p-6">
+        <h6 class="text-sm font-bold text-slate-900 mb-4">Filter by Vehicle:</h6>
+        <div class="flex flex-wrap gap-2">
+            <a href="?" class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold transition-all {% if not selected_vehicle %}bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg shadow-primary/20{% else %}border-2 border-slate-200/50 text-slate-700 hover:bg-slate-50{% endif %}">
+                All Vehicles
+            </a>
+            {% for vehicle in vehicles %}
+            <a href="?vehicle={{ vehicle.id }}" class="inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold transition-all {% if selected_vehicle == vehicle.id|stringformat:'s' %}bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg shadow-primary/20{% else %}border-2 border-slate-200/50 text-slate-700 hover:bg-slate-50{% endif %}">
+                {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}
+            </a>
+            {% endfor %}
         </div>
     </div>
     {% endif %}
     
     <!-- Service History -->
     {% if work_orders %}
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-wrench me-2"></i>Service Records
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+        <div class="px-6 py-5 bg-gradient-to-r from-primary to-primary/80 text-white flex items-center justify-between">
+            <h5 class="text-sm font-bold mb-0 flex items-center gap-2">
+                <i class="fas fa-wrench"></i>
+                <span>Service Records</span>
             </h5>
         </div>
-        <div class="card-body p-0">
+        <div class="p-6 space-y-4">
             {% for work_order in work_orders %}
                 {% include 'portal/partials/service_card.html' with service=work_order %}
             {% endfor %}
         </div>
     </div>
     {% else %}
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <i class="fas fa-wrench fa-4x text-muted mb-4"></i>
-            <h4>No Service History</h4>
-            <p class="text-muted">No service records found for your vehicles</p>
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm">
+        <div class="p-12 text-center">
+            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-wrench text-3xl text-slate-400"></i>
+            </div>
+            <h4 class="text-lg font-semibold text-slate-900 mb-2">No Service History</h4>
+            <p class="text-sm text-slate-500 mb-0">No service records found for your vehicles</p>
         </div>
     </div>
     {% endif %}
     
     <!-- Inspections -->
     {% if inspections %}
-    <div class="card mt-4">
-        <div class="card-header bg-info text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-clipboard-check me-2"></i>Vehicle Inspections
+    <div class="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden">
+        <div class="px-6 py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white flex items-center justify-between">
+            <h5 class="text-sm font-bold mb-0 flex items-center gap-2">
+                <i class="fas fa-clipboard-check"></i>
+                <span>Vehicle Inspections</span>
             </h5>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Vehicle</th>
-                            <th>Technician</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for inspection in inspections %}
-                        <tr>
-                            <td>{{ inspection.inspection_date|date:"M d, Y" }}</td>
-                            <td>{{ inspection.vehicle.year }} {{ inspection.vehicle.make }} {{ inspection.vehicle.model }}</td>
-                            <td>{{ inspection.technician.get_full_name|default:'N/A' }}</td>
-                            <td>
-                                {% if inspection.status == 'completed' %}
-                                    <span class="badge bg-success">
-                                {% else %}
-                                    <span class="badge bg-warning">
-                                {% endif %}
-                                    {{ inspection.get_status_display }}
-                                </span>
-                            </td>
-                            <td>
-                                <a href="{% url 'portal:inspection-detail' inspection.id %}" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-eye"></i> View
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="p-6 space-y-4">
+            {% for inspection in inspections %}
+            <div class="bg-slate-50/50 rounded-xl border border-slate-200/50 p-5 hover:shadow-lg hover:bg-white/80 transition-all">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1">
+                        <h6 class="font-bold text-slate-900 mb-2">{{ inspection.inspection_number }}</h6>
+                        <p class="text-sm text-slate-500 mb-2">{{ inspection.inspection_date|date:"M d, Y" }}</p>
+                        {% if inspection.vehicle %}
+                        <p class="text-sm text-slate-600 mb-0">{{ inspection.vehicle.year }} {{ inspection.vehicle.make }} {{ inspection.vehicle.model }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold 
+                            {% if inspection.status == 'passed' %}bg-emerald-100 text-emerald-700
+                            {% elif inspection.status == 'failed' %}bg-rose-100 text-rose-700
+                            {% else %}bg-slate-100 text-slate-700{% endif %}">
+                            {{ inspection.get_status_display }}
+                        </span>
+                        <a href="{% url 'portal:inspection-detail' inspection.id %}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-primary border-2 border-primary/20 rounded-xl hover:bg-primary/10 transition-all">
+                            <i class="fas fa-eye"></i>
+                            <span>View</span>
+                        </a>
+                    </div>
+                </div>
             </div>
+            {% endfor %}
         </div>
     </div>
     {% endif %}

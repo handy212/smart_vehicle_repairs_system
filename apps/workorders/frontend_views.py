@@ -12,6 +12,8 @@ import json
 import csv
 from datetime import datetime, timedelta
 
+from apps.branches.utils import resolve_branch, filter_queryset_for_user_branches
+
 from .models import (
     WorkOrder, ServiceTask, WorkOrderPart, 
     TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto
@@ -22,19 +24,29 @@ from apps.accounts.models import User
 from apps.billing.models import Estimate, EstimateLineItem
 
 
+def _get_workorder_or_404(request, queryset=None, **lookup):
+    """Retrieve a work order scoped to the current user's branch access."""
+    base_queryset = queryset if queryset is not None else WorkOrder.objects.all()
+    scoped_queryset = filter_queryset_for_user_branches(base_queryset, request.user, request=request, use_active_branch=True)
+    return get_object_or_404(scoped_queryset, **lookup)
+
+
 @login_required
 def workorder_list_view(request):
     """
     Work order list with filtering and search
     """
     workorders = WorkOrder.objects.select_related(
-        'customer', 'vehicle', 'primary_technician'
+        'customer', 'vehicle', 'primary_technician', 'branch'
     ).prefetch_related('assigned_technicians', 'tasks', 'parts').annotate(
         completed_tasks_count=Count('tasks', filter=Q(tasks__status='completed')),
         total_parts_quantity=Sum('parts__quantity'),
         total_hours=Sum('time_logs__duration_hours'),
         total_labor_cost=Sum('time_logs__labor_cost')
     )
+
+    # Filter by active branch from session
+    workorders = filter_queryset_for_user_branches(workorders, request.user, request=request, use_active_branch=True)
     
     # Apply filters
     status_filter = request.GET.get('status')
@@ -101,7 +113,7 @@ def workorder_kanban_view(request):
     """
     # Get work orders grouped by status
     workorders = WorkOrder.objects.select_related(
-        'customer', 'vehicle', 'primary_technician'
+        'customer', 'vehicle', 'primary_technician', 'branch'
     ).prefetch_related('assigned_technicians', 'tasks', 'parts').annotate(
         completed_tasks_count=Count('tasks', filter=Q(tasks__status='completed')),
         task_count=Count('tasks'),
@@ -109,6 +121,9 @@ def workorder_kanban_view(request):
         total_hours=Sum('time_logs__duration_hours'),
         total_labor_cost=Sum('time_logs__labor_cost')
     )
+
+    # Filter by active branch from session
+    workorders = filter_queryset_for_user_branches(workorders, request.user, request=request, use_active_branch=True)
     
     # Apply filters
     technician_filter = request.GET.get('technician')
@@ -154,21 +169,23 @@ def workorder_detail_view(request, pk):
     """
     Work order detail view with all related data
     """
-    workorder = get_object_or_404(
-        WorkOrder.objects.select_related(
-            'customer', 'vehicle', 'appointment', 'primary_technician', 'created_by'
-        ).prefetch_related(
-            'assigned_technicians', 'tasks__assigned_to', 'parts',
-            'time_logs__technician', 'notes__created_by', 'photos'
-        ).annotate(
-            completed_tasks_count=Count('tasks', filter=Q(tasks__status='completed')),
-            task_count=Count('tasks'),
-            total_parts_quantity=Sum('parts__quantity'),
-            total_hours=Sum('time_logs__duration_hours'),
-            total_labor_cost=Sum('time_logs__labor_cost')
-        ),
-        pk=pk
+    queryset = WorkOrder.objects.select_related(
+        'customer', 'vehicle', 'appointment', 'primary_technician', 'created_by', 'branch'
+    ).prefetch_related(
+        'assigned_technicians', 'tasks__assigned_to', 'parts',
+        'time_logs__technician', 'notes__created_by', 'photos'
+    ).annotate(
+        completed_tasks_count=Count('tasks', filter=Q(tasks__status='completed')),
+        task_count=Count('tasks'),
+        total_parts_quantity=Sum('parts__quantity'),
+        total_hours=Sum('time_logs__duration_hours'),
+        total_labor_cost=Sum('time_logs__labor_cost')
     )
+
+    # Filter by active branch from session
+    queryset = filter_queryset_for_user_branches(queryset, request.user, request=request, use_active_branch=True)
+
+    workorder = _get_workorder_or_404(request, queryset=queryset, pk=pk)
     
     # Calculate totals and statistics
     total_estimated_hours = workorder.tasks.aggregate(
@@ -220,6 +237,12 @@ def workorder_create_view(request):
     technicians = User.objects.filter(role__in=['technician', 'manager']).order_by('first_name')
     
     if request.method == 'POST':
+        branch = resolve_branch(request, branch_id=request.POST.get('branch') or request.POST.get('branch_id'))
+
+        if branch is None:
+            messages.error(request, 'Unable to determine branch for this work order.')
+            return redirect('workorders:list')
+
         try:
             # Create work order
             workorder = WorkOrder.objects.create(
@@ -231,7 +254,8 @@ def workorder_create_view(request):
                 special_instructions=request.POST.get('special_instructions', ''),
                 odometer_in=request.POST.get('odometer_in') or 0,
                 estimated_completion=request.POST.get('estimated_completion') or None,
-                created_by=request.user
+                created_by=request.user,
+                branch=branch
             )
             
             # Add assigned technicians
@@ -260,7 +284,10 @@ def workorder_edit_view(request, pk):
     """
     Edit work order
     """
-    workorder = get_object_or_404(WorkOrder, pk=pk)
+    workorder = get_object_or_404(
+        filter_queryset_for_user_branches(WorkOrder.objects.all(), request.user, request=request, use_active_branch=True),
+        pk=pk
+    )
     
     # Check permissions
     if request.user.role not in ['admin', 'manager', 'receptionist']:
@@ -316,14 +343,13 @@ def workorder_print_view(request, pk):
     """
     Printable work order view
     """
-    workorder = get_object_or_404(
-        WorkOrder.objects.select_related(
-            'customer', 'vehicle', 'primary_technician'
-        ).prefetch_related(
-            'assigned_technicians', 'tasks', 'parts', 'time_logs'
-        ),
-        pk=pk
+    queryset = WorkOrder.objects.select_related(
+        'customer', 'vehicle', 'primary_technician'
+    ).prefetch_related(
+        'assigned_technicians', 'tasks', 'parts', 'time_logs'
     )
+
+    workorder = _get_workorder_or_404(request, queryset=queryset, pk=pk)
     
     # Calculate totals
     total_labor_cost = workorder.tasks.aggregate(Sum('labor_cost'))['labor_cost__sum'] or 0
@@ -335,7 +361,8 @@ def workorder_print_view(request, pk):
         'total_labor_cost': total_labor_cost,
         'total_parts_cost': total_parts_cost,
         'total_hours': total_hours,
-        'print_date': timezone.now(),
+        'print_generated_at': timezone.now(),
+        'print_branch': workorder.branch,
     }
     
     return render(request, 'workorders/workorder_print.html', context)
@@ -351,37 +378,26 @@ def update_workorder_status(request, pk):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     
-    workorder = get_object_or_404(WorkOrder, pk=pk)
+    from django.core.exceptions import ValidationError
+    
+    workorder = _get_workorder_or_404(request, pk=pk)
     new_status = request.POST.get('status')
     
     if new_status not in dict(WorkOrder.STATUS_CHOICES):
         return JsonResponse({'error': 'Invalid status'}, status=400)
     
-    old_status = workorder.status
-    workorder.status = new_status
-    
-    # Update timestamps based on status
-    now = timezone.now()
-    if new_status == 'in_progress' and not workorder.started_at:
-        workorder.started_at = now
-    elif new_status == 'completed' and not workorder.completed_at:
-        workorder.completed_at = now
-    
-    workorder.save()
-    
-    # Create note for status change
-    WorkOrderNote.objects.create(
-        work_order=workorder,
-        note_type='internal',
-        note=f'Status changed from {old_status} to {new_status}',
-        created_by=request.user
-    )
-    
-    return JsonResponse({
-        'success': True,
-        'status': new_status,
-        'status_display': workorder.get_status_display()
-    })
+    try:
+        workorder.transition_to(new_status, user=request.user)
+        return JsonResponse({
+            'success': True,
+            'status': new_status,
+            'status_display': workorder.get_status_display()
+        })
+    except ValidationError as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
 
 
 @login_required
@@ -412,7 +428,7 @@ def add_workorder_note(request, pk):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     
-    workorder = get_object_or_404(WorkOrder, pk=pk)
+    workorder = _get_workorder_or_404(request, pk=pk)
     
     try:
         data = json.loads(request.body)
@@ -460,7 +476,7 @@ def technician_time_clock(request, pk):
     if request.method != 'POST':
         return JsonResponse({'error': 'POST required'}, status=405)
     
-    workorder = get_object_or_404(WorkOrder, pk=pk)
+    workorder = _get_workorder_or_404(request, pk=pk)
     
     try:
         data = json.loads(request.body)
@@ -539,7 +555,7 @@ def workorder_export_view(request):
     
     # Get work orders with select_related for efficiency
     workorders = WorkOrder.objects.select_related(
-        'customer', 'vehicle', 'primary_technician'
+        'customer', 'vehicle', 'primary_technician', 'branch'
     ).annotate(
         completed_tasks_count=Count('tasks', filter=Q(tasks__status='completed')),
         task_count=Count('tasks'),
@@ -547,6 +563,9 @@ def workorder_export_view(request):
         total_hours=Sum('time_logs__duration_hours'),
         total_labor_cost=Sum('time_logs__labor_cost')
     ).all()
+    
+    # Filter by active branch from session
+    workorders = filter_queryset_for_user_branches(workorders, request.user, request=request, use_active_branch=True)
     
     # Apply filters if provided
     status = request.GET.get('status')
@@ -629,7 +648,7 @@ def add_task(request, pk):
     """
     Add a new service task to a work order
     """
-    workorder = get_object_or_404(WorkOrder, pk=pk)
+    workorder = _get_workorder_or_404(request, pk=pk)
     
     # Check permissions
     if request.user.role not in ['admin', 'manager', 'technician']:
@@ -678,7 +697,7 @@ def update_task_status(request, pk, task_id):
     """
     Update the status of a service task
     """
-    workorder = get_object_or_404(WorkOrder, pk=pk)
+    workorder = _get_workorder_or_404(request, pk=pk)
     task = get_object_or_404(ServiceTask, id=task_id, work_order=workorder)
     
     # Check permissions
@@ -717,7 +736,7 @@ def delete_task(request, pk, task_id):
     """
     Delete a service task
     """
-    workorder = get_object_or_404(WorkOrder, pk=pk)
+    workorder = _get_workorder_or_404(request, pk=pk)
     task = get_object_or_404(ServiceTask, id=task_id, work_order=workorder)
     
     # Check permissions
@@ -741,7 +760,7 @@ def delete_task(request, pk, task_id):
 def get_task(request, pk, task_id):
     """Get task details for editing"""
     try:
-        workorder = get_object_or_404(WorkOrder, pk=pk)
+        workorder = _get_workorder_or_404(request, pk=pk)
         task = get_object_or_404(ServiceTask, id=task_id, work_order=workorder)
         
         return JsonResponse({
@@ -766,7 +785,7 @@ def get_task(request, pk, task_id):
 def update_task(request, pk, task_id):
     """Update an existing service task"""
     try:
-        workorder = get_object_or_404(WorkOrder, pk=pk)
+        workorder = _get_workorder_or_404(request, pk=pk)
         task = get_object_or_404(ServiceTask, id=task_id, work_order=workorder)
         
         # Check permissions
@@ -822,7 +841,7 @@ def update_diagnosis(request, pk):
     """
     Update diagnosis notes and estimate for a work order
     """
-    workorder = get_object_or_404(WorkOrder, pk=pk)
+    workorder = _get_workorder_or_404(request, pk=pk)
     
     # Check if user can perform diagnosis
     if request.user.role not in ['admin', 'manager', 'technician']:
@@ -868,7 +887,7 @@ def add_part(request, pk):
     """
     Add a part to the work order estimate
     """
-    workorder = get_object_or_404(WorkOrder, pk=pk)
+    workorder = _get_workorder_or_404(request, pk=pk)
     
     # Check permissions
     if request.user.role not in ['admin', 'manager', 'technician']:
@@ -946,7 +965,7 @@ def delete_part(request, pk, part_id):
     """
     Delete a part from the work order
     """
-    workorder = get_object_or_404(WorkOrder, pk=pk)
+    workorder = _get_workorder_or_404(request, pk=pk)
     part = get_object_or_404(WorkOrderPart, id=part_id, work_order=workorder)
     
     # Check permissions
@@ -977,7 +996,7 @@ def update_part_status(request, pk, part_id):
     """
     Update the status of a part (pending, ordered, received, installed)
     """
-    workorder = get_object_or_404(WorkOrder, pk=pk)
+    workorder = _get_workorder_or_404(request, pk=pk)
     part = get_object_or_404(WorkOrderPart, id=part_id, work_order=workorder)
     
     # Check permissions
@@ -1027,7 +1046,7 @@ def request_approval(request, pk):
     """
     Submit estimate for customer approval
     """
-    workorder = get_object_or_404(WorkOrder, pk=pk)
+    workorder = _get_workorder_or_404(request, pk=pk)
     
     # Check permissions
     if request.user.role not in ['admin', 'manager', 'technician']:
@@ -1120,7 +1139,7 @@ def request_approval(request, pk):
 def workorder_get_part(request, pk, part_id):
     """Get part details for editing"""
     try:
-        workorder = get_object_or_404(WorkOrder, pk=pk)
+        workorder = _get_workorder_or_404(request, pk=pk)
         part = get_object_or_404(WorkOrderPart, pk=part_id, work_order=workorder)
         
         return JsonResponse({
@@ -1149,7 +1168,7 @@ def workorder_update_part(request, pk, part_id):
         return JsonResponse({'success': False, 'error': 'Invalid request method'})
     
     try:
-        workorder = get_object_or_404(WorkOrder, pk=pk)
+        workorder = _get_workorder_or_404(request, pk=pk)
         part = get_object_or_404(WorkOrderPart, pk=part_id, work_order=workorder)
         
         # Update part fields

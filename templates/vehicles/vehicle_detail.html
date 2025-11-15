@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.css" integrity="sha512-WvVX1YO12zmsvTpUQV8s7ZU98DnkaAokcciMZJfnNWyNzm7//QRV61t4aEr0WdIa4pe854QHLTV302vH92FSMw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+{% endblock %}
+
 {% block title %}{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }} • {{ block.super }}{% endblock %}
 
 {% block page_header %}
@@ -245,7 +250,7 @@
                                 <h4 class="text-sm font-semibold text-slate-900 mb-1">Work Order #{{ work_order.work_order_number }}</h4>
                                 <div class="text-xs text-slate-500">
                                     {{ work_order.created_at|date:"M d, Y" }}
-                                    {% with tech=work_order.primary_technician|default:work_order.technician %}
+                                    {% with tech=work_order.lead_technician %}
                                         {% if tech %}
                                             &middot; {% if tech.user %}{{ tech.user.get_full_name }}{% else %}{{ tech.get_full_name|default:tech }}{% endif %}
                                         {% endif %}
@@ -439,17 +444,121 @@
                   <i class="fas fa-calendar text-xl text-success mb-2 group-hover:scale-110 transition-transform"></i>
                   <span class="text-xs font-medium text-slate-700 text-center">Schedule</span>
                 </a>
-                <button type="button" onclick="uploadPhoto()" class="flex flex-col items-center justify-center p-4 rounded-lg border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group">
+                                <button type="button" onclick="openPhotoUploadModal()" class="flex flex-col items-center justify-center p-4 rounded-lg border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group">
                   <i class="fas fa-camera text-xl text-info mb-2 group-hover:scale-110 transition-transform"></i>
                   <span class="text-xs font-medium text-slate-700 text-center">Photo</span>
                 </button>
-                <button type="button" onclick="uploadDocument()" class="flex flex-col items-center justify-center p-4 rounded-lg border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group">
+                                <button type="button" onclick="openDocumentUploadModal()" class="flex flex-col items-center justify-center p-4 rounded-lg border border-slate-200 hover:border-primary hover:bg-primary/5 transition-all group">
                   <i class="fas fa-file-upload text-xl text-slate-600 mb-2 group-hover:scale-110 transition-transform"></i>
                   <span class="text-xs font-medium text-slate-700 text-center">Document</span>
                 </button>
               </div>
             </div>
           </div>      
+    </div>
+</div>
+
+<!-- Photo Upload Modal -->
+<div id="photoUploadModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm" onclick="closePhotoUploadModal()">
+    <div class="relative w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl" onclick="event.stopPropagation()">
+        <button type="button" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors" onclick="closePhotoUploadModal()">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="px-6 py-5 border-b border-slate-200">
+            <h3 class="text-lg font-semibold text-slate-900">Upload Photos</h3>
+            <p class="text-sm text-slate-500 mt-1">Drag and drop or browse to add new photos for this vehicle.</p>
+        </div>
+        <div class="px-6 py-5 space-y-5">
+            <form id="photoUploadForm" class="dropzone" action="{% url 'api_vehicles:vehicle-upload-photo' vehicle.id %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Photo Type</label>
+                        <select name="photo_type" class="mt-1 w-full rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-colors">
+                            {% for value, label in vehicle_photo_types %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Caption (optional)</label>
+                        <input type="text" name="caption" maxlength="255" class="mt-1 w-full rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="Short description" autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Taken Date (optional)</label>
+                        <input type="date" name="taken_date" class="mt-1 w-full rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-colors">
+                    </div>
+                </div>
+                <div class="flex flex-col items-center justify-center h-full text-center px-4">
+                    <div class="dz-message" data-dz-message>
+                        <span class="flex flex-col items-center gap-2 text-slate-600">
+                            <i class="fas fa-cloud-upload-alt text-3xl text-primary"></i>
+                            <span class="font-medium">Drop photos here or click to browse</span>
+                            <span class="text-xs text-slate-400">Supported: JPG, PNG. Maximum size 10 MB per photo.</span>
+                        </span>
+                    </div>
+                </div>
+            </form>
+            <div id="photoUploadFeedback" class="hidden text-sm text-rose-600"></div>
+            <div class="flex items-center justify-end gap-3">
+                <button type="button" class="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" onclick="closePhotoUploadModal()">Cancel</button>
+                <button type="button" id="photoUploadBtn" class="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">Upload</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Document Upload Modal -->
+<div id="documentUploadModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm" onclick="closeDocumentUploadModal()">
+    <div class="relative w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl" onclick="event.stopPropagation()">
+        <button type="button" class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors" onclick="closeDocumentUploadModal()">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="px-6 py-5 border-b border-slate-200">
+            <h3 class="text-lg font-semibold text-slate-900">Upload Documents</h3>
+            <p class="text-sm text-slate-500 mt-1">Attach registration, insurance, inspection reports, and other files.</p>
+        </div>
+        <div class="px-6 py-5 space-y-5">
+            <form id="documentUploadForm" class="dropzone" action="{% url 'api_vehicles:vehicle-upload-document' vehicle.id %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Document Type</label>
+                        <select name="document_type" class="mt-1 w-full rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-colors" required>
+                            {% for value, label in vehicle_document_types %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Title</label>
+                        <input type="text" name="title" maxlength="255" class="mt-1 w-full rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="Document title" required autocomplete="off">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Expiry Date (optional)</label>
+                        <input type="date" name="expiry_date" class="mt-1 w-full rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide">Notes (optional)</label>
+                        <textarea name="notes" rows="2" class="mt-1 w-full rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-colors" placeholder="Add an optional note"></textarea>
+                    </div>
+                </div>
+                <div class="flex flex-col items-center justify-center h-full text-center px-4">
+                    <div class="dz-message" data-dz-message>
+                        <span class="flex flex-col items-center gap-2 text-slate-600">
+                            <i class="fas fa-file-upload text-3xl text-primary"></i>
+                            <span class="font-medium">Drop documents here or click to browse</span>
+                            <span class="text-xs text-slate-400">Accepted: PDF, JPG, PNG, DOC, DOCX, XLS, XLSX up to 25 MB.</span>
+                        </span>
+                    </div>
+                </div>
+            </form>
+            <div id="documentUploadFeedback" class="hidden text-sm text-rose-600"></div>
+            <div class="flex items-center justify-end gap-3">
+                <button type="button" class="px-4 py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors" onclick="closeDocumentUploadModal()">Cancel</button>
+                <button type="button" id="documentUploadBtn" class="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">Upload</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -466,6 +575,7 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js" integrity="sha512-oQq8uth41D+gIH/NJvSJvVB85MFk1eWpMK6glnkg6I7EdMqC1XVkW7RxLheXwmFdG03qScCM7gKS/Cx3FYt7Tg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 {% if mileage_history %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -533,32 +643,366 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endif %}
 
 <script>
+// Global variables - will be initialized in DOMContentLoaded
+let photoModalEl = null;
+let photoUploadModalEl = null;
+let documentUploadModalEl = null;
+let photoDropzone = null;
+let documentDropzone = null;
+let photoUploadHadErrors = false;
+let documentUploadHadErrors = false;
+
+// Flag to prevent multiple initializations
+let dropzonesInitialized = false;
+
+// Wait for DOM and Dropzone to be ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Prevent multiple initializations
+    if (dropzonesInitialized) {
+        return;
+    }
+    
+    // Check if Dropzone is loaded
+    if (typeof Dropzone === 'undefined') {
+        console.error('Dropzone is not loaded. Please check the script tag.');
+        return;
+    }
+    
+    Dropzone.autoDiscover = false;
+
+    // Initialize modal elements
+    photoModalEl = document.getElementById('photoModal');
+    photoUploadModalEl = document.getElementById('photoUploadModal');
+    documentUploadModalEl = document.getElementById('documentUploadModal');
+
+    // Initialize dropzones and event listeners
+    initPhotoDropzone();
+    initDocumentDropzone();
+    const photoUploadBtn = document.getElementById('photoUploadBtn');
+    if (photoUploadBtn) {
+        photoUploadBtn.addEventListener('click', processPhotoUploads);
+    }
+    const documentUploadBtn = document.getElementById('documentUploadBtn');
+    if (documentUploadBtn) {
+        documentUploadBtn.addEventListener('click', processDocumentUploads);
+    }
+    
+    dropzonesInitialized = true;
+});
+
+// Global functions - accessible from onclick handlers
+function updateBodyScrollLock() {
+    const shouldLock = (photoModalEl && photoModalEl.classList.contains('flex')) ||
+        (photoUploadModalEl && photoUploadModalEl.classList.contains('flex')) ||
+        (documentUploadModalEl && documentUploadModalEl.classList.contains('flex'));
+    document.body.style.overflow = shouldLock ? 'hidden' : '';
+}
+
 function viewPhoto(imageUrl) {
-    document.getElementById('modalPhoto').src = imageUrl;
-    document.getElementById('photoModal').classList.remove('hidden');
-    document.getElementById('photoModal').classList.add('flex');
-    document.body.style.overflow = 'hidden';
+    if (!photoModalEl) return;
+    const modalPhoto = document.getElementById('modalPhoto');
+    if (modalPhoto) {
+        modalPhoto.src = imageUrl;
+    }
+    photoModalEl.classList.remove('hidden');
+    photoModalEl.classList.add('flex');
+    updateBodyScrollLock();
 }
 
 function closePhotoModal() {
-    document.getElementById('photoModal').classList.add('hidden');
-    document.getElementById('photoModal').classList.remove('flex');
-    document.body.style.overflow = '';
+    if (!photoModalEl || !photoModalEl.classList.contains('flex')) return;
+    photoModalEl.classList.add('hidden');
+    photoModalEl.classList.remove('flex');
+    updateBodyScrollLock();
 }
 
-// Close modal on Escape key
+function openPhotoUploadModal() {
+    if (!photoUploadModalEl) return;
+    photoUploadModalEl.classList.remove('hidden');
+    photoUploadModalEl.classList.add('flex');
+    updateBodyScrollLock();
+}
+
+function closePhotoUploadModal() {
+    if (!photoUploadModalEl || !photoUploadModalEl.classList.contains('flex')) return;
+    photoUploadModalEl.classList.add('hidden');
+    photoUploadModalEl.classList.remove('flex');
+    const form = document.getElementById('photoUploadForm');
+    if (form) {
+        form.reset();
+    }
+    const feedback = document.getElementById('photoUploadFeedback');
+    if (feedback) {
+        feedback.classList.add('hidden');
+        feedback.textContent = '';
+    }
+    const uploadBtn = document.getElementById('photoUploadBtn');
+    if (uploadBtn) {
+        uploadBtn.disabled = false;
+    }
+    if (photoDropzone) {
+        photoDropzone.removeAllFiles(true);
+    }
+    photoUploadHadErrors = false;
+    updateBodyScrollLock();
+}
+
+function openDocumentUploadModal() {
+    if (!documentUploadModalEl) return;
+    documentUploadModalEl.classList.remove('hidden');
+    documentUploadModalEl.classList.add('flex');
+    updateBodyScrollLock();
+}
+
+function closeDocumentUploadModal() {
+    if (!documentUploadModalEl || !documentUploadModalEl.classList.contains('flex')) return;
+    documentUploadModalEl.classList.add('hidden');
+    documentUploadModalEl.classList.remove('flex');
+    const form = document.getElementById('documentUploadForm');
+    if (form) {
+        form.reset();
+    }
+    const feedback = document.getElementById('documentUploadFeedback');
+    if (feedback) {
+        feedback.classList.add('hidden');
+        feedback.textContent = '';
+    }
+    const uploadBtn = document.getElementById('documentUploadBtn');
+    if (uploadBtn) {
+        uploadBtn.disabled = false;
+    }
+    if (documentDropzone) {
+        documentDropzone.removeAllFiles(true);
+    }
+    documentUploadHadErrors = false;
+    updateBodyScrollLock();
+}
+
+function getCSRFToken(form) {
+    if (!form) return '';
+    const input = form.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (input) {
+        return input.value;
+    }
+    const match = document.cookie.match(/csrftoken=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+function formatDropzoneError(response) {
+    if (!response) {
+        return 'Upload failed. Please try again.';
+    }
+    if (typeof response === 'string') {
+        try {
+            const parsed = JSON.parse(response);
+            return formatDropzoneError(parsed);
+        } catch (error) {
+            return response;
+        }
+    }
+    if (response.detail) {
+        return response.detail;
+    }
+    if (Array.isArray(response)) {
+        return response.join(' ');
+    }
+    const keys = Object.keys(response);
+    if (keys.length > 0) {
+        const firstKey = keys[0];
+        const value = response[firstKey];
+        if (Array.isArray(value)) {
+            return value.join(' ');
+        }
+        if (typeof value === 'string') {
+            return value;
+        }
+    }
+    return 'Upload failed. Please try again.';
+}
+
+function showDropzoneError(element, response) {
+    if (!element) return;
+    element.textContent = formatDropzoneError(response);
+    element.classList.remove('hidden');
+}
+
+function initPhotoDropzone() {
+    const form = document.getElementById('photoUploadForm');
+    if (!form) return;
+    
+    // Destroy existing Dropzone instance if it exists
+    if (photoDropzone) {
+        photoDropzone.destroy();
+        photoDropzone = null;
+    }
+    
+    // Check if form already has Dropzone attached
+    if (form.dropzone) {
+        form.dropzone.destroy();
+    }
+    
+    const feedback = document.getElementById('photoUploadFeedback');
+    const uploadBtn = document.getElementById('photoUploadBtn');
+    photoDropzone = new Dropzone(form, {
+        paramName: 'image',
+        maxFilesize: 10,
+        acceptedFiles: 'image/*',
+        autoProcessQueue: false,
+        parallelUploads: 2,
+        headers: {
+            'X-CSRFToken': getCSRFToken(form)
+        }
+    });
+    photoDropzone.on('addedfile', function() {
+        if (feedback) {
+            feedback.classList.add('hidden');
+            feedback.textContent = '';
+        }
+    });
+    photoDropzone.on('sending', function(file, xhr, formData) {
+        photoUploadHadErrors = false;
+        if (uploadBtn) {
+            uploadBtn.disabled = true;
+        }
+        const typeField = form.querySelector('[name="photo_type"]');
+        const captionField = form.querySelector('[name="caption"]');
+        const takenDateField = form.querySelector('[name="taken_date"]');
+        if (typeField) {
+            formData.append('photo_type', typeField.value);
+        }
+        if (captionField && captionField.value) {
+            formData.append('caption', captionField.value);
+        }
+        if (takenDateField && takenDateField.value) {
+            formData.append('taken_date', takenDateField.value);
+        }
+    });
+    photoDropzone.on('success', function(file) {
+        photoDropzone.removeFile(file);
+    });
+    photoDropzone.on('error', function(file, response) {
+        photoUploadHadErrors = true;
+        showDropzoneError(feedback, response);
+        photoDropzone.removeFile(file);
+    });
+    photoDropzone.on('queuecomplete', function() {
+        if (uploadBtn) {
+            uploadBtn.disabled = false;
+        }
+        if (!photoUploadHadErrors) {
+            closePhotoUploadModal();
+            window.location.reload();
+        }
+    });
+}
+
+function initDocumentDropzone() {
+    const form = document.getElementById('documentUploadForm');
+    if (!form) return;
+    
+    // Destroy existing Dropzone instance if it exists
+    if (documentDropzone) {
+        documentDropzone.destroy();
+        documentDropzone = null;
+    }
+    
+    // Check if form already has Dropzone attached
+    if (form.dropzone) {
+        form.dropzone.destroy();
+    }
+    
+    const feedback = document.getElementById('documentUploadFeedback');
+    const uploadBtn = document.getElementById('documentUploadBtn');
+    documentDropzone = new Dropzone(form, {
+        paramName: 'file',
+        maxFilesize: 25,
+        acceptedFiles: '.pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx',
+        autoProcessQueue: false,
+        parallelUploads: 2,
+        headers: {
+            'X-CSRFToken': getCSRFToken(form)
+        }
+    });
+    documentDropzone.on('addedfile', function() {
+        if (feedback) {
+            feedback.classList.add('hidden');
+            feedback.textContent = '';
+        }
+    });
+    documentDropzone.on('sending', function(file, xhr, formData) {
+        documentUploadHadErrors = false;
+        if (uploadBtn) {
+            uploadBtn.disabled = true;
+        }
+        const typeField = form.querySelector('[name="document_type"]');
+        const titleField = form.querySelector('[name="title"]');
+        const expiryField = form.querySelector('[name="expiry_date"]');
+        const notesField = form.querySelector('[name="notes"]');
+        if (typeField) {
+            formData.append('document_type', typeField.value);
+        }
+        if (titleField) {
+            formData.append('title', titleField.value);
+        }
+        if (expiryField && expiryField.value) {
+            formData.append('expiry_date', expiryField.value);
+        }
+        if (notesField && notesField.value) {
+            formData.append('notes', notesField.value);
+        }
+    });
+    documentDropzone.on('success', function(file) {
+        documentDropzone.removeFile(file);
+    });
+    documentDropzone.on('error', function(file, response) {
+        documentUploadHadErrors = true;
+        showDropzoneError(feedback, response);
+        documentDropzone.removeFile(file);
+    });
+    documentDropzone.on('queuecomplete', function() {
+        if (uploadBtn) {
+            uploadBtn.disabled = false;
+        }
+        if (!documentUploadHadErrors) {
+            closeDocumentUploadModal();
+            window.location.reload();
+        }
+    });
+}
+
+function processPhotoUploads() {
+    if (!photoDropzone) return;
+    const feedback = document.getElementById('photoUploadFeedback');
+    photoUploadHadErrors = false;
+    if (photoDropzone.getQueuedFiles().length === 0) {
+        showDropzoneError(feedback, 'Please add at least one photo to upload.');
+        return;
+    }
+    photoDropzone.processQueue();
+}
+
+function processDocumentUploads() {
+    if (!documentDropzone) return;
+    const feedback = document.getElementById('documentUploadFeedback');
+    const form = document.getElementById('documentUploadForm');
+    if (form && !form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    documentUploadHadErrors = false;
+    if (documentDropzone.getQueuedFiles().length === 0) {
+        showDropzoneError(feedback, 'Please add at least one document to upload.');
+        return;
+    }
+    documentDropzone.processQueue();
+}
+
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closePhotoModal();
+        closePhotoUploadModal();
+        closeDocumentUploadModal();
     }
 });
-
-function uploadPhoto() {
-    alert('Photo upload functionality will be implemented with Dropzone.js');
-}
-
-function uploadDocument() {
-    alert('Document upload functionality will be implemented with Dropzone.js');
-}
 </script>
 {% endblock %}

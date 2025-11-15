@@ -73,6 +73,7 @@ urlpatterns = [
     
     # API Authentication
     path('api/auth/', include('apps.accounts.urls')),
+    path('api/accounts/', include('apps.accounts.urls')),  # Alias for frontend compatibility
     path('accounts/', include('allauth.urls')),
     
     # API endpoints (without namespace to avoid conflicts with frontend)
