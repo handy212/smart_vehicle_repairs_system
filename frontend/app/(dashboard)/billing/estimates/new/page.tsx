@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { billingApi } from "@/lib/api/billing";
 import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
+import { inventoryApi } from "@/lib/api/inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,15 +18,19 @@ import { ArrowLeft, AlertCircle, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { AxiosError } from "axios";
+import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 
 const lineItemSchema = z.object({
-  item_type: z.enum(["labor", "part", "fee", "discount"]),
+  item_type: z.enum(["labor", "part", "fee", "discount", "sublet", "other"]),
   description: z.string().min(1, "Description is required"),
   quantity: z.number().min(0).optional(),
   unit_price: z.number().min(0).optional(),
   labor_hours: z.number().min(0).optional(),
   labor_rate: z.number().min(0).optional(),
   is_taxable: z.boolean(),
+  part: z.number().optional(), // Link to inventory Part
+  part_number: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 const estimateSchema = z.object({
@@ -39,7 +44,6 @@ const estimateSchema = z.object({
   valid_until: z.string().min(1, "Valid until date is required"),
   discount_percentage: z.number().min(0).max(100).optional(),
   discount_reason: z.string().optional(),
-  tax_amount: z.number().min(0).optional(),
   shop_supplies_fee: z.number().min(0).optional(),
   environmental_fee: z.number().min(0).optional(),
   line_items: z.array(lineItemSchema).min(1, "At least one line item is required"),
@@ -52,9 +56,15 @@ export default function NewEstimatePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & { is_taxable: boolean }>>([
+  const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & { is_taxable: boolean; part?: number; part_number?: string }>>([
     { item_type: "labor", description: "", quantity: 1, unit_price: 0, is_taxable: true },
   ]);
+
+  // Fetch parts for part selection
+  const { data: partsData } = useQuery({
+    queryKey: ["parts", "list"],
+    queryFn: () => inventoryApi.list({ page: 1, is_active: true }),
+  });
 
   // Fetch customers
   const { data: customersData } = useQuery({
@@ -69,6 +79,11 @@ export default function NewEstimatePage() {
     queryKey: ["vehicles", "customer", selectedCustomer],
     queryFn: () => vehiclesApi.list({ owner: selectedCustomer || undefined }),
     enabled: !!selectedCustomer,
+  });
+
+  const { data: taxConfig, isLoading: taxConfigLoading } = useQuery({
+    queryKey: ["tax", "config"],
+    queryFn: () => billingApi.taxes.config(),
   });
 
   const {
@@ -89,7 +104,6 @@ export default function NewEstimatePage() {
 
   const customer = watch("customer");
   const discountPercentage = watch("discount_percentage") || 0;
-  const taxAmount = watch("tax_amount") || 0;
   const shopSuppliesFee = watch("shop_supplies_fee") || 0;
   const environmentalFee = watch("environmental_fee") || 0;
 
@@ -107,11 +121,20 @@ export default function NewEstimatePage() {
     setLineItems(lineItems.filter((_, i) => i !== index));
   };
 
-  const updateLineItem = (index: number, field: keyof LineItemFormData, value: any) => {
+  const updateLineItem = (index: number, field: string, value: any) => {
     const updated = [...lineItems];
     updated[index] = { ...updated[index], [field]: value } as any;
     setLineItems(updated);
-    setValue("line_items", updated as any);
+    // Sync with form state
+    setValue("line_items", updated as any, { shouldValidate: false });
+  };
+
+  const updateLineItemFields = (index: number, updates: Record<string, any>) => {
+    const updated = [...lineItems];
+    updated[index] = { ...updated[index], ...updates } as any;
+    setLineItems(updated);
+    // Sync with form state
+    setValue("line_items", updated as any, { shouldValidate: false });
   };
 
   const calculateLineItemTotal = (item: LineItemFormData): number => {
@@ -125,25 +148,23 @@ export default function NewEstimatePage() {
   };
 
   const subtotal = lineItems.reduce((sum, item) => sum + calculateLineItemTotal(item), 0);
+  const taxableSubtotalBeforeDiscount = lineItems.reduce(
+    (sum, item) => sum + (item.is_taxable !== false ? calculateLineItemTotal(item) : 0),
+    0
+  );
   const discountAmount = subtotal * (discountPercentage / 100);
   const subtotalAfterDiscount = subtotal - discountAmount;
-  const total = subtotalAfterDiscount + taxAmount + shopSuppliesFee + environmentalFee;
+  const taxSummary = computeGhanaTaxBreakdown({
+    taxableTotal: taxableSubtotalBeforeDiscount,
+    subtotal,
+    discountAmount,
+    config: taxConfig,
+  });
+  const total = Math.max(subtotalAfterDiscount, 0) + taxSummary.totalTax + shopSuppliesFee + environmentalFee;
 
   const createMutation = useMutation({
-    mutationFn: (data: EstimateFormData) => {
-      // Transform data to match API expectations (convert numbers to strings for financial fields)
-      const apiData: any = {
-        ...data,
-        discount_percentage: data.discount_percentage?.toString(),
-        tax_amount: data.tax_amount?.toString(),
-        shop_supplies_fee: data.shop_supplies_fee?.toString(),
-        environmental_fee: data.environmental_fee?.toString(),
-        line_items: data.line_items.map((item) => ({
-          ...item,
-          unit_price: item.unit_price?.toString(),
-          labor_rate: item.labor_rate?.toString(),
-        })),
-      };
+    mutationFn: (apiData: any) => {
+      // Data is already prepared in onSubmit, just send it
       return billingApi.estimates.create(apiData);
     },
     onSuccess: () => {
@@ -151,10 +172,30 @@ export default function NewEstimatePage() {
       router.push("/billing/estimates");
     },
     onError: (error) => {
+      console.error("Estimate creation error:", error);
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
+        console.error("Error data:", errorData);
+        
+        // Handle nested line_items errors
+        if (errorData.line_items) {
+          errorData.line_items.forEach((itemError: any, index: number) => {
+            if (typeof itemError === 'object') {
+              Object.keys(itemError).forEach((field) => {
+                const fieldError = Array.isArray(itemError[field])
+                  ? itemError[field][0]
+                  : itemError[field];
+                setError(`line_items.${index}.${field}` as any, {
+                  type: "server",
+                  message: fieldError,
+                });
+              });
+            }
+          });
+        }
+        
         Object.keys(errorData).forEach((field) => {
-          if (field !== "non_field_errors" && field !== "detail") {
+          if (field !== "non_field_errors" && field !== "detail" && field !== "line_items") {
             const fieldError = Array.isArray(errorData[field])
               ? errorData[field][0]
               : errorData[field];
@@ -183,16 +224,62 @@ export default function NewEstimatePage() {
 
   const onSubmit = async (data: EstimateFormData) => {
     setServerError(null);
-    // Calculate totals for line items
-    const lineItemsWithTotals = lineItems.map((item) => ({
-      ...item,
-      total: calculateLineItemTotal(item).toFixed(2),
-    }));
-    await createMutation.mutateAsync({
-      ...data,
-      line_items: lineItemsWithTotals,
-      discount_amount: discountAmount.toFixed(2),
-    } as any);
+    // Prepare line items - don't send total (it's calculated on backend)
+    // Use current lineItems state which has the latest part selections
+    const lineItemsForApi = lineItems.map((item: any) => {
+      const lineItem: any = {
+        item_type: item.item_type,
+        description: item.description,
+        is_taxable: item.is_taxable ?? true,
+      };
+      
+      // Handle labor items differently
+      if (item.item_type === 'labor') {
+        // For labor, use labor_hours and labor_rate, quantity defaults to labor_hours
+        lineItem.labor_hours = item.labor_hours || 1;
+        lineItem.labor_rate = (item.labor_rate || 0).toString();
+        lineItem.quantity = item.labor_hours || 1; // Quantity for labor is typically the hours
+        lineItem.unit_price = (item.labor_rate || 0).toString();
+      } else {
+        // For non-labor items, use quantity and unit_price
+        lineItem.quantity = item.quantity && item.quantity > 0 ? item.quantity : 1;
+        lineItem.unit_price = (item.unit_price || 0).toString();
+      }
+      
+      // Add part fields if present
+      if (item.part) {
+        lineItem.part = item.part;
+      }
+      if (item.part_number) {
+        lineItem.part_number = item.part_number;
+      }
+      
+      // Add notes if present
+      if (item.notes) {
+        lineItem.notes = item.notes;
+      }
+      
+      return lineItem;
+    });
+    
+    // Prepare API payload with proper formatting
+    const apiData: any = {
+      customer: data.customer,
+      vehicle: data.vehicle || undefined,
+      title: data.title || undefined,
+      description: data.description || undefined,
+      notes: data.notes || undefined,
+      customer_notes: data.customer_notes || undefined,
+      estimate_date: data.estimate_date,
+      valid_until: data.valid_until,
+      discount_percentage: data.discount_percentage?.toString() || undefined,
+      discount_reason: data.discount_reason || undefined,
+      shop_supplies_fee: data.shop_supplies_fee?.toString() || undefined,
+      environmental_fee: data.environmental_fee?.toString() || undefined,
+      line_items: lineItemsForApi,
+    };
+    
+    await createMutation.mutateAsync(apiData);
   };
 
   return (
@@ -406,9 +493,16 @@ export default function NewEstimatePage() {
                         </label>
                         <Select
                           value={item.item_type}
-                          onChange={(e) =>
-                            updateLineItem(index, "item_type", e.target.value as any)
-                          }
+                          onChange={(e) => {
+                            const newType = e.target.value as any;
+                            // Update item_type and clear part fields if needed, all in one update
+                            const updates: any = { item_type: newType };
+                            if (newType !== "part") {
+                              updates.part = undefined;
+                              updates.part_number = undefined;
+                            }
+                            updateLineItemFields(index, updates);
+                          }}
                         >
                           <option value="labor">Labor</option>
                           <option value="part">Part</option>
@@ -416,6 +510,49 @@ export default function NewEstimatePage() {
                           <option value="discount">Discount</option>
                         </Select>
                       </div>
+                      {item.item_type === "part" ? (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Select Part *
+                          </label>
+                          <Select
+                            value={item.part?.toString() || ""}
+                            onChange={(e) => {
+                              const partId = e.target.value ? parseInt(e.target.value) : null;
+                              if (partId && partsData?.results) {
+                                const selectedPart = partsData.results.find((p) => p.id === partId);
+                                if (selectedPart) {
+                                  // Update all fields at once to avoid multiple state updates
+                                  updateLineItemFields(index, {
+                                    part: partId,
+                                    part_number: selectedPart.part_number,
+                                    description: selectedPart.name,
+                                    unit_price: parseFloat(selectedPart.selling_price || "0"),
+                                    quantity: 1,
+                                  });
+                                }
+                              } else {
+                                // Clear part selection
+                                updateLineItemFields(index, {
+                                  part: undefined,
+                                  part_number: undefined,
+                                });
+                              }
+                            }}
+                          >
+                            <option value="">Select a part...</option>
+                            {partsData?.results && partsData.results.length > 0 ? (
+                              partsData.results.map((part) => (
+                                <option key={part.id} value={part.id.toString()}>
+                                  {part.part_number} - {part.name} (${parseFloat(part.selling_price || "0").toFixed(2)})
+                                </option>
+                              ))
+                            ) : (
+                              <option value="" disabled>Loading parts...</option>
+                            )}
+                          </Select>
+                        </div>
+                      ) : (
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Description *
@@ -428,6 +565,7 @@ export default function NewEstimatePage() {
                           placeholder="Item description"
                         />
                       </div>
+                      )}
                     </div>
 
                     {item.item_type === "labor" ? (
@@ -551,20 +689,7 @@ export default function NewEstimatePage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label htmlFor="tax_amount" className="block text-sm font-medium text-gray-700 mb-1">
-                      Tax Amount
-                    </label>
-                    <Input
-                      id="tax_amount"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      {...register("tax_amount", { valueAsNumber: true })}
-                      placeholder="0.00"
-                    />
-                  </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="shop_supplies_fee" className="block text-sm font-medium text-gray-700 mb-1">
                       Shop Supplies Fee
@@ -614,10 +739,31 @@ export default function NewEstimatePage() {
                     <span className="text-sm font-medium">-${discountAmount.toFixed(2)}</span>
                   </div>
                 )}
-                {taxAmount > 0 && (
+                {taxConfigLoading ? (
+                  <div className="text-sm text-gray-500">Loading tax configuration…</div>
+                ) : taxConfig?.enabled ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">NHIL ({taxConfig.nhil_rate}%)</span>
+                      <span className="text-gray-900">${taxSummary.nhilAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">GETFund ({taxConfig.getfund_rate}%)</span>
+                      <span className="text-gray-900">${taxSummary.getfundAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">COVID-19 ({taxConfig.covid_rate}%)</span>
+                      <span className="text-gray-900">${taxSummary.hrlAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">VAT ({taxConfig.vat_rate}%)</span>
+                      <span className="text-gray-900">${taxSummary.vatAmount.toFixed(2)}</span>
+                    </div>
+                  </>
+                ) : (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Tax</span>
-                    <span className="text-gray-900">${taxAmount.toFixed(2)}</span>
+                    <span className="text-gray-900">$0.00</span>
                   </div>
                 )}
                 {shopSuppliesFee > 0 && (
@@ -637,6 +783,11 @@ export default function NewEstimatePage() {
                     <span className="text-sm font-medium text-gray-700">Total</span>
                     <span className="text-2xl font-bold text-gray-900">${total.toFixed(2)}</span>
                   </div>
+                  {taxConfig && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Taxes are calculated automatically using {taxConfig.regime?.replace(/_/g, " ")} rates.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

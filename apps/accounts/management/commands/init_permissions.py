@@ -20,10 +20,12 @@ class Command(BaseCommand):
             # Collect all unique permissions from all role classes
             role_classes = [
                 (config_roles.Admin, 'admin', 100, 'Full system access'),
-                (config_roles.Manager, 'manager', 80, 'Workshop/Branch manager'),
+                (config_roles.Manager, 'manager', 85, 'Manager - manages branch operations, staff, and administration across assigned branches'),
+                (config_roles.ServiceCoordinator, 'service_coordinator', 70, 'Service Coordinator - manages work orders, coordinates between departments'),
                 (config_roles.Receptionist, 'receptionist', 60, 'Front desk staff'),
-                (config_roles.Technician, 'technician', 40, 'Workshop mechanics/technicians'),
                 (config_roles.PartsManager, 'parts_manager', 50, 'Inventory/Parts management'),
+                (config_roles.Accountant, 'accountant', 45, 'Accountant - handles billing, invoicing, and financial reconciliation'),
+                (config_roles.Technician, 'technician', 40, 'Workshop mechanics/technicians'),
                 (config_roles.Customer, 'customer', 10, 'Customer portal access'),
             ]
             
@@ -66,6 +68,8 @@ class Command(BaseCommand):
                 'view_service_history': ('vehicles', 'View Service History', 'View vehicle service history'),
                 'edit_own_profile': ('customers', 'Edit Own Profile', 'Edit own profile information'),
                 'change_own_password': ('customers', 'Change Own Password', 'Change own password'),
+                'view_branch_data': ('system', 'View Branch Data', 'View data from assigned branches'),
+                'manage_branch_staff': ('users', 'Manage Branch Staff', 'Manage staff at assigned branches'),
             }
             
             # Create all permissions

@@ -99,6 +99,93 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
 
         serializer.save(branch=branch)
     
+    def update(self, request, *args, **kwargs):
+        """Override update to add better error logging"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            instance = self.get_object()
+            logger.info(f"Updating work order {instance.id} with data: {request.data}")
+            return super().update(request, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"Error updating work order: {e}")
+            logger.error(f"Request data: {request.data}")
+            import traceback
+            logger.error(traceback.format_exc())
+            raise
+    
+    @action(detail=False, methods=['post'])
+    def check_repeat_visit(self, request):
+        """
+        Check if a vehicle has recent similar work orders (repeat visit detection).
+        
+        Request body:
+        {
+            "vehicle": <vehicle_id>,
+            "customer_concerns": "<concern text>"
+        }
+        
+        Returns:
+        {
+            "has_repeat": bool,
+            "matches": [
+                {
+                    "work_order_id": int,
+                    "work_order_number": str,
+                    "completed_at": datetime,
+                    "days_ago": int,
+                    "customer_concerns": str,
+                    "similarity": float,
+                    "technician": str,
+                    "branch_name": str
+                }
+            ]
+        }
+        """
+        from django.conf import settings
+        from .utils import detect_repeat_visit
+        
+        vehicle_id = request.data.get('vehicle')
+        concerns = request.data.get('customer_concerns', '')
+        
+        if not vehicle_id:
+            return Response(
+                {'error': 'vehicle is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not concerns or not concerns.strip():
+            return Response({
+                'has_repeat': False,
+                'matches': []
+            })
+        
+        if not settings.REPEAT_VISIT_ENABLED:
+            return Response({
+                'has_repeat': False,
+                'matches': []
+            })
+        
+        matches = detect_repeat_visit(
+            vehicle=vehicle_id,
+            customer_concerns=concerns,
+            days=settings.REPEAT_VISIT_DAYS,
+            similarity_threshold=settings.REPEAT_VISIT_SIMILARITY_THRESHOLD
+        )
+        
+        # Convert datetime to ISO format for JSON serialization
+        for match in matches:
+            if match.get('completed_at'):
+                match['completed_at'] = match['completed_at'].isoformat()
+            # Remove work_order instance (not JSON serializable)
+            match.pop('work_order', None)
+        
+        return Response({
+            'has_repeat': len(matches) > 0,
+            'matches': matches
+        })
+    
     # ========== STATUS WORKFLOW ACTIONS ==========
     
     @action(detail=True, methods=['post'])
@@ -136,7 +223,12 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         """Complete diagnosis and optionally request approval"""
         work_order = self.get_object()
         diagnosis_notes = request.data.get('diagnosis_notes', '')
-        requires_approval = request.data.get('requires_approval', False)
+        # Handle boolean conversion - could be string "true"/"false" or boolean
+        requires_approval_raw = request.data.get('requires_approval', False)
+        if isinstance(requires_approval_raw, str):
+            requires_approval = requires_approval_raw.lower() in ('true', '1', 'yes')
+        else:
+            requires_approval = bool(requires_approval_raw)
         estimated_labor_hours = request.data.get('estimated_labor_hours')
         estimated_labor_cost = request.data.get('estimated_labor_cost')
         estimated_parts_cost = request.data.get('estimated_parts_cost')
@@ -147,24 +239,42 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Validate diagnosis_notes is provided
+        if not diagnosis_notes or not diagnosis_notes.strip():
+            return Response(
+                {'error': 'Diagnosis notes are required to complete diagnosis.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         work_order.diagnosis_notes = diagnosis_notes
         work_order.diagnosis_completed_at = timezone.now()
         work_order.diagnosis_by = request.user
         work_order.requires_approval = requires_approval
         
-        # Update estimates
-        if estimated_labor_hours:
-            work_order.estimated_labor_hours = estimated_labor_hours
+        # Update estimates - convert to Decimal and handle None/empty values
+        from decimal import Decimal
+        if estimated_labor_hours is not None:
+            work_order.estimated_labor_hours = Decimal(str(estimated_labor_hours))
         if estimated_labor_cost:
-            work_order.estimated_labor_cost = estimated_labor_cost
+            work_order.estimated_labor_cost = Decimal(str(estimated_labor_cost))
+        else:
+            work_order.estimated_labor_cost = Decimal('0')
         if estimated_parts_cost:
-            work_order.estimated_parts_cost = estimated_parts_cost
+            work_order.estimated_parts_cost = Decimal(str(estimated_parts_cost))
+        else:
+            work_order.estimated_parts_cost = Decimal('0')
         
         work_order.save()
         
         # Determine next status using transition_to
         try:
             if requires_approval:
+                # Validate that estimated total is greater than 0 when approval is required
+                if work_order.estimated_total <= 0:
+                    return Response(
+                        {'error': 'Estimated total must be greater than 0 when customer approval is required. Please provide estimated labor cost and/or parts cost.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
                 work_order.approval_requested_at = timezone.now()
                 work_order.transition_to('awaiting_approval', user=request.user)
             else:
@@ -200,8 +310,25 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-        serializer = self.get_serializer(work_order)
-        return Response(serializer.data)
+        try:
+            serializer = self.get_serializer(work_order)
+            return Response(serializer.data)
+        except Exception as e:
+            # If serializer fails, return basic work order data with error info
+            import traceback
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Serializer error for work order {work_order.id}: {e}")
+            logger.error(traceback.format_exc())
+            return Response(
+                {
+                    'error': f'Error serializing work order: {str(e)}',
+                    'work_order_id': work_order.id,
+                    'work_order_number': work_order.work_order_number,
+                    'status': work_order.status
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=True, methods=['post'])
     def request_approval(self, request, pk=None):
@@ -482,17 +609,27 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def active(self, request):
         """Get all active work orders (not completed/closed)"""
-        active_statuses = ['draft', 'intake', 'diagnosis', 'awaiting_approval', 
-                          'approved', 'in_progress', 'paused', 'quality_check']
-        work_orders = self.get_queryset().filter(status__in=active_statuses)
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
         
-        page = self.paginate_queryset(work_orders)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        
-        serializer = self.get_serializer(work_orders, many=True)
-        return Response(serializer.data)
+        try:
+            active_statuses = ['draft', 'intake', 'diagnosis', 'awaiting_approval', 
+                              'approved', 'in_progress', 'paused', 'quality_check']
+            work_orders = self.get_queryset().filter(status__in=active_statuses)
+            
+            page = self.paginate_queryset(work_orders)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+            
+            serializer = self.get_serializer(work_orders, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Error in active work orders: {e}")
+            logger.error(traceback.format_exc())
+            # Return empty list instead of error to prevent frontend crashes
+            return Response([], status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['get'])
     def overdue(self, request):

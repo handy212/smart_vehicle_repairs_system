@@ -44,7 +44,7 @@ class BranchViewSet(viewsets.ModelViewSet):
             return Branch.objects.all()
         elif user.role == 'manager':
             return user.managed_branches.all()
-        elif user.role in ['receptionist', 'technician', 'parts_manager']:
+        elif user.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
             if user.branch:
                 return Branch.objects.filter(id=user.branch.id)
         

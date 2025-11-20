@@ -48,6 +48,12 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         from .admin_serializers import SystemSettingsSerializer
         return SystemSettingsSerializer
     
+    def list(self, request, *args, **kwargs):
+        category = request.query_params.get('category')
+        if category == 'tax':
+            SystemSettings.ensure_tax_settings()
+        return super().list(request, *args, **kwargs)
+    
     def perform_create(self, serializer):
         serializer.save(updated_by=self.request.user)
     
@@ -58,6 +64,8 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
     def by_category(self, request):
         """Get settings grouped by category"""
         category = request.query_params.get('category')
+        if category == 'tax':
+            SystemSettings.ensure_tax_settings()
         queryset = self.get_queryset()
         if category:
             settings = queryset.filter(category=category, is_active=True)

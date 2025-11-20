@@ -188,7 +188,6 @@ export default function AddVehiclePage() {
                   <VINDecoderButton
                     vin={vinValue}
                     onDecode={handleVinDecode}
-                    className="text-sm"
                   />
                 )}
               </div>

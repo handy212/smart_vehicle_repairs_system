@@ -69,6 +69,10 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     # Created by info
     created_by_name = serializers.SerializerMethodField()
     
+    # Related work order info
+    related_work_order_detail = serializers.SerializerMethodField()
+    rework_work_orders = serializers.SerializerMethodField()
+    
     class Meta:
         model = WorkOrder
         fields = '__all__'
@@ -92,6 +96,30 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
         if obj.created_by:
             return f"{obj.created_by.first_name} {obj.created_by.last_name}"
         return None
+    
+    def get_related_work_order_detail(self, obj):
+        """Get details of related work order if this is a rework"""
+        if obj.related_work_order:
+            return {
+                'id': obj.related_work_order.id,
+                'work_order_number': obj.related_work_order.work_order_number,
+                'completed_at': obj.related_work_order.completed_at,
+                'status': obj.related_work_order.status,
+            }
+        return None
+    
+    def get_rework_work_orders(self, obj):
+        """Get list of rework work orders that reference this one"""
+        reworks = obj.rework_work_orders.all()
+        return [
+            {
+                'id': wo.id,
+                'work_order_number': wo.work_order_number,
+                'created_at': wo.created_at,
+                'status': wo.status,
+            }
+            for wo in reworks
+        ]
 
 
 class WorkOrderCreateSerializer(serializers.ModelSerializer):
@@ -109,7 +137,8 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             'estimated_parts_cost',
             'odometer_in',
             'requires_approval', 'is_warranty', 'is_recall',
-            'is_customer_waiting', 'quality_check_required'
+            'is_customer_waiting', 'quality_check_required',
+            'is_warranty_rework', 'related_work_order', 'warranty_reason'
         ]
     
     def validate(self, data):
@@ -138,11 +167,61 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
                     "Estimated completion must be in the future."
                 )
         
+        # Check for active work orders at other branches
+        vehicle = data['vehicle']
+        request = self.context.get('request')
+        
+        if request:
+            from apps.branches.utils import resolve_branch
+            current_branch = resolve_branch(request, branch_id=request.data.get('branch') or request.data.get('branch_id'))
+            
+            if current_branch:
+                # Active work order statuses (not closed)
+                active_statuses = [
+                    'draft', 'inspection', 'intake', 'diagnosis', 
+                    'awaiting_approval', 'approved', 'in_progress', 
+                    'additional_work_found', 'paused', 'quality_check'
+                ]
+                
+                # Check for active work orders at other branches
+                active_work_orders = WorkOrder.objects.filter(
+                    vehicle=vehicle,
+                    status__in=active_statuses
+                ).exclude(branch=current_branch).select_related('branch')
+                
+                if active_work_orders.exists():
+                    active_wo = active_work_orders.first()
+                    branch_name = active_wo.branch.name if active_wo.branch else 'Unknown Branch'
+                    raise serializers.ValidationError(
+                        f"This vehicle has an active work order ({active_wo.work_order_number}) "
+                        f"at {branch_name}. A new work order can only be created once the existing "
+                        f"work order has been closed at the branch where it was opened."
+                    )
+        
+        # Check for repeat visits (non-blocking - stored in context for frontend)
+        from django.conf import settings
+        if settings.REPEAT_VISIT_ENABLED and data.get('customer_concerns'):
+            from .utils import detect_repeat_visit
+            matches = detect_repeat_visit(
+                vehicle=data['vehicle'],
+                customer_concerns=data['customer_concerns'],
+                days=settings.REPEAT_VISIT_DAYS,
+                similarity_threshold=settings.REPEAT_VISIT_SIMILARITY_THRESHOLD
+            )
+            if matches:
+                # Store in context for use in create method
+                self.context['repeat_visit_matches'] = matches
+        
         return data
     
     def create(self, validated_data):
         # Extract many-to-many field
         assigned_technicians = validated_data.pop('assigned_technicians', [])
+        
+        # Extract repeat visit related fields
+        is_warranty_rework = validated_data.pop('is_warranty_rework', False)
+        related_work_order_id = validated_data.pop('related_work_order', None)
+        warranty_reason = validated_data.pop('warranty_reason', '')
         
         if not validated_data.get('branch'):
             raise serializers.ValidationError({'branch': 'Branch is required.'})
@@ -152,12 +231,70 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
         if request and request.user:
             validated_data['created_by'] = request.user
         
+        # Handle warranty rework flag
+        if is_warranty_rework:
+            validated_data['is_warranty'] = True
+            validated_data['is_warranty_rework'] = True
+            if related_work_order_id:
+                validated_data['related_work_order_id'] = related_work_order_id
+            if warranty_reason:
+                validated_data['warranty_reason'] = warranty_reason
+        
         # Create work order
         work_order = WorkOrder.objects.create(**validated_data)
         
         # Add assigned technicians
         if assigned_technicians:
             work_order.assigned_technicians.set(assigned_technicians)
+        
+        # Create RepeatVisitAlert if matches were found
+        repeat_visit_matches = self.context.get('repeat_visit_matches', [])
+        if repeat_visit_matches and not is_warranty_rework:
+            # Use the first (most similar) match
+            match = repeat_visit_matches[0]
+            from .models import RepeatVisitAlert
+            from django.utils import timezone
+            
+            related_wo = match['work_order']
+            days_since = match['days_ago']
+            similarity = match['similarity']
+            
+            RepeatVisitAlert.objects.create(
+                work_order=work_order,
+                related_work_order=related_wo,
+                days_since_previous=days_since,
+                similarity_score=similarity,
+                marked_as_warranty=is_warranty_rework
+            )
+        elif is_warranty_rework and related_work_order_id:
+            # Create alert for warranty rework
+            from .models import RepeatVisitAlert
+            from django.utils import timezone
+            from django.conf import settings
+            
+            try:
+                related_wo = WorkOrder.objects.get(id=related_work_order_id)
+                if related_wo.completed_at:
+                    days_since = (timezone.now() - related_wo.completed_at).days
+                else:
+                    days_since = 0
+                
+                # Calculate similarity
+                from .utils import calculate_concern_similarity
+                similarity = calculate_concern_similarity(
+                    work_order.customer_concerns,
+                    related_wo.customer_concerns
+                )
+                
+                RepeatVisitAlert.objects.create(
+                    work_order=work_order,
+                    related_work_order=related_wo,
+                    days_since_previous=days_since,
+                    similarity_score=similarity,
+                    marked_as_warranty=True
+                )
+            except WorkOrder.DoesNotExist:
+                pass  # Related work order not found, skip alert creation
         
         return work_order
 
@@ -181,6 +318,35 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             'quality_check_by', 'quality_check_notes', 'quality_check_passed',
             'is_customer_waiting'
         ]
+    
+    def update(self, instance, validated_data):
+        """
+        Override update to handle status transitions properly using transition_to method.
+        This ensures validation, notifications, and proper state management.
+        """
+        from django.core.exceptions import ValidationError
+        
+        # Extract status if it's being updated
+        new_status = validated_data.pop('status', None)
+        
+        # Update other fields first
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Handle status transition if status is being changed
+        if new_status and new_status != instance.status:
+            try:
+                user = self.context.get('request').user if self.context.get('request') else None
+                instance.transition_to(new_status, user=user)
+            except ValidationError as e:
+                # Re-raise as DRF ValidationError so it's properly formatted
+                from rest_framework.exceptions import ValidationError as DRFValidationError
+                raise DRFValidationError({'status': str(e)})
+        else:
+            # If no status change or same status, just save normally
+            instance.save()
+        
+        return instance
 
 
 # ============= Service Task Serializers =============

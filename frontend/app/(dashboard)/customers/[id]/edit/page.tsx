@@ -112,7 +112,7 @@ export default function EditCustomerPage() {
         </Link>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600">Customer not found.</p>
+            <p className="text-red-600 dark:text-red-400">Customer not found.</p>
           </CardContent>
         </Card>
       </div>
@@ -129,8 +129,8 @@ export default function EditCustomerPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Edit Customer</h1>
-          <p className="text-sm text-gray-500 mt-1">Update customer information</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Edit Customer</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Update customer information</p>
         </div>
       </div>
 
@@ -147,7 +147,7 @@ export default function EditCustomerPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       First Name *
                     </label>
                     <Input
@@ -156,11 +156,11 @@ export default function EditCustomerPage() {
                       className={errors.first_name ? "border-red-500" : ""}
                     />
                     {errors.first_name && (
-                      <p className="mt-1 text-sm text-red-600">{errors.first_name.message}</p>
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.first_name.message}</p>
                     )}
                   </div>
                   <div>
-                    <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Last Name *
                     </label>
                     <Input
@@ -169,13 +169,13 @@ export default function EditCustomerPage() {
                       className={errors.last_name ? "border-red-500" : ""}
                     />
                     {errors.last_name && (
-                      <p className="mt-1 text-sm text-red-600">{errors.last_name.message}</p>
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.last_name.message}</p>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Email *
                   </label>
                   <Input
@@ -185,12 +185,12 @@ export default function EditCustomerPage() {
                     className={errors.email ? "border-red-500" : ""}
                   />
                   {errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Phone
                   </label>
                   <Input
@@ -210,7 +210,7 @@ export default function EditCustomerPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label htmlFor="customer_type" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="customer_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Customer Type *
                   </label>
                   <Select
@@ -226,7 +226,7 @@ export default function EditCustomerPage() {
                 {customerType !== "individual" && (
                   <>
                     <div>
-                      <label htmlFor="company_name" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="company_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Company Name
                       </label>
                       <Input
@@ -235,7 +235,7 @@ export default function EditCustomerPage() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="business_type" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="business_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Business Type
                       </label>
                       <Input
@@ -245,7 +245,7 @@ export default function EditCustomerPage() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="tax_id" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="tax_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Tax ID
                       </label>
                       <Input
@@ -265,7 +265,7 @@ export default function EditCustomerPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label htmlFor="payment_terms" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="payment_terms" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Payment Terms
                   </label>
                   <Select
@@ -281,7 +281,7 @@ export default function EditCustomerPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Status
                   </label>
                   <Select

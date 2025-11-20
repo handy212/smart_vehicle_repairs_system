@@ -11,12 +11,35 @@ from decimal import Decimal
 
 from apps.appointments.models import Appointment
 from apps.workorders.models import WorkOrder, ServiceTask
-from apps.billing.models import Invoice, Payment
+from apps.billing.models import Invoice, Payment, Estimate
 from apps.inventory.models import Part, PurchaseOrder, InventoryTransaction
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.inspections.models import VehicleInspection
 from apps.accounts.models import User
+from apps.branches.utils import (
+    filter_queryset_for_user_branches,
+    get_user_accessible_branches,
+    resolve_branch,
+)
+
+
+def _filter_branch_queryset(queryset, request, use_active_branch=True):
+    return filter_queryset_for_user_branches(
+        queryset, request.user, request, use_active_branch
+    )
+
+
+def _get_branch_ids(request, use_active_branch=True):
+    user = getattr(request, "user", None)
+    if not user or not getattr(user, "is_authenticated", False):
+        return []
+    branches = get_user_accessible_branches(user)
+    if use_active_branch:
+        active_branch = resolve_branch(request)
+        if active_branch:
+            return [active_branch.id]
+    return list(branches.values_list("id", flat=True))
 
 
 # ============================================================================
@@ -29,111 +52,175 @@ def dashboard_overview(request):
     """
     Get comprehensive dashboard overview with key metrics
     """
-    today = timezone.now().date()
-    week_start = today - timedelta(days=today.weekday())
-    month_start = today.replace(day=1)
+    import traceback
+    import logging
+    logger = logging.getLogger(__name__)
     
-    # Today's metrics
-    appointments_today = Appointment.objects.filter(
-        appointment_date=today
-    ).count()
-    
-    revenue_today = Invoice.objects.filter(
-        invoice_date=today,
-        status__in=['paid', 'partial']
-    ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
-    
-    # Active work orders
-    active_work_orders = WorkOrder.objects.filter(
-        status__in=['pending', 'in_progress', 'on_hold']
-    ).count()
-    
-    # This week's metrics
-    revenue_week = Invoice.objects.filter(
-        invoice_date__gte=week_start,
-        status__in=['paid', 'partial']
-    ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
-    
-    # This month's metrics
-    revenue_month = Invoice.objects.filter(
-        invoice_date__gte=month_start,
-        status__in=['paid', 'partial']
-    ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
-    
-    # Overdue invoices
-    overdue_invoices = Invoice.objects.filter(
-        status__in=['sent', 'viewed', 'partial'],
-        due_date__lt=today
-    ).aggregate(
-        count=Count('id'),
-        total=Sum('amount_due')
-    )
-    
-    # Low stock items
-    low_stock_count = Part.objects.filter(
-        quantity_in_stock__lte=F('reorder_point'),
-        is_active=True
-    ).count()
-    
-    # Pending estimates
-    pending_estimates = Invoice.objects.filter(status='draft').count()
-    
-    # Recent activity
-    recent_work_orders = WorkOrder.objects.select_related(
-        'customer', 'vehicle'
-    ).order_by('-created_at')[:5]
-    
-    recent_appointments = Appointment.objects.select_related(
-        'customer', 'vehicle'
-    ).order_by('-created_at')[:5]
-    
-    return Response({
-        'today': {
-            'appointments': appointments_today,
-            'revenue': float(revenue_today),
-            'date': today.isoformat()
-        },
-        'week': {
-            'revenue': float(revenue_week),
-            'start_date': week_start.isoformat()
-        },
-        'month': {
-            'revenue': float(revenue_month),
-            'start_date': month_start.isoformat()
-        },
-        'alerts': {
-            'active_work_orders': active_work_orders,
-            'overdue_invoices': {
-                'count': overdue_invoices['count'] or 0,
-                'total': float(overdue_invoices['total'] or 0)
-            },
-            'low_stock_items': low_stock_count,
-            'pending_estimates': pending_estimates
-        },
-        'recent_activity': {
-            'work_orders': [
-                {
+    try:
+        today = timezone.now().date()
+        week_start = today - timedelta(days=today.weekday())
+        month_start = today.replace(day=1)
+        
+        appointments_qs = filter_queryset_for_user_branches(Appointment.objects.all(), request.user, request)
+        invoices_qs = filter_queryset_for_user_branches(Invoice.objects.all(), request.user, request)
+        work_orders_qs = filter_queryset_for_user_branches(WorkOrder.objects.all(), request.user, request)
+        parts_qs = filter_queryset_for_user_branches(Part.objects.all(), request.user, request)
+        estimates_qs = filter_queryset_for_user_branches(Estimate.objects.all(), request.user, request)
+        
+        appointments_today = appointments_qs.filter(appointment_date=today).count()
+        
+        revenue_today = invoices_qs.filter(
+            invoice_date=today,
+            status__in=['paid', 'partial']
+        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
+        
+        active_work_orders = work_orders_qs.filter(
+            status__in=['pending', 'in_progress', 'on_hold']
+        ).count()
+        
+        revenue_week = invoices_qs.filter(
+            invoice_date__gte=week_start,
+            status__in=['paid', 'partial']
+        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
+        
+        revenue_month = invoices_qs.filter(
+            invoice_date__gte=month_start,
+            status__in=['paid', 'partial']
+        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
+        
+        overdue_invoices = invoices_qs.filter(
+            status__in=['sent', 'viewed', 'partial'],
+            due_date__lt=today
+        ).aggregate(
+            count=Count('id'),
+            total=Sum('amount_due')
+        )
+        
+        low_stock_count = parts_qs.filter(
+            is_active=True,
+            quantity_in_stock__lte=F('reorder_point')
+        ).count()
+        
+        pending_estimates = estimates_qs.filter(
+            status__in=['draft', 'awaiting_approval', 'sent']
+        ).count()
+        
+        recent_work_orders = work_orders_qs.select_related(
+            'customer', 'vehicle', 'customer__user'
+        ).order_by('-created_at')[:5]
+        
+        recent_appointments = appointments_qs.select_related(
+            'customer', 'vehicle', 'customer__user'
+        ).order_by('-created_at')[:5]
+        
+        # Build work orders list with safe attribute access
+        work_orders_list = []
+        for wo in recent_work_orders:
+            try:
+                customer_name = 'Unknown'
+                if wo.customer:
+                    if hasattr(wo.customer, 'company_name') and wo.customer.company_name:
+                        customer_name = wo.customer.company_name
+                    elif hasattr(wo.customer, 'full_name') and wo.customer.full_name:
+                        customer_name = wo.customer.full_name
+                    elif wo.customer.user:
+                        customer_name = f"{wo.customer.user.first_name} {wo.customer.user.last_name}".strip() or wo.customer.user.username
+                
+                vehicle_info = 'Unknown'
+                if wo.vehicle:
+                    parts = []
+                    if wo.vehicle.year:
+                        parts.append(str(wo.vehicle.year))
+                    if wo.vehicle.make:
+                        parts.append(wo.vehicle.make)
+                    if wo.vehicle.model:
+                        parts.append(wo.vehicle.model)
+                    vehicle_info = ' '.join(parts) if parts else 'Unknown'
+                
+                work_orders_list.append({
                     'id': wo.id,
                     'wo_number': wo.work_order_number,
-                    'customer': wo.customer.company_name or wo.customer.full_name,
-                    'vehicle': f"{wo.vehicle.year} {wo.vehicle.make} {wo.vehicle.model}",
+                    'customer': customer_name,
+                    'vehicle': vehicle_info,
                     'status': wo.status,
                     'created_at': wo.created_at.isoformat()
-                }
-                for wo in recent_work_orders
-            ],
-            'appointments': [
-                {
+                })
+            except Exception:
+                continue
+        
+        # Build appointments list with safe attribute access
+        appointments_list = []
+        for apt in recent_appointments:
+            try:
+                customer_name = 'Unknown'
+                if apt.customer:
+                    if hasattr(apt.customer, 'full_name') and apt.customer.full_name:
+                        customer_name = apt.customer.full_name
+                    elif apt.customer.user:
+                        customer_name = f"{apt.customer.user.first_name} {apt.customer.user.last_name}".strip() or apt.customer.user.username
+                
+                vehicle_info = 'Unknown'
+                if apt.vehicle:
+                    parts = []
+                    if apt.vehicle.year:
+                        parts.append(str(apt.vehicle.year))
+                    if apt.vehicle.make:
+                        parts.append(apt.vehicle.make)
+                    if apt.vehicle.model:
+                        parts.append(apt.vehicle.model)
+                    vehicle_info = ' '.join(parts) if parts else 'Unknown'
+                
+                appointments_list.append({
                     'id': apt.id,
-                    'customer': apt.customer.full_name,
-                    'vehicle': f"{apt.vehicle.year} {apt.vehicle.make} {apt.vehicle.model}",
+                    'customer': customer_name,
+                    'vehicle': vehicle_info,
                     'appointment_date': apt.appointment_date.isoformat(),
                     'status': apt.status
-                }
-                for apt in recent_appointments
-            ]
-        }
-    })
+                })
+            except Exception:
+                continue
+        
+        return Response({
+            'today': {
+                'appointments': appointments_today,
+                'revenue': float(revenue_today),
+                'date': today.isoformat()
+            },
+            'week': {
+                'revenue': float(revenue_week),
+                'start_date': week_start.isoformat()
+            },
+            'month': {
+                'revenue': float(revenue_month),
+                'start_date': month_start.isoformat()
+            },
+            'alerts': {
+                'active_work_orders': active_work_orders,
+                'overdue_invoices': {
+                    'count': overdue_invoices['count'] or 0,
+                    'total': float(overdue_invoices['total'] or 0)
+                },
+                'low_stock_items': low_stock_count,
+                'pending_estimates': pending_estimates
+            },
+            'recent_activity': {
+                'work_orders': work_orders_list,
+                'appointments': appointments_list
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error in dashboard_overview: {e}")
+        logger.error(traceback.format_exc())
+        # Return a minimal response that won't break the frontend
+        today = timezone.now().date()
+        return Response({
+            'today': {'appointments': 0, 'revenue': 0.0, 'date': today.isoformat()},
+            'week': {'revenue': 0.0, 'start_date': (today - timedelta(days=today.weekday())).isoformat()},
+            'month': {'revenue': 0.0, 'start_date': today.replace(day=1).isoformat()},
+            'alerts': {'active_work_orders': 0, 'overdue_invoices': {'count': 0, 'total': 0.0}, 'low_stock_items': 0, 'pending_estimates': 0},
+            'recent_activity': {'work_orders': [], 'appointments': []},
+            'error': str(e)
+        }, status=status.HTTP_200_OK)
 
 
 # ============================================================================
@@ -146,125 +233,161 @@ def revenue_report(request):
     """
     Detailed revenue report with breakdown by period, service type, and technician
     """
-    # Get date range from query params
-    start_date = request.query_params.get('start_date')
-    end_date = request.query_params.get('end_date')
-    period = request.query_params.get('period', 'daily')  # daily, weekly, monthly
+    import traceback
+    import logging
+    logger = logging.getLogger(__name__)
     
-    if not start_date or not end_date:
-        # Default to current month
-        today = timezone.now().date()
-        start_date = today.replace(day=1)
-        end_date = today
-    else:
-        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-    
-    # Base queryset
-    invoices = Invoice.objects.filter(
-        invoice_date__gte=start_date,
-        invoice_date__lte=end_date
-    )
-    
-    # Total revenue
-    total_invoiced = invoices.aggregate(total=Sum('total'))['total'] or Decimal('0')
-    total_paid = invoices.filter(
-        status__in=['paid', 'partial']
-    ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
-    total_outstanding = total_invoiced - total_paid
-    
-    # Revenue by period
-    if period == 'daily':
-        trunc_func = TruncDate
-    elif period == 'weekly':
-        trunc_func = TruncWeek
-    else:
-        trunc_func = TruncMonth
-    
-    revenue_by_period = invoices.filter(
-        status__in=['paid', 'partial']
-    ).annotate(
-        period=trunc_func('invoice_date')
-    ).values('period').annotate(
-        revenue=Sum('amount_paid'),
-        invoice_count=Count('id')
-    ).order_by('period')
-    
-    # Revenue by payment method
-    revenue_by_method = Payment.objects.filter(
-        payment_date__gte=start_date,
-        payment_date__lte=end_date,
-        status='completed'
-    ).values('payment_method').annotate(
-        total=Sum('amount'),
-        count=Count('id')
-    ).order_by('-total')
-    
-    # Revenue by technician (from work orders)
-    work_orders = WorkOrder.objects.filter(
-        invoice__invoice_date__gte=start_date,
-        invoice__invoice_date__lte=end_date,
-        invoice__status__in=['paid', 'partial']
-    ).select_related('primary_technician', 'invoice').prefetch_related('assigned_technicians')
-    
-    revenue_by_tech = {}
-    for wo in work_orders:
-        # Use primary technician or first assigned technician
-        tech = wo.primary_technician
-        if not tech and wo.assigned_technicians.exists():
-            tech = wo.assigned_technicians.first()
+    try:
+        # Get date range from query params
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        period = request.query_params.get('period', 'daily')  # daily, weekly, monthly
         
-        if tech and hasattr(wo, 'invoice') and wo.invoice:
-            tech_name = f"{tech.first_name} {tech.last_name}"
-            if tech_name not in revenue_by_tech:
-                revenue_by_tech[tech_name] = {
-                    'revenue': Decimal('0'),
-                    'work_orders': 0
+        if not start_date or not end_date:
+            # Default to current month
+            today = timezone.now().date()
+            start_date = today.replace(day=1)
+            end_date = today
+        else:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        invoices_qs = _filter_branch_queryset(Invoice.objects.all(), request)
+        invoices = invoices_qs.filter(
+            invoice_date__gte=start_date,
+            invoice_date__lte=end_date
+        )
+        
+        # Total revenue
+        total_invoiced = invoices.aggregate(total=Sum('total'))['total'] or Decimal('0')
+        total_paid = invoices.filter(
+            status__in=['paid', 'partial']
+        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
+        total_outstanding = total_invoiced - total_paid
+        
+        # Revenue by period
+        if period == 'daily':
+            trunc_func = TruncDate
+        elif period == 'weekly':
+            trunc_func = TruncWeek
+        else:
+            trunc_func = TruncMonth
+        
+        revenue_by_period = invoices.filter(
+            status__in=['paid', 'partial']
+        ).annotate(
+            period=trunc_func('invoice_date')
+        ).values('period').annotate(
+            revenue=Sum('amount_paid'),
+            invoice_count=Count('id')
+        ).order_by('period')
+        
+        # Revenue by payment method
+        branch_ids = _get_branch_ids(request)
+        revenue_by_method = Payment.objects.filter(
+            invoice__branch_id__in=branch_ids,
+            payment_date__gte=start_date,
+            payment_date__lte=end_date,
+            status='completed'
+        ).values('payment_method').annotate(
+            total=Sum('amount'),
+            count=Count('id')
+        ).order_by('-total')
+        
+        # Revenue by technician (from work orders)
+        work_orders = _filter_branch_queryset(WorkOrder.objects.all(), request).filter(
+            invoice__invoice_date__gte=start_date,
+            invoice__invoice_date__lte=end_date,
+            invoice__status__in=['paid', 'partial']
+        ).select_related('primary_technician', 'invoice').prefetch_related('assigned_technicians')
+        
+        revenue_by_tech = {}
+        for wo in work_orders:
+            try:
+                # Use primary technician or first assigned technician
+                tech = wo.primary_technician
+                if not tech and wo.assigned_technicians.exists():
+                    tech = wo.assigned_technicians.first()
+                
+                if tech:
+                    tech_name = f"{tech.first_name} {tech.last_name}".strip() or tech.username
+                    
+                    # Try to get invoice revenue
+                    revenue = Decimal('0')
+                    try:
+                        if hasattr(wo, 'invoice') and wo.invoice:
+                            revenue = wo.invoice.amount_paid or Decimal('0')
+                    except Exception:
+                        pass
+                    
+                    if tech_name not in revenue_by_tech:
+                        revenue_by_tech[tech_name] = {
+                            'revenue': Decimal('0'),
+                            'work_orders': 0
+                        }
+                    revenue_by_tech[tech_name]['revenue'] += revenue
+                    revenue_by_tech[tech_name]['work_orders'] += 1
+            except Exception:
+                continue
+        
+        return Response({
+            'period': {
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+                'grouping': period
+            },
+            'summary': {
+                'total_invoiced': float(total_invoiced),
+                'total_paid': float(total_paid),
+                'total_outstanding': float(total_outstanding),
+                'payment_rate': float((total_paid / total_invoiced * 100) if total_invoiced > 0 else 0)
+            },
+            'revenue_by_period': [
+                {
+                    'period': item['period'].isoformat(),
+                    'revenue': float(item['revenue']),
+                    'invoice_count': item['invoice_count']
                 }
-            revenue_by_tech[tech_name]['revenue'] += wo.invoice.amount_paid
-            revenue_by_tech[tech_name]['work_orders'] += 1
-    
-    return Response({
-        'period': {
-            'start_date': start_date.isoformat(),
-            'end_date': end_date.isoformat(),
-            'grouping': period
-        },
-        'summary': {
-            'total_invoiced': float(total_invoiced),
-            'total_paid': float(total_paid),
-            'total_outstanding': float(total_outstanding),
-            'payment_rate': float((total_paid / total_invoiced * 100) if total_invoiced > 0 else 0)
-        },
-        'revenue_by_period': [
-            {
-                'period': item['period'].isoformat(),
-                'revenue': float(item['revenue']),
-                'invoice_count': item['invoice_count']
-            }
-            for item in revenue_by_period
-        ],
-        'revenue_by_payment_method': [
-            {
-                'method': item['payment_method'],
-                'total': float(item['total']),
-                'count': item['count']
-            }
-            for item in revenue_by_method
-        ],
-        'revenue_by_technician': [
-            {
-                'technician': name,
-                'revenue': float(data['revenue']),
-                'work_orders': data['work_orders']
-            }
-            for name, data in sorted(
-                revenue_by_tech.items(),
-                key=lambda x: x[1]['revenue'],
-                reverse=True
-            )
-        ]
-    })
+                for item in revenue_by_period
+            ],
+            'revenue_by_payment_method': [
+                {
+                    'method': item['payment_method'],
+                    'total': float(item['total']),
+                    'count': item['count']
+                }
+                for item in revenue_by_method
+            ],
+            'revenue_by_technician': [
+                {
+                    'technician': name,
+                    'revenue': float(data['revenue']),
+                    'work_orders': data['work_orders']
+                }
+                for name, data in sorted(
+                    revenue_by_tech.items(),
+                    key=lambda x: x[1]['revenue'],
+                    reverse=True
+                )
+            ]
+        })
+    except Exception as e:
+        logger.error(f"Error in revenue_report: {e}")
+        logger.error(traceback.format_exc())
+        # Return a minimal response that won't break the frontend
+        today = timezone.now().date()
+        try:
+            period_val = period
+        except:
+            period_val = 'daily'
+        return Response({
+            'period': {'start_date': today.replace(day=1).isoformat(), 'end_date': today.isoformat(), 'grouping': period_val},
+            'summary': {'total_invoiced': 0.0, 'total_paid': 0.0, 'total_outstanding': 0.0, 'payment_rate': 0.0},
+            'revenue_by_period': [],
+            'revenue_by_payment_method': [],
+            'revenue_by_technician': [],
+            'error': str(e)
+        }, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -285,10 +408,13 @@ def profit_margin_report(request):
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
     
     # Revenue from invoices
-    invoices = Invoice.objects.filter(
+    invoices = _filter_branch_queryset(
+        Invoice.objects.filter(
         invoice_date__gte=start_date,
         invoice_date__lte=end_date,
         status__in=['paid', 'partial']
+        ),
+        request
     )
     
     total_revenue = invoices.aggregate(
@@ -298,9 +424,12 @@ def profit_margin_report(request):
     )
     
     # Cost of parts sold (from work orders)
-    work_orders = WorkOrder.objects.filter(
+    work_orders = _filter_branch_queryset(
+        WorkOrder.objects.filter(
         invoice__invoice_date__gte=start_date,
         invoice__invoice_date__lte=end_date
+        ),
+        request
     )
     
     parts_cost = Decimal('0')
@@ -357,9 +486,12 @@ def work_order_statistics(request):
         start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
     
-    work_orders = WorkOrder.objects.filter(
+    work_orders = _filter_branch_queryset(
+        WorkOrder.objects.filter(
         created_at__date__gte=start_date,
         created_at__date__lte=end_date
+        ),
+        request
     )
     
     # Status breakdown
@@ -388,9 +520,11 @@ def work_order_statistics(request):
             avg_completion_time = avg_completion_time.total_seconds() / 3600  # hours
     
     # Top services
+    branch_ids = _get_branch_ids(request)
     top_services = ServiceTask.objects.filter(
         work_order__created_at__date__gte=start_date,
-        work_order__created_at__date__lte=end_date
+        work_order__created_at__date__lte=end_date,
+        work_order__branch_id__in=branch_ids
     ).values('description').annotate(
         count=Count('id')
     ).order_by('-count')[:10]
@@ -553,7 +687,10 @@ def inventory_valuation(request):
     """
     Calculate total inventory value
     """
-    parts = Part.objects.filter(is_active=True)
+    parts = _filter_branch_queryset(
+        Part.objects.filter(is_active=True).defer('branch'),
+        request
+    )
     
     total_value = Decimal('0')
     by_category = {}
@@ -608,7 +745,11 @@ def inventory_turnover(request):
     
     # Get parts with usage data
     parts_data = []
-    for part in Part.objects.filter(is_active=True):
+    branch_parts = _filter_branch_queryset(
+        Part.objects.filter(is_active=True).defer('branch'),
+        request
+    )
+    for part in branch_parts:
         # Calculate usage from inventory transactions
         usage = InventoryTransaction.objects.filter(
             part=part,
@@ -667,10 +808,13 @@ def low_stock_report(request):
     """
     Get low stock items that need reordering
     """
-    low_stock = Part.objects.filter(
+    low_stock = _filter_branch_queryset(
+        Part.objects.filter(
         quantity_in_stock__lte=F('reorder_point'),
         is_active=True
-    ).select_related('category', 'preferred_supplier').order_by('quantity_in_stock')
+        ).select_related('category', 'preferred_supplier').defer('branch').order_by('quantity_in_stock'),
+        request
+    )
     
     critical_stock = low_stock.filter(quantity_in_stock__lte=F('reorder_point') / 2)
     

@@ -225,7 +225,7 @@ export default function AppointmentCalendarPage() {
               startTime: "08:00",
               endTime: "18:00",
             }}
-            className="dark:bg-gray-900"
+            // className="dark:bg-gray-900"
           />
         </CardContent>
       </Card>

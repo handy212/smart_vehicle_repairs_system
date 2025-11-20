@@ -61,7 +61,7 @@ class BranchManagementView(StaffOnlyMixin, TemplateView):
             return Branch.objects.all().order_by("name")
         if user.role == "manager":
             return user.managed_branches.all().order_by("name")
-        if user.role in ["receptionist", "technician", "parts_manager"]:
+        if user.role in ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant"]:
             if user.branch_id:
                 return Branch.objects.filter(pk=user.branch_id)
         return Branch.objects.none()

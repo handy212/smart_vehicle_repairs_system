@@ -16,8 +16,16 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AxiosError } from "axios";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const workOrderSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
@@ -25,7 +33,8 @@ const workOrderSchema = z.object({
   appointment: z.number().optional(),
   priority: z.enum(["low", "normal", "high", "urgent"]),
   status: z.enum(["draft", "pending", "in_progress", "completed"]),
-  customer_concerns: z.string().optional(),
+  customer_concerns: z.string().min(1, "Customer concerns are required"),
+  odometer_in: z.number().min(0),
 });
 
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
@@ -63,6 +72,23 @@ export default function NewWorkOrderPage() {
   });
 
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showActiveWorkOrderDialog, setShowActiveWorkOrderDialog] = useState(false);
+  const [activeWorkOrderBranch, setActiveWorkOrderBranch] = useState<string | null>(null);
+  
+  // Repeat visit detection
+  const [repeatVisitMatches, setRepeatVisitMatches] = useState<Array<{
+    work_order_id: number;
+    work_order_number: string;
+    completed_at: string;
+    days_ago: number;
+    customer_concerns: string;
+    similarity: number;
+    technician: string;
+    branch_name: string;
+  }>>([]);
+  const [showRepeatVisitDialog, setShowRepeatVisitDialog] = useState(false);
+  const [isWarrantyRework, setIsWarrantyRework] = useState(false);
+  const [selectedRelatedWorkOrder, setSelectedRelatedWorkOrder] = useState<number | null>(null);
 
   const {
     register,
@@ -79,31 +105,87 @@ export default function NewWorkOrderPage() {
       customer: customerId ? parseInt(customerId) : undefined,
       vehicle: vehicleId ? parseInt(vehicleId) : undefined,
       appointment: appointmentId ? parseInt(appointmentId) : undefined,
+      odometer_in: 0,
+      customer_concerns: "",
     },
   });
 
   const customer = watch("customer");
+  const vehicle = watch("vehicle");
+  const odometerIn = watch("odometer_in");
+  const customerConcerns = watch("customer_concerns");
 
   // Update selected customer when form value changes
-  if (customer && customer !== selectedCustomer) {
-    setSelectedCustomer(customer);
-    setValue("vehicle", undefined as any); // Reset vehicle when customer changes
-  }
+  useEffect(() => {
+    if (customer && customer !== selectedCustomer) {
+      setSelectedCustomer(customer);
+      setValue("vehicle", undefined as any); // Reset vehicle when customer changes
+      setValue("odometer_in", 0); // Reset odometer when vehicle changes
+    }
+  }, [customer, selectedCustomer, setValue]);
+
+  // Pre-fill odometer from vehicle's current mileage when vehicle is selected
+  useEffect(() => {
+    if (vehicle && vehiclesData?.results && !odometerIn) {
+      const selectedVehicle = vehiclesData.results.find(v => v.id === vehicle);
+      if (selectedVehicle?.current_mileage) {
+        setValue("odometer_in", selectedVehicle.current_mileage);
+      }
+    }
+  }, [vehicle, vehiclesData, odometerIn, setValue]);
 
   // Pre-fill from appointment if available
-  if (appointment && !customer) {
-    const customerId = typeof appointment.customer === 'object' && appointment.customer !== null 
-      ? appointment.customer.id 
-      : appointment.customer;
-    const vehicleId = typeof appointment.vehicle === 'object' && appointment.vehicle !== null 
-      ? appointment.vehicle.id 
-      : appointment.vehicle;
-    
-    setValue("customer", customerId);
-    setValue("vehicle", vehicleId);
-    setValue("appointment", appointment.id);
-    setSelectedCustomer(customerId);
-  }
+  useEffect(() => {
+    if (appointment && !customer) {
+      const customerId = typeof appointment.customer === 'object' && appointment.customer !== null 
+        ? appointment.customer.id 
+        : appointment.customer;
+      const vehicleId = typeof appointment.vehicle === 'object' && appointment.vehicle !== null 
+        ? appointment.vehicle.id 
+        : appointment.vehicle;
+      
+      setValue("customer", customerId);
+      setValue("vehicle", vehicleId);
+      setValue("appointment", appointment.id);
+      setSelectedCustomer(customerId);
+    }
+  }, [appointment, customer, setValue]);
+
+  // Check for repeat visits when vehicle and concerns are filled
+  useEffect(() => {
+    const checkRepeatVisit = async () => {
+      if (vehicle && customerConcerns && customerConcerns.trim().length > 10) {
+        try {
+          const result = await workordersApi.checkRepeatVisit({
+            vehicle,
+            customer_concerns: customerConcerns,
+          });
+          
+          if (result.has_repeat && result.matches.length > 0) {
+            setRepeatVisitMatches(result.matches);
+            setShowRepeatVisitDialog(true);
+            // Pre-select the first (most similar) match
+            if (result.matches[0]) {
+              setSelectedRelatedWorkOrder(result.matches[0].work_order_id);
+            }
+          } else {
+            setRepeatVisitMatches([]);
+            setShowRepeatVisitDialog(false);
+          }
+        } catch (error) {
+          // Silently fail - repeat visit check is non-blocking
+          console.error("Error checking repeat visit:", error);
+        }
+      } else {
+        setRepeatVisitMatches([]);
+        setShowRepeatVisitDialog(false);
+      }
+    };
+
+    // Debounce the check
+    const timeoutId = setTimeout(checkRepeatVisit, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [vehicle, customerConcerns]);
 
   const createMutation = useMutation({
     mutationFn: (data: WorkOrderFormData) => workordersApi.create(data),
@@ -111,47 +193,91 @@ export default function NewWorkOrderPage() {
       queryClient.invalidateQueries({ queryKey: ["workorders"] });
       router.push("/workorders");
     },
+    onError: (error: any) => {
+      console.log(">>> onError handler called");
+      console.log(">>> Error object:", error);
+      console.log(">>> Error response data:", error?.response?.data);
+      setServerError(null);
+      
+      // Extract error data from response
+      const errorData = error?.response?.data;
+      
+      if (!errorData) {
+        setServerError("An unexpected error occurred. Please try again.");
+        return;
+      }
+      
+      // Extract error message from various possible locations
+      let errorMessage = '';
+      
+      if (errorData.non_field_errors) {
+        errorMessage = Array.isArray(errorData.non_field_errors)
+          ? errorData.non_field_errors[0]
+          : errorData.non_field_errors;
+      } else if (errorData.detail) {
+        errorMessage = typeof errorData.detail === 'string' 
+          ? errorData.detail 
+          : (Array.isArray(errorData.detail) ? errorData.detail[0] : String(errorData.detail));
+      } else if (typeof errorData === 'string') {
+        errorMessage = errorData;
+      }
+      
+      // Check if this is an active work order error
+      if (errorMessage && errorMessage.toLowerCase().includes('active work order')) {
+        // Extract branch name from error message
+        // Format: "This vehicle has an active work order (WO-123) at Branch Name. A new..."
+        const branchMatch = errorMessage.match(/at ([^.]+)\./);
+        const branchName = branchMatch ? branchMatch[1].trim() : 'another branch';
+        
+        setActiveWorkOrderBranch(branchName);
+        setShowActiveWorkOrderDialog(true);
+        return;
+      }
+      
+      // Handle field-level errors
+      Object.keys(errorData).forEach((field) => {
+        if (field !== 'non_field_errors' && field !== 'detail') {
+          const fieldError = Array.isArray(errorData[field]) 
+            ? errorData[field][0] 
+            : String(errorData[field]);
+          
+          setError(field as keyof WorkOrderFormData, { 
+            type: "server", 
+            message: fieldError 
+          });
+        }
+      });
+      
+      // Set general error message
+      if (errorMessage) {
+        setServerError(errorMessage);
+      } else {
+        setServerError("An error occurred while creating the work order. Please check the form and try again.");
+      }
+    },
   });
 
   const onSubmit = async (data: WorkOrderFormData) => {
     setServerError(null);
+    // Ensure odometer_in is always a number (default to 0 if not provided)
+    const submitData: any = {
+      ...data,
+      odometer_in: data.odometer_in ?? 0,
+      customer_concerns: data.customer_concerns || "", // Ensure it's not undefined
+    };
+    
+    // Add warranty rework fields if applicable
+    if (isWarrantyRework && selectedRelatedWorkOrder) {
+      submitData.is_warranty_rework = true;
+      submitData.related_work_order = selectedRelatedWorkOrder;
+    }
+    
     try {
-      await createMutation.mutateAsync(data);
-    } catch (error) {
-      console.error("Error creating work order:", error);
-      
-      if (error instanceof AxiosError && error.response?.data) {
-        const errorData = error.response.data;
-        
-        // Handle field-level errors
-        Object.keys(errorData).forEach((field) => {
-          if (field !== 'non_field_errors' && field !== 'detail') {
-            const fieldError = Array.isArray(errorData[field]) 
-              ? errorData[field][0] 
-              : errorData[field];
-            setError(field as keyof WorkOrderFormData, { 
-              type: "server", 
-              message: fieldError 
-            });
-          }
-        });
-        
-        // Handle non-field errors
-        if (errorData.non_field_errors) {
-          const nonFieldError = Array.isArray(errorData.non_field_errors)
-            ? errorData.non_field_errors[0]
-            : errorData.non_field_errors;
-          setServerError(nonFieldError);
-        } else if (typeof errorData === 'string') {
-          setServerError(errorData);
-        } else if (errorData.detail) {
-          setServerError(errorData.detail);
-        } else {
-          setServerError("An error occurred while creating the work order. Please check the form and try again.");
-        }
-      } else {
-        setServerError("An unexpected error occurred. Please try again.");
-      }
+      await createMutation.mutateAsync(submitData);
+    } catch (error: any) {
+      // Error is handled by onError callback, but we can add fallback here
+      console.log(">>> onSubmit catch block");
+      console.log(">>> Caught error:", error);
     }
   };
 
@@ -165,15 +291,15 @@ export default function NewWorkOrderPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">New Work Order</h1>
-          <p className="text-sm text-gray-500 mt-1">Create a new work order</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">New Work Order</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Create a new work order</p>
         </div>
       </div>
 
       {appointment && (
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <CardContent className="pt-6">
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-blue-800 dark:text-blue-400">
               Creating work order from appointment: <strong>{appointment.appointment_number}</strong>
             </p>
           </CardContent>
@@ -181,15 +307,135 @@ export default function NewWorkOrderPage() {
       )}
 
       {serverError && (
-        <Card className="bg-red-50 border-red-200">
+        <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2 text-red-800">
+            <div className="flex items-center space-x-2 text-red-800 dark:text-red-400">
               <AlertCircle className="w-5 h-5" />
               <p className="text-sm font-medium">{serverError}</p>
             </div>
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={showActiveWorkOrderDialog} onOpenChange={setShowActiveWorkOrderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2 text-red-600 dark:text-red-400">
+              <AlertCircle className="w-5 h-5" />
+              <span>Active Work Order Detected</span>
+            </DialogTitle>
+            <DialogDescription className="pt-4">
+              The selected vehicle has an open work order at <strong>{activeWorkOrderBranch || 'another branch'}</strong>. 
+              Please close it before creating a new one.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowActiveWorkOrderDialog(false)}>
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Repeat Visit Alert Dialog */}
+      <Dialog open={showRepeatVisitDialog} onOpenChange={setShowRepeatVisitDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2 text-orange-600 dark:text-orange-400">
+              <AlertCircle className="w-5 h-5" />
+              <span>Repeat Visit Detected</span>
+            </DialogTitle>
+            <DialogDescription className="pt-4">
+              This vehicle was recently serviced for a similar issue. This may indicate a warranty/rework case.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {repeatVisitMatches.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                  Previous Work Order(s):
+                </h4>
+                {repeatVisitMatches.map((match, index) => (
+                  <Card key={match.work_order_id} className="border-orange-200 dark:border-orange-800">
+                    <CardContent className="pt-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-sm">
+                              Work Order: <strong>{match.work_order_number}</strong>
+                            </p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                              Completed {match.days_ago} day{match.days_ago !== 1 ? 's' : ''} ago
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-medium text-orange-600 dark:text-orange-400">
+                              {Math.round(match.similarity * 100)}% similar
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                          <p><strong>Branch:</strong> {match.branch_name}</p>
+                          <p><strong>Technician:</strong> {match.technician}</p>
+                          <p><strong>Previous Concerns:</strong> {match.customer_concerns.substring(0, 150)}{match.customer_concerns.length > 150 ? '...' : ''}</p>
+                        </div>
+                        <div className="pt-2">
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="related_work_order"
+                              checked={selectedRelatedWorkOrder === match.work_order_id}
+                              onChange={() => setSelectedRelatedWorkOrder(match.work_order_id)}
+                              className="w-4 h-4 text-orange-600"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              Link this work order as related
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+            
+            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isWarrantyRework}
+                  onChange={(e) => setIsWarrantyRework(e.target.checked)}
+                  className="w-4 h-4 text-orange-600 rounded"
+                />
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Mark as warranty/rework case
+                </span>
+              </label>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 ml-6">
+                This will flag the work order as a warranty case and link it to the previous work order.
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowRepeatVisitDialog(false);
+                setIsWarrantyRework(false);
+                setSelectedRelatedWorkOrder(null);
+              }}
+            >
+              Continue Anyway
+            </Button>
+            <Button onClick={() => setShowRepeatVisitDialog(false)}>
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -201,62 +447,86 @@ export default function NewWorkOrderPage() {
                 <CardTitle>Customer & Vehicle</CardTitle>
                 <CardDescription>Select customer and vehicle</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label htmlFor="customer" className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer *
-                  </label>
-                  <Select
-                    id="customer"
-                    {...register("customer", { valueAsNumber: true })}
-                    className={errors.customer ? "border-red-500" : ""}
-                    onChange={(e) => {
-                      setValue("customer", parseInt(e.target.value));
-                      setSelectedCustomer(parseInt(e.target.value));
-                    }}
-                    disabled={!!appointment}
-                  >
-                    <option value="">Select a customer</option>
-                    {customersData?.results?.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.user?.first_name} {customer.user?.last_name} - {customer.customer_number}
-                      </option>
-                    ))}
-                  </Select>
-                  {errors.customer && (
-                    <p className="mt-1 text-sm text-red-600">{errors.customer.message}</p>
-                  )}
-                </div>
 
-                <div>
-                  <label htmlFor="vehicle" className="block text-sm font-medium text-gray-700 mb-1">
-                    Vehicle *
-                  </label>
-                  <Select
-                    id="vehicle"
-                    {...register("vehicle", { valueAsNumber: true })}
-                    className={errors.vehicle ? "border-red-500" : ""}
-                    disabled={!selectedCustomer || !vehiclesData?.results?.length || !!appointment}
-                  >
-                    <option value="">
-                      {!selectedCustomer
-                        ? "Select a customer first"
-                        : !vehiclesData?.results?.length
-                        ? "No vehicles found"
-                        : "Select a vehicle"}
-                    </option>
-                    {vehiclesData?.results?.map((vehicle) => (
-                      <option key={vehicle.id} value={vehicle.id}>
-                        {vehicle.make} {vehicle.model} {vehicle.year} - {vehicle.vin}
-                      </option>
-                    ))}
-                  </Select>
-                  {errors.vehicle && (
-                    <p className="mt-1 text-sm text-red-600">{errors.vehicle.message}</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+  <CardContent>
+    {/* Grid layout — 1 column on mobile, 2 columns on md+ */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      {/* Customer */}
+      <div>
+        <label
+          htmlFor="customer"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+        >
+          Customer *
+        </label>
+
+        <Select
+          id="customer"
+          {...register("customer", { valueAsNumber: true })}
+          className={`w-full ${errors.customer ? "border-red-500" : ""}`}
+          onChange={(e) => {
+            const val = parseInt(e.target.value);
+            setValue("customer", val);
+            setSelectedCustomer(val);
+          }}
+        >
+          <option value="">Select a customer</option>
+          {customersData?.results?.map((customer) => (
+            <option key={customer.id} value={customer.id}>
+              {customer.user?.first_name} {customer.user?.last_name} — {customer.customer_number}
+            </option>
+          ))}
+        </Select>
+
+        {errors.customer && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+            {errors.customer.message}
+          </p>
+        )}
+      </div>
+
+      {/* Vehicle */}
+      <div>
+        <label
+          htmlFor="vehicle"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+        >
+          Vehicle *
+        </label>
+
+        <Select
+          id="vehicle"
+          {...register("vehicle", { valueAsNumber: true })}
+          className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}
+          disabled={!selectedCustomer || !vehiclesData?.results?.length}
+        >
+          <option value="">
+            {!selectedCustomer
+              ? "Select a customer first"
+              : !vehiclesData?.results?.length
+              ? "No vehicles found"
+              : "Select a vehicle"}
+          </option>
+
+          {vehiclesData?.results?.map((vehicle) => (
+            <option key={vehicle.id} value={vehicle.id}>
+              {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
+            </option>
+          ))}
+        </Select>
+
+        {errors.vehicle && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+            {errors.vehicle.message}
+          </p>
+        )}
+      </div>
+
+    </div>
+  </CardContent>
+</Card>
+
 
             {/* Work Order Details */}
             <Card>
@@ -267,7 +537,7 @@ export default function NewWorkOrderPage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Priority
                     </label>
                     <Select
@@ -281,7 +551,7 @@ export default function NewWorkOrderPage() {
                     </Select>
                   </div>
                   <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Status
                     </label>
                     <Select
@@ -297,7 +567,7 @@ export default function NewWorkOrderPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="customer_concerns" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="customer_concerns" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Customer Concerns / Description
                   </label>
                   <Textarea
@@ -305,7 +575,19 @@ export default function NewWorkOrderPage() {
                     {...register("customer_concerns")}
                     rows={6}
                     placeholder="Describe the issue or service needed..."
+                    className={errors.customer_concerns ? "border-red-500" : ""}
                   />
+                  {errors.customer_concerns && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.customer_concerns.message}</p>
+                  )}
+                  {repeatVisitMatches.length > 0 && !showRepeatVisitDialog && (
+                    <div className="mt-2 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md">
+                      <p className="text-sm text-orange-800 dark:text-orange-400">
+                        <AlertCircle className="w-4 h-4 inline mr-1" />
+                        Similar concerns detected from recent work order(s). Check the alert dialog for details.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

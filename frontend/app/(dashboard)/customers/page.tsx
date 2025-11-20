@@ -267,8 +267,8 @@ export default function CustomersPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
-            <div className="h-5 w-64 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-9 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+            <div className="h-5 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
           </div>
         </div>
         <Card>
@@ -282,7 +282,7 @@ export default function CustomersPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
         Error loading customers. Please try again.
       </div>
     );
@@ -292,8 +292,8 @@ export default function CustomersPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Customers</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Manage your customer database
           </p>
         </div>
@@ -342,7 +342,7 @@ export default function CustomersPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
                 <Input
                   type="text"
                   placeholder="Search customers by name, email, or customer number..."
@@ -450,8 +450,8 @@ export default function CustomersPage() {
             <TableSkeleton rows={8} columns={7} />
           ) : data?.results && data.results.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     {visibleColumns.has("checkbox") && (
                       <th className="px-6 py-3 text-left">
@@ -518,9 +518,9 @@ export default function CustomersPage() {
                     )}
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                   {data.results.map((customer) => (
-                    <tr key={customer.id} className="hover:bg-gray-50 transition-colors duration-150">
+                    <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150">
                       {visibleColumns.has("checkbox") && (
                         <td className="px-6 py-4 whitespace-nowrap">
                           <input
@@ -532,22 +532,22 @@ export default function CustomersPage() {
                         </td>
                       )}
                       {visibleColumns.has("customer_number") && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                           {customer.customer_number || "-"}
                         </td>
                       )}
                       {visibleColumns.has("name") && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                           {customer.full_name || customer.company_name || (customer.user?.first_name && customer.user?.last_name ? `${customer.user.first_name} ${customer.user.last_name}` : null) || "-"}
                         </td>
                       )}
                       {visibleColumns.has("email") && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {customer.email || customer.user?.email || "-"}
                         </td>
                       )}
                       {visibleColumns.has("type") && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 capitalize">
                           {customer.customer_type || "-"}
                         </td>
                       )}
@@ -556,10 +556,10 @@ export default function CustomersPage() {
                           <span
                             className={`px-2 py-1 text-xs font-semibold rounded-full ${
                               customer.status === "active"
-                                ? "bg-green-100 text-green-800"
+                                ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
                                 : customer.status === "inactive"
-                                ? "bg-gray-100 text-gray-800"
-                                : "bg-red-100 text-red-800"
+                                ? "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300"
+                                : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400"
                             }`}
                           >
                             {customer.status || "-"}
@@ -571,7 +571,7 @@ export default function CustomersPage() {
                           <div className="flex items-center space-x-2">
                             <Link
                               href={`/customers/${customer.id}`}
-                              className="text-blue-600 hover:text-blue-900"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                             >
                               View
                             </Link>
@@ -580,7 +580,7 @@ export default function CustomersPage() {
                               size="sm"
                               onClick={() => handleDelete(customer)}
                               disabled={deleteMutation.isPending}
-                              className="text-red-600 hover:text-red-900 hover:bg-red-50"
+                              className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -594,7 +594,7 @@ export default function CustomersPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-500">No customers found.</p>
+              <p className="text-gray-500 dark:text-gray-400">No customers found.</p>
               <Link href="/customers/new">
                 <Button className="mt-4" variant="outline">
                   <Plus className="w-4 h-4 mr-2" />
@@ -607,7 +607,7 @@ export default function CustomersPage() {
           {/* Pagination */}
           {data && data.count > 0 && (
             <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
+              <div className="text-sm text-gray-700 dark:text-gray-300">
                 Showing page {page} of {Math.ceil(data.count / 10)}
               </div>
               <div className="flex space-x-2">
@@ -654,7 +654,7 @@ export default function CustomersPage() {
             <DialogTitle>Update Status for {bulkSelection.selectedCount} Customer(s)</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               New Status
             </label>
             <Select

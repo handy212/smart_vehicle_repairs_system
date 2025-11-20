@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { User } from "@/lib/api/auth";
+import { useBranchStore } from "@/store/branchStore";
 
 interface AuthState {
   user: User | null;
@@ -24,6 +25,7 @@ export const useAuthStore = create<AuthState>()(
           localStorage.removeItem("access_token");
           localStorage.removeItem("refresh_token");
         }
+        useBranchStore.getState().clearBranch();
         set({
           user: null,
           isAuthenticated: false,

@@ -22,8 +22,8 @@ export default function InspectionDetailPage() {
   });
 
   const handleDownload = () => {
-    // TODO: Implement PDF download
-    window.open(`/api/inspections/inspections/${inspectionId}/pdf/`, "_blank");
+    // Open print-friendly view
+    window.open(`/portal/inspections/${inspectionId}/print`, "_blank");
   };
 
   if (isLoading) {

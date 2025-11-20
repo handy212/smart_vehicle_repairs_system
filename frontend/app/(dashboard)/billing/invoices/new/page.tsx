@@ -9,24 +9,31 @@ import { billingApi } from "@/lib/api/billing";
 import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { workordersApi } from "@/lib/api/workorders";
+import { inventoryApi } from "@/lib/api/inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, AlertCircle, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AxiosError } from "axios";
+import { calculateGhanaTax } from "@/lib/utils/tax";
 
 const lineItemSchema = z.object({
-  item_type: z.enum(["labor", "part", "fee", "discount"]),
+  item_type: z.enum(["labor", "part", "fee", "discount", "sublet", "other"]),
   description: z.string().min(1, "Description is required"),
   quantity: z.number().min(0).optional(),
   unit_price: z.number().min(0).optional(),
   labor_hours: z.number().min(0).optional(),
   labor_rate: z.number().min(0).optional(),
   is_taxable: z.boolean(),
+  part: z.number().optional(),
+  part_number: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 const invoiceSchema = z.object({
@@ -35,13 +42,23 @@ const invoiceSchema = z.object({
   work_order: z.number().optional(),
   invoice_date: z.string().min(1, "Invoice date is required"),
   due_date: z.string().min(1, "Due date is required"),
-  payment_terms: z.enum(["due_on_receipt", "net_15", "net_30", "net_60"]),
+  payment_terms: z.enum(["due_on_receipt", "net_15", "net_30", "net_60", "custom"]),
   notes: z.string().optional(),
+  discount_percentage: z.number().min(0).max(100).optional(),
+  discount_reason: z.string().optional(),
   line_items: z.array(lineItemSchema).min(1, "At least one line item is required"),
 });
 
 type InvoiceFormData = z.infer<typeof invoiceSchema>;
 type LineItemFormData = z.infer<typeof lineItemSchema>;
+
+const PAYMENT_TERMS = [
+  { value: "due_on_receipt", label: "Due on Receipt", days: 0 },
+  { value: "net_15", label: "Net 15", days: 15 },
+  { value: "net_30", label: "Net 30", days: 30 },
+  { value: "net_60", label: "Net 60", days: 60 },
+  { value: "custom", label: "Custom", days: null },
+];
 
 export default function NewInvoicePage() {
   const router = useRouter();
@@ -49,24 +66,27 @@ export default function NewInvoicePage() {
   const workOrderId = searchParams.get("work_order");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & { is_taxable: boolean }>>([
+  const [dueDateManual, setDueDateManual] = useState(false);
+  const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & { is_taxable: boolean; part?: number; part_number?: string; notes?: string }>>([
     { item_type: "labor", description: "", quantity: 1, unit_price: 0, is_taxable: true },
   ]);
 
-  // Fetch customers
+  const { data: partsData, isLoading: partsLoading, isError: partsError } = useQuery({
+    queryKey: ["parts", "list"],
+    queryFn: () => inventoryApi.list({ page: 1, is_active: true }),
+  });
+
   const { data: customersData } = useQuery({
     queryKey: ["customers", "list"],
     queryFn: () => customersApi.list({ page: 1 }),
   });
 
-  // Fetch work order if provided
   const { data: workOrder } = useQuery({
     queryKey: ["workorder", workOrderId],
     queryFn: () => workordersApi.get(parseInt(workOrderId!)),
     enabled: !!workOrderId,
   });
 
-  // Fetch vehicles for selected customer
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(
     workOrder ? (typeof workOrder.customer === 'object' ? workOrder.customer.id : workOrder.customer) : null
   );
@@ -75,6 +95,11 @@ export default function NewInvoicePage() {
     queryKey: ["vehicles", "customer", selectedCustomer],
     queryFn: () => vehiclesApi.list({ owner: selectedCustomer || undefined }),
     enabled: !!selectedCustomer,
+  });
+
+  const { data: taxConfig, isLoading: taxConfigLoading } = useQuery({
+    queryKey: ["tax", "config"],
+    queryFn: () => billingApi.taxes.config(),
   });
 
   const {
@@ -93,11 +118,27 @@ export default function NewInvoicePage() {
       customer: workOrder ? (typeof workOrder.customer === 'object' ? workOrder.customer.id : workOrder.customer) : undefined,
       vehicle: workOrder ? (typeof workOrder.vehicle === 'object' ? workOrder.vehicle.id : workOrder.vehicle) : undefined,
       work_order: workOrderId ? parseInt(workOrderId) : undefined,
+      discount_percentage: 0,
+      discount_reason: "",
       line_items: lineItems.map(item => ({ ...item, is_taxable: item.is_taxable ?? true })),
     },
   });
 
   const customer = watch("customer");
+  const invoiceDate = watch("invoice_date");
+  const paymentTerms = watch("payment_terms");
+
+  // Auto-calculate due date based on payment terms
+  useEffect(() => {
+    if (!dueDateManual && invoiceDate && paymentTerms) {
+      const term = PAYMENT_TERMS.find(t => t.value === paymentTerms);
+      if (term && term.days !== null) {
+        const date = new Date(invoiceDate);
+        date.setDate(date.getDate() + term.days);
+        setValue("due_date", date.toISOString().split("T")[0]);
+      }
+    }
+  }, [invoiceDate, paymentTerms, dueDateManual, setValue]);
 
   // Update selected customer when form value changes
   if (customer && customer !== selectedCustomer) {
@@ -113,438 +154,459 @@ export default function NewInvoicePage() {
     setLineItems(lineItems.filter((_, i) => i !== index));
   };
 
-  const updateLineItem = (index: number, field: keyof LineItemFormData, value: any) => {
+  const updateLineItem = (index: number, field: string, value: any) => {
     const updated = [...lineItems];
-    updated[index] = { ...updated[index], [field]: value };
+    updated[index] = { ...updated[index], [field]: value } as any;
     setLineItems(updated);
-    setValue("line_items", updated);
+    setValue("line_items", updated as any, { shouldValidate: false });
+  };
+
+  const updateLineItemFields = (index: number, updates: Record<string, any>) => {
+    const updated = [...lineItems];
+    updated[index] = { ...updated[index], ...updates } as any;
+    setLineItems(updated);
+    setValue("line_items", updated as any, { shouldValidate: false });
   };
 
   const calculateLineItemTotal = (item: LineItemFormData): number => {
     if (item.item_type === "labor" && item.labor_hours && item.labor_rate) {
       return item.labor_hours * item.labor_rate;
     }
-    if (item.quantity && item.unit_price) {
-      return item.quantity * item.unit_price;
-    }
-    return item.unit_price || 0;
+    return (item.quantity || 0) * (item.unit_price || 0);
   };
 
-  const subtotal = lineItems.reduce((sum, item) => sum + calculateLineItemTotal(item), 0);
-  const taxAmount = subtotal * 0.1; // 10% tax (should come from tax rate)
-  const total = subtotal + taxAmount;
+  const calculateSubtotal = (): number => {
+    return lineItems.reduce((sum, item) => sum + calculateLineItemTotal(item), 0);
+  };
+
+  const calculateDiscount = (): number => {
+    const discountPercentage = watch("discount_percentage") || 0;
+    return (calculateSubtotal() * discountPercentage) / 100;
+  };
+
+  const calculateSubtotalAfterDiscount = (): number => {
+    return calculateSubtotal() - calculateDiscount();
+  };
+
+  const calculateTaxableSubtotal = (): number => {
+    const subtotal = lineItems
+      .filter(item => item.is_taxable)
+      .reduce((sum, item) => sum + calculateLineItemTotal(item), 0);
+    
+    // Apply discount proportionally to taxable items
+    const discountPercentage = watch("discount_percentage") || 0;
+    const taxableAfterDiscount = subtotal * (1 - discountPercentage / 100);
+    return taxableAfterDiscount;
+  };
+
+  const calculateTax = (): number => {
+    const taxableAmount = calculateTaxableSubtotal();
+    const breakdown = calculateGhanaTax(taxableAmount, taxConfig);
+    return breakdown.total;
+  };
+
+  const calculateTotal = (): number => {
+    return calculateSubtotalAfterDiscount() + calculateTax();
+  };
 
   const createMutation = useMutation({
-    mutationFn: (data: InvoiceFormData) => {
-      // Transform data to match API expectations (convert numbers to strings for financial fields)
-      const apiData: any = {
-        ...data,
-        line_items: data.line_items.map((item) => ({
-          ...item,
-          unit_price: item.unit_price?.toString(),
+    mutationFn: async (data: InvoiceFormData) => {
+      const payload = {
+        customer: data.customer,
+        vehicle: data.vehicle,
+        work_order: data.work_order,
+        invoice_date: data.invoice_date,
+        due_date: data.due_date,
+        terms: PAYMENT_TERMS.find(t => t.value === data.payment_terms)?.label || data.payment_terms,
+        notes: data.notes,
+        line_items: data.line_items.map((item, idx) => ({
+          item_type: item.item_type,
+          description: item.description,
+          quantity: item.quantity || 0,
+          unit_price: (item.unit_price || 0).toString(),
+          labor_hours: item.labor_hours,
           labor_rate: item.labor_rate?.toString(),
+          is_taxable: item.is_taxable,
+          part: item.part,
+          part_number: item.part_number,
+          notes: item.notes,
+          order: idx,
         })),
       };
-      return billingApi.invoices.create(apiData);
+      return billingApi.invoices.create(payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       router.push("/billing");
     },
-    onError: (error) => {
-      if (error instanceof AxiosError && error.response?.data) {
-        const errorData = error.response.data;
-        Object.keys(errorData).forEach((field) => {
-          if (field !== "non_field_errors" && field !== "detail") {
-            const fieldError = Array.isArray(errorData[field])
-              ? errorData[field][0]
-              : errorData[field];
-            setError(field as keyof InvoiceFormData, {
-              type: "server",
-              message: fieldError,
-            });
+    onError: (error: AxiosError<any>) => {
+      const message = error.response?.data?.detail || error.response?.data?.message || "Failed to create invoice";
+      setServerError(message);
+      if (error.response?.data) {
+        Object.entries(error.response.data).forEach(([field, errors]) => {
+          if (Array.isArray(errors) && field !== 'detail' && field !== 'message') {
+            setError(field as any, { message: errors[0] });
           }
         });
-        if (errorData.non_field_errors) {
-          setServerError(
-            Array.isArray(errorData.non_field_errors)
-              ? errorData.non_field_errors[0]
-              : errorData.non_field_errors
-          );
-        } else if (errorData.detail) {
-          setServerError(errorData.detail);
-        } else {
-          setServerError("An error occurred while creating the invoice. Please check the form and try again.");
-        }
-      } else {
-        setServerError("An unexpected error occurred. Please try again.");
       }
     },
   });
 
-  const onSubmit = async (data: InvoiceFormData) => {
+  const onSubmit = (data: InvoiceFormData) => {
     setServerError(null);
-    // Calculate totals for line items
-    const lineItemsWithTotals = lineItems.map((item) => ({
-      ...item,
-      total: calculateLineItemTotal(item).toFixed(2),
-    }));
-    await createMutation.mutateAsync({
-      ...data,
-      line_items: lineItemsWithTotals,
-      subtotal: subtotal.toFixed(2),
-      tax_amount: taxAmount.toFixed(2),
-      total: total.toFixed(2),
-    } as any);
+    createMutation.mutate(data);
   };
+
+  const taxBreakdown = calculateGhanaTax(calculateTaxableSubtotal(), taxConfig);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center gap-4">
         <Link href="/billing">
-          <Button variant="outline">
-            <ArrowLeft className="w-4 h-4 mr-2" />
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">New Invoice</h1>
-          <p className="text-sm text-gray-500 mt-1">Create a new invoice</p>
+          <h1 className="text-3xl font-bold">Create Invoice</h1>
+          <p className="text-muted-foreground">Create a new invoice for a customer</p>
         </div>
       </div>
 
       {serverError && (
-        <Card className="bg-red-50 border-red-200">
+        <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2 text-red-800">
-              <AlertCircle className="w-5 h-5" />
-              <p className="text-sm font-medium">{serverError}</p>
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800">Error creating invoice</p>
+                <p className="text-sm text-red-700 mt-1">{serverError}</p>
+              </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Form */}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            {/* Customer & Vehicle */}
             <Card>
               <CardHeader>
-                <CardTitle>Customer & Vehicle</CardTitle>
-                <CardDescription>Select customer and vehicle</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label htmlFor="customer" className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer *
-                  </label>
-                  <Select
-                    id="customer"
-                    {...register("customer", { valueAsNumber: true })}
-                    className={errors.customer ? "border-red-500" : ""}
-                    onChange={(e) => {
-                      setValue("customer", parseInt(e.target.value));
-                      setSelectedCustomer(parseInt(e.target.value));
-                    }}
-                  >
-                    <option value="">Select a customer</option>
-                    {customersData?.results?.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.user?.first_name} {customer.user?.last_name} - {customer.customer_number}
-                      </option>
-                    ))}
-                  </Select>
-                  {errors.customer && (
-                    <p className="mt-1 text-sm text-red-600">{errors.customer.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="vehicle" className="block text-sm font-medium text-gray-700 mb-1">
-                    Vehicle
-                  </label>
-                  <Select
-                    id="vehicle"
-                    {...register("vehicle", { valueAsNumber: true })}
-                    disabled={!selectedCustomer || !vehiclesData?.results?.length}
-                  >
-                    <option value="">
-                      {!selectedCustomer
-                        ? "Select a customer first"
-                        : !vehiclesData?.results?.length
-                        ? "No vehicles found"
-                        : "Select a vehicle"}
-                    </option>
-                    {vehiclesData?.results?.map((vehicle) => (
-                      <option key={vehicle.id} value={vehicle.id}>
-                        {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.vin}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-
-                {workOrder && (
-                  <div className="bg-blue-50 p-3 rounded">
-                    <p className="text-sm text-blue-800">
-                      Creating invoice from work order: <strong>{workOrder.work_order_number}</strong>
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Invoice Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Invoice Details</CardTitle>
-                <CardDescription>Dates and payment terms</CardDescription>
+                <CardTitle>Basic Information</CardTitle>
+                <CardDescription>Enter invoice details</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="invoice_date" className="block text-sm font-medium text-gray-700 mb-1">
-                      Invoice Date *
-                    </label>
-                    <Input
-                      id="invoice_date"
-                      type="date"
-                      {...register("invoice_date")}
-                      className={errors.invoice_date ? "border-red-500" : ""}
-                    />
-                    {errors.invoice_date && (
-                      <p className="mt-1 text-sm text-red-600">{errors.invoice_date.message}</p>
-                    )}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Customer *</label>
+                    <Select
+                      {...register("customer", { valueAsNumber: true })}
+                      onChange={(e) => setValue("customer", parseInt(e.target.value), { shouldValidate: true })}
+                      value={watch("customer")?.toString() || ""}
+                    >
+                      <option value="">Select customer...</option>
+                      {customersData?.results.map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {c.user?.first_name && c.user?.last_name
+                            ? `${c.user.first_name} ${c.user.last_name}`
+                            : c.company_name || c.user?.username || `Customer #${c.id}`}
+                        </option>
+                      ))}
+                    </Select>
+                    {errors.customer && <p className="text-sm text-red-600">{errors.customer.message}</p>}
                   </div>
-                  <div>
-                    <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 mb-1">
-                      Due Date *
-                    </label>
-                    <Input
-                      id="due_date"
-                      type="date"
-                      {...register("due_date")}
-                      className={errors.due_date ? "border-red-500" : ""}
-                    />
-                    {errors.due_date && (
-                      <p className="mt-1 text-sm text-red-600">{errors.due_date.message}</p>
-                    )}
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Vehicle</label>
+                    <Select
+                      {...register("vehicle", { valueAsNumber: true })}
+                      disabled={!selectedCustomer}
+                    >
+                      <option value="">Select vehicle...</option>
+                      {vehiclesData?.results.map((v: any) => (
+                        <option key={v.id} value={v.id}>
+                          {v.year} {v.make} {v.model}
+                        </option>
+                      ))}
+                    </Select>
                   </div>
                 </div>
 
-                <div>
-                  <label htmlFor="payment_terms" className="block text-sm font-medium text-gray-700 mb-1">
-                    Payment Terms
-                  </label>
-                  <Select id="payment_terms" {...register("payment_terms")}>
-                    <option value="due_on_receipt">Due on Receipt</option>
-                    <option value="net_15">Net 15</option>
-                    <option value="net_30">Net 30</option>
-                    <option value="net_60">Net 60</option>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Invoice Date *</label>
+                    <Input type="date" {...register("invoice_date")} />
+                    {errors.invoice_date && <p className="text-sm text-red-600">{errors.invoice_date.message}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Payment Terms *</label>
+                    <Select {...register("payment_terms")}>
+                      {PAYMENT_TERMS.map(term => (
+                        <option key={term.value} value={term.value}>{term.label}</option>
+                      ))}
+                    </Select>
+                  </div>
                 </div>
 
-                <div>
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
-                  </label>
-                  <Textarea
-                    id="notes"
-                    {...register("notes")}
-                    rows={3}
-                    placeholder="Additional notes for the invoice..."
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Due Date *</label>
+                  <Input
+                    type="date"
+                    {...register("due_date")}
+                    onChange={(e) => {
+                      setValue("due_date", e.target.value);
+                      setDueDateManual(true);
+                    }}
                   />
+                  {errors.due_date && <p className="text-sm text-red-600">{errors.due_date.message}</p>}
+                  {!dueDateManual && (
+                    <p className="text-xs text-muted-foreground">Auto-calculated from payment terms</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Notes</label>
+                  <Textarea {...register("notes")} placeholder="Additional notes..." rows={3} />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Line Items */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Line Items</CardTitle>
-                  <CardDescription>Add items to the invoice</CardDescription>
-                </div>
-                <Button type="button" onClick={addLineItem} variant="outline" size="sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Item
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {lineItems.map((item, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-sm">Item {index + 1}</h4>
-                      {lineItems.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeLineItem(index)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Type *
-                        </label>
-                        <Select
-                          value={item.item_type}
-                          onChange={(e) =>
-                            updateLineItem(index, "item_type", e.target.value as any)
-                          }
-                        >
-                          <option value="labor">Labor</option>
-                          <option value="part">Part</option>
-                          <option value="fee">Fee</option>
-                          <option value="discount">Discount</option>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Description *
-                        </label>
-                        <Input
-                          value={item.description}
-                          onChange={(e) =>
-                            updateLineItem(index, "description", e.target.value)
-                          }
-                          placeholder="Item description"
-                        />
-                      </div>
-                    </div>
-
-                    {item.item_type === "labor" ? (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Hours
-                          </label>
-                          <Input
-                            type="number"
-                            step="0.5"
-                            value={item.labor_hours || ""}
-                            onChange={(e) =>
-                              updateLineItem(index, "labor_hours", parseFloat(e.target.value) || 0)
-                            }
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Rate ($/hr)
-                          </label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={item.labor_rate || ""}
-                            onChange={(e) =>
-                              updateLineItem(index, "labor_rate", parseFloat(e.target.value) || 0)
-                            }
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Quantity
-                          </label>
-                          <Input
-                            type="number"
-                            value={item.quantity || ""}
-                            onChange={(e) =>
-                              updateLineItem(index, "quantity", parseFloat(e.target.value) || 0)
-                            }
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Unit Price
-                          </label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={item.unit_price || ""}
-                            onChange={(e) =>
-                              updateLineItem(index, "unit_price", parseFloat(e.target.value) || 0)
-                            }
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={item.is_taxable}
-                          onChange={(e) =>
-                            updateLineItem(index, "is_taxable", e.target.checked)
-                          }
-                          className="rounded border-gray-300"
-                        />
-                        <span className="text-sm text-gray-700">Taxable</span>
-                      </label>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">Total</p>
-                        <p className="text-lg font-bold">
-                          ${calculateLineItemTotal(item).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Line Items</CardTitle>
+                    <CardDescription>Add services, parts, and fees</CardDescription>
                   </div>
-                ))}
+                  <Button type="button" onClick={addLineItem} size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Item
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[120px]">Type</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="w-[100px]">Qty</TableHead>
+                        <TableHead className="w-[120px]">Rate</TableHead>
+                        <TableHead className="w-[80px]">Tax</TableHead>
+                        <TableHead className="w-[120px] text-right">Total</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {lineItems.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <Select
+                              value={item.item_type}
+                              onChange={(e) => updateLineItem(index, "item_type", e.target.value)}
+                              className="text-sm"
+                            >
+                              <option value="labor">Labor</option>
+                              <option value="part">Part</option>
+                              <option value="sublet">Sublet</option>
+                              <option value="fee">Fee</option>
+                              <option value="other">Other</option>
+                            </Select>
+                          </TableCell>
 
-                {errors.line_items && (
-                  <p className="text-sm text-red-600">{errors.line_items.message}</p>
-                )}
+                          <TableCell>
+                            {item.item_type === "part" ? (
+                              <Select
+                                value={item.part?.toString() || ""}
+                                onChange={(e) => {
+                                  const partId = parseInt(e.target.value);
+                                  const selectedPart = partsData?.results.find((p: any) => p.id === partId);
+                                  if (selectedPart) {
+                                    updateLineItemFields(index, {
+                                      part: partId,
+                                      part_number: selectedPart.part_number,
+                                      description: selectedPart.name,
+                                      unit_price: parseFloat(selectedPart.cost_price || '0'),
+                                      quantity: selectedPart.quantity_in_stock > 0 ? 1 : 0,
+                                    });
+                                  }
+                                }}
+                                disabled={partsLoading || partsError}
+                                className="text-sm"
+                              >
+                                <option value="">
+                                  {partsLoading ? "Loading parts..." : partsError ? "Unable to load parts" : "Select part..."}
+                                </option>
+                                {partsData?.results.map((part: any) => (
+                                  <option key={part.id} value={part.id}>
+                                    {part.name} ({part.part_number})
+                                  </option>
+                                ))}
+                              </Select>
+                            ) : (
+                              <Input
+                                value={item.description}
+                                onChange={(e) => updateLineItem(index, "description", e.target.value)}
+                                placeholder="Description..."
+                                className="text-sm"
+                              />
+                            )}
+                          </TableCell>
+
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.quantity || ""}
+                              onChange={(e) => updateLineItem(index, "quantity", parseFloat(e.target.value) || 0)}
+                              placeholder="0"
+                              step="0.01"
+                              min="0"
+                              className="text-sm"
+                            />
+                          </TableCell>
+
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.unit_price || ""}
+                              onChange={(e) => updateLineItem(index, "unit_price", parseFloat(e.target.value) || 0)}
+                              placeholder="0.00"
+                              step="0.01"
+                              min="0"
+                              className="text-sm"
+                            />
+                          </TableCell>
+
+                          <TableCell>
+                            <div className="flex items-center justify-center">
+                              <Checkbox
+                                checked={item.is_taxable}
+                                onCheckedChange={(checked) => updateLineItem(index, "is_taxable", checked)}
+                              />
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="text-right font-medium">
+                            ${calculateLineItemTotal(item).toFixed(2)}
+                          </TableCell>
+
+                          <TableCell>
+                            {lineItems.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeLineItem(index)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Summary */}
-            <Card>
+          <div className="lg:col-span-1 space-y-6">
+            <Card className="sticky top-6">
               <CardHeader>
-                <CardTitle>Invoice Summary</CardTitle>
+                <CardTitle>Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Subtotal</span>
-                  <span className="text-gray-900">${subtotal.toFixed(2)}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="font-medium">${calculateSubtotal().toFixed(2)}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Tax (10%)</span>
-                  <span className="text-gray-900">${taxAmount.toFixed(2)}</span>
-                </div>
-                <div className="border-t pt-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">Total</span>
-                    <span className="text-2xl font-bold text-gray-900">${total.toFixed(2)}</span>
+
+                {calculateDiscount() > 0 && (
+                  <div className="flex justify-between text-sm text-red-600">
+                    <span>Discount ({watch("discount_percentage")}%)</span>
+                    <span>-${calculateDiscount().toFixed(2)}</span>
                   </div>
+                )}
+
+                {calculateDiscount() > 0 && (
+                  <div className="flex justify-between text-sm font-medium border-t pt-2">
+                    <span className="text-muted-foreground">Subtotal after Discount</span>
+                    <span>${calculateSubtotalAfterDiscount().toFixed(2)}</span>
+                  </div>
+                )}
+
+                <div className="border-t pt-3 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Tax Breakdown</p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">NHIL (2.5%)</span>
+                    <span>${taxBreakdown.nhil.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">GETFund (2.5%)</span>
+                    <span>${taxBreakdown.getfund.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">COVID-19 HRL (1%)</span>
+                    <span>${taxBreakdown.hrl.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">VAT (15%)</span>
+                    <span>${taxBreakdown.vat.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="border-t pt-3">
+                  <div className="flex justify-between text-sm font-medium">
+                    <span className="text-muted-foreground">Total Tax</span>
+                    <span>${taxBreakdown.total.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="border-t pt-3">
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total</span>
+                    <span>${calculateTotal().toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="pt-4 space-y-2">
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? "Creating..." : "Create Invoice"}
+                  </Button>
+                  <Link href="/billing">
+                    <Button type="button" variant="outline" className="w-full">
+                      Cancel
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Actions */}
             <Card>
               <CardHeader>
-                <CardTitle>Actions</CardTitle>
+                <CardTitle>Discounts</CardTitle>
+                <CardDescription>Apply discounts to this invoice</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating..." : "Create Invoice"}
-                </Button>
-                <Link href="/billing">
-                  <Button type="button" variant="outline" className="w-full">
-                    Cancel
-                  </Button>
-                </Link>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Discount Percentage (%)</label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    {...register("discount_percentage", { valueAsNumber: true })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Discount Reason</label>
+                  <Input {...register("discount_reason")} placeholder="e.g., Customer loyalty discount" />
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -553,4 +615,3 @@ export default function NewInvoicePage() {
     </div>
   );
 }
-

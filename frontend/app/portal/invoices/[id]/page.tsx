@@ -30,7 +30,7 @@ export default function InvoiceDetailPage() {
     enabled: !!invoiceId,
   });
 
-  const payments = (paymentsData?.results || paymentsData || []) as any[];
+  const payments = (paymentsData || []) as any[];
 
   const handleDownload = () => {
     // Open print-friendly view

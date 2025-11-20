@@ -87,7 +87,7 @@ def workorder_list_view(request):
     page_obj = paginator.get_page(page_number)
     
     # Get filter options
-    technicians = User.objects.filter(role__in=['technician', 'manager']).order_by('first_name')
+    technicians = User.objects.filter(role__in=['technician', 'manager', 'service_coordinator']).order_by('first_name')
     
     context = {
         'page_obj': page_obj,
@@ -149,7 +149,7 @@ def workorder_kanban_view(request):
         }
     
     # Get filter options
-    technicians = User.objects.filter(role__in=['technician', 'manager']).order_by('first_name')
+    technicians = User.objects.filter(role__in=['technician', 'manager', 'service_coordinator']).order_by('first_name')
     
     context = {
         'status_groups': status_groups,
@@ -209,7 +209,7 @@ def workorder_detail_view(request, pk):
     recent_time_logs = workorder.time_logs.select_related('technician').order_by('-created_at')[:5]
     
     # Get technicians for task assignment
-    technicians = User.objects.filter(role__in=['technician', 'manager']).order_by('first_name')
+    technicians = User.objects.filter(role__in=['technician', 'manager', 'service_coordinator']).order_by('first_name')
     
     context = {
         'workorder': workorder,
@@ -234,7 +234,7 @@ def workorder_create_view(request):
     """
     customers = Customer.objects.select_related('user').order_by('user__first_name')
     vehicles = Vehicle.objects.select_related('owner').order_by('make', 'model')
-    technicians = User.objects.filter(role__in=['technician', 'manager']).order_by('first_name')
+    technicians = User.objects.filter(role__in=['technician', 'manager', 'service_coordinator']).order_by('first_name')
     
     if request.method == 'POST':
         branch = resolve_branch(request, branch_id=request.POST.get('branch') or request.POST.get('branch_id'))
@@ -296,7 +296,7 @@ def workorder_edit_view(request, pk):
     
     customers = Customer.objects.select_related('user').order_by('user__first_name')
     vehicles = Vehicle.objects.select_related('owner').order_by('make', 'model')
-    technicians = User.objects.filter(role__in=['technician', 'manager']).order_by('first_name')
+    technicians = User.objects.filter(role__in=['technician', 'manager', 'service_coordinator']).order_by('first_name')
     
     if request.method == 'POST':
         try:

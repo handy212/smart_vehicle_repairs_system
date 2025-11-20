@@ -145,7 +145,7 @@ export default function CustomerDetailPage() {
         </Button>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600">Error loading customer. Please try again.</p>
+            <p className="text-red-600 dark:text-red-400">Error loading customer. Please try again.</p>
           </CardContent>
         </Card>
       </div>
@@ -192,10 +192,10 @@ export default function CustomerDetailPage() {
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               {customer.user?.first_name} {customer.user?.last_name}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Customer #{customer.customer_number}
             </p>
           </div>
@@ -236,25 +236,25 @@ export default function CustomerDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-start space-x-3">
-                    <Mail className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <Mail className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Email</p>
-                      <p className="text-gray-900">{customer.user?.email || "-"}</p>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</p>
+                      <p className="text-gray-900 dark:text-gray-100">{customer.user?.email || "-"}</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
-                    <Phone className="w-5 h-5 text-gray-400 mt-0.5" />
+                    <Phone className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Phone</p>
-                      <p className="text-gray-900">{customer.user?.phone || "-"}</p>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</p>
+                      <p className="text-gray-900 dark:text-gray-100">{customer.user?.phone || "-"}</p>
                     </div>
                   </div>
                   {customer.user?.address && (
                     <div className="flex items-start space-x-3">
-                      <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
+                      <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Address</p>
-                        <p className="text-gray-900">{customer.user.address}</p>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Address</p>
+                        <p className="text-gray-900 dark:text-gray-100">{customer.user.address}</p>
                       </div>
                     </div>
                   )}
@@ -269,19 +269,19 @@ export default function CustomerDetailPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Company Name</p>
-                      <p className="text-gray-900">{customer.company_name || "-"}</p>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Company Name</p>
+                      <p className="text-gray-900 dark:text-gray-100">{customer.company_name || "-"}</p>
                     </div>
                     {customer.business_type && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Business Type</p>
-                        <p className="text-gray-900">{customer.business_type}</p>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Business Type</p>
+                        <p className="text-gray-900 dark:text-gray-100">{customer.business_type}</p>
                       </div>
                     )}
                     {customer.tax_id && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Tax ID</p>
-                        <p className="text-gray-900">{customer.tax_id}</p>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Tax ID</p>
+                        <p className="text-gray-900 dark:text-gray-100">{customer.tax_id}</p>
                       </div>
                     )}
                   </CardContent>
@@ -296,32 +296,32 @@ export default function CustomerDetailPage() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Customer Type</p>
-                      <p className="text-gray-900 capitalize">{customer.customer_type || "-"}</p>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer Type</p>
+                      <p className="text-gray-900 dark:text-gray-100 capitalize">{customer.customer_type || "-"}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Payment Terms</p>
-                      <p className="text-gray-900">{customer.payment_terms?.replace("_", " ") || "-"}</p>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Terms</p>
+                      <p className="text-gray-900 dark:text-gray-100">{customer.payment_terms?.replace("_", " ") || "-"}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Current Balance</p>
-                      <p className="text-gray-900 font-semibold">
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Balance</p>
+                      <p className="text-gray-900 dark:text-gray-100 font-semibold">
                         ${parseFloat(customer.current_balance || "0").toFixed(2)}
                       </p>
                     </div>
                     {customer.loyalty_points !== undefined && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Loyalty Points</p>
-                        <p className="text-gray-900">{customer.loyalty_points}</p>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loyalty Points</p>
+                        <p className="text-gray-900 dark:text-gray-100">{customer.loyalty_points}</p>
                       </div>
                     )}
                   </div>
                   {customer.customer_since && (
                     <div className="flex items-start space-x-3">
-                      <Calendar className="w-5 h-5 text-gray-400 mt-0.5" />
+                      <Calendar className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">Customer Since</p>
-                        <p className="text-gray-900">
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer Since</p>
+                        <p className="text-gray-900 dark:text-gray-100">
                           {format(new Date(customer.customer_since), "MMMM dd, yyyy")}
                         </p>
                       </div>
@@ -340,23 +340,23 @@ export default function CustomerDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Total Vehicles</span>
-                    <span className="text-lg font-semibold">{vehicles.length}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Total Vehicles</span>
+                    <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">{vehicles.length}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Total Visits</span>
-                    <span className="text-lg font-semibold">{stats?.total_visits || 0}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Total Visits</span>
+                    <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">{stats?.total_visits || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Total Spent</span>
-                    <span className="text-lg font-semibold">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Total Spent</span>
+                    <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                       ${parseFloat(String(stats?.total_spent || 0)).toFixed(2)}
                     </span>
                   </div>
                   {stats?.last_visit_date && (
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">Last Visit</span>
-                      <span className="text-sm font-medium">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">Last Visit</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {format(new Date(stats.last_visit_date), "MMM dd, yyyy")}
                       </span>
                     </div>
@@ -448,8 +448,8 @@ export default function CustomerDetailPage() {
                 </Table>
               ) : (
                 <div className="text-center py-8">
-                  <Car className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 mb-4">No vehicles registered for this customer.</p>
+                  <Car className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">No vehicles registered for this customer.</p>
                   <Link href={`/vehicles/new?customer=${customerId}`}>
                     <Button>
                       <Plus className="w-4 h-4 mr-2" />
@@ -545,8 +545,8 @@ export default function CustomerDetailPage() {
                   </Table>
                 ) : (
                   <div className="text-center py-8">
-                    <Receipt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 mb-4">No invoices found for this customer.</p>
+                    <Receipt className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">No invoices found for this customer.</p>
                     <Link href={`/billing/invoices/new?customer=${customerId}`}>
                       <Button>
                         <Plus className="w-4 h-4 mr-2" />
@@ -634,8 +634,8 @@ export default function CustomerDetailPage() {
                   </Table>
                 ) : (
                   <div className="text-center py-8">
-                    <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 mb-4">No estimates found for this customer.</p>
+                    <ClipboardList className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">No estimates found for this customer.</p>
                     <Link href={`/billing/estimates/new?customer=${customerId}`}>
                       <Button>
                         <Plus className="w-4 h-4 mr-2" />
@@ -725,8 +725,8 @@ export default function CustomerDetailPage() {
                   </Table>
                 ) : (
                   <div className="text-center py-8">
-                    <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 mb-4">No work orders found for this customer.</p>
+                    <Wrench className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">No work orders found for this customer.</p>
                     <Link href={`/workorders/new?customer=${customerId}`}>
                       <Button>
                         <Plus className="w-4 h-4 mr-2" />
@@ -810,8 +810,8 @@ export default function CustomerDetailPage() {
                   </Table>
                 ) : (
                   <div className="text-center py-8">
-                    <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 mb-4">No appointments found for this customer.</p>
+                    <Calendar className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400 mb-4">No appointments found for this customer.</p>
                     <Link href={`/appointments/new?customer=${customerId}`}>
                       <Button>
                         <Plus className="w-4 h-4 mr-2" />
@@ -844,7 +844,7 @@ export default function CustomerDetailPage() {
                     <div
                       key={note.id}
                       className={`p-4 rounded-lg border ${
-                        note.is_important ? "border-red-200 bg-red-50" : "border-gray-200 bg-white"
+                        note.is_important ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
                       }`}
                     >
                       <div className="flex items-start justify-between mb-2">
@@ -854,13 +854,13 @@ export default function CustomerDetailPage() {
                             <Badge variant="danger">Important</Badge>
                           )}
                         </div>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
                           {format(new Date(note.created_at), "MMM dd, yyyy 'at' h:mm a")}
                         </span>
                       </div>
-                      <p className="text-gray-900 whitespace-pre-wrap">{note.note}</p>
+                      <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{note.note}</p>
                       {note.created_by_name && (
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                           Added by {note.created_by_name}
                         </p>
                       )}
@@ -869,8 +869,8 @@ export default function CustomerDetailPage() {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 mb-4">No notes for this customer.</p>
+                  <MessageSquare className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">No notes for this customer.</p>
                   <Button onClick={() => setIsNoteDialogOpen(true)}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add First Note
@@ -902,7 +902,7 @@ export default function CustomerDetailPage() {
                   <option value="complaint">Complaint</option>
                 </Select>
                 {errors.note_type && (
-                  <p className="text-red-500 text-xs mt-1">{errors.note_type.message}</p>
+                  <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.note_type.message}</p>
                 )}
               </div>
               <div>
@@ -917,7 +917,7 @@ export default function CustomerDetailPage() {
                   placeholder="Enter your note here..."
                 />
                 {errors.note && (
-                  <p className="text-red-500 text-xs mt-1">{errors.note.message}</p>
+                  <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.note.message}</p>
                 )}
               </div>
               <div className="flex items-center space-x-2">

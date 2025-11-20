@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 import environ
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -59,6 +60,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'django_celery_beat',
     'django_celery_results',
+    'django_ledger',  # Django Ledger - Double-entry accounting
     
     # Local apps
     'apps.accounts',
@@ -102,6 +104,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'apps.accounts.context_processors.settings_context',
                 'apps.branches.context_processors.branch_context',
+                'django_ledger.context.django_ledger_context',  # Django Ledger context
             ],
         },
     },
@@ -172,6 +175,14 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+# CORS Headers (allow branch switch header by default)
+# Note: This can be overridden in environment-specific settings
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'X-Branch-ID',
+]
+# CORS settings - can be overridden in development/production
+CORS_ALLOW_CREDENTIALS = True
 
 # JWT Settings
 SIMPLE_JWT = {
@@ -343,6 +354,14 @@ LOGGING = {
         },
     },
 }
+
+# Django Ledger Settings
+DJANGO_LEDGER_USE_DEPRECATED_BEHAVIOR = False  # Use new API (set to True to use deprecated features)
+
+# Repeat Visit Detection Settings
+REPEAT_VISIT_DAYS = env.int('REPEAT_VISIT_DAYS', default=30)
+REPEAT_VISIT_SIMILARITY_THRESHOLD = env.float('REPEAT_VISIT_SIMILARITY_THRESHOLD', default=0.3)
+REPEAT_VISIT_ENABLED = env.bool('REPEAT_VISIT_ENABLED', default=True)
 
 # Create logs directory if it doesn't exist
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)

@@ -16,13 +16,15 @@ import { Badge } from "@/components/ui/badge";
 
 export default function DashboardPage() {
   // Fetch dashboard overview from reporting API
-  const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
+  const { data: dashboardData, isLoading: dashboardLoading, error: dashboardError } = useQuery({
     queryKey: ["dashboard", "overview"],
     queryFn: () => reportingApi.dashboard(),
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch revenue data for charts
-  const { data: revenueData } = useQuery({
+  const { data: revenueData, error: revenueError } = useQuery({
     queryKey: ["dashboard", "revenue"],
     queryFn: () => {
       const today = new Date();
@@ -33,10 +35,12 @@ export default function DashboardPage() {
         period: "daily",
       });
     },
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch work order statistics
-  const { data: workOrderStats } = useQuery({
+  const { data: workOrderStats, error: workOrderStatsError } = useQuery({
     queryKey: ["dashboard", "workorder-stats"],
     queryFn: () => {
       const today = new Date();
@@ -47,12 +51,16 @@ export default function DashboardPage() {
         end_date: format(today, "yyyy-MM-dd"),
       });
     },
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch low stock items
-  const { data: lowStockData } = useQuery({
+  const { data: lowStockData, error: lowStockError } = useQuery({
     queryKey: ["dashboard", "low-stock"],
     queryFn: () => reportingApi.lowStock(),
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch basic counts
@@ -71,12 +79,17 @@ export default function DashboardPage() {
     queryFn: () => appointmentsApi.today(),
   });
 
-  const { data: activeWorkOrders } = useQuery({
+  const { data: activeWorkOrders, error: activeWorkOrdersError } = useQuery({
     queryKey: ["workorders", "active"],
     queryFn: () => workordersApi.active(),
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   const isLoading = dashboardLoading || !customersData || !vehiclesData;
+
+  // Show error banner if critical APIs are failing
+  const hasApiErrors = dashboardError || revenueError || activeWorkOrdersError;
 
   // Calculate stats from dashboard data
   const stats = {
@@ -193,11 +206,25 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Welcome back! Here's what's happening today.
         </p>
       </div>
+
+      {/* Error Banner */}
+      {hasApiErrors && (
+        <Card className="border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2 text-yellow-800 dark:text-yellow-400">
+              <AlertTriangle className="w-5 h-5" />
+              <p className="text-sm font-medium">
+                Some dashboard data is temporarily unavailable. The page will continue to load with available data.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -206,9 +233,9 @@ export default function DashboardPage() {
           const CardWrapper = stat.link ? Link : "div";
           return (
             <CardWrapper key={stat.title} href={stat.link} className={stat.link ? "block" : ""}>
-              <Card className={`transition-all hover:shadow-lg ${stat.link ? "cursor-pointer" : ""} ${stat.alert ? "border-red-300 border-2" : ""}`}>
+              <Card className={`transition-all hover:shadow-lg ${stat.link ? "cursor-pointer" : ""} ${stat.alert ? "border-red-300 dark:border-red-700 border-2" : ""}`}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
                     {stat.title}
                   </CardTitle>
                   <div className={`${stat.color} p-2 rounded-lg`}>
@@ -216,9 +243,9 @@ export default function DashboardPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stat.value}</div>
                   {stat.alert && (
-                    <p className="text-xs text-red-600 mt-1">Action required</p>
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">Action required</p>
                   )}
                 </CardContent>
               </Card>
@@ -235,9 +262,9 @@ export default function DashboardPage() {
             const CardWrapper = alert.link ? Link : "div";
             return (
               <CardWrapper key={alert.title} href={alert.link} className={alert.link ? "block" : ""}>
-                <Card className={`transition-all hover:shadow-lg border-2 border-orange-300 ${alert.link ? "cursor-pointer" : ""}`}>
+                <Card className={`transition-all hover:shadow-lg border-2 border-orange-300 dark:border-orange-700 ${alert.link ? "cursor-pointer" : ""}`}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-orange-700">
+                    <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-400">
                       {alert.title}
                     </CardTitle>
                     <div className={`${alert.color} p-2 rounded-lg`}>
@@ -245,9 +272,9 @@ export default function DashboardPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-gray-900">{alert.value}</div>
+                    <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{alert.value}</div>
                     {alert.amount && (
-                      <div className="text-sm text-gray-600 mt-1">{alert.amount}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{alert.amount}</div>
                     )}
                   </CardContent>
                 </Card>
@@ -265,7 +292,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                <span className="text-gray-600">Daily Revenue</span>
+                <span className="text-gray-600 dark:text-gray-400">Daily Revenue</span>
               </div>
             </div>
           </div>
@@ -296,7 +323,7 @@ export default function DashboardPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[300px] text-gray-500">
+            <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
               No revenue data available
             </div>
           )}
@@ -332,7 +359,7 @@ export default function DashboardPage() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[300px] text-gray-500">
+              <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
                 No work order data available
               </div>
             )}
@@ -359,7 +386,7 @@ export default function DashboardPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[300px] text-gray-500">
+              <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
                 No payment data available
               </div>
             )}
@@ -372,7 +399,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Today's Appointments</CardTitle>
-            <Link href="/appointments" className="text-sm text-blue-600 hover:text-blue-800">
+            <Link href="/appointments" className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
               View All
             </Link>
           </CardHeader>
@@ -383,11 +410,11 @@ export default function DashboardPage() {
                   <Link
                     key={apt.id}
                     href={`/appointments/${apt.id}`}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     <div className="flex-1">
-                      <p className="font-medium text-sm">{apt.customer_name || "N/A"}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{apt.customer_name || "N/A"}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {apt.vehicle_info || "N/A"} • {apt.appointment_time}
                       </p>
                     </div>
@@ -407,7 +434,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No appointments scheduled for today</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">No appointments scheduled for today</p>
             )}
           </CardContent>
         </Card>
@@ -415,7 +442,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Active Work Orders</CardTitle>
-            <Link href="/workorders" className="text-sm text-blue-600 hover:text-blue-800">
+            <Link href="/workorders" className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
               View All
             </Link>
           </CardHeader>
@@ -426,11 +453,11 @@ export default function DashboardPage() {
                   <Link
                     key={wo.id}
                     href={`/workorders/${wo.id}`}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     <div className="flex-1">
-                      <p className="font-medium text-sm">{wo.work_order_number}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{wo.work_order_number}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {wo.customer_name || "N/A"} • {wo.vehicle_info || "N/A"}
                       </p>
                     </div>
@@ -450,7 +477,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No active work orders</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">No active work orders</p>
             )}
           </CardContent>
         </Card>
@@ -460,46 +487,46 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Today's Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Today's Revenue</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 ${parseFloat(String(stats.today_revenue || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <TrendingUp className="h-8 w-8 text-green-500" />
             </div>
-            <p className="text-xs text-gray-500 mt-2">Revenue for today</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Revenue for today</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Week Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Week Revenue</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 ${parseFloat(String(stats.week_revenue || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <DollarSign className="h-8 w-8 text-blue-500" />
             </div>
-            <p className="text-xs text-gray-500 mt-2">This week's total</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">This week's total</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Month Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Month Revenue</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 ${parseFloat(String(stats.month_revenue || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <TrendingUp className="h-8 w-8 text-emerald-500" />
             </div>
-            <p className="text-xs text-gray-500 mt-2">This month's total</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">This month's total</p>
           </CardContent>
         </Card>
       </div>

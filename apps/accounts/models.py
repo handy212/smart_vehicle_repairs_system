@@ -30,9 +30,11 @@ class User(AbstractUser):
     ROLE_CHOICES = (
         ('admin', 'Admin'),
         ('manager', 'Manager'),
+        ('service_coordinator', 'Service Coordinator'),
         ('receptionist', 'Receptionist'),
         ('technician', 'Technician'),
         ('parts_manager', 'Parts Manager'),
+        ('accountant', 'Accountant'),
         ('customer', 'Customer'),
     )
     
@@ -128,7 +130,7 @@ class User(AbstractUser):
             return Branch.objects.filter(is_active=True)
         elif self.role == 'manager':
             return self.managed_branches.filter(is_active=True)
-        elif self.role in ['receptionist', 'technician', 'parts_manager']:
+        elif self.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
             if self.branch:
                 return Branch.objects.filter(id=self.branch.id, is_active=True)
             return Branch.objects.none()
@@ -140,7 +142,7 @@ class User(AbstractUser):
             return True
         elif self.role == 'manager':
             return self.managed_branches.filter(id=branch.id).exists()
-        elif self.role in ['receptionist', 'technician', 'parts_manager']:
+        elif self.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
             return self.branch and self.branch.id == branch.id
         return False
     
@@ -152,7 +154,7 @@ class User(AbstractUser):
             return Branch.objects.filter(is_headquarters=True).first() or Branch.objects.filter(is_active=True).first()
         elif self.role == 'manager':
             return self.managed_branches.filter(is_active=True).first()
-        elif self.role in ['receptionist', 'technician', 'parts_manager']:
+        elif self.role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
             return self.branch
         return None
 

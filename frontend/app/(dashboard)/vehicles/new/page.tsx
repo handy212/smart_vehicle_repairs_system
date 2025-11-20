@@ -144,15 +144,15 @@ export default function NewVehiclePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">New Vehicle</h1>
-          <p className="text-sm text-gray-500 mt-1">Register a new vehicle</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">New Vehicle</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Register a new vehicle</p>
         </div>
       </div>
 
       {serverError && (
-        <Card className="bg-red-50 border-red-200">
+        <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2 text-red-800">
+            <div className="flex items-center space-x-2 text-red-800 dark:text-red-400">
               <AlertCircle className="w-5 h-5" />
               <p className="text-sm font-medium">{serverError}</p>
             </div>
@@ -172,7 +172,7 @@ export default function NewVehiclePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label htmlFor="vin" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="vin" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     VIN (Vehicle Identification Number) *
                   </label>
                   <div className="flex items-center space-x-2">
@@ -193,16 +193,16 @@ export default function NewVehiclePage() {
                     />
                   </div>
                   {errors.vin && (
-                    <p className="mt-1 text-sm text-red-600">{errors.vin.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.vin.message}</p>
                   )}
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     Enter a 17-character VIN and click "Decode VIN" to auto-fill vehicle information
                   </p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label htmlFor="make" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="make" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Make *
                     </label>
                     <Input
@@ -212,11 +212,11 @@ export default function NewVehiclePage() {
                       placeholder="Toyota"
                     />
                     {errors.make && (
-                      <p className="mt-1 text-sm text-red-600">{errors.make.message}</p>
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.make.message}</p>
                     )}
                   </div>
                   <div>
-                    <label htmlFor="model" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="model" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Model *
                     </label>
                     <Input
@@ -226,11 +226,11 @@ export default function NewVehiclePage() {
                       placeholder="Camry"
                     />
                     {errors.model && (
-                      <p className="mt-1 text-sm text-red-600">{errors.model.message}</p>
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.model.message}</p>
                     )}
                   </div>
                   <div>
-                    <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="year" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Year *
                     </label>
                     <Input
@@ -240,14 +240,14 @@ export default function NewVehiclePage() {
                       className={errors.year ? "border-red-500" : ""}
                     />
                     {errors.year && (
-                      <p className="mt-1 text-sm text-red-600">{errors.year.message}</p>
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.year.message}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="license_plate" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="license_plate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       License Plate
                     </label>
                     <Input
@@ -256,7 +256,7 @@ export default function NewVehiclePage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="exterior_color" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="exterior_color" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Color
                     </label>
                     <Input
@@ -276,7 +276,7 @@ export default function NewVehiclePage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="current_mileage" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="current_mileage" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Mileage
                     </label>
                     <Input
@@ -287,7 +287,7 @@ export default function NewVehiclePage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="engine_type" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="engine_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Engine Type
                     </label>
                     <Select
@@ -312,7 +312,7 @@ export default function NewVehiclePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label htmlFor="owner" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="owner" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Owner (Customer) *
                   </label>
                   <Select
@@ -329,12 +329,12 @@ export default function NewVehiclePage() {
                     ))}
                   </Select>
                   {errors.owner && (
-                    <p className="mt-1 text-sm text-red-600">{errors.owner.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.owner.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Status
                   </label>
                   <Select

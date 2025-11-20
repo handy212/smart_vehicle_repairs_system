@@ -31,6 +31,7 @@ from apps.workorders.models import WorkOrder
 from apps.branches.utils import filter_queryset_for_user_branches
 from apps.inventory.models import Part
 from apps.accounts.models import User
+from apps.billing.tax_service import TaxService
 
 
 @login_required
@@ -274,11 +275,26 @@ def invoice_create(request):
             customer = get_object_or_404(Customer, id=customer_id)
             vehicle = get_object_or_404(Vehicle, id=vehicle_id)
             
+            # Determine branch: from work_order, or resolve from request
+            branch = None
+            if work_order_id:
+                try:
+                    work_order = WorkOrder.objects.get(id=work_order_id)
+                    branch = work_order.branch
+                except WorkOrder.DoesNotExist:
+                    pass
+            
+            # If no branch from work_order, resolve from request
+            if not branch:
+                from apps.branches.utils import resolve_branch
+                branch = resolve_branch(request)
+            
             # Create invoice
             invoice = Invoice.objects.create(
                 customer=customer,
                 vehicle=vehicle,
                 work_order_id=work_order_id if work_order_id else None,
+                branch=branch,  # CRITICAL: Set branch for Django Ledger integration
                 due_date=timezone.now().date() + timedelta(days=30),
                 description=request.POST.get('description', ''),
                 notes=request.POST.get('notes', ''),
@@ -384,6 +400,29 @@ def invoice_print(request, invoice_id):
         'print_generated_at': timezone.now(),
         'print_branch': invoice.branch or (invoice.work_order.branch if invoice.work_order else None),
     }
+    
+    # Check if PDF format is requested
+    if request.GET.get('format') == 'pdf':
+        try:
+            from weasyprint import HTML
+            
+            # Render HTML template
+            html_string = render_to_string('billing/invoice_print.html', context, request=request)
+            
+            # Generate PDF
+            pdf = HTML(string=html_string).write_pdf()
+            
+            # Return PDF response
+            response = HttpResponse(pdf, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
+            return response
+            
+        except ImportError:
+            messages.error(request, 'PDF generation requires WeasyPrint. Please install it: pip install weasyprint')
+            return redirect('billing:invoice_detail', invoice_id=invoice.id)
+        except Exception as e:
+            messages.error(request, f'Error generating PDF: {str(e)}')
+            return redirect('billing:invoice_detail', invoice_id=invoice.id)
     
     return render(request, 'billing/invoice_print.html', context)
 
@@ -805,18 +844,18 @@ def get_work_orders_for_vehicle(request):
 def calculate_tax(request):
     """Calculate tax for given amount and location (AJAX endpoint)"""
     try:
-        amount = Decimal(request.GET.get('amount', '0'))
-        # Get location parameters for tax calculation
-        # This is simplified - implement proper tax calculation based on TaxRate model
-        
-        # For now, use a simple 8.5% tax rate
-        tax_rate = Decimal('8.5')
-        tax_amount = (amount * tax_rate / 100).quantize(Decimal('0.01'))
+        taxable_amount = Decimal(request.GET.get('taxable_amount', request.GET.get('amount', '0')))
+        breakdown = TaxService.calculate_breakdown(taxable_amount)
         
         return JsonResponse({
-            'tax_rate': float(tax_rate),
-            'tax_amount': float(tax_amount),
-            'total_with_tax': float(amount + tax_amount)
+            'regime': breakdown.regime,
+            'taxable_subtotal': float(breakdown.taxable_subtotal),
+            'nhil_amount': float(breakdown.nhil_amount),
+            'getfund_amount': float(breakdown.getfund_amount),
+            'hrl_amount': float(breakdown.hrl_amount),
+            'vat_amount': float(breakdown.vat_amount),
+            'tax_amount': float(breakdown.total_tax),
+            'total_with_tax': float(breakdown.taxable_subtotal + breakdown.total_tax)
         })
         
     except Exception as e:

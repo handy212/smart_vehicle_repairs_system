@@ -144,6 +144,12 @@ class Estimate(models.Model):
     
     # Tax
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    taxable_subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    tax_nhil_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    tax_getfund_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    tax_hrl_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    tax_vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    tax_regime = models.CharField(max_length=50, blank=True)
     
     # Shop supplies/environmental fees
     shop_supplies_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
@@ -218,12 +224,31 @@ class Estimate(models.Model):
         # Apply discount
         if self.discount_percentage > 0:
             self.discount_amount = (self.subtotal * self.discount_percentage / 100).quantize(Decimal('0.01'))
+        else:
+            # Explicitly reset discount_amount to 0 when discount_percentage is 0
+            self.discount_amount = Decimal('0')
         
         subtotal_after_discount = self.subtotal - self.discount_amount
         
-        # Calculate tax (simplified - can be enhanced with TaxRate model)
-        # This is a placeholder - implement proper tax calculation based on TaxRate
-        # For now, we'll calculate it in the view/serializer based on applicable rates
+        # Calculate tax based on Ghana standard regime
+        taxable_before_discount = sum(
+            item.total for item in line_items if item.is_taxable
+        ) or Decimal('0')
+        discount_ratio = Decimal('0')
+        if self.subtotal > 0 and self.discount_amount > 0:
+            discount_ratio = (self.discount_amount / self.subtotal)
+        taxable_discount = (taxable_before_discount * discount_ratio).quantize(Decimal('0.01')) if discount_ratio > 0 else Decimal('0')
+        taxable_after_discount = max(taxable_before_discount - taxable_discount, Decimal('0'))
+        
+        from apps.billing.tax_service import TaxService
+        breakdown = TaxService.calculate_breakdown(taxable_after_discount)
+        self.taxable_subtotal = breakdown.taxable_subtotal
+        self.tax_nhil_amount = breakdown.nhil_amount
+        self.tax_getfund_amount = breakdown.getfund_amount
+        self.tax_hrl_amount = breakdown.hrl_amount
+        self.tax_vat_amount = breakdown.vat_amount
+        self.tax_amount = breakdown.total_tax
+        self.tax_regime = breakdown.regime
         
         # Grand total
         self.total = (
@@ -257,6 +282,11 @@ class Estimate(models.Model):
     def can_be_converted(self):
         """Check if estimate can be converted to work order"""
         return self.status == 'approved' and not self.work_order
+    
+    @property
+    def subtotal_after_discount(self):
+        """Calculate subtotal after discount"""
+        return self.subtotal - self.discount_amount
 
 
 class EstimateLineItem(models.Model):
@@ -380,6 +410,16 @@ class Invoice(models.Model):
         related_name='invoices'
     )  # Link to original estimate if applicable
     
+    # Django Ledger Invoice reference (for full accounting integration)
+    ledger_invoice = models.OneToOneField(
+        'django_ledger.InvoiceModel',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='repair_invoice',
+        help_text="Django Ledger Invoice for full accounting integration"
+    )
+    
     # Status and dates
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     invoice_date = models.DateField(default=timezone.now)
@@ -409,6 +449,12 @@ class Invoice(models.Model):
     
     # Tax
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    taxable_subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    tax_nhil_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    tax_getfund_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    tax_hrl_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    tax_vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    tax_regime = models.CharField(max_length=50, blank=True)
     
     # Shop supplies/environmental fees
     shop_supplies_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
@@ -458,6 +504,11 @@ class Invoice(models.Model):
     def __str__(self):
         return f"{self.invoice_number} - {self.customer}"
     
+    @property
+    def subtotal_after_discount(self):
+        """Calculate subtotal after discount"""
+        return self.subtotal - self.discount_amount
+    
     def save(self, *args, **kwargs):
         # Auto-generate invoice number using branch sequence
         if not self.invoice_number and self.branch:
@@ -506,11 +557,29 @@ class Invoice(models.Model):
         # Apply discount
         if self.discount_percentage > 0:
             self.discount_amount = (self.subtotal * self.discount_percentage / 100).quantize(Decimal('0.01'))
+        else:
+            # Explicitly reset discount_amount to 0 when discount_percentage is 0
+            self.discount_amount = Decimal('0')
         
         subtotal_after_discount = self.subtotal - self.discount_amount
         
-        # Calculate tax (will be done with TaxRate in views/serializers)
-        # For now, just add what's set
+        # Ghana tax regime (assume work order totals are taxable)
+        taxable_before_discount = self.subtotal
+        discount_ratio = Decimal('0')
+        if self.subtotal > 0 and self.discount_amount > 0:
+            discount_ratio = (self.discount_amount / self.subtotal)
+        taxable_discount = (taxable_before_discount * discount_ratio).quantize(Decimal('0.01')) if discount_ratio > 0 else Decimal('0')
+        taxable_after_discount = max(taxable_before_discount - taxable_discount, Decimal('0'))
+        
+        from apps.billing.tax_service import TaxService
+        breakdown = TaxService.calculate_breakdown(taxable_after_discount)
+        self.taxable_subtotal = breakdown.taxable_subtotal
+        self.tax_nhil_amount = breakdown.nhil_amount
+        self.tax_getfund_amount = breakdown.getfund_amount
+        self.tax_hrl_amount = breakdown.hrl_amount
+        self.tax_vat_amount = breakdown.vat_amount
+        self.tax_amount = breakdown.total_tax
+        self.tax_regime = breakdown.regime
         
         # Grand total
         self.total = (
@@ -541,7 +610,7 @@ class Invoice(models.Model):
     @property
     def days_until_due(self):
         """Days until invoice is due"""
-        if self.is_overdue:
+        if self.is_overdue or not self.due_date:
             return 0
         delta = self.due_date - timezone.now().date()
         return delta.days
@@ -563,6 +632,83 @@ class Invoice(models.Model):
             return Decimal('0')
         return ((self.amount_paid / self.total) * 100).quantize(Decimal('0.01'))
 
+
+class InvoiceLineItem(models.Model):
+    """Line items recorded on an invoice (standalone invoices)"""
+    
+    ITEM_TYPE_CHOICES = [
+        ('labor', 'Labor'),
+        ('part', 'Part'),
+        ('fee', 'Fee'),
+        ('discount', 'Discount'),
+        ('sublet', 'Sublet/Outsource'),
+        ('other', 'Other'),
+    ]
+    
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='line_items')
+    
+    item_type = models.CharField(max_length=20, choices=ITEM_TYPE_CHOICES)
+    description = models.CharField(max_length=500)
+    notes = models.TextField(blank=True)
+    
+    part = models.ForeignKey(Part, on_delete=models.SET_NULL, null=True, blank=True)
+    part_number = models.CharField(max_length=100, blank=True)
+    
+    quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    
+    labor_hours = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
+    labor_rate = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0'))]
+    )
+    
+    is_taxable = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'id']
+    
+    def __str__(self):
+        return f"{self.invoice.invoice_number} - {self.description}"
+    
+    def save(self, *args, **kwargs):
+        total = Decimal('0')
+        if self.item_type == 'labor' and self.labor_hours and self.labor_rate:
+            total = (self.labor_hours * self.labor_rate)
+        elif self.quantity and self.unit_price:
+            total = (self.quantity * self.unit_price)
+        elif self.unit_price:
+            total = self.unit_price
+        elif self.total:
+            total = self.total
+        self.total = total.quantize(Decimal('0.01'))
+        super().save(*args, **kwargs)
 
 class Payment(models.Model):
     """Payment records for invoices"""

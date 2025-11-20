@@ -13,6 +13,10 @@ class UserSerializer(serializers.ModelSerializer):
     
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     customer_profile = serializers.SerializerMethodField()
+    branch = serializers.SerializerMethodField()
+    managed_branches = serializers.SerializerMethodField()
+    branch_name = serializers.SerializerMethodField()
+    managed_branches_names = serializers.SerializerMethodField()
     
     class Meta:
         model = User
@@ -21,7 +25,9 @@ class UserSerializer(serializers.ModelSerializer):
             'phone', 'role', 'profile_picture', 'date_of_birth',
             'address', 'city', 'state', 'zip_code', 'country',
             'email_notifications', 'sms_notifications',
-            'is_active', 'created_at', 'updated_at', 'customer_profile'
+            'is_active', 'created_at', 'updated_at', 'customer_profile',
+            'branch', 'managed_branches', 'branch_name', 'managed_branches_names',
+            'employee_id', 'hire_date', 'hourly_rate'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
         extra_kwargs = {
@@ -37,6 +43,22 @@ class UserSerializer(serializers.ModelSerializer):
                 'customer_number': getattr(obj.customer_profile, 'customer_number', None),
             }
         return None
+    
+    def get_branch(self, obj):
+        """Return branch ID if user has a branch"""
+        return obj.branch.id if obj.branch else None
+    
+    def get_managed_branches(self, obj):
+        """Return list of managed branch IDs"""
+        return list(obj.managed_branches.values_list('id', flat=True))
+    
+    def get_branch_name(self, obj):
+        """Return branch name for display"""
+        return obj.branch.name if obj.branch else None
+    
+    def get_managed_branches_names(self, obj):
+        """Return list of managed branch names"""
+        return list(obj.managed_branches.values_list('name', flat=True))
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -49,30 +71,169 @@ class UserCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'email', 'username', 'password', 'password2',
-            'first_name', 'last_name', 'phone', 'role'
+            'first_name', 'last_name', 'phone', 'role',
+            'branch', 'managed_branches', 'employee_id', 'hire_date', 'hourly_rate',
+            'is_active'
         ]
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set queryset for branch fields dynamically
+        from apps.branches.models import Branch
+        branch_queryset = Branch.objects.filter(is_active=True)
+        
+        # Add branch field with queryset
+        self.fields['branch'] = serializers.PrimaryKeyRelatedField(
+            queryset=branch_queryset,
+            required=False,
+            allow_null=True,
+            help_text="Single branch assignment for non-manager staff"
+        )
+        
+        # Add managed_branches field with queryset
+        self.fields['managed_branches'] = serializers.PrimaryKeyRelatedField(
+            many=True,
+            queryset=branch_queryset,
+            required=False,
+            help_text="Multiple branch assignment for managers"
+        )
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
+        
+        role = attrs.get('role')
+        branch = attrs.get('branch')
+        managed_branches = attrs.get('managed_branches', [])
+        
+        # Validate branch assignment based on role
+        if role == 'manager':
+            # Managers should use managed_branches, not branch
+            if branch:
+                raise serializers.ValidationError({
+                    "branch": "Managers should be assigned via managed_branches, not branch field."
+                })
+        elif role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
+            # Staff should use branch, not managed_branches
+            if managed_branches:
+                raise serializers.ValidationError({
+                    "managed_branches": f"{role} role should be assigned to a single branch, not multiple branches."
+                })
+        
         return attrs
     
     def create(self, validated_data):
-        validated_data.pop('password2')
+        password2 = validated_data.pop('password2')
+        managed_branches = validated_data.pop('managed_branches', [])
+        branch = validated_data.pop('branch', None)
+        
+        # Set is_staff for non-customer roles
+        role = validated_data.get('role')
+        if role != 'customer':
+            validated_data['is_staff'] = True
+        
         user = User.objects.create_user(**validated_data)
+        
+        # Assign branch based on role
+        if role == 'manager' and managed_branches:
+            user.managed_branches.set(managed_branches)
+        elif branch and role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
+            user.branch = branch
+            user.save()
+        
         return user
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user profile"""
     
+    role = serializers.ChoiceField(choices=User.ROLE_CHOICES, required=False)
+    is_active = serializers.BooleanField(required=False)
+    
     class Meta:
         model = User
         fields = [
             'first_name', 'last_name', 'phone', 'profile_picture',
             'date_of_birth', 'address', 'city', 'state', 'zip_code', 'country',
-            'email_notifications', 'sms_notifications'
+            'email_notifications', 'sms_notifications', 'role', 'is_active',
+            'branch', 'managed_branches', 'employee_id', 'hire_date', 'hourly_rate'
         ]
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set queryset for branch fields dynamically
+        from apps.branches.models import Branch
+        branch_queryset = Branch.objects.filter(is_active=True)
+        
+        # Add branch field with queryset
+        self.fields['branch'] = serializers.PrimaryKeyRelatedField(
+            queryset=branch_queryset,
+            required=False,
+            allow_null=True,
+            help_text="Single branch assignment for non-manager staff"
+        )
+        
+        # Add managed_branches field with queryset
+        self.fields['managed_branches'] = serializers.PrimaryKeyRelatedField(
+            many=True,
+            queryset=branch_queryset,
+            required=False,
+            help_text="Multiple branch assignment for managers"
+        )
+    
+    def validate(self, attrs):
+        role = attrs.get('role', self.instance.role if self.instance else None)
+        branch = attrs.get('branch')
+        managed_branches = attrs.get('managed_branches')
+        
+        # If role is being changed, validate branch assignment
+        if role:
+            if role == 'manager':
+                # Managers should use managed_branches, not branch
+                if branch is not None:
+                    raise serializers.ValidationError({
+                        "branch": "Managers should be assigned via managed_branches, not branch field."
+                    })
+                # Clear branch if switching to manager
+                if self.instance and self.instance.branch:
+                    attrs['branch'] = None
+            elif role in ['receptionist', 'technician', 'parts_manager', 'service_coordinator', 'accountant']:
+                # Staff should use branch, not managed_branches
+                if managed_branches is not None and len(managed_branches) > 0:
+                    raise serializers.ValidationError({
+                        "managed_branches": f"{role} role should be assigned to a single branch, not multiple branches."
+                    })
+                # Clear managed_branches if switching to staff role
+                if self.instance:
+                    self.instance.managed_branches.clear()
+        
+        return attrs
+    
+    def update(self, instance, validated_data):
+        managed_branches = validated_data.pop('managed_branches', None)
+        role = validated_data.get('role', instance.role)
+        
+        # Update basic fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        instance.save()
+        
+        # Update branch assignments
+        if managed_branches is not None:
+            if role == 'manager':
+                instance.managed_branches.set(managed_branches)
+            else:
+                instance.managed_branches.clear()
+        
+        # Update is_staff based on role
+        if role != 'customer':
+            instance.is_staff = True
+        else:
+            instance.is_staff = False
+        instance.save()
+        
+        return instance
 
 
 class ChangePasswordSerializer(serializers.Serializer):

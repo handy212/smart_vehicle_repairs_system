@@ -14,6 +14,7 @@ router.register(r'payments', views.PaymentViewSet, basename='payment')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('tax/config/', views.TaxConfigurationView.as_view(), name='tax-config'),
     
     # Hubtel Payment Gateway endpoints (API)
     path('payments/hubtel/initiate/', hubtel_views.initiate_payment, name='hubtel-payment-initiate'),

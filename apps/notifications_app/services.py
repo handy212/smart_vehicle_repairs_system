@@ -312,6 +312,9 @@ class NotificationHelper:
     @staticmethod
     def appointment_reminder(appointment, recipient):
         """Create appointment reminder notification"""
+        # Get customer name
+        customer_name = appointment.customer.company_name if appointment.customer.company_name else appointment.customer.user.get_full_name()
+        
         return Notification.objects.create(
             recipient=recipient,
             notification_type='appointment',
@@ -321,7 +324,7 @@ class NotificationHelper:
             message=f'Reminder: You have an appointment on {appointment.appointment_date} at {appointment.appointment_time}',
             data={
                 'appointment_id': appointment.id,
-                'customer_name': f"{appointment.customer.first_name} {appointment.customer.last_name}",
+                'customer_name': customer_name,
                 'vehicle': f"{appointment.vehicle.year} {appointment.vehicle.make} {appointment.vehicle.model}",
                 'appointment_date': str(appointment.appointment_date),
                 'appointment_time': str(appointment.appointment_time)
@@ -333,17 +336,20 @@ class NotificationHelper:
     @staticmethod
     def work_order_completed(work_order, recipient):
         """Create work order completed notification"""
+        # Get customer name
+        customer_name = work_order.customer.company_name if work_order.customer.company_name else work_order.customer.user.get_full_name()
+        
         return Notification.objects.create(
             recipient=recipient,
             notification_type='work_order',
             channel='email',
             priority='normal',
-            title=f'Work Order {work_order.wo_number} Completed',
-            message=f'Work order {work_order.wo_number} has been completed.',
+            title=f'Work Order {work_order.work_order_number} Completed',
+            message=f'Work order {work_order.work_order_number} has been completed.',
             data={
                 'work_order_id': work_order.id,
-                'wo_number': work_order.wo_number,
-                'customer_name': work_order.customer.name,
+                'wo_number': work_order.work_order_number,
+                'customer_name': customer_name,
                 'vehicle': f"{work_order.vehicle.year} {work_order.vehicle.make} {work_order.vehicle.model}"
             },
             related_object_type='work_order',

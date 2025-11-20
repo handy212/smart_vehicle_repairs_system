@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api/auth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { notificationsApi } from "@/lib/api/notifications";
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, ChangeEvent } from "react";
 import { searchApi, SearchResult } from "@/lib/api/search";
 import { cn } from "@/lib/utils/cn";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Select } from "@/components/ui/select";
+import { branchesApi, type Branch } from "@/lib/api/admin";
+import { useBranchStore } from "@/store/branchStore";
 
 interface NavbarProps {
   onMenuToggle?: () => void;
@@ -22,6 +25,7 @@ interface NavbarProps {
 export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
   const { user, logout, isAuthenticated } = useAuthStore();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -29,6 +33,9 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const { activeBranchId, activeBranch, setBranch } = useBranchStore();
+  const previousBranchIdRef = useRef<number | null>(null);
+  const hasInitializedBranchRef = useRef(false);
 
   const { data: unreadCountData } = useQuery({
     queryKey: ["notifications", "unread-count"],
@@ -36,6 +43,83 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
     enabled: isAuthenticated,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
+
+  const {
+    data: accessibleBranchesData,
+    isLoading: isBranchesLoading,
+  } = useQuery<Branch[]>({
+    queryKey: ["branches", "accessible"],
+    queryFn: () => branchesApi.accessible(),
+    enabled: isAuthenticated,
+  });
+
+  const branchOptions = accessibleBranchesData ?? [];
+  const sortedBranches = [...branchOptions].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+  const hasMultipleBranches = sortedBranches.length > 1;
+  const showBranchSwitcher =
+    isAuthenticated &&
+    ((user?.role === "admin" && sortedBranches.length > 0) ||
+      hasMultipleBranches);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (!sortedBranches.length) return;
+
+    if (!activeBranchId) {
+      setBranch(sortedBranches[0]);
+      return;
+    }
+
+    const matched = sortedBranches.find((branch) => branch.id === activeBranchId);
+    if (!matched) {
+      setBranch(sortedBranches[0]);
+      return;
+    }
+
+    if (!activeBranch || matched.id !== activeBranch.id) {
+      setBranch(matched);
+      return;
+    }
+
+    hasInitializedBranchRef.current = true;
+  }, [sortedBranches, activeBranchId, isAuthenticated, activeBranch, setBranch]);
+
+  useEffect(() => {
+    if (!hasInitializedBranchRef.current) {
+      previousBranchIdRef.current = activeBranchId ?? null;
+      return;
+    }
+
+    if (
+      previousBranchIdRef.current !== null &&
+      activeBranchId !== null &&
+      activeBranchId !== previousBranchIdRef.current
+    ) {
+      queryClient.clear();
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      } else {
+        router.refresh();
+      }
+    }
+
+    previousBranchIdRef.current = activeBranchId ?? null;
+  }, [activeBranchId, queryClient, router]);
+
+  const handleBranchChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const selectedId = parseInt(event.target.value, 10);
+    const selectedBranch = sortedBranches.find(
+      (branch) => branch.id === selectedId
+    );
+    if (selectedBranch) {
+      setBranch(selectedBranch);
+    }
+  };
+
+  const currentBranchId =
+    activeBranchId ?? (sortedBranches.length ? sortedBranches[0].id : null);
 
   const unreadCount = unreadCountData?.unread_count || 0;
 
@@ -228,6 +312,31 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
             >
               <Search className="w-5 h-5" />
             </button>
+
+            {showBranchSwitcher && (
+              <div className="hidden md:flex flex-col mr-2 min-w-[180px]">
+                {/* <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Branch
+                </span> */}
+                <Select
+                  value={currentBranchId ? currentBranchId.toString() : ""}
+                  onChange={handleBranchChange}
+                  disabled={isBranchesLoading || sortedBranches.length === 0}
+                  className="w-48 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+                >
+                  {!currentBranchId && (
+                    <option value="" disabled>
+                      {isBranchesLoading ? "Loading branches..." : "Select branch"}
+                    </option>
+                  )}
+                  {sortedBranches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
 
             {/* Theme Toggle */}
             <ThemeToggle />

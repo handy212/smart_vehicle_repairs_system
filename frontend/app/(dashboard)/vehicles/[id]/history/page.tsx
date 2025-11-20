@@ -37,7 +37,7 @@ export default function VehicleHistoryPage() {
   if (vehicleLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
@@ -45,7 +45,7 @@ export default function VehicleHistoryPage() {
   if (!vehicle) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Vehicle not found.</p>
+        <p className="text-gray-500 dark:text-gray-400">Vehicle not found.</p>
         <Link href="/vehicles">
           <Button className="mt-4" variant="outline">
             Back to Vehicles
@@ -132,8 +132,8 @@ export default function VehicleHistoryPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Service History</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Service History</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.license_plate || vehicle.vin}
           </p>
         </div>
@@ -145,10 +145,10 @@ export default function VehicleHistoryPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Total Services</p>
-                <p className="text-2xl font-bold">{vehicleWorkOrders.length}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Services</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{vehicleWorkOrders.length}</p>
               </div>
-              <Wrench className="w-8 h-8 text-blue-500" />
+              <Wrench className="w-8 h-8 text-blue-500 dark:text-blue-400" />
             </div>
           </CardContent>
         </Card>
@@ -156,10 +156,10 @@ export default function VehicleHistoryPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Appointments</p>
-                <p className="text-2xl font-bold">{vehicleAppointments.length}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Appointments</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{vehicleAppointments.length}</p>
               </div>
-              <Calendar className="w-8 h-8 text-green-500" />
+              <Calendar className="w-8 h-8 text-green-500 dark:text-green-400" />
             </div>
           </CardContent>
         </Card>
@@ -167,14 +167,14 @@ export default function VehicleHistoryPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Current Mileage</p>
-                <p className="text-2xl font-bold">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Mileage</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   {vehicle.current_mileage
                     ? `${vehicle.current_mileage.toLocaleString()} mi`
                     : "-"}
                 </p>
               </div>
-              <Gauge className="w-8 h-8 text-purple-500" />
+              <Gauge className="w-8 h-8 text-purple-500 dark:text-purple-400" />
             </div>
           </CardContent>
         </Card>
@@ -182,8 +182,8 @@ export default function VehicleHistoryPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Total Spent</p>
-                <p className="text-2xl font-bold">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Spent</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                   $
                   {vehicleWorkOrders
                     .reduce((sum, wo) => {
@@ -195,7 +195,7 @@ export default function VehicleHistoryPage() {
                     .toFixed(2)}
                 </p>
               </div>
-              <FileText className="w-8 h-8 text-orange-500" />
+              <FileText className="w-8 h-8 text-orange-500 dark:text-orange-400" />
             </div>
           </CardContent>
         </Card>
@@ -223,10 +223,10 @@ export default function VehicleHistoryPage() {
                 <TableBody>
                   {vehicleWorkOrders.map((wo) => (
                     <TableRow key={wo.id}>
-                      <TableCell className="font-mono text-sm font-medium">
+                      <TableCell className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
                         {wo.work_order_number}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-gray-900 dark:text-gray-100">
                         {wo.created_at
                           ? format(new Date(wo.created_at), "MMM dd, yyyy")
                           : "-"}
@@ -239,7 +239,7 @@ export default function VehicleHistoryPage() {
                       <TableCell>
                         <Badge variant="secondary">{wo.priority || "-"}</Badge>
                       </TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium text-gray-900 dark:text-gray-100">
                         {wo.total_cost
                           ? `$${parseFloat(wo.total_cost.toString()).toFixed(2)}`
                           : "-"}
@@ -257,7 +257,7 @@ export default function VehicleHistoryPage() {
               </Table>
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No work orders found for this vehicle.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No work orders found for this vehicle.</p>
           )}
         </CardContent>
       </Card>
@@ -284,16 +284,16 @@ export default function VehicleHistoryPage() {
                 <TableBody>
                   {vehicleAppointments.map((apt) => (
                     <TableRow key={apt.id}>
-                      <TableCell className="font-mono text-sm font-medium">
+                      <TableCell className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
                         {apt.appointment_number}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-gray-900 dark:text-gray-100">
                         {apt.appointment_date
                           ? format(new Date(apt.appointment_date), "MMM dd, yyyy")
                           : "-"}
                       </TableCell>
-                      <TableCell>{apt.appointment_time || "-"}</TableCell>
-                      <TableCell>{apt.service_type || "-"}</TableCell>
+                      <TableCell className="text-gray-900 dark:text-gray-100">{apt.appointment_time || "-"}</TableCell>
+                      <TableCell className="text-gray-900 dark:text-gray-100">{apt.service_type || "-"}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(apt.status) as any}>
                           {apt.status?.replace("_", " ") || "-"}
@@ -312,7 +312,7 @@ export default function VehicleHistoryPage() {
               </Table>
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No appointments found for this vehicle.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">No appointments found for this vehicle.</p>
           )}
         </CardContent>
       </Card>
@@ -331,8 +331,8 @@ export default function VehicleHistoryPage() {
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center ${
                         item.type === "work_order"
-                          ? "bg-blue-100 text-blue-600"
-                          : "bg-green-100 text-green-600"
+                          ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                          : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
                       }`}
                     >
                       {item.type === "work_order" ? (
@@ -342,20 +342,20 @@ export default function VehicleHistoryPage() {
                       )}
                     </div>
                     {index < timelineItems.length - 1 && (
-                      <div className="w-0.5 h-full bg-gray-200 ml-5 -mt-2" style={{ height: "40px" }} />
+                      <div className="w-0.5 h-full bg-gray-200 dark:bg-gray-700 ml-5 -mt-2" style={{ height: "40px" }} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{item.title}</p>
-                        <p className="text-sm text-gray-500">{item.description}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.title}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge variant={getStatusVariant(item.status) as any}>
                           {item.status?.replace("_", " ")}
                         </Badge>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
                           {format(new Date(item.date), "MMM dd, yyyy")}
                         </span>
                       </div>

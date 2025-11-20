@@ -1,34 +1,139 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { billingApi } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Download, Mail, DollarSign, Calendar, User, Printer } from "lucide-react";
+import { Select } from "@/components/ui/select";
+import { ArrowLeft, Edit, Download, Mail, DollarSign, Calendar, User, Printer, ExternalLink, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useState } from "react";
 import RecordPaymentDialog from "./components/RecordPaymentDialog";
+import { useBranchStore } from "@/store/branchStore";
 
 export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
   const invoiceId = parseInt(params.id as string);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [localStatus, setLocalStatus] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: invoice, isLoading, error } = useQuery({
     queryKey: ["invoice", invoiceId],
     queryFn: () => billingApi.invoices.get(invoiceId),
   });
 
+  // Update local status when invoice data changes
+  useEffect(() => {
+    if (invoice?.status) {
+      setLocalStatus(invoice.status);
+    }
+  }, [invoice?.status]);
+
   const { data: payments } = useQuery({
     queryKey: ["payments", invoiceId],
     queryFn: () => billingApi.payments.list({ invoice: invoiceId }),
     enabled: !!invoice,
   });
+
+  const statusChangeMutation = useMutation({
+    mutationFn: async (newStatus: string) => {
+      return billingApi.invoices.update(invoiceId, { status: newStatus });
+    },
+    onMutate: async (newStatus) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["invoice", invoiceId] });
+      
+      // Snapshot previous value
+      const previousInvoice = queryClient.getQueryData(["invoice", invoiceId]);
+      
+      // Optimistically update
+      queryClient.setQueryData(["invoice", invoiceId], (old: any) => ({
+        ...old,
+        status: newStatus,
+      }));
+      setLocalStatus(newStatus);
+      
+      return { previousInvoice };
+    },
+    onError: (err, newStatus, context) => {
+      // Rollback on error
+      if (context?.previousInvoice) {
+        queryClient.setQueryData(["invoice", invoiceId], context.previousInvoice);
+        setLocalStatus((context.previousInvoice as any)?.status || invoice?.status || null);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async () => {
+      return billingApi.invoices.send(invoiceId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
+      alert("Invoice sent successfully!");
+    },
+    onError: () => {
+      alert("Failed to send invoice. Please try again.");
+    },
+  });
+
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value;
+    if (newStatus && newStatus !== localStatus) {
+      statusChangeMutation.mutate(newStatus);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/billing/invoices/${invoiceId}/pdf/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'X-Branch-ID': useBranchStore.getState().activeBranchId?.toString() || '',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `Failed to generate PDF: ${response.status} ${response.statusText}`);
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice_${invoice?.invoice_number || invoiceId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to download PDF. Please try again.';
+      alert(errorMessage);
+      console.error('PDF download error:', error);
+    }
+  };
+
+  const handleSendEmail = () => {
+    if (confirm("Send this invoice to the customer via email?")) {
+      sendEmailMutation.mutate();
+    }
+  };
 
   if (isLoading) {
     return (
@@ -70,12 +175,42 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  const parseAmount = (value?: string | number | null) => {
+    if (value === null || value === undefined) {
+      return 0;
+    }
+    const num = typeof value === "number" ? value : parseFloat(value);
+    return Number.isNaN(num) ? 0 : num;
+  };
+
+  const taxBreakdown = {
+    regime: invoice.tax_breakdown?.regime || invoice.tax_regime || "ghana_standard",
+    nhilAmount: parseAmount(invoice.tax_breakdown?.nhil_amount ?? invoice.tax_nhil_amount),
+    getfundAmount: parseAmount(invoice.tax_breakdown?.getfund_amount ?? invoice.tax_getfund_amount),
+    hrlAmount: parseAmount(invoice.tax_breakdown?.hrl_amount ?? invoice.tax_hrl_amount),
+    vatAmount: parseAmount(invoice.tax_breakdown?.vat_amount ?? invoice.tax_vat_amount),
+    totalTax: parseAmount(invoice.tax_breakdown?.total_tax ?? invoice.tax_amount),
+  };
+  const hasDetailedTax =
+    taxBreakdown.nhilAmount > 0 ||
+    taxBreakdown.getfundAmount > 0 ||
+    taxBreakdown.hrlAmount > 0 ||
+    taxBreakdown.vatAmount > 0;
+
   return (
-    <div className="space-y-6">
+    <>
+      <style jsx global>{`
+        @media print {
+          .no-print { display: none !important; }
+          body { margin: 0; padding: 20px; }
+          .print-page { page-break-after: auto; }
+        }
+      `}</style>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={() => router.back()}>
+          <Button variant="outline" onClick={() => router.back()} className="no-print">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -88,20 +223,26 @@ export default function InvoiceDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex space-x-2">
-          <Link href={`/billing/invoices/${invoiceId}/print`} target="_blank">
-            <Button variant="outline">
-              <Printer className="w-4 h-4 mr-2" />
-              Print
-            </Button>
-          </Link>
-          <Button variant="outline">
+        <div className="flex space-x-2 no-print">
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="w-4 h-4 mr-2" />
+            Print
+          </Button>
+          <Button variant="outline" onClick={handleDownloadPDF}>
             <Download className="w-4 h-4 mr-2" />
             Download PDF
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setShowPaymentDialog(true)}>
+            <DollarSign className="w-4 h-4 mr-2" />
+            Record Payment
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleSendEmail}
+            disabled={sendEmailMutation.isPending}
+          >
             <Mail className="w-4 h-4 mr-2" />
-            Send Email
+            {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
           </Button>
           <Link href={`/billing/invoices/${invoiceId}/edit`}>
             <Button>
@@ -110,13 +251,6 @@ export default function InvoiceDetailPage() {
             </Button>
           </Link>
         </div>
-      </div>
-
-      {/* Status Badge */}
-      <div>
-        <Badge variant={getStatusVariant(invoice.status) as any} className="text-sm px-3 py-1">
-          {invoice.status?.replace("_", " ") || invoice.status}
-        </Badge>
       </div>
 
       {/* Main Content Grid */}
@@ -133,6 +267,31 @@ export default function InvoiceDetailPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Invoice Number</p>
                   <p className="text-gray-900 font-mono">{invoice.invoice_number}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Status</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getStatusVariant(localStatus || invoice.status)}>
+                      {(localStatus || invoice.status).replace("_", " ").toUpperCase()}
+                    </Badge>
+                    <select
+                      value={localStatus || invoice.status}
+                      onChange={handleStatusChange}
+                      disabled={statusChangeMutation.isPending}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="sent">Sent</option>
+                      <option value="viewed">Viewed</option>
+                      <option value="partial">Partially Paid</option>
+                      <option value="paid">Paid</option>
+                      <option value="overdue">Overdue</option>
+                      <option value="void">Void</option>
+                    </select>
+                    {statusChangeMutation.isPending && (
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Invoice Date</p>
@@ -162,8 +321,35 @@ export default function InvoiceDetailPage() {
                   ) : (
                     <p className="text-gray-900">{invoice.customer_name || "-"}</p>
                   )}
+                  {invoice.customer_email && (
+                    <p className="text-xs text-gray-500 mt-1">{invoice.customer_email}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-1">Vehicle</p>
+                  <p className="text-gray-900">{invoice.vehicle_display || "No vehicle"}</p>
+                  {invoice.vehicle_vin && (
+                    <p className="text-xs text-gray-500 mt-1">VIN: {invoice.vehicle_vin}</p>
+                  )}
                 </div>
               </div>
+              
+              {((invoice as any).description || (invoice as any).terms) && (
+                <div className="border-t pt-4 mt-4 space-y-3">
+                  {(invoice as any).description && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Description</p>
+                      <p className="text-gray-900 text-sm">{(invoice as any).description}</p>
+                    </div>
+                  )}
+                  {(invoice as any).terms && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Payment Terms</p>
+                      <p className="text-gray-900 text-sm">{(invoice as any).terms}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -254,12 +440,73 @@ export default function InvoiceDetailPage() {
                   ${parseFloat(invoice.subtotal || "0").toFixed(2)}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Tax</span>
-                <span className="text-gray-900">
-                  ${parseFloat(invoice.tax_amount || "0").toFixed(2)}
-                </span>
-              </div>
+              
+              {/* Discount Display */}
+              {parseFloat(invoice.discount_percentage || "0") > 0 && parseFloat(invoice.discount_amount || "0") > 0 && (
+                <>
+                  <div className="flex items-center justify-between text-red-600">
+                    <span className="text-sm">
+                      Discount ({parseFloat(invoice.discount_percentage || "0").toFixed(1)}%)
+                      {invoice.discount_reason && (
+                        <span className="text-xs text-gray-500 ml-1">- {invoice.discount_reason}</span>
+                      )}
+                    </span>
+                    <span>
+                      -${parseFloat(invoice.discount_amount || "0").toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between font-medium border-t pt-2">
+                    <span className="text-sm text-gray-500">Subtotal after Discount</span>
+                    <span className="text-gray-900">
+                      ${(parseFloat(invoice.subtotal || "0") - parseFloat(invoice.discount_amount || "0")).toFixed(2)}
+                    </span>
+                  </div>
+                </>
+              )}
+              
+              {hasDetailedTax ? (
+                <>
+                  {taxBreakdown.nhilAmount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">NHIL</span>
+                      <span className="text-gray-900">
+                        ${taxBreakdown.nhilAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {taxBreakdown.getfundAmount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">GETFund</span>
+                      <span className="text-gray-900">
+                        ${taxBreakdown.getfundAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {taxBreakdown.hrlAmount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">COVID-19</span>
+                      <span className="text-gray-900">
+                        ${taxBreakdown.hrlAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {taxBreakdown.vatAmount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">VAT</span>
+                      <span className="text-gray-900">
+                        ${taxBreakdown.vatAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Tax</span>
+                  <span className="text-gray-900">
+                    ${taxBreakdown.totalTax.toFixed(2)}
+                  </span>
+                </div>
+              )}
               <div className="border-t pt-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700">Total</span>
@@ -267,6 +514,7 @@ export default function InvoiceDetailPage() {
                     ${parseFloat(invoice.total || "0").toFixed(2)}
                   </span>
                 </div>
+      
               </div>
               <div className="border-t pt-3">
                 <div className="flex items-center justify-between">
@@ -285,32 +533,6 @@ export default function InvoiceDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {invoice.status !== "paid" && parseFloat(invoice.balance_due || "0") > 0 && (
-                <Button 
-                  className="w-full" 
-                  variant="default"
-                  onClick={() => setShowPaymentDialog(true)}
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Record Payment
-                </Button>
-              )}
-              <Button className="w-full" variant="outline">
-                <Download className="w-4 h-4 mr-2" />
-                Download PDF
-              </Button>
-              <Button className="w-full" variant="outline">
-                <Mail className="w-4 h-4 mr-2" />
-                Send to Customer
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
@@ -325,7 +547,8 @@ export default function InvoiceDetailPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

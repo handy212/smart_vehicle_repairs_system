@@ -3,7 +3,14 @@ from decimal import Decimal
 from django.utils import timezone
 from django.db import transaction
 from django.core.validators import MinValueValidator
-from apps.billing.models import TaxRate, Estimate, EstimateLineItem, Invoice, Payment
+from apps.billing.models import (
+    TaxRate,
+    Estimate,
+    EstimateLineItem,
+    Invoice,
+    InvoiceLineItem,
+    Payment,
+)
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.workorders.models import WorkOrder
@@ -86,18 +93,30 @@ class EstimateLineItemCreateSerializer(serializers.ModelSerializer):
         ]
     
     def validate(self, data):
-        # Ensure quantity and unit_price are positive
-        if data.get('quantity', 0) <= 0:
-            raise serializers.ValidationError({"quantity": "Quantity must be greater than 0"})
-        if data.get('unit_price', 0) < 0:
-            raise serializers.ValidationError({"unit_price": "Unit price cannot be negative"})
+        item_type = data.get('item_type')
         
         # If item_type is labor, labor_hours and labor_rate should be provided
-        if data.get('item_type') == 'labor':
-            if not data.get('labor_hours'):
-                raise serializers.ValidationError({"labor_hours": "Labor hours required for labor items"})
-            if not data.get('labor_rate'):
-                raise serializers.ValidationError({"labor_rate": "Labor rate required for labor items"})
+        if item_type == 'labor':
+            labor_hours = data.get('labor_hours')
+            labor_rate = data.get('labor_rate')
+            if not labor_hours or labor_hours <= 0:
+                raise serializers.ValidationError({"labor_hours": "Labor hours must be greater than 0"})
+            if not labor_rate or (isinstance(labor_rate, str) and float(labor_rate) < 0) or (isinstance(labor_rate, (int, float)) and labor_rate < 0):
+                raise serializers.ValidationError({"labor_rate": "Labor rate must be greater than or equal to 0"})
+            # For labor items, quantity should match labor_hours
+            if not data.get('quantity'):
+                data['quantity'] = labor_hours
+        else:
+            # For non-labor items, ensure quantity and unit_price are valid
+            quantity = data.get('quantity')
+            if not quantity or quantity <= 0:
+                raise serializers.ValidationError({"quantity": "Quantity must be greater than 0"})
+            
+            unit_price = data.get('unit_price')
+            if unit_price is not None:
+                unit_price_val = float(unit_price) if isinstance(unit_price, str) else unit_price
+                if unit_price_val < 0:
+                    raise serializers.ValidationError({"unit_price": "Unit price cannot be negative"})
         
         return data
 
@@ -146,6 +165,7 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
     approved_by_name = serializers.CharField(source='approved_by.get_full_name', read_only=True)
     sent_by_name = serializers.CharField(source='sent_by.get_full_name', read_only=True)
+    tax_breakdown = serializers.SerializerMethodField()
     
     is_expired = serializers.BooleanField(read_only=True)
     days_until_expiration = serializers.IntegerField(read_only=True)
@@ -163,6 +183,7 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
             'labor_subtotal', 'parts_subtotal', 'sublet_subtotal', 'subtotal',
             'discount_amount', 'discount_percentage', 'discount_reason',
             'tax_amount', 'shop_supplies_fee', 'environmental_fee', 'total',
+            'taxable_subtotal', 'tax_breakdown', 'line_items',
             'line_items',
             'is_expired', 'days_until_expiration', 'can_be_approved', 'can_be_converted',
             'approved_date', 'declined_date', 'converted_date',
@@ -174,6 +195,17 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
     
     def get_vehicle_display(self, obj):
         return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
+
+    def get_tax_breakdown(self, obj):
+        return {
+            'regime': obj.tax_regime,
+            'taxable_subtotal': str(obj.taxable_subtotal),
+            'nhil_amount': str(obj.tax_nhil_amount),
+            'getfund_amount': str(obj.tax_getfund_amount),
+            'hrl_amount': str(obj.tax_hrl_amount),
+            'vat_amount': str(obj.tax_vat_amount),
+            'total_tax': str(obj.tax_amount),
+        }
 
 
 class EstimateCreateSerializer(serializers.ModelSerializer):
@@ -187,7 +219,7 @@ class EstimateCreateSerializer(serializers.ModelSerializer):
             'customer', 'vehicle', 'title', 'description',
             'notes', 'customer_notes', 'estimate_date', 'valid_until',
             'discount_percentage', 'discount_reason',
-            'tax_amount', 'shop_supplies_fee', 'environmental_fee',
+            'shop_supplies_fee', 'environmental_fee',
             'line_items'
         ]
     
@@ -209,6 +241,12 @@ class EstimateCreateSerializer(serializers.ModelSerializer):
         # Set created_by
         validated_data['created_by'] = self.context['request'].user
         
+        # Resolve branch from request if not provided
+        if not validated_data.get('branch'):
+            from apps.branches.utils import resolve_branch
+            request = self.context['request']
+            validated_data['branch'] = resolve_branch(request)
+        
         # Create estimate
         estimate = Estimate.objects.create(**validated_data)
         
@@ -225,14 +263,85 @@ class EstimateCreateSerializer(serializers.ModelSerializer):
 class EstimateUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating estimates"""
     
+    line_items = EstimateLineItemCreateSerializer(many=True, required=False)
+    
     class Meta:
         model = Estimate
         fields = [
+            'customer', 'vehicle',
             'title', 'description', 'notes', 'customer_notes',
             'estimate_date', 'valid_until',
             'discount_percentage', 'discount_reason',
-            'tax_amount', 'shop_supplies_fee', 'environmental_fee'
+            'shop_supplies_fee', 'environmental_fee',
+            'status', 'line_items'
         ]
+        extra_kwargs = {
+            'customer': {'required': False},
+            'vehicle': {'required': False},
+            'title': {'required': False},
+            'description': {'required': False},
+            'notes': {'required': False},
+            'customer_notes': {'required': False},
+            'estimate_date': {'required': False},
+            'valid_until': {'required': False},
+            'discount_percentage': {'required': False},
+            'discount_reason': {'required': False},
+            'shop_supplies_fee': {'required': False},
+            'environmental_fee': {'required': False},
+            'status': {'required': False},
+        }
+    
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        line_items_data = validated_data.pop('line_items', None)
+        discount_percentage_updated = 'discount_percentage' in validated_data
+        
+        # Update estimate fields
+        instance = super().update(instance, validated_data)
+        
+        # If line items are provided, update them
+        if line_items_data is not None:
+            # Delete existing line items
+            instance.line_items.all().delete()
+            
+            # Create new line items
+            for item_data in line_items_data:
+                EstimateLineItem.objects.create(estimate=instance, **item_data)
+            
+            # Recalculate totals
+            instance.calculate_totals()
+        elif discount_percentage_updated:
+            # If only discount_percentage was updated, recalculate discount_amount
+            discount_percentage = instance.discount_percentage or Decimal('0')
+            if discount_percentage > 0:
+                instance.discount_amount = (instance.subtotal * discount_percentage / 100).quantize(Decimal('0.01'))
+            else:
+                # Explicitly reset discount_amount to 0 when discount_percentage is 0
+                instance.discount_amount = Decimal('0')
+            instance.save()
+        
+        return instance
+
+
+# ============================================================================
+# ============================================================================
+# INVOICE LINE ITEM SERIALIZERS
+# ============================================================================
+
+class InvoiceLineItemSerializer(serializers.ModelSerializer):
+    part_name = serializers.CharField(source='part.name', read_only=True)
+    
+    class Meta:
+        model = InvoiceLineItem
+        fields = [
+            'id', 'item_type', 'description', 'notes',
+            'part', 'part_name', 'part_number',
+            'quantity', 'unit_price', 'total',
+            'labor_hours', 'labor_rate',
+            'is_taxable', 'order',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['total', 'created_at', 'updated_at']
 
 
 # ============================================================================
@@ -274,9 +383,9 @@ class InvoiceListSerializer(serializers.ModelSerializer):
 class InvoiceDetailSerializer(serializers.ModelSerializer):
     """Serializer for invoice details"""
     
-    customer_name = serializers.CharField(source='customer.full_name', read_only=True)
-    customer_email = serializers.CharField(source='customer.email', read_only=True)
-    customer_phone = serializers.CharField(source='customer.phone', read_only=True)
+    customer_name = serializers.SerializerMethodField()
+    customer_email = serializers.SerializerMethodField()
+    customer_phone = serializers.SerializerMethodField()
     customer_address = serializers.SerializerMethodField()
     
     vehicle_display = serializers.SerializerMethodField()
@@ -287,12 +396,18 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
     
     estimate_number = serializers.CharField(source='estimate.estimate_number', read_only=True)
     
-    # Include payment history
+    # Django Ledger integration fields
+    ledger_invoice = serializers.UUIDField(source='ledger_invoice.uuid', read_only=True, allow_null=True)
+    ledger_invoice_url = serializers.SerializerMethodField()
+    
+    # Include payment history and line items
     payments = serializers.SerializerMethodField()
+    line_items = InvoiceLineItemSerializer(many=True, read_only=True)
     
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
     sent_by_name = serializers.CharField(source='sent_by.get_full_name', read_only=True)
     voided_by_name = serializers.CharField(source='voided_by.get_full_name', read_only=True)
+    tax_breakdown = serializers.SerializerMethodField()
     
     is_overdue = serializers.BooleanField(read_only=True)
     days_overdue = serializers.IntegerField(read_only=True)
@@ -309,14 +424,17 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             'vehicle', 'vehicle_display', 'vehicle_vin',
             'work_order', 'work_order_number', 'work_order_status',
             'estimate', 'estimate_number',
+            'ledger_invoice', 'ledger_invoice_url',
             'status', 'invoice_date', 'due_date',
             'description', 'notes', 'customer_notes', 'terms',
             'labor_subtotal', 'parts_subtotal', 'sublet_subtotal', 'subtotal',
             'discount_amount', 'discount_percentage', 'discount_reason',
             'tax_amount', 'shop_supplies_fee', 'environmental_fee', 'total',
+            'taxable_subtotal', 'tax_breakdown',
             'amount_paid', 'amount_due',
             'is_overdue', 'days_overdue', 'days_until_due',
             'is_paid', 'is_partially_paid', 'payment_percentage',
+            'line_items',
             'payments',
             'created_by', 'created_by_name',
             'sent_by', 'sent_by_name', 'sent_at',
@@ -328,46 +446,161 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
     def get_vehicle_display(self, obj):
         return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
     
+    def get_customer_name(self, obj):
+        """Get customer name from user or company name"""
+        customer = obj.customer
+        if customer.company_name:
+            return customer.company_name
+        if hasattr(customer, 'user') and customer.user:
+            return customer.user.get_full_name() or customer.user.username
+        return str(customer)
+    
+    def get_customer_email(self, obj):
+        """Get customer email from user"""
+        customer = obj.customer
+        if hasattr(customer, 'user') and customer.user:
+            return customer.user.email or ''
+        return ''
+    
+    def get_customer_phone(self, obj):
+        """Get customer phone from user"""
+        customer = obj.customer
+        if hasattr(customer, 'user') and customer.user:
+            return customer.user.phone or ''
+        return ''
+    
     def get_customer_address(self, obj):
-        parts = [obj.customer.address]
-        if obj.customer.city:
-            city_state_zip = f"{obj.customer.city}, {obj.customer.state} {obj.customer.zip_code}"
-            parts.append(city_state_zip)
+        """Get customer address from service_address, billing_address, or user address"""
+        customer = obj.customer
+        parts = []
+        
+        # Try service address first
+        if customer.service_address:
+            parts.append(customer.service_address)
+            if customer.service_city:
+                city_state_zip = f"{customer.service_city}, {customer.service_state} {customer.service_zip_code}".strip()
+                if city_state_zip and city_state_zip != ", ":
+                    parts.append(city_state_zip)
+        # Fall back to billing address
+        elif customer.billing_address:
+            parts.append(customer.billing_address)
+            if customer.billing_city:
+                city_state_zip = f"{customer.billing_city}, {customer.billing_state} {customer.billing_zip_code}".strip()
+                if city_state_zip and city_state_zip != ", ":
+                    parts.append(city_state_zip)
+        # Fall back to user address
+        elif hasattr(customer, 'user') and customer.user:
+            user = customer.user
+            if user.address:
+                parts.append(user.address)
+            if user.city:
+                city_state_zip = f"{user.city}, {user.state} {user.zip_code}".strip()
+                if city_state_zip and city_state_zip != ", ":
+                    parts.append(city_state_zip)
+        
         return ", ".join(filter(None, parts))
+    
+    def get_ledger_invoice_url(self, obj):
+        """Get URL to view invoice in Django Ledger"""
+        if obj.ledger_invoice and obj.branch and hasattr(obj.branch, 'ledger_entity') and obj.branch.ledger_entity:
+            entity_slug = obj.branch.ledger_entity.slug
+            # Get request from context
+            request = self.context.get('request')
+            if request:
+                # Build absolute URI from request
+                # Django request.build_absolute_uri gives us the full URL including protocol and domain
+                base_url = request.build_absolute_uri('/').rstrip('/')
+                # If the request came through /api, replace it, otherwise use as-is
+                if '/api' in base_url:
+                    base_url = base_url.replace('/api', '')
+                # Ensure we have the correct port (8000 for backend)
+                # If request came from frontend (port 3000), we need to change it
+                if ':3000' in base_url:
+                    base_url = base_url.replace(':3000', ':8000')
+                return f"{base_url}/ledger/invoice/{entity_slug}/detail/{obj.ledger_invoice.uuid}/"
+            else:
+                # Fallback: use environment variable or default to localhost:8000
+                import os
+                api_url = os.environ.get('NEXT_PUBLIC_API_URL', 'http://localhost:8000/api')
+                base_url = api_url.replace('/api', '').rstrip('/')
+                return f"{base_url}/ledger/invoice/{entity_slug}/detail/{obj.ledger_invoice.uuid}/"
+        return None
     
     def get_payments(self, obj):
         from apps.billing.serializers import PaymentSerializer
         payments = obj.payments.filter(status='completed').order_by('-payment_date')
         return PaymentSerializer(payments, many=True).data
 
+    def get_tax_breakdown(self, obj):
+        return {
+            'regime': obj.tax_regime,
+            'taxable_subtotal': str(obj.taxable_subtotal),
+            'nhil_amount': str(obj.tax_nhil_amount),
+            'getfund_amount': str(obj.tax_getfund_amount),
+            'hrl_amount': str(obj.tax_hrl_amount),
+            'vat_amount': str(obj.tax_vat_amount),
+            'total_tax': str(obj.tax_amount),
+        }
+
+
+class InvoiceLineItemCreateSerializer(serializers.Serializer):
+    """Serializer for invoice line items (used for standalone invoices)"""
+    item_type = serializers.ChoiceField(choices=['labor', 'part', 'fee', 'discount', 'sublet', 'other'])
+    description = serializers.CharField(max_length=500)
+    quantity = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    unit_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    labor_hours = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+    labor_rate = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    part = serializers.PrimaryKeyRelatedField(queryset=Part.objects.all(), required=False, allow_null=True)
+    part_number = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    is_taxable = serializers.BooleanField(default=True)
+    total = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+
 
 class InvoiceCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating invoices"""
     
+    line_items = InvoiceLineItemCreateSerializer(many=True, required=False)
+    
     class Meta:
         model = Invoice
         fields = [
-            'work_order', 'estimate',
+            'customer', 'vehicle', 'work_order', 'estimate',
             'invoice_date', 'due_date',
             'description', 'notes', 'customer_notes', 'terms',
             'discount_percentage', 'discount_reason',
-            'tax_amount', 'shop_supplies_fee', 'environmental_fee'
+            'shop_supplies_fee', 'environmental_fee',
+            'line_items'  # For standalone invoices without work order
         ]
+        extra_kwargs = {
+            'customer': {'required': False},
+            'vehicle': {'required': False},
+            'work_order': {'required': False},
+        }
     
     def validate(self, data):
         work_order = data.get('work_order')
+        customer = data.get('customer')
+        vehicle = data.get('vehicle')
+        line_items = data.get('line_items', [])
         
-        # Ensure work order exists
-        if not work_order:
-            raise serializers.ValidationError({"work_order": "Work order is required"})
-        
-        # Ensure work order is completed
-        if work_order.status != 'completed':
-            raise serializers.ValidationError({"work_order": "Work order must be completed before creating invoice"})
-        
-        # Check if invoice already exists for this work order
-        if Invoice.objects.filter(work_order=work_order).exists():
-            raise serializers.ValidationError({"work_order": "Invoice already exists for this work order"})
+        # If work_order is provided, validate it
+        if work_order:
+            # Ensure work order is completed
+            if work_order.status != 'completed':
+                raise serializers.ValidationError({"work_order": "Work order must be completed before creating invoice"})
+            
+            # Check if invoice already exists for this work order
+            if Invoice.objects.filter(work_order=work_order).exists():
+                raise serializers.ValidationError({"work_order": "Invoice already exists for this work order"})
+        else:
+            # For standalone invoices, customer and vehicle are required
+            if not customer:
+                raise serializers.ValidationError({"customer": "Customer is required when creating invoice without work order"})
+            if not vehicle:
+                raise serializers.ValidationError({"vehicle": "Vehicle is required when creating invoice without work order"})
+            if not line_items:
+                raise serializers.ValidationError({"line_items": "At least one line item is required when creating invoice without work order"})
         
         # Ensure due_date is after invoice_date
         if data.get('due_date') and data.get('invoice_date'):
@@ -376,21 +609,141 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
         
         return data
     
+    @transaction.atomic
     def create(self, validated_data):
-        work_order = validated_data['work_order']
+        line_items_data = validated_data.pop('line_items', [])
+        work_order = validated_data.get('work_order')
         
         # Set created_by
         validated_data['created_by'] = self.context['request'].user
         
-        # Get customer and vehicle from work order
-        validated_data['customer'] = work_order.customer
-        validated_data['vehicle'] = work_order.vehicle
+        # If work_order is provided, get customer and vehicle from it
+        if work_order:
+            validated_data['customer'] = work_order.customer
+            validated_data['vehicle'] = work_order.vehicle
+            
+            # CRITICAL: Set branch from work_order for Django Ledger integration
+            if not validated_data.get('branch') and work_order.branch:
+                validated_data['branch'] = work_order.branch
+        else:
+            # For standalone invoices, resolve branch from request
+            if not validated_data.get('branch'):
+                from apps.branches.utils import resolve_branch
+                request = self.context['request']
+                validated_data['branch'] = resolve_branch(request)
+        
+        # Map payment_terms to terms if provided (frontend sends payment_terms)
+        if 'payment_terms' in validated_data:
+            payment_terms = validated_data.pop('payment_terms')
+            if not validated_data.get('terms'):
+                # Map enum values to readable text
+                terms_map = {
+                    'due_on_receipt': 'Due on Receipt',
+                    'net_15': 'Net 15',
+                    'net_30': 'Net 30',
+                    'net_60': 'Net 60',
+                }
+                validated_data['terms'] = terms_map.get(payment_terms, payment_terms)
         
         # Create invoice
         invoice = Invoice.objects.create(**validated_data)
         
-        # Calculate totals from work order
-        invoice.calculate_totals_from_work_order()
+        # Calculate totals
+        if work_order:
+            # Calculate totals from work order
+            invoice.calculate_totals_from_work_order()
+            invoice.save()
+        elif line_items_data:
+            # Calculate totals from line items
+            from decimal import Decimal
+            labor_subtotal = Decimal('0')
+            parts_subtotal = Decimal('0')
+            sublet_subtotal = Decimal('0')
+            
+            taxable_before_discount = Decimal('0')
+            
+            for item in line_items_data:
+                # Calculate item total from quantity and unit_price
+                quantity = Decimal(str(item.get('quantity', 0) or 0))
+                unit_price = Decimal(str(item.get('unit_price', 0) or 0))
+                item_total = (quantity * unit_price).quantize(Decimal('0.01'))
+                
+                item_type = item.get('item_type', '')
+                
+                if item_type == 'labor':
+                    labor_subtotal += item_total
+                elif item_type == 'part':
+                    parts_subtotal += item_total
+                elif item_type == 'sublet':
+                    sublet_subtotal += item_total
+                
+                if item.get('is_taxable', True):
+                    taxable_before_discount += item_total
+            
+            invoice.labor_subtotal = labor_subtotal
+            invoice.parts_subtotal = parts_subtotal
+            invoice.sublet_subtotal = sublet_subtotal
+            invoice.subtotal = labor_subtotal + parts_subtotal + sublet_subtotal
+            
+            # Apply discount
+            discount_percentage = validated_data.get('discount_percentage', Decimal('0'))
+            if discount_percentage > 0:
+                invoice.discount_amount = (invoice.subtotal * discount_percentage / 100).quantize(Decimal('0.01'))
+            else:
+                # Explicitly reset discount_amount to 0 when discount_percentage is 0
+                invoice.discount_amount = Decimal('0')
+            
+            subtotal_after_discount = invoice.subtotal - invoice.discount_amount
+            
+            discount_ratio = Decimal('0')
+            if invoice.subtotal > 0 and invoice.discount_amount > 0:
+                discount_ratio = invoice.discount_amount / invoice.subtotal
+            taxable_discount = (taxable_before_discount * discount_ratio).quantize(Decimal('0.01')) if discount_ratio > 0 else Decimal('0')
+            taxable_after_discount = max(taxable_before_discount - taxable_discount, Decimal('0'))
+            
+            from apps.billing.tax_service import TaxService
+            breakdown = TaxService.calculate_breakdown(taxable_after_discount)
+            invoice.taxable_subtotal = breakdown.taxable_subtotal
+            invoice.tax_nhil_amount = breakdown.nhil_amount
+            invoice.tax_getfund_amount = breakdown.getfund_amount
+            invoice.tax_hrl_amount = breakdown.hrl_amount
+            invoice.tax_vat_amount = breakdown.vat_amount
+            invoice.tax_amount = breakdown.total_tax
+            invoice.tax_regime = breakdown.regime
+            
+            # Calculate total
+            invoice.total = (
+                subtotal_after_discount + 
+                invoice.tax_amount + 
+                invoice.shop_supplies_fee + 
+                invoice.environmental_fee
+            ).quantize(Decimal('0.01'))
+            
+            invoice.amount_due = invoice.total
+            invoice.save()
+            
+            # Persist invoice line items
+            for order, item in enumerate(line_items_data):
+                item_data = item.copy()
+                item_data.pop('total', None)
+                InvoiceLineItem.objects.create(
+                    invoice=invoice,
+                    order=order,
+                    **item_data
+                )
+        
+        # The post_save signal will create the DL invoice automatically
+        # But we need to ensure the invoice is saved again to trigger the signal
+        # (signal fires on save, and we just saved above, so it should work)
+        # However, if DL invoice wasn't created, we need to refresh from DB
+        invoice.refresh_from_db()
+        
+        # Ensure Django Ledger invoice has matching line items
+        try:
+            from apps.billing.accounting_service import AccountingService
+            AccountingService.create_dl_invoice(invoice)
+        except Exception:
+            pass
         
         return invoice
 
@@ -398,14 +751,142 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
 class InvoiceUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating invoices"""
     
+    line_items = InvoiceLineItemCreateSerializer(many=True, required=False)
+    
     class Meta:
         model = Invoice
         fields = [
+            'status',  # Allow status updates
+            'customer', 'vehicle',
             'description', 'notes', 'customer_notes', 'terms',
             'invoice_date', 'due_date',
             'discount_percentage', 'discount_reason',
-            'tax_amount', 'shop_supplies_fee', 'environmental_fee'
+            'shop_supplies_fee', 'environmental_fee',
+            'line_items'
         ]
+        extra_kwargs = {
+            'customer': {'required': False},
+            'vehicle': {'required': False},
+            'description': {'required': False},
+            'notes': {'required': False},
+            'customer_notes': {'required': False},
+            'terms': {'required': False},
+            'invoice_date': {'required': False},
+            'due_date': {'required': False},
+            'discount_percentage': {'required': False},
+            'discount_reason': {'required': False},
+            'shop_supplies_fee': {'required': False},
+            'environmental_fee': {'required': False},
+            'status': {'required': False},
+        }
+    
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        line_items_data = validated_data.pop('line_items', None)
+        discount_percentage_updated = 'discount_percentage' in validated_data
+        
+        instance = super().update(instance, validated_data)
+        
+        # If discount_percentage was updated, recalculate discount_amount
+        if discount_percentage_updated:
+            discount_percentage = instance.discount_percentage or Decimal('0')
+            if discount_percentage > 0:
+                instance.discount_amount = (instance.subtotal * discount_percentage / 100).quantize(Decimal('0.01'))
+            else:
+                # Explicitly reset discount_amount to 0 when discount_percentage is 0
+                instance.discount_amount = Decimal('0')
+            instance.save()
+        
+        if line_items_data is not None:
+            if not instance.work_order and len(line_items_data) == 0:
+                raise serializers.ValidationError({
+                    "line_items": "At least one line item is required."
+                })
+            
+            InvoiceLineItem.objects.filter(invoice=instance).delete()
+            
+            if line_items_data:
+                labor_subtotal = Decimal('0')
+                parts_subtotal = Decimal('0')
+                sublet_subtotal = Decimal('0')
+                taxable_before_discount = Decimal('0')
+                
+                for order, item in enumerate(line_items_data):
+                    # Calculate item total from quantity and unit_price
+                    quantity = Decimal(str(item.get('quantity', 0) or 0))
+                    unit_price = Decimal(str(item.get('unit_price', 0) or 0))
+                    item_total = (quantity * unit_price).quantize(Decimal('0.01'))
+                    
+                    item_type = item.get('item_type', '')
+                    
+                    if item_type == 'labor':
+                        labor_subtotal += item_total
+                    elif item_type == 'part':
+                        parts_subtotal += item_total
+                    elif item_type == 'sublet':
+                        sublet_subtotal += item_total
+                    
+                    if item.get('is_taxable', True):
+                        taxable_before_discount += item_total
+                    
+                    item_data = item.copy()
+                    item_data.pop('total', None)
+                    InvoiceLineItem.objects.create(
+                        invoice=instance,
+                        order=order,
+                        **item_data
+                    )
+                
+                instance.labor_subtotal = labor_subtotal
+                instance.parts_subtotal = parts_subtotal
+                instance.sublet_subtotal = sublet_subtotal
+                instance.subtotal = labor_subtotal + parts_subtotal + sublet_subtotal
+                
+                discount_percentage = instance.discount_percentage or Decimal('0')
+                if discount_percentage > 0:
+                    instance.discount_amount = (instance.subtotal * discount_percentage / 100).quantize(Decimal('0.01'))
+                else:
+                    # Explicitly reset discount_amount to 0 when discount_percentage is 0
+                    instance.discount_amount = Decimal('0')
+                subtotal_after_discount = instance.subtotal - instance.discount_amount
+                
+                discount_ratio = Decimal('0')
+                if instance.subtotal > 0 and instance.discount_amount > 0:
+                    discount_ratio = (instance.discount_amount / instance.subtotal)
+                taxable_discount = (taxable_before_discount * discount_ratio).quantize(Decimal('0.01')) if discount_ratio > 0 else Decimal('0')
+                taxable_after_discount = max(taxable_before_discount - taxable_discount, Decimal('0'))
+                
+                from apps.billing.tax_service import TaxService
+                breakdown = TaxService.calculate_breakdown(taxable_after_discount)
+                instance.taxable_subtotal = breakdown.taxable_subtotal
+                instance.tax_nhil_amount = breakdown.nhil_amount
+                instance.tax_getfund_amount = breakdown.getfund_amount
+                instance.tax_hrl_amount = breakdown.hrl_amount
+                instance.tax_vat_amount = breakdown.vat_amount
+                instance.tax_amount = breakdown.total_tax
+                instance.tax_regime = breakdown.regime
+                
+                instance.total = (
+                    subtotal_after_discount +
+                    instance.tax_amount +
+                    instance.shop_supplies_fee +
+                    instance.environmental_fee
+                ).quantize(Decimal('0.01'))
+                instance.amount_due = (instance.total - instance.amount_paid).quantize(Decimal('0.01'))
+                instance.save()
+            else:
+                # No line items provided; fallback to work order totals if available
+                if instance.work_order:
+                    instance.calculate_totals_from_work_order()
+                    instance.save()
+        
+        try:
+            from apps.billing.accounting_service import AccountingService
+            AccountingService.create_dl_invoice(instance)
+        except Exception:
+            pass
+        
+        return instance
 
 
 # ============================================================================

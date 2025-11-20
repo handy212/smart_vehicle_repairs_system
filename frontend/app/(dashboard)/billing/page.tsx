@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { Plus, Search, Receipt, DollarSign, Trash2, Download } from "lucide-react";
+import { Plus, Search, Receipt, DollarSign, Trash2, Download, CheckCircle2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -523,6 +523,7 @@ export default function BillingPage() {
                     >
                       Status
                     </SortableHeader>
+                    <TableHead>Accounting</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -564,6 +565,19 @@ export default function BillingPage() {
                         <Badge variant={getStatusVariant(invoice.status) as any}>
                           {invoice.status?.replace("_", " ") || invoice.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {invoice.ledger_invoice ? (
+                          <div className="flex items-center space-x-1 text-green-600">
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span className="text-xs">Synced</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1 text-gray-400">
+                            <AlertCircle className="w-4 h-4" />
+                            <span className="text-xs">Not Synced</span>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">

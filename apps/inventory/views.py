@@ -6,8 +6,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Sum, Count, F, Q, Avg
 from django.utils import timezone
+from django.db import connection
 from datetime import date
 from decimal import Decimal
+
+from apps.branches.utils import filter_queryset_for_user_branches
 
 from .models import (
     PartCategory, Supplier, Part, PurchaseOrder, 
@@ -146,6 +149,61 @@ class PartViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        
+        # Check if branch column exists in database before filtering
+        # This allows the API to work before migrations are run
+        try:
+            table_name = Part._meta.db_table
+            db_vendor = connection.vendor
+            
+            has_branch_column = False
+            with connection.cursor() as cursor:
+                if db_vendor == 'postgresql':
+                    cursor.execute("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = %s AND column_name = 'branch_id'
+                    """, [table_name])
+                    has_branch_column = cursor.fetchone() is not None
+                elif db_vendor == 'sqlite':
+                    cursor.execute("""
+                        SELECT name FROM pragma_table_info(?) WHERE name = 'branch_id'
+                    """, [table_name])
+                    has_branch_column = cursor.fetchone() is not None
+                elif db_vendor == 'mysql':
+                    cursor.execute("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = %s AND column_name = 'branch_id'
+                        AND table_schema = DATABASE()
+                    """, [table_name])
+                    has_branch_column = cursor.fetchone() is not None
+                else:
+                    # For other databases, try a simple test query
+                    try:
+                        cursor.execute(f"SELECT branch_id FROM {table_name} LIMIT 0")
+                        has_branch_column = True  # If query succeeds, column exists
+                    except Exception:
+                        has_branch_column = False  # If query fails, column doesn't exist
+        except Exception:
+            # If checking fails, assume column doesn't exist and defer it
+            has_branch_column = False
+        
+        if has_branch_column:
+            # Branch column exists, filter by branch
+            try:
+                queryset = filter_queryset_for_user_branches(
+                    queryset,
+                    self.request.user,
+                    self.request,
+                    include_unassigned=True
+                )
+            except Exception:
+                # If filtering fails for any reason, defer branch field
+                queryset = queryset.defer('branch')
+        else:
+            # Branch column doesn't exist yet, defer it to avoid SQL errors
+            queryset = queryset.defer('branch')
         
         # Custom filter: low stock
         if self.request.query_params.get('low_stock') == 'true':
@@ -540,6 +598,10 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     search_fields = ['po_number', 'supplier__name', 'notes']
     ordering_fields = ['po_number', 'order_date', 'expected_delivery_date', 'total', 'created_at']
     ordering = ['-created_at']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return filter_queryset_for_user_branches(queryset, self.request.user, self.request)
 
     def get_serializer_class(self):
         if self.action == 'create':

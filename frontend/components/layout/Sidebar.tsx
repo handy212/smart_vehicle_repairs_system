@@ -16,6 +16,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";

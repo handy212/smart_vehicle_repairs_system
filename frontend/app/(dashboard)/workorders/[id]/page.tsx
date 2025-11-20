@@ -67,7 +67,7 @@ export default function WorkOrderDetailPage() {
         </Button>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600">Error loading work order. Please try again.</p>
+            <p className="text-red-600 dark:text-red-400">Error loading work order. Please try again.</p>
           </CardContent>
         </Card>
       </div>
@@ -125,10 +125,10 @@ export default function WorkOrderDetailPage() {
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               Work Order #{workOrder.work_order_number}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {workOrder.customer_name || "Customer"}
             </p>
           </div>
@@ -232,8 +232,8 @@ export default function WorkOrderDetailPage() {
                   <div className="flex items-start space-x-3">
                     <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Work Order Created</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Work Order Created</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {format(new Date(workOrder.created_at), "MMM dd, yyyy 'at' h:mm a")}
                       </p>
                     </div>
@@ -245,8 +245,8 @@ export default function WorkOrderDetailPage() {
                   <div className="flex items-start space-x-3">
                     <div className="w-2 h-2 rounded-full bg-purple-500 mt-2"></div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Diagnosis Completed</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Diagnosis Completed</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {format(new Date((workOrder as any).diagnosis_completed_at), "MMM dd, yyyy 'at' h:mm a")}
                       </p>
                     </div>
@@ -258,8 +258,8 @@ export default function WorkOrderDetailPage() {
                   <div className="flex items-start space-x-3">
                     <div className="w-2 h-2 rounded-full bg-yellow-500 mt-2"></div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Approval Requested</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Approval Requested</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {format(new Date((workOrder as any).approval_requested_at), "MMM dd, yyyy 'at' h:mm a")}
                       </p>
                     </div>
@@ -271,8 +271,8 @@ export default function WorkOrderDetailPage() {
                   <div className="flex items-start space-x-3">
                     <div className="w-2 h-2 rounded-full bg-green-500 mt-2"></div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Work Order Approved</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Work Order Approved</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {format(new Date((workOrder as any).approved_at), "MMM dd, yyyy 'at' h:mm a")}
                       </p>
                     </div>
@@ -284,8 +284,8 @@ export default function WorkOrderDetailPage() {
                   <div className="flex items-start space-x-3">
                     <div className="w-2 h-2 rounded-full bg-green-500 mt-2"></div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Work Started</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Work Started</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {format(new Date((workOrder as any).started_at), "MMM dd, yyyy 'at' h:mm a")}
                       </p>
                     </div>
@@ -297,10 +297,10 @@ export default function WorkOrderDetailPage() {
                   <div className="flex items-start space-x-3">
                     <div className={`w-2 h-2 rounded-full mt-2 ${(workOrder as any).quality_check_passed ? 'bg-green-500' : 'bg-red-500'}`}></div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         Quality Check {(workOrder as any).quality_check_passed ? 'Passed' : 'Failed'}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {format(new Date((workOrder as any).quality_check_at), "MMM dd, yyyy 'at' h:mm a")}
                       </p>
                     </div>
@@ -312,8 +312,8 @@ export default function WorkOrderDetailPage() {
                   <div className="flex items-start space-x-3">
                     <div className="w-2 h-2 rounded-full bg-green-600 mt-2"></div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">Work Order Completed</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Work Order Completed</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {format(new Date(workOrder.completed_at), "MMM dd, yyyy 'at' h:mm a")}
                       </p>
                     </div>
@@ -323,8 +323,8 @@ export default function WorkOrderDetailPage() {
                 {/* Notes Timeline */}
                 {notes.length > 0 && (
                   <>
-                    <div className="border-t pt-4 mt-4">
-                      <p className="text-sm font-medium text-gray-700 mb-3">Notes & Activity</p>
+                    <div className="border-t dark:border-gray-700 pt-4 mt-4">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Notes & Activity</p>
                     </div>
                     {notes
                       .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())

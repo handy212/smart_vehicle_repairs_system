@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     WorkOrder, ServiceTask, WorkOrderPart,
-    TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto
+    TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto, RepeatVisitAlert
 )
 
 
@@ -43,7 +43,7 @@ class WorkOrderAdmin(admin.ModelAdmin):
                     'actual_total', 'created_at', 'is_overdue_badge']
     list_filter = ['status', 'priority', 'is_customer_waiting', 'requires_approval', 
                    'approved_by_customer', 'quality_check_required', 'quality_check_completed',
-                   'is_warranty', 'is_recall', 'created_at']
+                   'is_warranty', 'is_recall', 'is_warranty_rework', 'created_at']
     search_fields = ['work_order_number', 'customer__user__first_name', 
                      'customer__user__last_name', 'vehicle__vin', 'vehicle__license_plate',
                      'customer_concerns', 'diagnosis_notes']
@@ -96,6 +96,10 @@ class WorkOrderAdmin(admin.ModelAdmin):
         }),
         ('Flags', {
             'fields': ('is_warranty', 'is_recall', 'is_customer_waiting')
+        }),
+        ('Repeat Visit / Warranty Rework', {
+            'fields': ('is_warranty_rework', 'related_work_order', 'warranty_reason'),
+            'classes': ('collapse',)
         }),
         ('Tracking', {
             'fields': ('created_by',),
@@ -233,4 +237,26 @@ class WorkOrderPhotoAdmin(admin.ModelAdmin):
     list_filter = ['photo_type', 'taken_at']
     search_fields = ['work_order__work_order_number', 'caption', 'description']
     readonly_fields = ['created_at']
+
+
+@admin.register(RepeatVisitAlert)
+class RepeatVisitAlertAdmin(admin.ModelAdmin):
+    list_display = ['work_order', 'related_work_order', 'days_since_previous', 
+                    'similarity_score', 'marked_as_warranty', 'detected_at', 'resolved_by']
+    list_filter = ['marked_as_warranty', 'detected_at']
+    search_fields = ['work_order__work_order_number', 'related_work_order__work_order_number']
+    readonly_fields = ['detected_at', 'days_since_previous', 'similarity_score']
+    date_hierarchy = 'detected_at'
+    
+    fieldsets = (
+        ('Alert Information', {
+            'fields': ('work_order', 'related_work_order', 'detected_at')
+        }),
+        ('Match Details', {
+            'fields': ('days_since_previous', 'similarity_score')
+        }),
+        ('Resolution', {
+            'fields': ('marked_as_warranty', 'resolved_by')
+        }),
+    )
 

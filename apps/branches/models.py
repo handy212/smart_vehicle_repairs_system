@@ -2,6 +2,7 @@
 Branch models for multi-branch support
 """
 from django.db import models
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator
 
@@ -86,6 +87,16 @@ class Branch(models.Model):
         help_text="Next sequential number for inspections"
     )
     
+    # Django Ledger Entity reference (for accounting integration)
+    ledger_entity = models.OneToOneField(
+        'django_ledger.EntityModel',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='branch',
+        help_text="Django Ledger Entity for this branch's accounting"
+    )
+    
     # Metadata
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
     updated_at = models.DateTimeField(_('updated at'), auto_now=True)
@@ -168,3 +179,81 @@ class Branch(models.Model):
     def full_address(self):
         """Get formatted full address"""
         return f"{self.address}, {self.city}, {self.state} {self.zip_code}, {self.country}"
+    
+    def get_or_create_ledger_entity(self):
+        """Get or create Django Ledger entity for this branch"""
+        if self.ledger_entity:
+            return self.ledger_entity
+        
+        try:
+            from django_ledger.models import EntityModel
+            from apps.accounts.models import User
+            
+            # Get admin user - use created_by if available, otherwise get first superuser/admin
+            admin_user = self.created_by
+            if not admin_user or not (admin_user.is_superuser or admin_user.role == 'admin'):
+                admin_user = User.objects.filter(
+                    Q(is_superuser=True) | Q(role='admin')
+                ).first()
+            
+            if not admin_user:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"No admin user found to assign to entity for branch {self.name}")
+                return None
+            
+            # Try to get existing entity first
+            entity = EntityModel.objects.filter(name=self.name).first()
+            
+            if not entity:
+                # Try to create new entity - handle path constraint by using add_root if needed
+                try:
+                    # Check if there's already a root entity (path=())
+                    root_entities = EntityModel.objects.filter(depth=0, path='')
+                    if root_entities.exists():
+                        # If a root entity exists, this branch should be a child of it
+                        # For now, create as root with a unique name or handle differently
+                        # Most likely each branch should be independent, so we'll create anyway
+                        pass
+                    
+                    # Create entity using add_root for tree structure
+                    entity = EntityModel.add_root(
+                        name=self.name,
+                        address_1=self.address or '',
+                        city=self.city or '',
+                        state=self.state or '',
+                        zip_code=self.zip_code or '',
+                        country=self.country or 'USA',
+                        email=self.email or '',
+                        phone=self.phone or '',
+                        admin=admin_user,
+                    )
+                except Exception as create_error:
+                    # If creation fails (e.g., duplicate path), try to find existing entity
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Entity creation failed for {self.name}, trying to find existing: {create_error}")
+                    # Try to get by slug or other unique identifier
+                    entity = EntityModel.objects.filter(
+                        name__iexact=self.name
+                    ).first()
+                    
+                    if not entity:
+                        # Last resort: get first available entity for this admin
+                        entity = EntityModel.objects.filter(admin=admin_user).first()
+                        if not entity:
+                            raise create_error
+            
+            if entity:
+                self.ledger_entity = entity
+                self.save(update_fields=['ledger_entity'])
+            
+            return entity
+        except ImportError:
+            # Django Ledger not installed
+            return None
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error creating ledger entity for branch {self.name}: {e}")
+            return None

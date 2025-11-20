@@ -243,8 +243,8 @@ export default function WorkOrdersPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
-            <div className="h-5 w-64 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-9 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+            <div className="h-5 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
           </div>
         </div>
         <Card>
@@ -258,7 +258,7 @@ export default function WorkOrdersPage() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
         Error loading work orders. Please try again.
       </div>
     );
@@ -298,8 +298,8 @@ export default function WorkOrdersPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Work Orders</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Work Orders</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Manage work orders and service jobs
           </p>
         </div>
@@ -329,7 +329,7 @@ export default function WorkOrdersPage() {
           <div className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
                 <Input
                   type="text"
                   placeholder="Search work orders..."
@@ -360,7 +360,7 @@ export default function WorkOrdersPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Status
                 </label>
                 <Select
@@ -482,7 +482,7 @@ export default function WorkOrdersPage() {
                 </TableHeader>
                 <TableBody>
                   {data.results.map((workorder) => (
-                    <TableRow key={workorder.id} className="transition-colors duration-150 hover:bg-gray-50">
+                    <TableRow key={workorder.id} className="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-gray-800">
                       <TableCell>
                         <input
                           type="checkbox"
@@ -491,11 +491,11 @@ export default function WorkOrdersPage() {
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
+                      <TableCell className="font-mono text-sm text-gray-900 dark:text-gray-100">
                         {workorder.work_order_number || "-"}
                       </TableCell>
-                      <TableCell>{workorder.customer_name || "N/A"}</TableCell>
-                      <TableCell>{workorder.vehicle_info || "N/A"}</TableCell>
+                      <TableCell className="text-gray-900 dark:text-gray-100">{workorder.customer_name || "N/A"}</TableCell>
+                      <TableCell className="text-gray-900 dark:text-gray-100">{workorder.vehicle_info || "N/A"}</TableCell>
                       <TableCell>
                         <Badge variant={getPriorityVariant(workorder.priority) as any}>
                           {workorder.priority || "-"}
@@ -506,10 +506,10 @@ export default function WorkOrdersPage() {
                           {workorder.status?.replace("_", " ") || workorder.status || "-"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium text-gray-900 dark:text-gray-100">
                         {workorder.total_cost ? `$${parseFloat(workorder.total_cost).toFixed(2)}` : "-"}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-gray-500 dark:text-gray-400">
                         {workorder.created_at
                           ? format(new Date(workorder.created_at), "MMM dd, yyyy")
                           : "-"}
@@ -518,7 +518,7 @@ export default function WorkOrdersPage() {
                         <div className="flex items-center space-x-2">
                           <Link
                             href={`/workorders/${workorder.id}`}
-                            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 text-sm font-medium"
                           >
                             View
                           </Link>
@@ -527,7 +527,7 @@ export default function WorkOrdersPage() {
                             size="sm"
                             onClick={() => handleDelete(workorder)}
                             disabled={deleteMutation.isPending}
-                            className="text-red-600 hover:text-red-900 hover:bg-red-50"
+                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -540,8 +540,8 @@ export default function WorkOrdersPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Wrench className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No work orders found.</p>
+              <Wrench className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No work orders found.</p>
               <Link href="/workorders/new">
                 <Button className="mt-4" variant="outline">
                   <Plus className="w-4 h-4 mr-2" />
@@ -554,7 +554,7 @@ export default function WorkOrdersPage() {
           {/* Pagination */}
           {data && data.count > 0 && (
             <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
+              <div className="text-sm text-gray-700 dark:text-gray-300">
                 Showing page {page} of {Math.ceil(data.count / 10)}
               </div>
               <div className="flex space-x-2">
@@ -587,7 +587,7 @@ export default function WorkOrdersPage() {
             <DialogTitle>Update Status for {bulkSelection.selectedCount} Work Order(s)</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               New Status
             </label>
             <Select

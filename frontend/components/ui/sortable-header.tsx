@@ -30,7 +30,7 @@ export function SortableHeader({
   return (
     <th
       className={cn(
-        "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none",
+        "px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors select-none",
         className
       )}
       onClick={() => onSort(field)}
@@ -39,11 +39,11 @@ export function SortableHeader({
         <span>{children}</span>
         <span className="flex-shrink-0">
           {direction === "asc" ? (
-            <ArrowUp className="w-4 h-4 text-gray-600" />
+            <ArrowUp className="w-4 h-4 text-gray-600 dark:text-gray-300" />
           ) : direction === "desc" ? (
-            <ArrowDown className="w-4 h-4 text-gray-600" />
+            <ArrowDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
           ) : (
-            <ArrowUpDown className="w-4 h-4 text-gray-400" />
+            <ArrowUpDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
           )}
         </span>
       </div>

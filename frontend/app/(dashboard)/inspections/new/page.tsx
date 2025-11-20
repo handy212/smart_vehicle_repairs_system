@@ -17,6 +17,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { AxiosError } from "axios";
 import { useToast } from "@/lib/hooks/useToast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const inspectionSchema = z.object({
   vehicle: z.number().min(1, "Vehicle is required"),
@@ -37,6 +45,8 @@ export default function NewInspectionPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showActiveWorkOrderDialog, setShowActiveWorkOrderDialog] = useState(false);
+  const [activeWorkOrderBranch, setActiveWorkOrderBranch] = useState<string | null>(null);
 
   // Fetch templates
   const { data: templatesData } = useQuery({
@@ -97,6 +107,31 @@ export default function NewInspectionPage() {
     onError: (error) => {
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
+        
+        // Check for active work order at another branch error
+        let errorMessage = '';
+        if (errorData.non_field_errors) {
+          errorMessage = Array.isArray(errorData.non_field_errors)
+            ? errorData.non_field_errors[0]
+            : errorData.non_field_errors;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+        
+        // Check if this is the active work order error
+        if (errorMessage && errorMessage.includes('has an active work order') && errorMessage.includes('at')) {
+          // Extract branch name from error message
+          // Format: "This vehicle has an active work order (WO-123) at Branch Name. A new..."
+          const branchMatch = errorMessage.match(/at ([^.]+)\./);
+          const branchName = branchMatch ? branchMatch[1].trim() : 'another branch';
+          setActiveWorkOrderBranch(branchName);
+          setShowActiveWorkOrderDialog(true);
+          return;
+        }
+        
+        // Handle field-level errors
         Object.keys(errorData).forEach((field) => {
           if (field !== "non_field_errors" && field !== "detail") {
             const fieldError = Array.isArray(errorData[field])
@@ -108,14 +143,10 @@ export default function NewInspectionPage() {
             });
           }
         });
-        if (errorData.non_field_errors) {
-          setServerError(
-            Array.isArray(errorData.non_field_errors)
-              ? errorData.non_field_errors[0]
-              : errorData.non_field_errors
-          );
-        } else if (errorData.detail) {
-          setServerError(errorData.detail);
+        
+        // Handle other errors
+        if (errorMessage) {
+          setServerError(errorMessage);
         } else {
           setServerError("An error occurred while creating the inspection. Please check the form and try again.");
         }
@@ -159,6 +190,26 @@ export default function NewInspectionPage() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={showActiveWorkOrderDialog} onOpenChange={setShowActiveWorkOrderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2 text-red-600">
+              <AlertCircle className="w-5 h-5" />
+              <span>Active Work Order Detected</span>
+            </DialogTitle>
+            <DialogDescription className="pt-4">
+              The selected vehicle has an open work order at <strong>{activeWorkOrderBranch}</strong>. 
+              Please close it before creating a new one.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowActiveWorkOrderDialog(false)}>
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <Card>

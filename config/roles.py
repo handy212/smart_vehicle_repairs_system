@@ -22,19 +22,29 @@ class Admin(AbstractUserRole):
 
 
 class Manager(AbstractUserRole):
-    """Workshop/Branch manager - can access multiple branches"""
+    """Manager - manages branch operations, staff, and administration across assigned branches"""
     available_permissions = {
         'view_reports': True,
+        'view_all_reports': True,  # Can view all reports across assigned branches
         'manage_inventory': True,
+        'view_inventory_reports': True,
         'manage_appointments': True,
         'manage_workorders': True,
+        'create_workorders': True,
+        'view_workorders': True,
+        'update_workorder_status': True,
+        'add_workorder_notes': True,
         'manage_billing': True,
+        'create_invoices': True,
+        'process_payments': True,
         'manage_customers': True,
         'manage_vehicles': True,
         'manage_technicians': True,
         'approve_estimates': True,
         'view_branch_data': True,  # Can view data from assigned branches
         'manage_branch_staff': True,  # Can manage staff at assigned branches
+        'create_inspections': True,
+        'view_vehicle_history': True,
     }
 
 
@@ -73,6 +83,38 @@ class PartsManager(AbstractUserRole):
         'receive_parts': True,
         'approve_part_requests': True,
         'view_inventory_reports': True,
+    }
+
+
+class ServiceCoordinator(AbstractUserRole):
+    """Service Coordinator - manages work orders, coordinates between departments"""
+    available_permissions = {
+        'manage_workorders': True,
+        'create_workorders': True,
+        'view_workorders': True,
+        'update_workorder_status': True,
+        'add_workorder_notes': True,
+        'manage_appointments': True,
+        'manage_customers': True,
+        'manage_vehicles': True,
+        'view_reports': True,
+        'approve_estimates': True,
+        'create_inspections': True,
+        'view_vehicle_history': True,
+        'request_parts': True,
+        'view_inventory_reports': True,  # Need to coordinate with parts department
+    }
+
+
+class Accountant(AbstractUserRole):
+    """Accountant - handles billing, invoicing, and financial reconciliation"""
+    available_permissions = {
+        'manage_billing': True,
+        'create_invoices': True,
+        'process_payments': True,
+        'view_all_reports': True,
+        'view_workorders': True,  # Need to review work orders before invoicing
+        'view_reports': True,
     }
 
 

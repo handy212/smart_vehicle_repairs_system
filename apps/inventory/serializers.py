@@ -6,6 +6,7 @@ from .models import (
     PurchaseOrderItem, InventoryTransaction
 )
 from apps.accounts.models import User
+from apps.branches.utils import resolve_branch
 
 
 class PartCategorySerializer(serializers.ModelSerializer):
@@ -153,6 +154,13 @@ class PartCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
+        branch = validated_data.get('branch')
+        if not branch:
+            request = self.context.get('request')
+            if request:
+                branch = resolve_branch(request)
+        if branch:
+            validated_data['branch'] = branch
         return super().create(validated_data)
 
 
@@ -160,7 +168,7 @@ class PartUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Part
         fields = [
-            'name', 'description', 'category', 'manufacturer', 
+            'name', 'description', 'category', 'branch', 'manufacturer',
             'manufacturer_part_number', 'suppliers', 'preferred_supplier',
             'reorder_point', 'reorder_quantity', 'minimum_stock', 'maximum_stock',
             'unit', 'cost_price', 'selling_price', 'markup_percentage', 'list_price',
@@ -278,6 +286,13 @@ class PurchaseOrderCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         items_data = validated_data.pop('items')
         validated_data['created_by'] = self.context['request'].user
+        branch = validated_data.get('branch')
+        if not branch:
+            request = self.context.get('request')
+            if request:
+                branch = resolve_branch(request)
+        if branch:
+            validated_data['branch'] = branch
         
         purchase_order = PurchaseOrder.objects.create(**validated_data)
         

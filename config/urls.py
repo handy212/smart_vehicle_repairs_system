@@ -129,6 +129,9 @@ urlpatterns = [
     
     # Notifications API (backend)
     path('inbox/notifications/', include('notifications.urls', namespace='inbox_notifications')),
+    
+    # Django Ledger - Accounting System
+    path('ledger/', include('django_ledger.urls', namespace='django_ledger')),
 ]
 
 # Serve media files in development

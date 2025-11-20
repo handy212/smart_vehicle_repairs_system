@@ -84,3 +84,140 @@ def find_repeat_workorders(
     return repeat_matches
 
 
+def get_recent_completed_work_orders(vehicle, days=30):
+    """
+    Get recently completed work orders for a vehicle within the specified days.
+    
+    Args:
+        vehicle: Vehicle instance or ID
+        days: Number of days to look back (default 30)
+    
+    Returns:
+        QuerySet of completed work orders ordered by completion date descending
+    """
+    from apps.vehicles.models import Vehicle
+    
+    if hasattr(vehicle, "pk"):
+        vehicle_id = vehicle.pk
+    else:
+        vehicle_id = vehicle
+    
+    cutoff_date = timezone.now() - timedelta(days=days)
+    
+    return WorkOrder.objects.filter(
+        vehicle_id=vehicle_id,
+        status__in=['completed', 'invoiced', 'closed'],
+        completed_at__isnull=False,
+        completed_at__gte=cutoff_date
+    ).select_related('primary_technician', 'branch').order_by('-completed_at')
+
+
+def calculate_concern_similarity(concerns1, concerns2):
+    """
+    Calculate similarity between two customer concern texts.
+    Uses a combination of sequence matching and word overlap.
+    
+    Args:
+        concerns1: First concern text
+        concerns2: Second concern text
+    
+    Returns:
+        Similarity score between 0.0 and 1.0
+    """
+    if not concerns1 or not concerns2:
+        return 0.0
+    
+    # Normalize text (lowercase, remove extra spaces)
+    text1 = re.sub(r'\s+', ' ', str(concerns1).lower().strip())
+    text2 = re.sub(r'\s+', ' ', str(concerns2).lower().strip())
+    
+    if not text1 or not text2:
+        return 0.0
+    
+    # Use SequenceMatcher for similarity
+    similarity = SequenceMatcher(None, text1, text2).ratio()
+    
+    # Also check for common keywords
+    words1 = set(text1.split())
+    words2 = set(text2.split())
+    
+    if len(words1) == 0 or len(words2) == 0:
+        return float(similarity)
+    
+    # Jaccard similarity for word overlap
+    intersection = len(words1 & words2)
+    union = len(words1 | words2)
+    word_similarity = intersection / union if union > 0 else 0.0
+    
+    # Combine both metrics (weighted average)
+    combined = (similarity * 0.6) + (word_similarity * 0.4)
+    
+    return round(combined, 3)
+
+
+def detect_repeat_visit(vehicle, customer_concerns, date=None, days=30, similarity_threshold=0.3):
+    """
+    Detect if a vehicle is returning within the specified days for a similar problem.
+    
+    Args:
+        vehicle: Vehicle instance or ID
+        customer_concerns: Current customer concerns text
+        date: Optional date to check from (defaults to now)
+        days: Number of days to look back (default 30)
+        similarity_threshold: Minimum similarity score to consider a match (default 0.3)
+    
+    Returns:
+        List of dictionaries with match information:
+        - work_order: WorkOrder instance
+        - work_order_number: str
+        - completed_at: datetime
+        - days_ago: int
+        - customer_concerns: str
+        - similarity: float
+        - technician: str (technician name)
+        - branch_name: str
+    """
+    if not customer_concerns or not customer_concerns.strip():
+        return []
+    
+    recent_work_orders = get_recent_completed_work_orders(vehicle, days=days)
+    
+    matches = []
+    check_date = date or timezone.now()
+    
+    for wo in recent_work_orders:
+        if not wo.completed_at:
+            continue
+        
+        similarity = calculate_concern_similarity(customer_concerns, wo.customer_concerns)
+        
+        if similarity >= similarity_threshold:
+            days_ago = (check_date - wo.completed_at).days
+            
+            technician_name = None
+            if wo.primary_technician:
+                technician_name = f"{wo.primary_technician.first_name} {wo.primary_technician.last_name}".strip()
+            elif wo.assigned_technicians.exists():
+                tech = wo.assigned_technicians.first()
+                technician_name = f"{tech.first_name} {tech.last_name}".strip()
+            
+            branch_name = wo.branch.name if wo.branch else 'Unknown Branch'
+            
+            matches.append({
+                'work_order': wo,
+                'work_order_id': wo.id,
+                'work_order_number': wo.work_order_number,
+                'completed_at': wo.completed_at,
+                'days_ago': days_ago,
+                'customer_concerns': wo.customer_concerns,
+                'similarity': similarity,
+                'technician': technician_name or 'Not assigned',
+                'branch_name': branch_name,
+            })
+    
+    # Sort by similarity (highest first), then by days_ago (most recent first)
+    matches.sort(key=lambda x: (-x['similarity'], x['days_ago']))
+    
+    return matches
+
+

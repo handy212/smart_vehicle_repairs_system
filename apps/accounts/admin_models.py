@@ -25,6 +25,7 @@ class SystemSettings(models.Model):
         ('business', 'Business Settings'),
         ('integration', 'Integrations'),
         ('maintenance', 'Maintenance'),
+        ('tax', 'Tax & Compliance'),
     )
     
     category = models.CharField(_('category'), max_length=50, choices=CATEGORY_CHOICES)
@@ -49,6 +50,15 @@ class SystemSettings(models.Model):
     def display_name(self):
         """Convert key to human-readable display name"""
         return self.key.replace('_', ' ').title()
+
+    TAX_SETTING_DEFAULTS = [
+        ('tax_enabled', 'true', 'Enable Ghana tax computation for invoices and estimates'),
+        ('tax_regime', 'ghana_standard', 'Tax regime identifier (e.g., ghana_standard)'),
+        ('tax_vat_rate', '15.0', 'Value Added Tax percentage applied on taxable supply plus levies'),
+        ('tax_nhil_rate', '2.5', 'National Health Insurance Levy percentage applied on taxable supply'),
+        ('tax_getfund_rate', '2.5', 'GETFund levy percentage applied on taxable supply'),
+        ('tax_covid_rate', '1.0', 'COVID-19 Health Recovery Levy percentage applied on taxable supply'),
+    ]
     
     @classmethod
     def get_setting(cls, key, default=None):
@@ -72,6 +82,21 @@ class SystemSettings(models.Model):
             }
         )
         return setting
+
+    @classmethod
+    def ensure_tax_settings(cls):
+        """Ensure Tax & Compliance settings exist so UI is never empty."""
+        for key, value, description in cls.TAX_SETTING_DEFAULTS:
+            cls.objects.get_or_create(
+                key=key,
+                defaults={
+                    'category': 'tax',
+                    'value': value,
+                    'description': description,
+                    'is_secret': False,
+                    'is_active': True,
+                }
+            )
 
 
 class AuditLog(models.Model):

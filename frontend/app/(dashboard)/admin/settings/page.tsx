@@ -5,11 +5,15 @@ import { adminApi, SystemSetting } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Plus, Save, Trash2, Eye, EyeOff } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Save, Trash2, Eye, EyeOff, Search } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { format } from "date-fns";
+import { billingApi } from "@/lib/api/billing";
 
 const CATEGORIES = [
   { value: "company", label: "Company Info" },
@@ -20,17 +24,31 @@ const CATEGORIES = [
   { value: "notification", label: "Notifications" },
   { value: "security", label: "Security" },
   { value: "business", label: "Business Settings" },
+  { value: "tax", label: "Tax & Compliance" },
   { value: "integration", label: "Integrations" },
   { value: "maintenance", label: "Maintenance" },
 ];
 
 export default function SystemSettingsPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedCategory, setSelectedCategory] = useState("company");
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const initialCategory = searchParams?.get("category") || "company";
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [showSecret, setShowSecret] = useState<Record<number, boolean>>({});
-  const [formData, setFormData] = useState<Partial<SystemSetting>>({});
+  const [rowEdits, setRowEdits] = useState<
+    Record<number, Partial<Pick<SystemSetting, "value" | "description">>>
+  >({});
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    const category = searchParams?.get("category") || "company";
+    if (category !== selectedCategory) {
+      setSelectedCategory(category);
+    }
+  }, [searchParams, selectedCategory]);
 
   const { data: settingsData, isLoading } = useQuery({
     queryKey: ["admin", "settings", selectedCategory],
@@ -46,8 +64,6 @@ export default function SystemSettingsPage() {
         title: "Success",
         description: "Setting updated successfully",
       });
-      setEditingId(null);
-      setFormData({});
     },
     onError: (error: any) => {
       toast({
@@ -76,24 +92,6 @@ export default function SystemSettingsPage() {
     },
   });
 
-  const handleEdit = (setting: SystemSetting) => {
-    setEditingId(setting.id);
-    setFormData({
-      value: setting.value,
-      description: setting.description,
-      is_active: setting.is_active,
-    });
-  };
-
-  const handleSave = (id: number) => {
-    updateMutation.mutate({ id, data: formData });
-  };
-
-  const handleCancel = () => {
-    setEditingId(null);
-    setFormData({});
-  };
-
   const handleDelete = (setting: SystemSetting) => {
     if (confirm(`Are you sure you want to delete setting "${setting.key}"?`)) {
       deleteMutation.mutate(setting.id);
@@ -104,7 +102,72 @@ export default function SystemSettingsPage() {
     setShowSecret((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const getRowValue = (setting: SystemSetting) =>
+    rowEdits[setting.id]?.value ?? setting.value ?? "";
+
+  const getRowDescription = (setting: SystemSetting) =>
+    rowEdits[setting.id]?.description ?? setting.description ?? "";
+
+  const handleRowChange = (
+    setting: SystemSetting,
+    updates: Partial<Pick<SystemSetting, "value" | "description">>
+  ) => {
+    setRowEdits((prev) => {
+      const prevEntry = prev[setting.id] || {};
+      const mergedValue =
+        updates.value !== undefined ? updates.value : prevEntry.value;
+      const mergedDescription =
+        updates.description !== undefined ? updates.description : prevEntry.description;
+
+      const diff: Partial<Pick<SystemSetting, "value" | "description">> = {};
+      if (mergedValue !== undefined && mergedValue !== (setting.value ?? "")) {
+        diff.value = mergedValue;
+      }
+      if (
+        mergedDescription !== undefined &&
+        mergedDescription !== (setting.description ?? "")
+      ) {
+        diff.description = mergedDescription;
+      }
+
+      if (Object.keys(diff).length === 0) {
+        const { [setting.id]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [setting.id]: diff };
+    });
+  };
+
+  const handleSaveRow = async (id: number) => {
+    const payload = rowEdits[id];
+    if (!payload) return;
+    try {
+      await updateMutation.mutateAsync({ id, data: payload });
+      setRowEdits((prev) => {
+        const { [id]: _, ...rest } = prev;
+        return rest;
+      });
+    } catch (error) {
+      // handled by mutation toast
+    }
+  };
+
+  const handleActiveToggle = async (setting: SystemSetting, checked: boolean) => {
+    if (setting.is_active === checked) return;
+    try {
+      await updateMutation.mutateAsync({ id: setting.id, data: { is_active: checked } });
+    } catch (error) {
+      // handled by mutation toast
+    }
+  };
+
   const settings = settingsData?.results || [];
+  const filteredSettings = settings.filter((setting) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    const haystack = `${setting.display_name || ""} ${setting.key} ${setting.description || ""}`.toLowerCase();
+    return haystack.includes(term);
+  });
 
   if (isLoading) {
     return (
@@ -131,12 +194,12 @@ export default function SystemSettingsPage() {
 
       {/* Category Filter */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 space-y-4">
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.value}
-                onClick={() => setSelectedCategory(cat.value)}
+                onClick={() => handleCategorySelect(cat.value)}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   selectedCategory === cat.value
                     ? "bg-blue-600 text-white"
@@ -147,8 +210,23 @@ export default function SystemSettingsPage() {
               </button>
             ))}
           </div>
+          <div className="w-full max-w-md">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search settings..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      {selectedCategory === "tax" && (
+        <TaxInfoBanner />
+      )}
 
       {/* Settings List */}
       <Card>
@@ -159,160 +237,173 @@ export default function SystemSettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {settings.length > 0 ? (
-            <div className="space-y-4">
-              {settings.map((setting) => (
-                <div
-                  key={setting.id}
-                  className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-                >
-                  {editingId === setting.id ? (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Key
-                        </label>
-                        <Input value={setting.key} disabled className="bg-gray-50" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Value {setting.is_secret && "(Secret)"}
-                        </label>
-                        <div className="relative">
-                          <Input
-                            type={setting.is_secret && !showSecret[setting.id] ? "password" : "text"}
-                            value={formData.value || ""}
-                            onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                            className="pr-10"
-                          />
-                          {setting.is_secret && (
-                            <button
-                              type="button"
-                              onClick={() => toggleSecretVisibility(setting.id)}
-                              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                            >
-                              {showSecret[setting.id] ? (
-                                <EyeOff className="w-4 h-4" />
-                              ) : (
-                                <Eye className="w-4 h-4" />
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Description
-                        </label>
-                        <Input
-                          value={formData.description || ""}
-                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        />
-                      </div>
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={formData.is_active ?? true}
-                          onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <label className="ml-2 text-sm text-gray-700">Active</label>
-                      </div>
-                      <div className="flex justify-end space-x-2">
-                        <Button variant="outline" onClick={handleCancel}>
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={() => handleSave(setting.id)}
-                          disabled={updateMutation.isPending}
-                        >
-                          <Save className="w-4 h-4 mr-2" />
-                          Save
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">
+          {filteredSettings.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-64">Setting</TableHead>
+                    <TableHead>Value</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-center w-28">Active</TableHead>
+                    <TableHead className="text-center w-24">Secret</TableHead>
+                    <TableHead className="w-48">Updated</TableHead>
+                    <TableHead className="text-right w-48">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredSettings.map((setting) => {
+                    const pendingChanges = !!rowEdits[setting.id];
+                    return (
+                      <TableRow key={setting.id} className="align-top">
+                        <TableCell>
+                          <div className="font-semibold text-gray-900">
                             {setting.display_name || setting.key}
-                          </h3>
-                          {setting.description && (
-                            <p className="text-sm text-gray-600 mt-1">{setting.description}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {setting.is_active ? (
-                            <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
-                              Active
+                          </div>
+                          <div className="text-xs text-gray-500 uppercase tracking-widest">
+                            {setting.key}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="relative">
+                            <Input
+                              type={setting.is_secret && !showSecret[setting.id] ? "password" : "text"}
+                              value={getRowValue(setting)}
+                              onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                              className="pr-9"
+                            />
+                            {setting.is_secret && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-1/2 right-1 -translate-y-1/2 h-7 w-7"
+                                onClick={() => toggleSecretVisibility(setting.id)}
+                              >
+                                {showSecret[setting.id] ? (
+                                  <EyeOff className="w-4 h-4" />
+                                ) : (
+                                  <Eye className="w-4 h-4" />
+                                )}
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            value={getRowDescription(setting)}
+                            onChange={(e) => handleRowChange(setting, { description: e.target.value })}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={setting.is_active}
+                            onCheckedChange={(checked) =>
+                              handleActiveToggle(setting, Boolean(checked))
+                            }
+                            disabled={updateMutation.isPending}
+                            className="mx-auto"
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {setting.is_secret ? (
+                            <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-800">
+                              Yes
                             </span>
                           ) : (
-                            <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded">
-                              Inactive
-                            </span>
+                            <span className="text-xs text-gray-500">No</span>
                           )}
-                          {setting.is_secret && (
-                            <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">
-                              Secret
-                            </span>
+                        </TableCell>
+                        <TableCell>
+                          {setting.updated_by_name ? (
+                            <div className="text-xs text-gray-500">
+                              {setting.updated_by_name}
+                              <br />
+                              {format(new Date(setting.updated_at), "MMM dd, yyyy HH:mm")}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
                           )}
-                        </div>
-                      </div>
-                      <div className="mt-2">
-                        <label className="text-xs font-medium text-gray-500">Value:</label>
-                        <div className="mt-1 flex items-center space-x-2">
-                          <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded flex-1">
-                            {setting.is_secret && !showSecret[setting.id]
-                              ? "•".repeat(20)
-                              : setting.value || "(empty)"}
-                          </p>
-                          {setting.is_secret && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => toggleSecretVisibility(setting.id)}
-                            >
-                              {showSecret[setting.id] ? (
-                                <EyeOff className="w-4 h-4" />
-                              ) : (
-                                <Eye className="w-4 h-4" />
-                              )}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      {setting.updated_by_name && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          Last updated by {setting.updated_by_name} on{" "}
-                          {format(new Date(setting.updated_at), "MMM dd, yyyy HH:mm")}
-                        </p>
-                      )}
-                      <div className="flex justify-end space-x-2 mt-4">
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(setting)}>
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(setting)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                        </TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!pendingChanges || updateMutation.isPending}
+                            onClick={() => handleSaveRow(setting.id)}
+                          >
+                            <Save className="w-4 h-4 mr-1" />
+                            Save
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(setting)}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-500">No settings found for this category</p>
+              <p className="text-gray-500">
+                {settings.length === 0
+                  ? "No settings found for this category"
+                  : "No settings match your search"}
+              </p>
             </div>
           )}
         </CardContent>
       </Card>
     </div>
   );
+  function handleCategorySelect(category: string) {
+    setSelectedCategory(category);
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    if (category === "company") {
+      params.delete("category");
+    } else {
+      params.set("category", category);
+    }
+    const queryString = params.toString();
+    router.replace(`${pathname}${queryString ? `?${queryString}` : ""}`, { scroll: false });
+  }
+
+  function TaxInfoBanner() {
+    const { data, isLoading } = useQuery({
+      queryKey: ["admin", "tax-config"],
+      queryFn: () => billingApi.taxes.config(),
+    });
+
+    return (
+      <Card className="bg-blue-50 border-blue-200">
+        <CardHeader>
+          <CardTitle className="text-blue-900">Tax & Compliance Overview</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-blue-900 space-y-2">
+          <p>
+            Configure Ghana Revenue Authority standard rates. These fields feed directly into invoice and estimate tax calculations.
+          </p>
+          {isLoading ? (
+            <p>Loading current configuration…</p>
+          ) : data ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>NHIL: {data.nhil_rate}%</div>
+              <div>GETFund: {data.getfund_rate}%</div>
+              <div>COVID-19: {data.covid_rate}%</div>
+              <div>VAT: {data.vat_rate}%</div>
+            </div>
+          ) : null}
+          <p className="text-xs text-blue-700">
+            Tip: enable or disable tax, adjust rates, and change the regime directly from the settings list below.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 }

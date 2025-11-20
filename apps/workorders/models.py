@@ -22,6 +22,7 @@ class WorkOrder(models.Model):
         ('awaiting_approval', 'Awaiting Customer Approval'),
         ('approved', 'Approved'),
         ('in_progress', 'In Progress'),
+        ('additional_work_found', 'Additional Work Found'),
         ('paused', 'Paused'),
         ('quality_check', 'Quality Check'),
         ('completed', 'Completed'),
@@ -62,7 +63,7 @@ class WorkOrder(models.Model):
     vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name='work_orders')
     
     # Status and Priority
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', db_index=True)
+    status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='draft', db_index=True)
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal')
     
     # Technician Assignment
@@ -209,13 +210,31 @@ class WorkOrder(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         related_name='created_work_orders',
-        limit_choices_to={'role__in': ['receptionist', 'manager', 'admin']}
+        limit_choices_to={'role__in': ['receptionist', 'manager', 'admin', 'service_coordinator']}
     )
     
     # Flags
     is_warranty = models.BooleanField(default=False)
     is_recall = models.BooleanField(default=False)
     is_customer_waiting = models.BooleanField(default=False)
+    
+    # Repeat Visit / Warranty Rework Tracking
+    is_warranty_rework = models.BooleanField(
+        default=False,
+        help_text="Flag if this is a warranty/rework case (vehicle returned within 30 days for similar issue)"
+    )
+    related_work_order = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rework_work_orders',
+        help_text="Link to original work order if this is a rework"
+    )
+    warranty_reason = models.TextField(
+        blank=True,
+        help_text="Reason for warranty/rework"
+    )
     
     class Meta:
         ordering = ['-created_at']
@@ -315,12 +334,13 @@ class WorkOrder(models.Model):
             'diagnosis': ['awaiting_approval', 'approved', 'in_progress'],
             'awaiting_approval': ['approved', 'diagnosis'],
             'approved': ['in_progress', 'awaiting_approval'],
-            'in_progress': ['paused', 'quality_check', 'completed'],
+            'in_progress': ['paused', 'quality_check', 'completed', 'additional_work_found'],
+            'additional_work_found': ['awaiting_approval', 'in_progress'],
             'paused': ['in_progress'],
             'quality_check': ['completed', 'in_progress'],
             'completed': ['invoiced', 'closed'],
             'invoiced': ['closed'],
-            'closed': [],  # Terminal state
+            'closed': ['invoiced', 'completed', 'in_progress'],  # Allow reopen transitions
         }
         
         # Check if transition is in valid transitions list
@@ -427,6 +447,21 @@ class WorkOrder(models.Model):
         old_status = self.status
         self.status = new_status
         
+        # Handle additional_work_found: reset approval and require new approval
+        if new_status == 'additional_work_found':
+            self.requires_approval = True
+            self.approved_by_customer = False
+            self.approved_at = None
+            # Add note about additional work
+            if user:
+                WorkOrderNote.objects.create(
+                    work_order=self,
+                    note_type='internal',
+                    note='Additional work discovered during repair - customer approval required',
+                    created_by=user,
+                    is_important=True
+                )
+        
         # Update timestamps
         now = timezone.now()
         if new_status == 'in_progress' and not self.started_at:
@@ -448,6 +483,23 @@ class WorkOrder(models.Model):
         # Send notifications
         if notify:
             self._send_status_notification(new_status, old_status)
+        
+        # Post accounting entries when work order is completed
+        if new_status == 'completed':
+            try:
+                from apps.billing.accounting_service import AccountingService
+                # Post parts cost (COGS)
+                AccountingService.post_parts_cost(self)
+                # Post labor cost (COGS)
+                AccountingService.post_labor_cost(self)
+            except Exception as e:
+                # Log error but don't fail the transition
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(
+                    f"Failed to post accounting entries for WO {self.work_order_number}: {e}",
+                    exc_info=True
+                )
         
         return True
     
@@ -957,3 +1009,164 @@ class WorkOrderPhoto(models.Model):
     
     def __str__(self):
         return f"{self.work_order.work_order_number} - {self.photo_type} - {self.caption}"
+
+
+class TriageForm(models.Model):
+    """
+    Structured triage form for initial vehicle assessment
+    Completed by Service Coordinator during initial inspection
+    """
+    
+    work_order = models.OneToOneField(
+        WorkOrder,
+        on_delete=models.CASCADE,
+        related_name='triage_form',
+        help_text="Work order this triage form is for"
+    )
+    
+    # Performed by Service Coordinator
+    performed_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='triage_forms',
+        limit_choices_to={'role__in': ['service_coordinator', 'manager', 'receptionist']},
+        help_text="Service Coordinator who performed the triage"
+    )
+    
+    # Visual Inspection
+    visual_inspection_notes = models.TextField(
+        blank=True,
+        help_text="Notes from visual inspection of the vehicle"
+    )
+    exterior_condition = models.CharField(
+        max_length=20,
+        choices=[
+            ('excellent', 'Excellent'),
+            ('good', 'Good'),
+            ('fair', 'Fair'),
+            ('poor', 'Poor'),
+        ],
+        blank=True,
+        help_text="Overall exterior condition"
+    )
+    interior_condition = models.CharField(
+        max_length=20,
+        choices=[
+            ('excellent', 'Excellent'),
+            ('good', 'Good'),
+            ('fair', 'Fair'),
+            ('poor', 'Poor'),
+        ],
+        blank=True,
+        help_text="Overall interior condition"
+    )
+    
+    # Test Drive
+    test_drive_performed = models.BooleanField(default=False)
+    test_drive_notes = models.TextField(
+        blank=True,
+        help_text="Notes from test drive (if performed)"
+    )
+    test_drive_issues = models.TextField(
+        blank=True,
+        help_text="Issues observed during test drive"
+    )
+    
+    # Initial Assessment
+    initial_assessment = models.TextField(
+        help_text="Service Coordinator's initial assessment of the problem"
+    )
+    priority_assessment = models.CharField(
+        max_length=10,
+        choices=WorkOrder.PRIORITY_CHOICES,
+        default='normal',
+        help_text="Initial priority assessment"
+    )
+    estimated_complexity = models.CharField(
+        max_length=20,
+        choices=[
+            ('simple', 'Simple'),
+            ('moderate', 'Moderate'),
+            ('complex', 'Complex'),
+            ('very_complex', 'Very Complex'),
+        ],
+        default='moderate',
+        help_text="Estimated complexity of the repair"
+    )
+    
+    # Recommended Next Steps
+    recommended_next_steps = models.TextField(
+        blank=True,
+        help_text="Recommended next steps (e.g., 'Send to diagnosis', 'Check parts availability')"
+    )
+    requires_diagnosis = models.BooleanField(
+        default=True,
+        help_text="Whether diagnosis is required before proceeding"
+    )
+    customer_communication_notes = models.TextField(
+        blank=True,
+        help_text="Notes about customer communication during triage"
+    )
+    
+    # Timestamps
+    completed_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-completed_at']
+        verbose_name = 'Triage Form'
+        verbose_name_plural = 'Triage Forms'
+    
+    def __str__(self):
+        return f"Triage for {self.work_order.work_order_number} - {self.completed_at.strftime('%Y-%m-%d')}"
+
+
+class RepeatVisitAlert(models.Model):
+    """
+    Track repeat visits when a vehicle returns within 30 days for similar problems.
+    Used for quality control and warranty tracking.
+    """
+    work_order = models.OneToOneField(
+        WorkOrder,
+        on_delete=models.CASCADE,
+        related_name='repeat_visit_alert',
+        help_text="The work order that triggered this repeat visit alert"
+    )
+    related_work_order = models.ForeignKey(
+        WorkOrder,
+        on_delete=models.CASCADE,
+        related_name='triggered_alerts',
+        help_text="The previous work order that this repeat visit relates to"
+    )
+    days_since_previous = models.IntegerField(
+        help_text="Number of days between completion of previous work order and creation of this one"
+    )
+    similarity_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=3,
+        help_text="Text similarity score between customer concerns (0-1)"
+    )
+    detected_at = models.DateTimeField(auto_now_add=True)
+    marked_as_warranty = models.BooleanField(
+        default=False,
+        help_text="Whether this repeat visit was marked as a warranty/rework case"
+    )
+    resolved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='resolved_repeat_visits',
+        limit_choices_to={'role__in': ['manager', 'admin']}
+    )
+    
+    class Meta:
+        ordering = ['-detected_at']
+        indexes = [
+            models.Index(fields=['work_order']),
+            models.Index(fields=['related_work_order']),
+            models.Index(fields=['marked_as_warranty', 'detected_at']),
+        ]
+    
+    def __str__(self):
+        return f"Repeat visit alert: {self.work_order.work_order_number} -> {self.related_work_order.work_order_number} ({self.days_since_previous} days)"

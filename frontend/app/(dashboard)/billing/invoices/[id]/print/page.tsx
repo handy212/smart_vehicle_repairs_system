@@ -47,20 +47,26 @@ export default function InvoicePrintPage() {
   const amountDue = parseFloat(invoice.balance_due || '0');
 
   return (
-    <div className="print-container p-8 max-w-4xl mx-auto bg-white">
+    <>
       <style jsx global>{`
         @media print {
           @page {
             margin: 1cm;
           }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
           body {
-            background: white;
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-family: Arial, sans-serif !important;
+            font-size: 12px !important;
           }
           .no-print {
             display: none !important;
-          }
-          .print-container {
-            box-shadow: none;
           }
           /* Hide dashboard layout elements */
           nav,
@@ -88,89 +94,182 @@ export default function InvoicePrintPage() {
             display: none !important;
             visibility: hidden !important;
           }
-          /* Ensure print container is full width */
+          /* Print container styles */
           .print-container {
             max-width: 100% !important;
-            margin: 0 auto !important;
+            margin: 0 !important;
+            padding: 20px !important;
+            box-shadow: none !important;
+            background: white !important;
+          }
+          /* Table styles */
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin: 10px 0 !important;
+            font-size: 12px !important;
+          }
+          th, td {
+            border: 1px solid #000 !important;
+            padding: 5px !important;
+            text-align: left !important;
+          }
+          th {
+            background-color: #f0f0f0 !important;
+            font-weight: bold !important;
+          }
+          .text-right {
+            text-align: right !important;
+          }
+          .text-center {
+            text-align: center !important;
+          }
+          .font-bold {
+            font-weight: bold !important;
+          }
+          .font-semibold {
+            font-weight: 600 !important;
           }
         }
         @media screen {
+          body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            font-size: 12px;
+          }
           .print-container {
+            max-width: 4xl;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+          }
+          th, td {
+            border: 1px solid #000;
+            padding: 5px;
+            text-align: left;
+          }
+          th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+          }
+          .text-right {
+            text-align: right;
+          }
+          .text-center {
+            text-align: center;
           }
         }
       `}</style>
+      <div className="print-container">
 
       {/* Header */}
-      <div className="mb-8 border-b-2 border-gray-800 pb-4">
-        <div className="flex justify-between items-start">
+      <div style={{ marginBottom: '20px', borderBottom: '2px solid #000', paddingBottom: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">INVOICE</h1>
-            <p className="text-lg text-gray-600 mt-1">#{invoice.invoice_number}</p>
+            <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>INVOICE</h1>
+            <p style={{ fontSize: '14px', marginTop: '5px', margin: 0 }}>#{invoice.invoice_number}</p>
           </div>
-          <div className="text-right">
+          <div style={{ textAlign: 'right' }}>
             {invoice.invoice_date && (
-              <p className="text-sm text-gray-600">Date: {format(new Date(invoice.invoice_date), 'MMM dd, yyyy')}</p>
+              <p style={{ fontSize: '12px', margin: '2px 0' }}>Date: {format(new Date(invoice.invoice_date), 'MMM dd, yyyy')}</p>
             )}
             {invoice.due_date && (
-              <p className="text-sm text-gray-600">Due: {format(new Date(invoice.due_date), 'MMM dd, yyyy')}</p>
+              <p style={{ fontSize: '12px', margin: '2px 0' }}>Due: {format(new Date(invoice.due_date), 'MMM dd, yyyy')}</p>
             )}
-            <p className="text-sm text-gray-600 mt-1">
-              Status: <span className="font-semibold uppercase">{invoice.status}</span>
+            <p style={{ fontSize: '12px', margin: '2px 0' }}>
+              Status: <span style={{ fontWeight: '600', textTransform: 'uppercase' }}>{invoice.status}</span>
             </p>
           </div>
         </div>
       </div>
 
       {/* Customer Info */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">BILL TO</h2>
-          <div className="text-sm space-y-1">
-            <p className="font-semibold">{customerName}</p>
-          </div>
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '5px', borderBottom: '1px solid #ccc', paddingBottom: '5px' }}>BILL TO</h2>
+        <div style={{ fontSize: '12px' }}>
+          <p style={{ fontWeight: '600', margin: '2px 0' }}>{customerName}</p>
+          {invoice.customer_email && <p style={{ margin: '2px 0' }}>Email: {invoice.customer_email}</p>}
+          {invoice.customer_phone && <p style={{ margin: '2px 0' }}>Phone: {invoice.customer_phone}</p>}
+          {invoice.customer_address && <p style={{ margin: '2px 0' }}>{invoice.customer_address}</p>}
+        </div>
       </div>
+
+      {/* Vehicle Info */}
+      {invoice.vehicle && (
+        <div style={{ marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '5px', borderBottom: '1px solid #ccc', paddingBottom: '5px' }}>VEHICLE</h2>
+          <div style={{ fontSize: '12px' }}>
+            {invoice.vehicle_display && <p style={{ margin: '2px 0', fontWeight: '600' }}>{invoice.vehicle_display}</p>}
+            {invoice.vehicle_vin && <p style={{ margin: '2px 0' }}>VIN: {invoice.vehicle_vin}</p>}
+          </div>
+        </div>
+      )}
 
       {/* Work Order Reference */}
       {invoice.work_order && (
-        <div className="mb-8">
-          <p className="text-sm">
-            <span className="font-semibold">Work Order:</span> #{typeof invoice.work_order === 'object' ? invoice.work_order.id : invoice.work_order}
+        <div style={{ marginBottom: '20px' }}>
+          <p style={{ fontSize: '12px' }}>
+            <span style={{ fontWeight: '600' }}>Work Order:</span> #{typeof invoice.work_order === 'object' ? invoice.work_order.id : invoice.work_order}
           </p>
         </div>
       )}
 
+      {/* Description */}
+      {invoice.description && (
+        <div style={{ marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '5px' }}>SERVICE DESCRIPTION</h2>
+          <p style={{ fontSize: '12px', whiteSpace: 'pre-wrap' }}>{invoice.description}</p>
+        </div>
+      )}
+
       {/* Line Items */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">ITEMS</h2>
-        <table className="w-full text-sm border-collapse">
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '5px', borderBottom: '1px solid #ccc', paddingBottom: '5px' }}>SERVICES & PARTS</h2>
+        <table style={{ width: '100%', borderCollapse: 'collapse', margin: '10px 0', fontSize: '12px' }}>
           <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-gray-300 px-3 py-2 text-left">Description</th>
-              <th className="border border-gray-300 px-3 py-2 text-right">Quantity</th>
-              <th className="border border-gray-300 px-3 py-2 text-right">Unit Price</th>
-              <th className="border border-gray-300 px-3 py-2 text-right">Total</th>
+            <tr style={{ backgroundColor: '#f0f0f0' }}>
+              <th style={{ border: '1px solid #000', padding: '5px', textAlign: 'left', fontWeight: 'bold' }}>Description</th>
+              <th style={{ border: '1px solid #000', padding: '5px', textAlign: 'center', fontWeight: 'bold' }}>Qty</th>
+              <th style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold' }}>Unit Price</th>
+              <th style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold' }}>Total</th>
             </tr>
           </thead>
           <tbody>
             {invoice.line_items && invoice.line_items.length > 0 ? (
               invoice.line_items.map((item, index) => {
-                const quantity = parseFloat(String(item.quantity || '1'));
-                const unitPrice = parseFloat(String(item.unit_price || '0'));
+                const quantity = item.item_type === 'labor' && item.labor_hours 
+                  ? parseFloat(String(item.labor_hours || '1'))
+                  : parseFloat(String(item.quantity || '1'));
+                const unitPrice = item.item_type === 'labor' && item.labor_rate
+                  ? parseFloat(String(item.labor_rate || '0'))
+                  : parseFloat(String(item.unit_price || '0'));
                 const lineTotal = quantity * unitPrice;
                 return (
                   <tr key={index}>
-                    <td className="border border-gray-300 px-3 py-2">
+                    <td style={{ border: '1px solid #000', padding: '5px' }}>
                       {item.description}
+                      {item.part_number && <><br />Part #: {item.part_number}</>}
+                      {item.notes && <><br />{item.notes}</>}
                     </td>
-                    <td className="border border-gray-300 px-3 py-2 text-right">{quantity}</td>
-                    <td className="border border-gray-300 px-3 py-2 text-right">${unitPrice.toFixed(2)}</td>
-                    <td className="border border-gray-300 px-3 py-2 text-right">${lineTotal.toFixed(2)}</td>
+                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'center' }}>
+                      {item.item_type === 'labor' && item.labor_hours ? `${quantity.toFixed(1)} hrs` : quantity}
+                    </td>
+                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>
+                      {item.item_type === 'labor' && item.labor_rate ? `$${unitPrice.toFixed(2)}/hr` : `$${unitPrice.toFixed(2)}`}
+                    </td>
+                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${lineTotal.toFixed(2)}</td>
                   </tr>
                 );
               })
             ) : (
               <tr>
-                <td colSpan={4} className="border border-gray-300 px-3 py-2 text-center text-gray-500">
+                <td colSpan={4} style={{ border: '1px solid #000', padding: '5px', textAlign: 'center' }}>
                   No line items
                 </td>
               </tr>
@@ -179,70 +278,114 @@ export default function InvoicePrintPage() {
         </table>
       </div>
 
-      {/* Totals */}
-      <div className="mb-8">
-        <div className="flex justify-end">
-          <div className="w-64">
-            <table className="w-full text-sm border-collapse">
-              <tbody>
+      {/* Financial Summary */}
+      <div style={{ marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '5px', borderBottom: '1px solid #ccc', paddingBottom: '5px' }}>FINANCIAL SUMMARY</h2>
+        <table style={{ width: '100%', borderCollapse: 'collapse', margin: '10px 0', fontSize: '12px' }}>
+          <tbody>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>Subtotal</td>
+              <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold' }}>${subtotal.toFixed(2)}</td>
+            </tr>
+            {discountAmount > 0 && (
+              <>
                 <tr>
-                  <td className="border border-gray-300 px-3 py-2 text-right font-semibold">Subtotal:</td>
-                  <td className="border border-gray-300 px-3 py-2 text-right">${subtotal.toFixed(2)}</td>
+                  <td style={{ border: '1px solid #000', padding: '5px' }}>
+                    Discount ({invoice.discount_percentage ? parseFloat(invoice.discount_percentage).toFixed(1) : 0}%)
+                    {invoice.discount_reason && <><br /><small>{invoice.discount_reason}</small></>}
+                  </td>
+                  <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>-${discountAmount.toFixed(2)}</td>
                 </tr>
-                {discountAmount > 0 && (
-                  <tr>
-                    <td className="border border-gray-300 px-3 py-2 text-right font-semibold">Discount:</td>
-                    <td className="border border-gray-300 px-3 py-2 text-right">-${discountAmount.toFixed(2)}</td>
-                  </tr>
-                )}
-                {taxAmount > 0 && (
-                  <tr>
-                    <td className="border border-gray-300 px-3 py-2 text-right font-semibold">Tax:</td>
-                    <td className="border border-gray-300 px-3 py-2 text-right">${taxAmount.toFixed(2)}</td>
-                  </tr>
-                )}
-                <tr className="bg-gray-100">
-                  <td className="border border-gray-300 px-3 py-2 text-right font-bold text-lg">TOTAL:</td>
-                  <td className="border border-gray-300 px-3 py-2 text-right font-bold text-lg">${total.toFixed(2)}</td>
+                <tr>
+                  <td style={{ border: '1px solid #000', padding: '5px' }}>Subtotal after Discount</td>
+                  <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${(subtotal - discountAmount).toFixed(2)}</td>
                 </tr>
-                {amountPaid > 0 && (
+              </>
+            )}
+            {(invoice.tax_nhil_amount || invoice.tax_getfund_amount || invoice.tax_hrl_amount || invoice.tax_vat_amount) ? (
+              <>
+                <tr>
+                  <td colSpan={2} style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>Tax Breakdown:</td>
+                </tr>
+                {invoice.tax_nhil_amount && parseFloat(invoice.tax_nhil_amount) > 0 && (
                   <tr>
-                    <td className="border border-gray-300 px-3 py-2 text-right font-semibold">Amount Paid:</td>
-                    <td className="border border-gray-300 px-3 py-2 text-right">${amountPaid.toFixed(2)}</td>
+                    <td style={{ border: '1px solid #000', padding: '5px' }}>NHIL (2.5%)</td>
+                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${parseFloat(invoice.tax_nhil_amount).toFixed(2)}</td>
                   </tr>
                 )}
-                {amountDue > 0 && (
-                  <tr className="bg-yellow-50">
-                    <td className="border border-gray-300 px-3 py-2 text-right font-bold">Amount Due:</td>
-                    <td className="border border-gray-300 px-3 py-2 text-right font-bold">${amountDue.toFixed(2)}</td>
+                {invoice.tax_getfund_amount && parseFloat(invoice.tax_getfund_amount) > 0 && (
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '5px' }}>GETFund (2.5%)</td>
+                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${parseFloat(invoice.tax_getfund_amount).toFixed(2)}</td>
                   </tr>
                 )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                {invoice.tax_hrl_amount && parseFloat(invoice.tax_hrl_amount) > 0 && (
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '5px' }}>COVID-19 HRL (1%)</td>
+                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${parseFloat(invoice.tax_hrl_amount).toFixed(2)}</td>
+                  </tr>
+                )}
+                {invoice.tax_vat_amount && parseFloat(invoice.tax_vat_amount) > 0 && (
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '5px' }}>VAT (15%)</td>
+                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${parseFloat(invoice.tax_vat_amount).toFixed(2)}</td>
+                  </tr>
+                )}
+                <tr>
+                  <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>Total Tax</td>
+                  <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold' }}>${taxAmount.toFixed(2)}</td>
+                </tr>
+              </>
+            ) : taxAmount > 0 && (
+              <tr>
+                <td style={{ border: '1px solid #000', padding: '5px' }}>Tax</td>
+                <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${taxAmount.toFixed(2)}</td>
+              </tr>
+            )}
+            <tr style={{ backgroundColor: '#f0f0f0' }}>
+              <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', fontSize: '14px' }}>TOTAL AMOUNT</td>
+              <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold', fontSize: '14px' }}>${total.toFixed(2)}</td>
+            </tr>
+            {amountPaid > 0 && (
+              <tr>
+                <td style={{ border: '1px solid #000', padding: '5px' }}>Amount Paid</td>
+                <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${amountPaid.toFixed(2)}</td>
+              </tr>
+            )}
+            {amountDue > 0 && (
+              <tr style={{ backgroundColor: '#fffacd' }}>
+                <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>BALANCE DUE</td>
+                <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold' }}>${amountDue.toFixed(2)}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Payment History */}
       {payments && payments.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">PAYMENT HISTORY</h2>
-          <table className="w-full text-sm border-collapse">
+        <div style={{ marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '5px', borderBottom: '1px solid #ccc', paddingBottom: '5px' }}>PAYMENT HISTORY</h2>
+          <table style={{ width: '100%', borderCollapse: 'collapse', margin: '10px 0', fontSize: '12px' }}>
             <thead>
-              <tr className="bg-gray-100">
-                <th className="border border-gray-300 px-3 py-2 text-left">Date</th>
-                <th className="border border-gray-300 px-3 py-2 text-left">Method</th>
-                <th className="border border-gray-300 px-3 py-2 text-right">Amount</th>
+              <tr style={{ backgroundColor: '#f0f0f0' }}>
+                <th style={{ border: '1px solid #000', padding: '5px', textAlign: 'left', fontWeight: 'bold' }}>Date</th>
+                <th style={{ border: '1px solid #000', padding: '5px', textAlign: 'left', fontWeight: 'bold' }}>Method</th>
+                <th style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold' }}>Amount</th>
               </tr>
             </thead>
             <tbody>
               {payments.map((payment) => (
                 <tr key={payment.id}>
-                  <td className="border border-gray-300 px-3 py-2">
+                  <td style={{ border: '1px solid #000', padding: '5px' }}>
                     {format(new Date(payment.payment_date), 'MMM dd, yyyy')}
                   </td>
-                  <td className="border border-gray-300 px-3 py-2 capitalize">{payment.payment_method.replace('_', ' ')}</td>
-                  <td className="border border-gray-300 px-3 py-2 text-right">${parseFloat(payment.amount || '0').toFixed(2)}</td>
+                  <td style={{ border: '1px solid #000', padding: '5px', textTransform: 'capitalize' }}>
+                    {payment.payment_method.replace('_', ' ')}
+                  </td>
+                  <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>
+                    ${parseFloat(payment.amount || '0').toFixed(2)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -251,29 +394,31 @@ export default function InvoicePrintPage() {
       )}
 
       {/* Notes */}
-      {(invoice.notes || invoice.payment_terms) && (
-        <div className="mb-8">
-          {invoice.notes && (
-            <div className="mb-4">
-              <p className="font-semibold mb-1">Notes:</p>
-              <p className="text-sm whitespace-pre-wrap">{invoice.notes}</p>
+      {(invoice.notes || invoice.customer_notes || invoice.payment_terms) && (
+        <div style={{ marginBottom: '20px' }}>
+          {invoice.customer_notes && (
+            <div style={{ marginBottom: '10px' }}>
+              <p style={{ fontWeight: '600', marginBottom: '5px', fontSize: '14px' }}>Notes:</p>
+              <p style={{ fontSize: '12px', whiteSpace: 'pre-wrap' }}>{invoice.customer_notes}</p>
             </div>
           )}
           {invoice.payment_terms && (
             <div>
-              <p className="font-semibold mb-1">Payment Terms:</p>
-              <p className="text-sm whitespace-pre-wrap">{invoice.payment_terms}</p>
+              <p style={{ fontWeight: '600', marginBottom: '5px', fontSize: '14px' }}>Payment Terms:</p>
+              <p style={{ fontSize: '12px', whiteSpace: 'pre-wrap' }}>{invoice.payment_terms}</p>
             </div>
           )}
         </div>
       )}
 
       {/* Footer */}
-      <div className="mt-12 pt-4 border-t border-gray-300 text-xs text-gray-600 text-center">
-        <p>Thank you for your business!</p>
-        <p className="mt-2">This is a computer-generated invoice. Please retain for your records.</p>
+      <div style={{ marginTop: '30px', paddingTop: '10px', borderTop: '1px solid #ccc', fontSize: '10px', textAlign: 'center', color: '#666' }}>
+        <p style={{ margin: '5px 0' }}>Thank you for your business!</p>
+        <p style={{ margin: '5px 0' }}>This is a computer-generated invoice. Please retain for your records.</p>
+        <p style={{ margin: '5px 0' }}>Generated on {format(new Date(), 'MMMM dd, yyyy \'at\' h:mm a')}</p>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

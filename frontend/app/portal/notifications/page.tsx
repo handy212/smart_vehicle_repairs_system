@@ -48,7 +48,7 @@ export default function NotificationsPage() {
   });
 
   const notifications = (notificationsData?.results || notificationsData || []) as Notification[];
-  const unreadCount = unreadCountData?.count || 0;
+  const unreadCount = unreadCountData?.unread_count || 0;
 
   const markAsReadMutation = useMutation({
     mutationFn: (id: number) => notificationsApi.markAsRead(id),

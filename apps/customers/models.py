@@ -49,6 +49,16 @@ class Customer(models.Model):
         help_text="Link to user account with customer role"
     )
     
+    # Django Ledger Customer reference (for AR tracking)
+    ledger_customer = models.OneToOneField(
+        'django_ledger.CustomerModel',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='repair_customer',
+        help_text="Django Ledger Customer for AR tracking and aging reports"
+    )
+    
     # Customer identification
     customer_number = models.CharField(
         max_length=20,

@@ -2,6 +2,7 @@
 Development settings for Smart Vehicle Repairs System.
 """
 from .base import *
+from corsheaders.defaults import default_headers
 
 # Development specific settings
 DEBUG = True
@@ -27,7 +28,8 @@ CORS_ALLOW_METHODS = [
     'POST',
     'PUT',
 ]
-CORS_ALLOW_HEADERS = [
+# Override base CORS headers to include all necessary headers
+CORS_ALLOW_HEADERS = list(default_headers) + [
     'accept',
     'accept-encoding',
     'authorization',
@@ -37,7 +39,11 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'x-branch-id',
+    'X-Branch-ID',
 ]
+# Ensure CORS middleware handles preflight requests
+CORS_PREFLIGHT_MAX_AGE = 86400
 
 # Debug toolbar
 INSTALLED_APPS += [

@@ -77,6 +77,16 @@ class Supplier(models.Model):
     # Notes
     notes = models.TextField(blank=True)
     
+    # Django Ledger Vendor reference (for AP tracking)
+    ledger_vendor = models.OneToOneField(
+        'django_ledger.VendorModel',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='repair_supplier',
+        help_text="Django Ledger Vendor for AP tracking and aging reports"
+    )
+    
     # Tracking
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -118,6 +128,14 @@ class Part(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     category = models.ForeignKey(PartCategory, on_delete=models.PROTECT, related_name='parts')
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='parts',
+        help_text='Branch this part inventory belongs to'
+    )
     
     # Manufacturer info
     manufacturer = models.CharField(max_length=200, blank=True)
@@ -197,6 +215,16 @@ class Part(models.Model):
     is_taxable = models.BooleanField(default=True)
     is_core = models.BooleanField(default=False, help_text='Requires core exchange')
     core_charge = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    
+    # Django Ledger Item reference (for inventory accounting)
+    ledger_item = models.OneToOneField(
+        'django_ledger.ItemModel',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='repair_part',
+        help_text="Django Ledger Item for inventory accounting and COGS tracking"
+    )
     
     # Tracking
     last_cost_update = models.DateTimeField(null=True, blank=True)
@@ -291,6 +319,26 @@ class PurchaseOrder(models.Model):
     
     # Supplier
     supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name='purchase_orders')
+    
+    # Branch assignment (for accounting)
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='purchase_orders',
+        help_text="Branch where this purchase order is for"
+    )
+    
+    # Django Ledger Bill reference (for AP tracking when PO is received)
+    ledger_bill = models.OneToOneField(
+        'django_ledger.BillModel',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='repair_purchase_order',
+        help_text="Django Ledger Bill created when PO is received (for AP tracking)"
+    )
     
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', db_index=True)

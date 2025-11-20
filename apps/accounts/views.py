@@ -63,7 +63,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def staff_list(self, request):
         """Get list of all staff members"""
-        staff = User.objects.filter(role__in=['admin', 'manager', 'receptionist', 'technician', 'parts_manager'])
+        staff = User.objects.filter(role__in=['admin', 'manager', 'service_coordinator', 'receptionist', 'technician', 'parts_manager', 'accountant'])
         serializer = StaffUserSerializer(staff, many=True)
         return Response(serializer.data)
     

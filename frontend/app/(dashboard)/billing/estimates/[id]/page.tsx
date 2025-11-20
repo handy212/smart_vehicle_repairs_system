@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { billingApi } from "@/lib/api/billing";
@@ -10,8 +11,8 @@ import { ArrowLeft, Edit, Mail, FileText, CheckCircle, XCircle, Download, Wrench
 import Link from "next/link";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
+import { useBranchStore } from "@/store/branchStore";
 
 export default function EstimateDetailPage() {
   const params = useParams();
@@ -20,10 +21,64 @@ export default function EstimateDetailPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isConverting, setIsConverting] = useState(false);
+  const [localStatus, setLocalStatus] = useState<string | null>(null);
 
   const { data: estimate, isLoading, error } = useQuery({
     queryKey: ["estimate", estimateId],
     queryFn: () => billingApi.estimates.get(estimateId),
+  });
+
+  // Update local status when estimate data changes
+  useEffect(() => {
+    if (estimate?.status) {
+      setLocalStatus(estimate.status);
+    }
+  }, [estimate?.status]);
+
+  const statusChangeMutation = useMutation({
+    mutationFn: async (newStatus: string) => {
+      return billingApi.estimates.update(estimateId, { status: newStatus });
+    },
+    onMutate: async (newStatus) => {
+      await queryClient.cancelQueries({ queryKey: ["estimate", estimateId] });
+      const previousEstimate = queryClient.getQueryData(["estimate", estimateId]);
+      queryClient.setQueryData(["estimate", estimateId], (old: any) => ({
+        ...old,
+        status: newStatus,
+      }));
+      setLocalStatus(newStatus);
+      return { previousEstimate };
+    },
+    onError: (err, newStatus, context) => {
+      if (context?.previousEstimate) {
+        queryClient.setQueryData(["estimate", estimateId], context.previousEstimate);
+        setLocalStatus((context.previousEstimate as any)?.status || estimate?.status || null);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+    },
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async () => {
+      return billingApi.estimates.send(estimateId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+      toast({
+        title: "Success",
+        description: "Estimate sent successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send estimate. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const convertToInvoiceMutation = useMutation({
@@ -65,6 +120,54 @@ export default function EstimateDetailPage() {
       });
     },
   });
+
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value;
+    if (newStatus && newStatus !== localStatus) {
+      statusChangeMutation.mutate(newStatus);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/billing/estimates/${estimateId}/pdf/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'X-Branch-ID': useBranchStore.getState().activeBranchId?.toString() || '',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `Failed to generate PDF: ${response.status} ${response.statusText}`);
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `estimate_${estimate?.estimate_number || estimateId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to download PDF. Please try again.';
+      alert(errorMessage);
+      console.error('PDF download error:', error);
+    }
+  };
+
+  const handleSendEmail = () => {
+    if (confirm("Send this estimate to the customer via email?")) {
+      sendEmailMutation.mutate();
+    }
+  };
 
   const handleConvertToInvoice = () => {
     if (confirm("Convert this estimate to an invoice? This action cannot be undone.")) {
@@ -122,12 +225,42 @@ export default function EstimateDetailPage() {
     }
   };
 
+  const parseAmount = (value?: string | number | null) => {
+    if (value === null || value === undefined) {
+      return 0;
+    }
+    const num = typeof value === "number" ? value : parseFloat(value);
+    return Number.isNaN(num) ? 0 : num;
+  };
+
+  const taxBreakdown = {
+    regime: estimate.tax_breakdown?.regime || estimate.tax_regime || "ghana_standard",
+    nhilAmount: parseAmount(estimate.tax_breakdown?.nhil_amount ?? estimate.tax_nhil_amount),
+    getfundAmount: parseAmount(estimate.tax_breakdown?.getfund_amount ?? estimate.tax_getfund_amount),
+    hrlAmount: parseAmount(estimate.tax_breakdown?.hrl_amount ?? estimate.tax_hrl_amount),
+    vatAmount: parseAmount(estimate.tax_breakdown?.vat_amount ?? estimate.tax_vat_amount),
+    totalTax: parseAmount(estimate.tax_breakdown?.total_tax ?? estimate.tax_amount),
+  };
+  const hasDetailedTax =
+    taxBreakdown.nhilAmount > 0 ||
+    taxBreakdown.getfundAmount > 0 ||
+    taxBreakdown.hrlAmount > 0 ||
+    taxBreakdown.vatAmount > 0;
+
   return (
-    <div className="space-y-6">
+    <>
+      <style jsx global>{`
+        @media print {
+          .no-print { display: none !important; }
+          body { margin: 0; padding: 20px; }
+          .print-page { page-break-after: auto; }
+        }
+      `}</style>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={() => router.back()}>
+          <Button variant="outline" onClick={() => router.back()} className="no-print">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -140,44 +273,30 @@ export default function EstimateDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex space-x-2">
-          <Link href={`/billing/estimates/${estimateId}/print`} target="_blank">
-            <Button variant="outline">
-              <Printer className="w-4 h-4 mr-2" />
-              Print
-            </Button>
-          </Link>
-          <Button variant="outline">
+        <div className="flex space-x-2 no-print">
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="w-4 h-4 mr-2" />
+            Print
+          </Button>
+          <Button variant="outline" onClick={handleDownloadPDF}>
             <Download className="w-4 h-4 mr-2" />
             Download PDF
           </Button>
-          <Button variant="outline">
+          <Button 
+            variant="outline" 
+            onClick={handleSendEmail}
+            disabled={sendEmailMutation.isPending}
+          >
             <Mail className="w-4 h-4 mr-2" />
-            Send Email
+            {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
           </Button>
+          <Link href={`/billing/estimates/${estimateId}/edit`}>
+            <Button>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
+          </Link>
         </div>
-      </div>
-
-      {/* Status Badge */}
-      <div className="flex items-center space-x-2">
-        <Badge variant={getStatusVariant(estimate.status) as any} className="text-sm px-3 py-1">
-          {estimate.status?.replace("_", " ") || estimate.status}
-        </Badge>
-        {estimate.is_expired && (
-          <Badge variant="danger" className="text-sm px-3 py-1">
-            Expired
-          </Badge>
-        )}
-        {estimate.can_be_approved && (
-          <Badge variant="info" className="text-sm px-3 py-1">
-            Can Be Approved
-          </Badge>
-        )}
-        {estimate.can_be_converted && (
-          <Badge variant="info" className="text-sm px-3 py-1">
-            Can Be Converted
-          </Badge>
-        )}
       </div>
 
       {/* Main Content Grid */}
@@ -194,6 +313,30 @@ export default function EstimateDetailPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Estimate Number</p>
                   <p className="text-gray-900 font-mono">{estimate.estimate_number}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Status</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getStatusVariant(localStatus || estimate.status) as any}>
+                      {(localStatus || estimate.status)?.replace("_", " ").toUpperCase()}
+                    </Badge>
+                    <select
+                      value={localStatus || estimate.status}
+                      onChange={handleStatusChange}
+                      disabled={statusChangeMutation.isPending}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="sent">Sent</option>
+                      <option value="viewed">Viewed</option>
+                      <option value="approved">Approved</option>
+                      <option value="declined">Declined</option>
+                      <option value="converted">Converted</option>
+                    </select>
+                    {statusChangeMutation.isPending && (
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Estimate Date</p>
@@ -223,6 +366,9 @@ export default function EstimateDetailPage() {
                   ) : (
                     <p className="text-gray-900">{estimate.customer_name || "-"}</p>
                   )}
+                  {estimate.customer_email && (
+                    <p className="text-xs text-gray-500 mt-1">{estimate.customer_email}</p>
+                  )}
                 </div>
                 {estimate.vehicle && (
                   <div>
@@ -233,21 +379,28 @@ export default function EstimateDetailPage() {
                     >
                       {estimate.vehicle_display || "View Vehicle"}
                     </Link>
+                    {estimate.vehicle_vin && (
+                      <p className="text-xs text-gray-500 mt-1">VIN: {estimate.vehicle_vin}</p>
+                    )}
                   </div>
                 )}
               </div>
-              {estimate.title && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Title</p>
-                  <p className="text-gray-900">{estimate.title}</p>
+              {((estimate.title || estimate.description) && (
+                <div className="border-t pt-4 mt-4 space-y-3">
+                  {estimate.title && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Title</p>
+                      <p className="text-gray-900 text-sm">{estimate.title}</p>
+                    </div>
+                  )}
+                  {estimate.description && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Description</p>
+                      <p className="text-gray-900 text-sm whitespace-pre-wrap">{estimate.description}</p>
+                    </div>
+                  )}
                 </div>
-              )}
-              {estimate.description && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Description</p>
-                  <p className="text-gray-900 whitespace-pre-wrap">{estimate.description}</p>
-                </div>
-              )}
+              ))}
             </CardContent>
           </Card>
 
@@ -329,20 +482,73 @@ export default function EstimateDetailPage() {
                   ${parseFloat(estimate.subtotal || "0").toFixed(2)}
                 </span>
               </div>
-              {estimate.discount_amount && parseFloat(estimate.discount_amount) > 0 && (
-                <div className="flex items-center justify-between text-red-600">
-                  <span className="text-sm">Discount</span>
-                  <span className="text-sm font-medium">
-                    -${parseFloat(estimate.discount_amount).toFixed(2)}
+              
+              {/* Discount Display */}
+              {parseFloat(estimate.discount_percentage || "0") > 0 && parseFloat(estimate.discount_amount || "0") > 0 && (
+                <>
+                  <div className="flex items-center justify-between text-red-600">
+                    <span className="text-sm">
+                      Discount ({parseFloat(estimate.discount_percentage || "0").toFixed(1)}%)
+                      {estimate.discount_reason && (
+                        <span className="text-xs text-gray-500 ml-1">- {estimate.discount_reason}</span>
+                      )}
+                    </span>
+                    <span>
+                      -${parseFloat(estimate.discount_amount || "0").toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between font-medium border-t pt-2">
+                    <span className="text-sm text-gray-500">Subtotal after Discount</span>
+                    <span className="text-gray-900">
+                      ${(parseFloat(estimate.subtotal || "0") - parseFloat(estimate.discount_amount || "0")).toFixed(2)}
+                    </span>
+                  </div>
+                </>
+              )}
+              
+              {hasDetailedTax ? (
+                <>
+                  {taxBreakdown.nhilAmount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">NHIL</span>
+                      <span className="text-gray-900">
+                        ${taxBreakdown.nhilAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {taxBreakdown.getfundAmount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">GETFund</span>
+                      <span className="text-gray-900">
+                        ${taxBreakdown.getfundAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {taxBreakdown.hrlAmount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">COVID-19</span>
+                      <span className="text-gray-900">
+                        ${taxBreakdown.hrlAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {taxBreakdown.vatAmount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">VAT</span>
+                      <span className="text-gray-900">
+                        ${taxBreakdown.vatAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Tax</span>
+                  <span className="text-gray-900">
+                    ${taxBreakdown.totalTax.toFixed(2)}
                   </span>
                 </div>
               )}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Tax</span>
-                <span className="text-gray-900">
-                  ${parseFloat(estimate.tax_amount || "0").toFixed(2)}
-                </span>
-              </div>
               <div className="border-t pt-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700">Total</span>
@@ -388,14 +594,6 @@ export default function EstimateDetailPage() {
                   Approve Estimate
                 </Button>
               )}
-              <Button className="w-full" variant="outline">
-                <Download className="w-4 h-4 mr-2" />
-                Download PDF
-              </Button>
-              <Button className="w-full" variant="outline">
-                <Mail className="w-4 h-4 mr-2" />
-                Send to Customer
-              </Button>
             </CardContent>
           </Card>
 
@@ -433,7 +631,7 @@ export default function EstimateDetailPage() {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
-

@@ -277,6 +277,41 @@ class VehicleInspectionCreateSerializer(serializers.ModelSerializer):
                 )
         return value
     
+    def validate(self, data):
+        """Validate that vehicle doesn't have active work order at another branch"""
+        vehicle = data.get('vehicle')
+        request = self.context.get('request')
+        
+        if vehicle and request:
+            from apps.branches.utils import resolve_branch
+            
+            current_branch = resolve_branch(request, branch_id=request.data.get('branch') or request.data.get('branch_id'))
+            
+            if current_branch:
+                # Active work order statuses (not closed)
+                active_statuses = [
+                    'draft', 'inspection', 'intake', 'diagnosis', 
+                    'awaiting_approval', 'approved', 'in_progress', 
+                    'additional_work_found', 'paused', 'quality_check'
+                ]
+                
+                # Check for active work orders at other branches
+                active_work_orders = WorkOrder.objects.filter(
+                    vehicle=vehicle,
+                    status__in=active_statuses
+                ).exclude(branch=current_branch).select_related('branch')
+                
+                if active_work_orders.exists():
+                    active_wo = active_work_orders.first()
+                    branch_name = active_wo.branch.name if active_wo.branch else 'Unknown Branch'
+                    raise serializers.ValidationError(
+                        f"This vehicle has an active work order ({active_wo.work_order_number}) "
+                        f"at {branch_name}. A new inspection can only be created once the existing "
+                        f"work order has been closed at the branch where it was opened."
+                    )
+        
+        return data
+    
     def create(self, validated_data):
         validated_data['performed_by'] = self.context['request'].user
         return super().create(validated_data)

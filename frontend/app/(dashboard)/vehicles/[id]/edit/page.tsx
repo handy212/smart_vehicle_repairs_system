@@ -133,7 +133,7 @@ export default function EditVehiclePage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
@@ -149,7 +149,7 @@ export default function EditVehiclePage() {
         </Link>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-red-600">Vehicle not found.</p>
+            <p className="text-red-600 dark:text-red-400">Vehicle not found.</p>
           </CardContent>
         </Card>
       </div>
@@ -166,15 +166,15 @@ export default function EditVehiclePage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Edit Vehicle</h1>
-          <p className="text-sm text-gray-500 mt-1">Update vehicle information</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Edit Vehicle</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Update vehicle information</p>
         </div>
       </div>
 
       {serverError && (
-        <Card className="bg-red-50 border-red-200">
+        <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2 text-red-800">
+            <div className="flex items-center space-x-2 text-red-800 dark:text-red-400">
               <AlertCircle className="w-5 h-5" />
               <p className="text-sm font-medium">{serverError}</p>
             </div>
@@ -194,7 +194,7 @@ export default function EditVehiclePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label htmlFor="vin" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="vin" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     VIN (Vehicle Identification Number) *
                   </label>
                   <Input
@@ -203,13 +203,13 @@ export default function EditVehiclePage() {
                     className={errors.vin ? "border-red-500" : ""}
                   />
                   {errors.vin && (
-                    <p className="mt-1 text-sm text-red-600">{errors.vin.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.vin.message}</p>
                   )}
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label htmlFor="make" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="make" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Make *
                     </label>
                     <Input
@@ -218,11 +218,11 @@ export default function EditVehiclePage() {
                       className={errors.make ? "border-red-500" : ""}
                     />
                     {errors.make && (
-                      <p className="mt-1 text-sm text-red-600">{errors.make.message}</p>
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.make.message}</p>
                     )}
                   </div>
                   <div>
-                    <label htmlFor="model" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="model" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Model *
                     </label>
                     <Input
@@ -231,11 +231,11 @@ export default function EditVehiclePage() {
                       className={errors.model ? "border-red-500" : ""}
                     />
                     {errors.model && (
-                      <p className="mt-1 text-sm text-red-600">{errors.model.message}</p>
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.model.message}</p>
                     )}
                   </div>
                   <div>
-                    <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="year" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Year *
                     </label>
                     <Input
@@ -245,14 +245,14 @@ export default function EditVehiclePage() {
                       className={errors.year ? "border-red-500" : ""}
                     />
                     {errors.year && (
-                      <p className="mt-1 text-sm text-red-600">{errors.year.message}</p>
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.year.message}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="license_plate" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="license_plate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       License Plate
                     </label>
                     <Input
@@ -261,7 +261,7 @@ export default function EditVehiclePage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="exterior_color" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="exterior_color" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Color
                     </label>
                     <Input
@@ -281,7 +281,7 @@ export default function EditVehiclePage() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="current_mileage" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="current_mileage" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Mileage
                     </label>
                     <Input
@@ -291,7 +291,7 @@ export default function EditVehiclePage() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="engine_type" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="engine_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Engine Type
                     </label>
                     <Select
@@ -316,7 +316,7 @@ export default function EditVehiclePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label htmlFor="owner" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="owner" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Owner (Customer) *
                   </label>
                   <Select
@@ -333,12 +333,12 @@ export default function EditVehiclePage() {
                     ))}
                   </Select>
                   {errors.owner && (
-                    <p className="mt-1 text-sm text-red-600">{errors.owner.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.owner.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Status
                   </label>
                   <Select

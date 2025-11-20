@@ -26,7 +26,7 @@ export default function PaymentHistoryPage() {
     queryKey: ["portal", "payments", statusFilter, methodFilter],
     queryFn: () => {
       const customerId = user?.customer_profile?.id || (user as any)?.customer?.id;
-      if (!customerId) return Promise.resolve({ count: 0, next: null, previous: null, results: [] });
+      if (!customerId) return Promise.resolve([]);
       const params: any = {
         customer: customerId,
         ordering: "-payment_date",
@@ -42,7 +42,7 @@ export default function PaymentHistoryPage() {
     enabled: !!user && !!(user?.customer_profile?.id || (user as any)?.customer?.id),
   });
 
-  const payments = (paymentsData?.results || paymentsData || []) as any[];
+  const payments = (paymentsData || []) as any[];
 
   if (isLoading) {
     return (

@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.utils import timezone
@@ -25,6 +26,7 @@ from apps.billing.serializers import (
     InvoiceListSerializer, InvoiceDetailSerializer, InvoiceCreateSerializer, InvoiceUpdateSerializer,
     PaymentSerializer, PaymentCreateSerializer, RefundPaymentSerializer
 )
+from apps.billing.tax_service import TaxService
 
 
 class TaxRateViewSet(viewsets.ModelViewSet):
@@ -342,6 +344,56 @@ class EstimateViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(expiring, many=True)
         return Response(serializer.data)
     
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Generate PDF for estimate"""
+        from django.template.loader import render_to_string
+        from django.http import HttpResponse
+        import traceback
+        
+        estimate = self.get_object()
+        
+        try:
+            from weasyprint import HTML
+            
+            # Prepare context
+            context = {
+                'estimate': estimate,
+                'print_generated_at': timezone.now(),
+                'print_branch': estimate.branch or (estimate.work_order.branch if estimate.work_order else None),
+            }
+            
+            # Render HTML template
+            html_string = render_to_string('billing/estimate_print.html', context, request=request)
+            
+            # Generate PDF
+            pdf = HTML(string=html_string).write_pdf()
+            
+            # Return PDF response
+            response = HttpResponse(pdf, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="estimate_{estimate.estimate_number}.pdf"'
+            return response
+            
+        except ImportError as e:
+            logger.error(f"WeasyPrint import error: {str(e)}")
+            return Response(
+                {"error": "PDF generation requires WeasyPrint. Please install it: pip install weasyprint"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        except AttributeError as e:
+            # Handle WeasyPrint/pycparser compatibility issues
+            logger.error(f"WeasyPrint compatibility error: {str(e)}\n{traceback.format_exc()}")
+            return Response(
+                {"error": "PDF generation is currently unavailable due to a dependency issue. Please use the Print button and save as PDF from your browser."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        except Exception as e:
+            logger.error(f"PDF generation error: {str(e)}\n{traceback.format_exc()}")
+            return Response(
+                {"error": f"Error generating PDF: {str(e)}. Please use the Print button and save as PDF from your browser."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
     def perform_create(self, serializer):
         """Assign branch when creating estimate"""
         request = self.request
@@ -398,7 +450,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     queryset = Invoice.objects.select_related(
         'customer', 'vehicle', 'work_order', 'estimate',
         'created_by', 'sent_by', 'voided_by'
-    ).prefetch_related('payments')
+    ).prefetch_related('payments', 'line_items')
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'customer', 'vehicle', 'work_order', 'invoice_date', 'due_date']
@@ -562,6 +614,56 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(overdue, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Generate PDF for invoice"""
+        from django.template.loader import render_to_string
+        from django.http import HttpResponse
+        import traceback
+        
+        invoice = self.get_object()
+        
+        try:
+            from weasyprint import HTML
+            
+            # Prepare context
+            context = {
+                'invoice': invoice,
+                'print_generated_at': timezone.now(),
+                'print_branch': invoice.branch or (invoice.work_order.branch if invoice.work_order else None),
+            }
+            
+            # Render HTML template
+            html_string = render_to_string('billing/invoice_print.html', context, request=request)
+            
+            # Generate PDF
+            pdf = HTML(string=html_string).write_pdf()
+            
+            # Return PDF response
+            response = HttpResponse(pdf, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
+            return response
+            
+        except ImportError as e:
+            logger.error(f"WeasyPrint import error: {str(e)}")
+            return Response(
+                {"error": "PDF generation requires WeasyPrint. Please install it: pip install weasyprint"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        except AttributeError as e:
+            # Handle WeasyPrint/pycparser compatibility issues
+            logger.error(f"WeasyPrint compatibility error: {str(e)}\n{traceback.format_exc()}")
+            return Response(
+                {"error": "PDF generation is currently unavailable due to a dependency issue. Please use the Print button and save as PDF from your browser."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        except Exception as e:
+            logger.error(f"PDF generation error: {str(e)}\n{traceback.format_exc()}")
+            return Response(
+                {"error": f"Error generating PDF: {str(e)}. Please use the Print button and save as PDF from your browser."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=False, methods=['get'])
     def aging_report(self, request):
@@ -1002,3 +1104,19 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+
+class TaxConfigurationView(APIView):
+    """Expose configured tax regime and rates."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        config = TaxService.get_config()
+        return Response({
+            'enabled': config.enabled,
+            'regime': config.regime,
+            'vat_rate': str(config.vat_rate),
+            'nhil_rate': str(config.nhil_rate),
+            'getfund_rate': str(config.getfund_rate),
+            'covid_rate': str(config.covid_rate),
+        })

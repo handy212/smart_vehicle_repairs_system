@@ -31,6 +31,7 @@ cycler==0.12.1
 diff-match-patch==20241021
 Django==4.2.25
 django-allauth==65.11.2
+django-ledger>=0.8.2.3
 django-anymail==13.1
 django-appconf==1.1.0
 django-celery-beat==2.8.1
