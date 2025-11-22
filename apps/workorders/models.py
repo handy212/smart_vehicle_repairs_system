@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models import Max
+from django.core.exceptions import FieldDoesNotExist
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from decimal import Decimal
@@ -251,6 +253,9 @@ class WorkOrder(models.Model):
         return f"{self.work_order_number} - {self.customer} - {self.vehicle}"
     
     def save(self, *args, **kwargs):
+        # Track if this is a new work order
+        is_new = self.pk is None
+        
         # Auto-generate work order number using branch sequence
         if not self.work_order_number:
             if self.branch:
@@ -268,6 +273,14 @@ class WorkOrder(models.Model):
         self.actual_total = self.actual_labor_cost + self.actual_parts_cost
         
         super().save(*args, **kwargs)
+        
+        # Initialize workflow tasks for new work orders or when transitioning from draft
+        if is_new and self.status == 'draft':
+            # Don't create tasks for draft status - they'll be created on first transition
+            pass
+        elif is_new and self.status != 'draft':
+            # New work order starting with a non-draft status - create workflow task
+            self._handle_workflow_tasks('draft', self.status, None)
     
     @property
     def is_overdue(self):
@@ -471,6 +484,9 @@ class WorkOrder(models.Model):
         
         self.save()
         
+        # Handle workflow task creation and completion
+        self._handle_workflow_tasks(old_status, new_status, user)
+        
         # Log transition
         if user:
             WorkOrderNote.objects.create(
@@ -623,6 +639,158 @@ class WorkOrder(models.Model):
         # Check if any parts are still pending or ordered
         pending_parts = self.parts.filter(status__in=['pending', 'ordered'])
         return pending_parts.count() == 0
+    
+    def _get_workflow_task_config(self, status):
+        """
+        Get configuration for workflow task based on status.
+        Returns dict with task_type, description, and sequence_order, or None if no task needed.
+        """
+        WORKFLOW_TASK_CONFIG = {
+            'inspection': {
+                'task_type': 'inspection',
+                'description': 'Initial Inspection',
+                'sequence_order': 1,
+            },
+            'intake': {
+                'task_type': 'other',
+                'description': 'Customer Intake',
+                'sequence_order': 2,
+            },
+            'diagnosis': {
+                'task_type': 'diagnostic',
+                'description': 'Perform Diagnosis',
+                'sequence_order': 3,
+            },
+            'awaiting_approval': {
+                'task_type': 'other',
+                'description': 'Await Customer Approval',
+                'sequence_order': 4,
+            },
+            'approved': {
+                'task_type': 'other',
+                'description': 'Customer Approval Received',
+                'sequence_order': 5,
+            },
+            'in_progress': {
+                'task_type': 'repair',
+                'description': 'Repair Work',
+                'sequence_order': 6,
+            },
+            'quality_check': {
+                'task_type': 'inspection',
+                'description': 'Quality Check',
+                'sequence_order': 7,
+            },
+            'completed': {
+                'task_type': 'other',
+                'description': 'Finalize Work Order',
+                'sequence_order': 8,
+            },
+            'invoiced': {
+                'task_type': 'other',
+                'description': 'Generate Invoice',
+                'sequence_order': 9,
+            },
+            'closed': {
+                'task_type': 'other',
+                'description': 'Close Work Order',
+                'sequence_order': 10,
+            },
+        }
+        return WORKFLOW_TASK_CONFIG.get(status)
+    
+    def _handle_workflow_tasks(self, old_status, new_status, user=None):
+        """
+        Automatically create and complete workflow tasks based on status transitions.
+        """
+        try:
+            from django.utils import timezone
+            from django.db import DatabaseError
+            
+            # Check if workflow task fields exist in the database
+            # If migration hasn't been run, fields won't exist and queries will fail
+            try:
+                # Test if the fields exist by checking the model's meta
+                from django.db import connection
+                fields = [f.name for f in self.tasks.model._meta.get_fields()]
+                workflow_fields_exist = 'is_workflow_task' in fields and 'workflow_phase' in fields
+            except (AttributeError, FieldDoesNotExist, Exception):
+                # Fields don't exist yet - migration not run, or error checking
+                workflow_fields_exist = False
+            
+            if not workflow_fields_exist:
+                # Migration hasn't been run yet - skip workflow task creation
+                return
+            
+            # Complete the task for the old status if it exists
+            if old_status:
+                try:
+                    old_task = self.tasks.filter(
+                        workflow_phase=old_status,
+                        is_workflow_task=True
+                    ).first()
+                    
+                    if old_task and old_task.status != 'completed':
+                        old_task.status = 'completed'
+                        old_task.completed_at = timezone.now()
+                        # Bypass save() recursion by using update()
+                        ServiceTask.objects.filter(pk=old_task.pk).update(
+                            status='completed',
+                            completed_at=timezone.now()
+                        )
+                        # Update totals after completion
+                        self.recalculate_totals()
+                except (DatabaseError, AttributeError) as e:
+                    # Log error but don't fail the status transition
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to complete workflow task for phase {old_status}: {e}")
+            
+            # Create task for new status if config exists and task doesn't already exist
+            task_config = self._get_workflow_task_config(new_status)
+            if task_config:
+                try:
+                    existing_task = self.tasks.filter(
+                        workflow_phase=new_status,
+                        is_workflow_task=True
+                    ).first()
+                    
+                    if not existing_task:
+                        # Get max sequence order for non-workflow tasks to place workflow tasks appropriately
+                        max_manual_seq = self.tasks.filter(is_workflow_task=False).aggregate(
+                            max_seq=Max('sequence_order')
+                        )['max_seq'] or 0
+                        
+                        # Auto-start workflow tasks for certain phases
+                        auto_start_phases = ['inspection', 'intake', 'diagnosis', 'in_progress', 'quality_check']
+                        initial_status = 'in_progress' if new_status in auto_start_phases else 'pending'
+                        
+                        workflow_task = ServiceTask.objects.create(
+                            work_order=self,
+                            workflow_phase=new_status,
+                            is_workflow_task=True,
+                            task_type=task_config['task_type'],
+                            description=task_config['description'],
+                            sequence_order=task_config['sequence_order'] + max_manual_seq,
+                            status=initial_status,
+                            assigned_to=self.primary_technician if self.primary_technician else None,
+                        )
+                        
+                        # Set started_at if auto-started
+                        if initial_status == 'in_progress':
+                            ServiceTask.objects.filter(pk=workflow_task.pk).update(
+                                started_at=timezone.now()
+                            )
+                except (DatabaseError, AttributeError) as e:
+                    # Log error but don't fail the status transition
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to create workflow task for phase {new_status}: {e}")
+        except Exception as e:
+            # Catch any other errors and log them without failing the transition
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in _handle_workflow_tasks: {e}", exc_info=True)
 
 
 class ServiceTask(models.Model):
@@ -699,12 +867,43 @@ class ServiceTask(models.Model):
         validators=[MinValueValidator(0)]
     )
     
+    # Workflow tracking
+    workflow_phase = models.CharField(
+        max_length=25,
+        choices=[
+            ('draft', 'Draft'),
+            ('inspection', 'Initial Inspection'),
+            ('intake', 'Intake'),
+            ('diagnosis', 'Diagnosis'),
+            ('awaiting_approval', 'Awaiting Customer Approval'),
+            ('approved', 'Approved'),
+            ('in_progress', 'In Progress'),
+            ('additional_work_found', 'Additional Work Found'),
+            ('paused', 'Paused'),
+            ('quality_check', 'Quality Check'),
+            ('completed', 'Completed'),
+            ('invoiced', 'Invoiced'),
+            ('closed', 'Closed'),
+        ],
+        null=True,
+        blank=True,
+        help_text="If set, this task is automatically created and completed based on workflow phase"
+    )
+    is_workflow_task = models.BooleanField(
+        default=False,
+        help_text="Indicates if this task was automatically created by the workflow system"
+    )
+    
     # Tracking
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         ordering = ['work_order', 'sequence_order', 'created_at']
+        indexes = [
+            models.Index(fields=['work_order', 'workflow_phase']),
+            models.Index(fields=['is_workflow_task']),
+        ]
     
     def __str__(self):
         return f"{self.work_order.work_order_number} - {self.description}"

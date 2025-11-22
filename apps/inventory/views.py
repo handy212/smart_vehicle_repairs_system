@@ -268,7 +268,7 @@ class PartViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'])
-    def adjust_stock(self, request, pk=None):
+    def adjust(self, request, pk=None):
         """Manually adjust stock quantity"""
         part = self.get_object()
         serializer = PartStockAdjustmentSerializer(data=request.data)

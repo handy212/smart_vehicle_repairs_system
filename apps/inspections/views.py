@@ -168,15 +168,66 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
             use_active_branch=not show_all
         )
     
-    def perform_create(self, serializer):
-        """Assign branch when creating inspection"""
-        request = self.request
+    def create(self, request, *args, **kwargs):
+        """Create inspection and return with full details including ID"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Get branch for assignment
         branch_id = request.data.get('branch') or request.data.get('branch_id')
-        branch = resolve_branch(request, branch_id=branch_id)
+        try:
+            branch = resolve_branch(request, branch_id=branch_id)
+        except Exception as e:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({
+                'branch': f'Error resolving branch: {str(e)}'
+            })
         
         if branch is None:
             from rest_framework.exceptions import ValidationError
-            raise ValidationError({'branch': 'A valid branch assignment is required.'})
+            user = request.user
+            accessible_branches = user.get_accessible_branches() if hasattr(user, 'get_accessible_branches') else None
+            
+            if accessible_branches and accessible_branches.exists():
+                error_msg = 'A valid branch assignment is required. Please specify a branch in the request.'
+            else:
+                error_msg = 'You do not have access to any branches. Please contact an administrator.'
+            
+            raise ValidationError({'branch': error_msg})
+        
+        # Create inspection with branch
+        inspection = serializer.save(branch=branch)
+        
+        # Return with detail serializer to include ID and all fields
+        headers = self.get_success_headers(serializer.data)
+        detail_serializer = VehicleInspectionDetailSerializer(inspection)
+        return Response(detail_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
+    def perform_create(self, serializer):
+        """Assign branch when creating inspection - called by default create if not overridden"""
+        request = self.request
+        branch_id = request.data.get('branch') or request.data.get('branch_id')
+        
+        try:
+            branch = resolve_branch(request, branch_id=branch_id)
+        except Exception as e:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({
+                'branch': f'Error resolving branch: {str(e)}'
+            })
+        
+        if branch is None:
+            from rest_framework.exceptions import ValidationError
+            # Get more helpful error message
+            user = request.user
+            accessible_branches = user.get_accessible_branches() if hasattr(user, 'get_accessible_branches') else None
+            
+            if accessible_branches and accessible_branches.exists():
+                error_msg = 'A valid branch assignment is required. Please specify a branch in the request.'
+            else:
+                error_msg = 'You do not have access to any branches. Please contact an administrator.'
+            
+            raise ValidationError({'branch': error_msg})
         
         serializer.save(branch=branch)
     
@@ -287,6 +338,69 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_201_CREATED if not existing_result else status.HTTP_200_OK
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['post'])
+    def save_results(self, request, pk=None):
+        """Bulk save/update multiple inspection results"""
+        inspection = self.get_object()
+        results_data = request.data.get('results', [])
+        
+        if not isinstance(results_data, list):
+            return Response(
+                {'error': 'results must be a list'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        saved_results = []
+        errors = []
+        
+        for idx, result_data in enumerate(results_data):
+            result_data = result_data.copy()
+            result_data['inspection'] = inspection.id
+            
+            inspection_item_id = result_data.get('inspection_item')
+            if not inspection_item_id:
+                errors.append({
+                    'index': idx,
+                    'error': 'inspection_item is required'
+                })
+                continue
+            
+            # Check if result already exists
+            existing_result = InspectionResult.objects.filter(
+                inspection=inspection,
+                inspection_item_id=inspection_item_id
+            ).first()
+            
+            if existing_result:
+                serializer = InspectionResultCreateSerializer(
+                    existing_result,
+                    data=result_data,
+                    partial=True
+                )
+            else:
+                serializer = InspectionResultCreateSerializer(data=result_data)
+            
+            if serializer.is_valid():
+                serializer.save()
+                saved_results.append(InspectionResultSerializer(serializer.instance).data)
+            else:
+                errors.append({
+                    'index': idx,
+                    'inspection_item': inspection_item_id,
+                    'errors': serializer.errors
+                })
+        
+        if errors:
+            return Response({
+                'saved': saved_results,
+                'errors': errors
+            }, status=status.HTTP_207_MULTI_STATUS)  # Multi-Status for partial success
+        
+        return Response({
+            'message': f'Successfully saved {len(saved_results)} results',
+            'results': saved_results
+        }, status=status.HTTP_200_OK)
     
     @action(detail=True, methods=['post'])
     def send_to_customer(self, request, pk=None):

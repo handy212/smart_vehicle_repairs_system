@@ -85,6 +85,14 @@ export default function EditWorkOrderPage() {
   const queryClient = useQueryClient();
 
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
+  const [selectedCustomerData, setSelectedCustomerData] = useState<{
+    id: number;
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    customer_type?: string;
+    customer_number?: string;
+  } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { data: workOrder, isLoading } = useQuery({
@@ -104,6 +112,12 @@ export default function EditWorkOrderPage() {
     queryFn: () => vehiclesApi.list({ owner: selectedCustomer || undefined }),
     enabled: !!selectedCustomer,
   });
+
+  // Get selected vehicle details
+  const vehicle = watch("vehicle");
+  const selectedVehicle = vehicle && vehiclesData?.results
+    ? vehiclesData.results.find((v) => v.id === vehicle) || null
+    : null;
 
   const {
     register,
@@ -134,6 +148,18 @@ export default function EditWorkOrderPage() {
         customer_concerns: workOrder.customer_concerns || "",
       });
       setSelectedCustomer(customerId || null);
+      
+      // Set customer data if available from workOrder
+      if (typeof workOrder.customer === 'object' && workOrder.customer !== null) {
+        setSelectedCustomerData({
+          id: workOrder.customer.id,
+          full_name: workOrder.customer.full_name,
+          email: workOrder.customer.email,
+          phone: workOrder.customer.phone,
+          customer_type: workOrder.customer.customer_type,
+          customer_number: workOrder.customer.customer_number,
+        });
+      }
     }
   }, [workOrder, isLoading, reset]);
 
@@ -143,8 +169,42 @@ export default function EditWorkOrderPage() {
   useEffect(() => {
     if (customer && customer !== selectedCustomer) {
       setSelectedCustomer(customer);
+      
+      // Find and store selected customer data
+      const customerData = customersData?.results?.find((c) => c.id === customer);
+      if (customerData) {
+        setSelectedCustomerData({
+          id: customerData.id,
+          full_name: customerData.full_name,
+          email: customerData.email,
+          phone: customerData.phone,
+          customer_type: customerData.customer_type,
+          customer_number: customerData.customer_number,
+        });
+      } else {
+        setSelectedCustomerData(null);
+      }
+    } else if (!customer) {
+      setSelectedCustomerData(null);
     }
-  }, [customer, selectedCustomer]);
+  }, [customer, selectedCustomer, customersData]);
+
+  // Initialize customer data when customersData loads
+  useEffect(() => {
+    if (customersData?.results && customer && (!selectedCustomerData || selectedCustomerData.id !== customer)) {
+      const customerData = customersData.results.find((c) => c.id === customer);
+      if (customerData) {
+        setSelectedCustomerData({
+          id: customerData.id,
+          full_name: customerData.full_name,
+          email: customerData.email,
+          phone: customerData.phone,
+          customer_type: customerData.customer_type,
+          customer_number: customerData.customer_number,
+        });
+      }
+    }
+  }, [customersData, customer, selectedCustomerData]);
 
   const updateMutation = useMutation({
     mutationFn: (data: WorkOrderFormData) => workordersApi.update(workOrderId, data),
@@ -262,77 +322,156 @@ export default function EditWorkOrderPage() {
               <CardDescription>Select customer and vehicle</CardDescription>
             </CardHeader>
 
-  <CardContent>
+  <CardContent className="space-y-6">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       
       {/* Customer */}
-      <div>
-        <label
-          htmlFor="customer"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-        >
-          Customer *
-        </label>
+      <div className="space-y-3">
+        <div>
+          <label
+            htmlFor="customer"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+          >
+            Customer *
+          </label>
 
-        <Select
-          id="customer"
-          {...register("customer", { valueAsNumber: true })}
-          className={`w-full ${errors.customer ? "border-red-500" : ""}`}
-          onChange={(e) => {
-            const val = parseInt(e.target.value);
-            setValue("customer", val);
-            setSelectedCustomer(val);
-          }}
-        >
-          <option value="">Select a customer</option>
-          {customersData?.results?.map((customer) => (
-            <option key={customer.id} value={customer.id}>
-              {customer.user?.first_name} {customer.user?.last_name} — {customer.customer_number}
-            </option>
-          ))}
-        </Select>
+          <Select
+            id="customer"
+            {...register("customer", { valueAsNumber: true })}
+            className={`w-full ${errors.customer ? "border-red-500" : ""}`}
+            onChange={(e) => {
+              const val = parseInt(e.target.value);
+              setValue("customer", val);
+              setSelectedCustomer(val);
+              
+              // Update selected customer data
+              const customerData = customersData?.results?.find((c) => c.id === val);
+              if (customerData) {
+                setSelectedCustomerData({
+                  id: customerData.id,
+                  full_name: customerData.full_name,
+                  email: customerData.email,
+                  phone: customerData.phone,
+                  customer_type: customerData.customer_type,
+                  customer_number: customerData.customer_number,
+                });
+              } else {
+                setSelectedCustomerData(null);
+              }
+            }}
+          >
+            <option value="">Select a customer</option>
+            {customersData?.results?.map((customer) => (
+              <option key={customer.id} value={customer.id}>
+                {customer.full_name || `${customer.user?.first_name || ''} ${customer.user?.last_name || ''}`.trim() || 'Unknown'}
+              </option>
+            ))}
+          </Select>
 
-        {errors.customer && (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-            {errors.customer.message}
-          </p>
+          {errors.customer && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+              {errors.customer.message}
+            </p>
+          )}
+        </div>
+
+        {/* Customer Info Display */}
+        {selectedCustomerData && (
+          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              Customer Information
+            </div>
+            <div className="space-y-2 text-sm">
+              {selectedCustomerData.phone && (
+                <div className="flex items-start">
+                  <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Phone:</span>
+                  <span className="text-gray-900 dark:text-gray-100">{selectedCustomerData.phone}</span>
+                </div>
+              )}
+              {selectedCustomerData.email && (
+                <div className="flex items-start">
+                  <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Email:</span>
+                  <span className="text-gray-900 dark:text-gray-100 break-words">{selectedCustomerData.email}</span>
+                </div>
+              )}
+              {selectedCustomerData.customer_type && (
+                <div className="flex items-start">
+                  <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Type:</span>
+                  <span className="text-gray-900 dark:text-gray-100 capitalize">
+                    {selectedCustomerData.customer_type.replace('_', ' ')}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
 
       {/* Vehicle */}
-      <div>
-        <label
-          htmlFor="vehicle"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-        >
-          Vehicle *
-        </label>
+      <div className="space-y-3">
+        <div>
+          <label
+            htmlFor="vehicle"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+          >
+            Vehicle *
+          </label>
 
-        <Select
-          id="vehicle"
-          {...register("vehicle", { valueAsNumber: true })}
-          className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}
-          disabled={!selectedCustomer || !vehiclesData?.results?.length}
-        >
-          <option value="">
-            {!selectedCustomer
-              ? "Select a customer first"
-              : !vehiclesData?.results?.length
-              ? "No vehicles found"
-              : "Select a vehicle"}
-          </option>
-
-          {vehiclesData?.results?.map((vehicle) => (
-            <option key={vehicle.id} value={vehicle.id}>
-              {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
+          <Select
+            id="vehicle"
+            {...register("vehicle", { valueAsNumber: true })}
+            className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}
+            disabled={!selectedCustomer || !vehiclesData?.results?.length}
+          >
+            <option value="">
+              {!selectedCustomer
+                ? "Select a customer first"
+                : !vehiclesData?.results?.length
+                ? "No vehicles found"
+                : "Select a vehicle"}
             </option>
-          ))}
-        </Select>
 
-        {errors.vehicle && (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-            {errors.vehicle.message}
-          </p>
+            {vehiclesData?.results?.map((vehicle) => (
+              <option key={vehicle.id} value={vehicle.id}>
+                {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
+              </option>
+            ))}
+          </Select>
+
+          {errors.vehicle && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+              {errors.vehicle.message}
+            </p>
+          )}
+        </div>
+
+        {/* Vehicle Info Display */}
+        {selectedVehicle && (
+          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              Vehicle Information
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start">
+                <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">Make/Model:</span>
+                <span className="text-gray-900 dark:text-gray-100">
+                  {selectedVehicle.make} {selectedVehicle.model} {selectedVehicle.year}
+                </span>
+              </div>
+              {selectedVehicle.license_plate && (
+                <div className="flex items-start">
+                  <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">License:</span>
+                  <span className="text-gray-900 dark:text-gray-100">{selectedVehicle.license_plate}</span>
+                </div>
+              )}
+              {selectedVehicle.vin && (
+                <div className="flex items-start">
+                  <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">VIN:</span>
+                  <span className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">{selectedVehicle.vin}</span>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
 

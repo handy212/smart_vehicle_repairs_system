@@ -173,10 +173,28 @@ class VehicleInspectionListSerializer(serializers.ModelSerializer):
         ]
     
     def get_vehicle_info(self, obj):
-        return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model} ({obj.vehicle.license_plate})"
+        """Get formatted vehicle information"""
+        if not obj.vehicle:
+            return None
+        try:
+            license_plate = obj.vehicle.license_plate or ''
+            vehicle_info = f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
+            if license_plate:
+                return f"{vehicle_info} ({license_plate})"
+            return vehicle_info
+        except (AttributeError, TypeError):
+            return None
     
     def get_performed_by_name(self, obj):
-        return f"{obj.performed_by.first_name} {obj.performed_by.last_name}"
+        """Get performed by name with null-safe handling"""
+        if not obj.performed_by:
+            return None
+        try:
+            first_name = obj.performed_by.first_name or ''
+            last_name = obj.performed_by.last_name or ''
+            return f"{first_name} {last_name}".strip() or None
+        except (AttributeError, TypeError):
+            return None
     
     def get_result_counts(self, obj):
         return {
@@ -192,7 +210,7 @@ class VehicleInspectionDetailSerializer(serializers.ModelSerializer):
     vehicle_info = serializers.SerializerMethodField()
     vehicle = serializers.SerializerMethodField()
     template = InspectionTemplateDetailSerializer(read_only=True)
-    work_order_number = serializers.CharField(source='work_order.wo_number', read_only=True)
+    work_order_number = serializers.SerializerMethodField()
     performed_by_name = serializers.SerializerMethodField()
     approved_by_name = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -221,26 +239,62 @@ class VehicleInspectionDetailSerializer(serializers.ModelSerializer):
         ]
     
     def get_vehicle_info(self, obj):
-        return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
+        """Get formatted vehicle information with null-safe handling"""
+        if not obj.vehicle:
+            return None
+        try:
+            return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
+        except (AttributeError, TypeError):
+            return None
     
     def get_vehicle(self, obj):
-        return {
-            'id': obj.vehicle.id,
-            'year': obj.vehicle.year,
-            'make': obj.vehicle.make,
-            'model': obj.vehicle.model,
-            'vin': obj.vehicle.vin,
-            'license_plate': obj.vehicle.license_plate,
-            'color': obj.vehicle.color,
-        }
+        """Get vehicle details with null-safe handling"""
+        if not obj.vehicle:
+            return None
+        try:
+            return {
+                'id': obj.vehicle.id,
+                'year': obj.vehicle.year,
+                'make': obj.vehicle.make or '',
+                'model': obj.vehicle.model or '',
+                'vin': obj.vehicle.vin or '',
+                'license_plate': obj.vehicle.license_plate or '',
+                'exterior_color': obj.vehicle.exterior_color or '',
+                'interior_color': obj.vehicle.interior_color or '',
+            }
+        except (AttributeError, TypeError):
+            return None
+    
+    def get_work_order_number(self, obj):
+        """Get work order number with null-safe handling"""
+        if not obj.work_order:
+            return None
+        try:
+            return obj.work_order.work_order_number
+        except (AttributeError, TypeError):
+            return None
     
     def get_performed_by_name(self, obj):
-        return f"{obj.performed_by.first_name} {obj.performed_by.last_name}"
+        """Get performed by name with null-safe handling"""
+        if not obj.performed_by:
+            return None
+        try:
+            first_name = obj.performed_by.first_name or ''
+            last_name = obj.performed_by.last_name or ''
+            return f"{first_name} {last_name}".strip() or None
+        except (AttributeError, TypeError):
+            return None
     
     def get_approved_by_name(self, obj):
-        if obj.approved_by:
-            return f"{obj.approved_by.first_name} {obj.approved_by.last_name}"
-        return None
+        """Get approved by name with null-safe handling"""
+        if not obj.approved_by:
+            return None
+        try:
+            first_name = obj.approved_by.first_name or ''
+            last_name = obj.approved_by.last_name or ''
+            return f"{first_name} {last_name}".strip() or None
+        except (AttributeError, TypeError):
+            return None
     
     def get_result_counts(self, obj):
         return {
@@ -270,11 +324,26 @@ class VehicleInspectionCreateSerializer(serializers.ModelSerializer):
     def validate_work_order(self, value):
         """Ensure work order exists and is for the same vehicle"""
         if value:
-            vehicle = self.initial_data.get('vehicle')
-            if vehicle and value.vehicle_id != vehicle:
-                raise serializers.ValidationError(
-                    "Work order must be for the same vehicle"
-                )
+            # Get vehicle from initial_data - could be ID or Vehicle object
+            vehicle_input = self.initial_data.get('vehicle')
+            if vehicle_input:
+                # Handle both ID and Vehicle object cases
+                if isinstance(vehicle_input, int):
+                    vehicle_id = vehicle_input
+                elif hasattr(vehicle_input, 'id'):
+                    vehicle_id = vehicle_input.id
+                else:
+                    # Try to convert to int if it's a string
+                    try:
+                        vehicle_id = int(vehicle_input)
+                    except (ValueError, TypeError):
+                        vehicle_id = None
+                
+                # Compare vehicle IDs
+                if vehicle_id and value.vehicle_id != vehicle_id:
+                    raise serializers.ValidationError(
+                        "Work order must be for the same vehicle"
+                    )
         return value
     
     def validate(self, data):
@@ -283,32 +352,47 @@ class VehicleInspectionCreateSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         
         if vehicle and request:
-            from apps.branches.utils import resolve_branch
-            
-            current_branch = resolve_branch(request, branch_id=request.data.get('branch') or request.data.get('branch_id'))
-            
-            if current_branch:
-                # Active work order statuses (not closed)
-                active_statuses = [
-                    'draft', 'inspection', 'intake', 'diagnosis', 
-                    'awaiting_approval', 'approved', 'in_progress', 
-                    'additional_work_found', 'paused', 'quality_check'
-                ]
+            try:
+                from apps.branches.utils import resolve_branch
                 
-                # Check for active work orders at other branches
-                active_work_orders = WorkOrder.objects.filter(
-                    vehicle=vehicle,
-                    status__in=active_statuses
-                ).exclude(branch=current_branch).select_related('branch')
+                branch_id = None
+                if hasattr(request, 'data'):
+                    branch_id = request.data.get('branch') or request.data.get('branch_id')
                 
-                if active_work_orders.exists():
-                    active_wo = active_work_orders.first()
-                    branch_name = active_wo.branch.name if active_wo.branch else 'Unknown Branch'
-                    raise serializers.ValidationError(
-                        f"This vehicle has an active work order ({active_wo.work_order_number}) "
-                        f"at {branch_name}. A new inspection can only be created once the existing "
-                        f"work order has been closed at the branch where it was opened."
-                    )
+                current_branch = resolve_branch(request, branch_id=branch_id)
+                
+                if current_branch:
+                    # Active work order statuses (not closed)
+                    active_statuses = [
+                        'draft', 'inspection', 'intake', 'diagnosis', 
+                        'awaiting_approval', 'approved', 'in_progress', 
+                        'additional_work_found', 'paused', 'quality_check'
+                    ]
+                    
+                    # Check for active work orders at other branches
+                    active_work_orders = WorkOrder.objects.filter(
+                        vehicle=vehicle,
+                        status__in=active_statuses
+                    ).exclude(branch=current_branch).select_related('branch')
+                    
+                    if active_work_orders.exists():
+                        active_wo = active_work_orders.first()
+                        branch_name = active_wo.branch.name if active_wo.branch else 'Unknown Branch'
+                        raise serializers.ValidationError(
+                            f"This vehicle has an active work order ({active_wo.work_order_number}) "
+                            f"at {branch_name}. A new inspection can only be created once the existing "
+                            f"work order has been closed at the branch where it was opened."
+                        )
+            except serializers.ValidationError:
+                # Re-raise validation errors
+                raise
+            except Exception as e:
+                # Log other errors but don't fail validation
+                # This allows the create to proceed if branch resolution fails
+                # The perform_create method will handle branch assignment
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Error during work order validation: {str(e)}")
         
         return data
     

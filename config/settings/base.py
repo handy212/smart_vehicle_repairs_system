@@ -60,7 +60,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'django_celery_beat',
     'django_celery_results',
-    'django_ledger',  # Django Ledger - Double-entry accounting
+    'django_ledger',  
     
     # Local apps
     'apps.accounts',

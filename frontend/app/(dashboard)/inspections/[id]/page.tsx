@@ -131,9 +131,12 @@ export default function InspectionDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           {inspection.status === "in_progress" && (
-            <Button onClick={() => completeMutation.mutate()} disabled={completeMutation.isPending}>
+            <Button 
+              onClick={() => router.push(`/inspections/${inspectionId}/perform`)} 
+              disabled={completeMutation.isPending}
+            >
               <CheckCircle className="w-4 h-4 mr-2" />
-              Complete
+              Perform Inspection
             </Button>
           )}
           {inspection.status === "completed" && (

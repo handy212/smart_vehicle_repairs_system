@@ -1,10 +1,11 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Car, DollarSign, Calendar, Wrench, AlertCircle, Link as LinkIcon } from "lucide-react";
+import { User, Car, DollarSign, Calendar, Wrench, AlertCircle, Link as LinkIcon, FileText } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import WorkflowActions from "./WorkflowActions";
 
 interface OverviewTabProps {
@@ -19,62 +20,131 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
       <div className="lg:col-span-2 space-y-6">
         {/* Customer & Vehicle */}
         <Card>
-  <CardHeader>
-    <CardTitle>Customer & Vehicle</CardTitle>
-  </CardHeader>
+          <CardHeader>
+            <CardTitle>Customer & Vehicle</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Customer */}
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <User className="w-5 h-5 text-gray-400" />
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Customer</h3>
+                </div>
+                {workOrder.customer ? (
+                  <>
+                    <div>
+                      {typeof workOrder.customer === "object" && workOrder.customer !== null ? (
+                        <Link
+                          href={`/customers/${workOrder.customer.id}`}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-base"
+                        >
+                          {workOrder.customer.full_name || workOrder.customer_name || "View Customer"}
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/customers/${workOrder.customer}`}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-base"
+                        >
+                          {workOrder.customer_name || "View Customer"}
+                        </Link>
+                      )}
+                    </div>
+                    {typeof workOrder.customer === "object" && workOrder.customer !== null && (
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                          Customer Information
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          {workOrder.customer.phone && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Phone:</span>
+                              <span className="text-gray-900 dark:text-gray-100">{workOrder.customer.phone}</span>
+                            </div>
+                          )}
+                          {workOrder.customer.email && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Email:</span>
+                              <span className="text-gray-900 dark:text-gray-100 break-words">{workOrder.customer.email}</span>
+                            </div>
+                          )}
+                          {workOrder.customer.customer_type && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Type:</span>
+                              <span className="text-gray-900 dark:text-gray-100 capitalize">
+                                {workOrder.customer.customer_type.replace('_', ' ')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-gray-900 dark:text-gray-100">{workOrder.customer_name || "-"}</p>
+                )}
+              </div>
 
-  <CardContent>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-      {/* Customer */}
-      <div className="flex items-start space-x-3">
-        <User className="w-5 h-5 text-gray-400 mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-gray-500">Customer</p>
-
-          {workOrder.customer ? (
-            <Link
-              href={`/customers/${
-                typeof workOrder.customer === "object" && workOrder.customer !== null
-                  ? workOrder.customer.id
-                  : workOrder.customer
-              }`}
-              className="text-blue-600 hover:text-blue-800 font-medium"
-            >
-              {workOrder.customer_name || "View Customer"}
-            </Link>
-          ) : (
-            <p className="text-gray-900">{workOrder.customer_name || "-"}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Vehicle */}
-      <div className="flex items-start space-x-3">
-        <Car className="w-5 h-5 text-gray-400 mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-gray-500">Vehicle</p>
-
-          {workOrder.vehicle ? (
-            <Link
-              href={`/vehicles/${
-                typeof workOrder.vehicle === "object" && workOrder.vehicle !== null
-                  ? workOrder.vehicle.id
-                  : workOrder.vehicle
-              }`}
-              className="text-blue-600 hover:text-blue-800 font-medium"
-            >
-              {workOrder.vehicle_info || "View Vehicle"}
-            </Link>
-          ) : (
-            <p className="text-gray-900">{workOrder.vehicle_info || "-"}</p>
-          )}
-        </div>
-      </div>
-
-    </div>
-  </CardContent>
-</Card>
+              {/* Vehicle */}
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <Car className="w-5 h-5 text-gray-400" />
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Vehicle</h3>
+                </div>
+                {workOrder.vehicle ? (
+                  <>
+                    <div>
+                      {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null ? (
+                        <Link
+                          href={`/vehicles/${workOrder.vehicle.id}`}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-base"
+                        >
+                          {workOrder.vehicle.year} {workOrder.vehicle.make} {workOrder.vehicle.model}
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/vehicles/${workOrder.vehicle}`}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-base"
+                        >
+                          {workOrder.vehicle_info || "View Vehicle"}
+                        </Link>
+                      )}
+                    </div>
+                    {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null && (
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                          Vehicle Information
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-start">
+                            <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">Make/Model:</span>
+                            <span className="text-gray-900 dark:text-gray-100">
+                              {workOrder.vehicle.make} {workOrder.vehicle.model} {workOrder.vehicle.year}
+                            </span>
+                          </div>
+                          {workOrder.vehicle.license_plate && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">License:</span>
+                              <span className="text-gray-900 dark:text-gray-100">{workOrder.vehicle.license_plate}</span>
+                            </div>
+                          )}
+                          {workOrder.vehicle.vin && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">VIN:</span>
+                              <span className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">{workOrder.vehicle.vin}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-gray-900 dark:text-gray-100">{workOrder.vehicle_info || "-"}</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
 
         {/* Customer Concerns */}
@@ -209,6 +279,21 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
 
       {/* Right Column - Summary & Actions */}
       <div className="space-y-6">
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Link href={`/workorders/${workOrder.id}/jobcard`} target="_blank">
+              <Button variant="outline" className="w-full">
+                <FileText className="w-4 h-4 mr-2" />
+                Print JobCard
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
         {/* Workflow Actions */}
         <Card>
           <CardHeader>
@@ -218,6 +303,7 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
             <WorkflowActions
               workOrderId={workOrder.id}
               status={workOrder.status}
+              workOrder={workOrder}
               onStatusChange={onStatusChange}
             />
           </CardContent>

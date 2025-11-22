@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
+import { inspectionsApi } from "@/lib/api/inspections";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/lib/hooks/useToast";
 import { workOrderNotesApi } from "@/lib/api/workorder-notes";
+import { adminApi } from "@/lib/api/admin";
 import {
   Play,
   Pause,
@@ -30,12 +33,14 @@ import {
 interface WorkflowActionsProps {
   workOrderId: number;
   status: string;
+  workOrder?: any; // Work order data to get vehicle info
   onStatusChange?: () => void;
 }
 
-export default function WorkflowActions({ workOrderId, status, onStatusChange }: WorkflowActionsProps) {
+export default function WorkflowActions({ workOrderId, status, workOrder, onStatusChange }: WorkflowActionsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [showCompleteDiagnosisDialog, setShowCompleteDiagnosisDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showQualityCheckDialog, setShowQualityCheckDialog] = useState(false);
@@ -43,29 +48,182 @@ export default function WorkflowActions({ workOrderId, status, onStatusChange }:
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [showAdditionalWorkDialog, setShowAdditionalWorkDialog] = useState(false);
   const [showRequestApprovalDialog, setShowRequestApprovalDialog] = useState(false);
+  const [showInspectionDialog, setShowInspectionDialog] = useState(false);
+  const [showStartDiagnosisDialog, setShowStartDiagnosisDialog] = useState(false);
+
+  // Fetch work order data if not provided
+  const { data: workOrderData } = useQuery({
+    queryKey: ["workorder", workOrderId],
+    queryFn: () => workordersApi.get(workOrderId),
+    enabled: !workOrder,
+  });
+
+  const currentWorkOrder = workOrder || workOrderData;
+  
+  // Fetch inspections for this work order
+  const { data: inspectionsData } = useQuery({
+    queryKey: ["inspections", "workorder", workOrderId],
+    queryFn: async () => {
+      if (!workOrderId || isNaN(workOrderId)) {
+        console.warn("Invalid workOrderId for inspections query:", workOrderId);
+        return { results: [], count: 0, next: null, previous: null };
+      }
+      return inspectionsApi.list({ work_order: workOrderId });
+    },
+    enabled: !!workOrderId && !isNaN(workOrderId),
+  });
+
+  // Check if there's a completed inspection
+  const hasCompletedInspection = inspectionsData?.results?.some(
+    (inspection: any) => inspection.status === "completed" || inspection.status === "approved"
+  ) || false;
 
   const refreshWorkOrder = () => {
     queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
     onStatusChange?.();
   };
 
-  // Start Inspection (Phase 1: Initial Triage)
-  const startInspectionMutation = useMutation({
-    mutationFn: () => workordersApi.updateStatus(workOrderId, "inspection"),
-    onSuccess: () => {
-      toast({ title: "Success", description: "Work order moved to initial inspection." });
-      refreshWorkOrder();
+  // Create Inspection
+  const createInspectionMutation = useMutation({
+    mutationFn: async (data: any) => {
+      console.log("Creating inspection with data:", data);
+      try {
+        // Make the API call directly to see the full response
+        const response = await inspectionsApi.create(data);
+        console.log("Inspection creation response:", response);
+        console.log("Response type:", typeof response);
+        console.log("Response keys:", response ? Object.keys(response) : "null");
+        console.log("Response ID:", response?.id);
+        
+        // Check if response is empty
+        if (!response || (typeof response === 'object' && Object.keys(response).length === 0)) {
+          console.error("Empty response received from inspection creation");
+          throw new Error("Inspection creation returned an empty response. Please check server logs.");
+        }
+        
+        return response;
+      } catch (error: any) {
+        console.error("Inspection creation error details:", error);
+        console.error("Error response:", error.response);
+        console.error("Error response status:", error.response?.status);
+        console.error("Error response data:", error.response?.data);
+        console.error("Error message:", error.message);
+        throw error;
+      }
+    },
+    onSuccess: (inspection) => {
+      console.log("Inspection creation success callback, inspection:", inspection);
+      
+      // Validate inspection response has an ID
+      if (!inspection) {
+        console.error("Inspection creation response is null or undefined");
+        toast({
+          title: "Error",
+          description: "Inspection creation failed. Please try again.",
+          variant: "destructive",
+        });
+        setShowInspectionDialog(false);
+        return;
+      }
+
+      const inspectionId = inspection.id;
+      
+      if (!inspectionId || inspectionId === null || inspectionId === undefined) {
+        console.error("Inspection creation response missing ID:", inspection);
+        toast({
+          title: "Error",
+          description: "Inspection was created but could not retrieve the ID. Please check the inspections list.",
+          variant: "destructive",
+        });
+        setShowInspectionDialog(false);
+        queryClient.invalidateQueries({ queryKey: ["inspections", "workorder", workOrderId] });
+        return;
+      }
+
+      // Ensure inspectionId is a number
+      const numericId = typeof inspectionId === 'number' ? inspectionId : parseInt(String(inspectionId));
+      
+      if (isNaN(numericId) || numericId <= 0) {
+        console.error("Invalid inspection ID:", inspectionId, "numericId:", numericId);
+        toast({
+          title: "Error",
+          description: "Inspection was created but has an invalid ID. Please check the inspections list.",
+          variant: "destructive",
+        });
+        setShowInspectionDialog(false);
+        queryClient.invalidateQueries({ queryKey: ["inspections", "workorder", workOrderId] });
+        return;
+      }
+
+      console.log("Valid inspection ID:", numericId, "Navigating to inspection page");
+
+      // Update work order status to inspection
+      workordersApi.updateStatus(workOrderId, "inspection").then(() => {
+        queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+        queryClient.invalidateQueries({ queryKey: ["inspections", "workorder", workOrderId] });
+        setShowInspectionDialog(false);
+        toast({ 
+          title: "Success", 
+          description: "Inspection created. Please complete it before proceeding to intake.",
+          variant: "success",
+        });
+        // Navigate to inspection detail page
+        router.push(`/inspections/${numericId}`);
+        onStatusChange?.();
+      }).catch((error) => {
+        console.error("Error updating work order status:", error);
+        // Still navigate to inspection even if status update fails
+        setShowInspectionDialog(false);
+        queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+        queryClient.invalidateQueries({ queryKey: ["inspections", "workorder", workOrderId] });
+        toast({
+          title: "Warning",
+          description: "Inspection created but work order status update failed. Navigating to inspection page.",
+          variant: "default",
+        });
+        router.push(`/inspections/${numericId}`);
+        onStatusChange?.();
+      });
     },
     onError: (error: any) => {
+      console.error("Inspection creation error:", error);
+      console.error("Error response:", error.response);
+      console.error("Error response data:", error.response?.data);
+      
+      let errorMessage = "Failed to create inspection";
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.error) {
+          errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+        } else if (data.detail) {
+          errorMessage = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+        } else if (data.message) {
+          errorMessage = typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
+        } else if (Array.isArray(data)) {
+          errorMessage = data.join(', ');
+        } else {
+          // Handle field-level errors
+          const fieldErrors = Object.entries(data)
+            .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+            .join('; ');
+          errorMessage = fieldErrors || JSON.stringify(data);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to start inspection",
+        description: errorMessage,
         variant: "destructive",
       });
     },
   });
 
-  // Start Intake (Phase 1: Customer Intake)
+  // Start Intake (Phase 1: Customer Intake) - with validation
   const startIntakeMutation = useMutation({
     mutationFn: () => workordersApi.startIntake(workOrderId),
     onSuccess: () => {
@@ -73,19 +231,44 @@ export default function WorkflowActions({ workOrderId, status, onStatusChange }:
       refreshWorkOrder();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to start intake",
-        variant: "destructive",
-      });
+      const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to start intake";
+      
+      // Check if error is about missing inspection
+      if (errorMessage.includes("inspection") || !hasCompletedInspection) {
+        toast({
+          title: "Inspection Required",
+          description: "Please complete the initial inspection before starting intake.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     },
   });
 
   // Start Diagnosis (Phase 1: Diagnosis)
   const startDiagnosisMutation = useMutation({
-    mutationFn: () => workordersApi.startDiagnosis(workOrderId),
+    mutationFn: async (data?: { primary_technician?: number; initial_notes?: string; priority?: string }) => {
+      // First start diagnosis
+      await workordersApi.startDiagnosis(workOrderId);
+      
+      // Then update work order with additional info if provided
+      if (data && (data.primary_technician || data.initial_notes || data.priority)) {
+        const updateData: any = {};
+        if (data.primary_technician) updateData.primary_technician = data.primary_technician;
+        if (data.initial_notes) updateData.diagnosis_notes = data.initial_notes;
+        if (data.priority) updateData.priority = data.priority;
+        
+        await workordersApi.update(workOrderId, updateData);
+      }
+    },
     onSuccess: () => {
       toast({ title: "Success", description: "Diagnosis started." });
+      setShowStartDiagnosisDialog(false);
       refreshWorkOrder();
     },
     onError: (error: any) => {
@@ -379,8 +562,8 @@ export default function WorkflowActions({ workOrderId, status, onStatusChange }:
           {
             label: "Start Initial Inspection",
             icon: Eye,
-            onClick: () => startInspectionMutation.mutate(),
-            disabled: startInspectionMutation.isPending,
+            onClick: () => setShowInspectionDialog(true),
+            disabled: createInspectionMutation.isPending,
             variant: "outline",
             description: "Perform initial visual inspection/triage",
           },
@@ -388,8 +571,10 @@ export default function WorkflowActions({ workOrderId, status, onStatusChange }:
             label: "Start Intake",
             icon: Play,
             onClick: () => startIntakeMutation.mutate(),
-            disabled: startIntakeMutation.isPending,
-            description: "Begin customer intake process",
+            disabled: startIntakeMutation.isPending || !hasCompletedInspection,
+            description: hasCompletedInspection 
+              ? "Begin customer intake process" 
+              : "Complete inspection first before starting intake",
           }
         );
         break;
@@ -399,8 +584,10 @@ export default function WorkflowActions({ workOrderId, status, onStatusChange }:
           label: "Start Intake",
           icon: Play,
           onClick: () => startIntakeMutation.mutate(),
-          disabled: startIntakeMutation.isPending,
-          description: "Move to intake after initial inspection",
+          disabled: startIntakeMutation.isPending || !hasCompletedInspection,
+          description: hasCompletedInspection 
+            ? "Move to intake after initial inspection" 
+            : "Complete inspection first before starting intake",
         });
         break;
 
@@ -408,7 +595,7 @@ export default function WorkflowActions({ workOrderId, status, onStatusChange }:
         actions.push({
           label: "Start Diagnosis",
           icon: ClipboardCheck,
-          onClick: () => startDiagnosisMutation.mutate(),
+          onClick: () => setShowStartDiagnosisDialog(true),
           disabled: startDiagnosisMutation.isPending,
           description: "Begin diagnostic testing",
         });
@@ -745,6 +932,42 @@ export default function WorkflowActions({ workOrderId, status, onStatusChange }:
             onSubmit={(reason) => pauseMutation.mutate(reason)}
             onCancel={() => setShowPauseDialog(false)}
             isSubmitting={pauseMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Inspection Dialog */}
+      <Dialog open={showInspectionDialog} onOpenChange={setShowInspectionDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Create Initial Inspection</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Create a new inspection for this work order
+            </DialogDescription>
+          </DialogHeader>
+          <CreateInspectionForm
+            workOrder={currentWorkOrder}
+            onSubmit={(data) => createInspectionMutation.mutate(data)}
+            onCancel={() => setShowInspectionDialog(false)}
+            isSubmitting={createInspectionMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Start Diagnosis Dialog */}
+      <Dialog open={showStartDiagnosisDialog} onOpenChange={setShowStartDiagnosisDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Start Diagnosis</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Begin diagnostic testing for this vehicle
+            </DialogDescription>
+          </DialogHeader>
+          <StartDiagnosisForm
+            workOrder={currentWorkOrder}
+            onSubmit={(data) => startDiagnosisMutation.mutate(data)}
+            onCancel={() => setShowStartDiagnosisDialog(false)}
+            isSubmitting={startDiagnosisMutation.isPending}
           />
         </DialogContent>
       </Dialog>
@@ -1176,6 +1399,286 @@ function PauseForm({
         </Button>
         <Button type="button" onClick={handleSubmit} disabled={isSubmitting} variant="outline">
           {isSubmitting ? "Pausing..." : "Pause"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function StartDiagnosisForm({
+  workOrder,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+}: {
+  workOrder?: any;
+  onSubmit: (data: { primary_technician?: number; initial_notes?: string; priority?: string }) => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
+}) {
+  const [primaryTechnician, setPrimaryTechnician] = useState<string>(() => {
+    const tech = workOrder?.primary_technician;
+    if (!tech || tech === null) return "";
+    if (typeof tech === "object" && "id" in tech) {
+      return String(tech.id);
+    }
+    if (typeof tech === "number") {
+      return String(tech);
+    }
+    return "";
+  });
+  const [initialNotes, setInitialNotes] = useState("");
+  const [priority, setPriority] = useState(workOrder?.priority || "normal");
+
+  // Fetch technicians
+  const { data: technicians } = useQuery({
+    queryKey: ["technicians"],
+    queryFn: () => adminApi.users.technicians(),
+  });
+
+  const techniciansList = technicians || [];
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    const data: { primary_technician?: number; initial_notes?: string; priority?: string } = {};
+    
+    if (primaryTechnician && primaryTechnician !== "") {
+      data.primary_technician = Number(primaryTechnician);
+    }
+    if (initialNotes && initialNotes.trim()) {
+      data.initial_notes = initialNotes.trim();
+    }
+    if (priority && priority !== workOrder?.priority) {
+      data.priority = priority;
+    }
+    
+    onSubmit(data);
+  };
+
+  return (
+    <>
+      <form onSubmit={handleSubmit} className="px-6 pb-6">
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="primary_technician" className="block mb-2 dark:text-gray-300">
+              Primary Technician (Optional)
+            </Label>
+            <select
+              id="primary_technician"
+              value={primaryTechnician}
+              onChange={(e) => setPrimaryTechnician(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            >
+              <option value="">Select technician</option>
+              {techniciansList.map((tech: any) => (
+                <option key={tech.id} value={String(tech.id)}>
+                  {tech.first_name} {tech.last_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <Label htmlFor="priority" className="block mb-2 dark:text-gray-300">
+              Priority (Optional)
+            </Label>
+            <select
+              id="priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            >
+              <option value="low">Low</option>
+              <option value="normal">Normal</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+
+          <div>
+            <Label htmlFor="initial_notes" className="block mb-2 dark:text-gray-300">
+              Initial Observations (Optional)
+            </Label>
+            <Textarea
+              id="initial_notes"
+              value={initialNotes}
+              onChange={(e) => setInitialNotes(e.target.value)}
+              placeholder="Quick notes or initial observations before detailed testing..."
+              rows={3}
+              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            />
+          </div>
+
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
+            <p className="text-sm text-blue-800 dark:text-blue-400">
+              <AlertCircle className="w-4 h-4 inline mr-1" />
+              Diagnosis will begin. You can add detailed diagnosis notes when completing the diagnosis.
+            </p>
+          </div>
+        </div>
+      </form>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button 
+          type="button" 
+          onClick={handleSubmit} 
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Starting..." : "Start Diagnosis"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function CreateInspectionForm({
+  workOrder,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+}: {
+  workOrder?: any;
+  onSubmit: (data: any) => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
+}) {
+  const [templateId, setTemplateId] = useState<number | "">("");
+  const [inspectionDate, setInspectionDate] = useState(new Date().toISOString().slice(0, 16));
+  const [odometerReading, setOdometerReading] = useState("");
+  const [notes, setNotes] = useState("");
+
+  // Fetch templates
+  const { data: templatesData } = useQuery({
+    queryKey: ["inspection-templates", "active"],
+    queryFn: () => inspectionsApi.templates.active(),
+  });
+
+  const templates = templatesData || [];
+  const vehicleId = workOrder?.vehicle 
+    ? (typeof workOrder.vehicle === "object" ? workOrder.vehicle.id : workOrder.vehicle)
+    : null;
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    if (!templateId || !vehicleId) {
+      return;
+    }
+
+    const data: any = {
+      vehicle: vehicleId,
+      template: templateId,
+      work_order: workOrder?.id,
+      inspection_date: inspectionDate,
+    };
+
+    if (odometerReading && odometerReading.trim()) {
+      data.odometer_reading = parseInt(odometerReading);
+    }
+
+    if (notes && notes.trim()) {
+      data.notes = notes.trim();
+    }
+
+    onSubmit(data);
+  };
+
+  return (
+    <>
+      <form onSubmit={handleSubmit} className="px-6 pb-6">
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="template" className="block mb-2 dark:text-gray-300">
+              Inspection Template <span className="text-red-500">*</span>
+            </Label>
+            <select
+              id="template"
+              value={templateId}
+              onChange={(e) => setTemplateId(parseInt(e.target.value) || "")}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            >
+              <option value="">Select a template</option>
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name}
+                  {template.is_default && " (Default)"}
+                </option>
+              ))}
+            </select>
+            {templates.length === 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                No templates available. Please create a template first.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="inspection_date" className="block mb-2 dark:text-gray-300">
+              Inspection Date <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="inspection_date"
+              type="datetime-local"
+              value={inspectionDate}
+              onChange={(e) => setInspectionDate(e.target.value)}
+              required
+              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="odometer_reading" className="block mb-2 dark:text-gray-300">
+              Odometer Reading (Optional)
+            </Label>
+            <Input
+              id="odometer_reading"
+              type="number"
+              value={odometerReading}
+              onChange={(e) => setOdometerReading(e.target.value)}
+              placeholder="Current mileage"
+              min={0}
+              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="notes" className="block mb-2 dark:text-gray-300">
+              Notes (Optional)
+            </Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Additional notes about this inspection"
+              rows={3}
+              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            />
+          </div>
+
+          {!vehicleId && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
+              <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                <AlertCircle className="w-4 h-4 inline mr-1" />
+                No vehicle selected for this work order. Please ensure the work order has a vehicle assigned.
+              </p>
+            </div>
+          )}
+        </div>
+      </form>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button 
+          type="button" 
+          onClick={handleSubmit} 
+          disabled={isSubmitting || !templateId || !vehicleId || templates.length === 0}
+        >
+          {isSubmitting ? "Creating..." : "Create Inspection"}
         </Button>
       </DialogFooter>
     </>
