@@ -24,7 +24,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh }: Tas
   // Separate workflow tasks from manual tasks
   const { workflowTasks, manualTasks } = useMemo(() => {
     const workflow = tasks.filter((task) => task.is_workflow_task === true);
-    const manual = tasks.filter((task) => !task.is_workflow_task || task.is_workflow_task === false);
+    const manual = tasks.filter((task) => !task.is_workflow_task);
     return { workflowTasks: workflow, manualTasks: manual };
   }, [tasks]);
 
@@ -69,13 +69,13 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh }: Tas
       <TableCell>
         <div className="flex items-start gap-2">
           {isWorkflow && (
-            <Workflow className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" title="Workflow Task" />
+            <Workflow className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
           )}
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <p className="font-medium">{task.description}</p>
               {isWorkflow && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="secondary" className="text-xs">
                   Auto
                 </Badge>
               )}
@@ -153,7 +153,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh }: Tas
                 <Workflow className="w-5 h-5 text-blue-600" />
                 <CardTitle>Workflow Tasks</CardTitle>
               </div>
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="secondary" className="text-xs">
                 Auto-generated
               </Badge>
             </CardHeader>

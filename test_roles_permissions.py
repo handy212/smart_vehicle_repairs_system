@@ -5,6 +5,7 @@ Test script for roles and permissions implementation
 import os
 import sys
 import django
+import pytest
 
 # Setup Django
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -17,6 +18,12 @@ from apps.branches.models import Branch
 from apps.workorders.models import WorkOrder
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
+
+@pytest.fixture(autouse=True)
+def setup_roles():
+    """Ensure roles and permissions are initialized before running tests"""
+    call_command('init_permissions')
 
 def print_header(text):
     print(f"\n{'='*60}")
@@ -32,6 +39,7 @@ def print_error(text):
 def print_warning(text):
     print(f"⚠️  {text}")
 
+@pytest.mark.django_db
 def test_roles_exist():
     """Test that all required roles exist"""
     print_header("Testing Role Existence")
@@ -51,8 +59,9 @@ def test_roles_exist():
             print_error(f"Role '{role_code}' does NOT exist")
             all_passed = False
     
-    return all_passed
+    assert all_passed
 
+@pytest.mark.django_db
 def test_permissions_exist():
     """Test that all required permissions exist"""
     print_header("Testing Permission Existence")
@@ -72,8 +81,9 @@ def test_permissions_exist():
             print_error(f"Permission '{perm_code}' does NOT exist")
             all_passed = False
     
-    return all_passed
+    assert all_passed
 
+@pytest.mark.django_db
 def test_role_permissions():
     """Test that roles have correct permissions"""
     print_header("Testing Role Permissions")
@@ -101,8 +111,9 @@ def test_role_permissions():
             print_error(f"Role '{role_code}' does not exist")
             all_passed = False
     
-    return all_passed
+    assert all_passed
 
+@pytest.mark.django_db
 def test_branch_access():
     """Test branch access for different roles"""
     print_header("Testing Branch Access Logic")
@@ -190,8 +201,9 @@ def test_branch_access():
         print_error("has_branch_access() failed for manager")
         all_passed = False
     
-    return all_passed
+    assert all_passed
 
+@pytest.mark.django_db
 def test_workorder_creation():
     """Test work order creation permissions"""
     print_header("Testing Work Order Creation")
@@ -259,7 +271,7 @@ def test_workorder_creation():
         )
         print_success(f"Service Coordinator can create work orders (WO: {wo.work_order_number})")
         wo.delete()  # Cleanup
-        return True
+        assert True
     except ValidationError as e:
         print_error(f"Service Coordinator CANNOT create work orders: {e}")
         return False
@@ -267,6 +279,7 @@ def test_workorder_creation():
         print_error(f"Error creating work order: {e}")
         return False
 
+@pytest.mark.django_db
 def test_role_priority():
     """Test role priority ordering"""
     print_header("Testing Role Priority")
@@ -295,7 +308,7 @@ def test_role_priority():
             print_error(f"Role '{role_code}' does not exist")
             all_passed = False
     
-    return all_passed
+    assert all_passed
 
 def cleanup_test_data():
     """Clean up test data"""

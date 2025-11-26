@@ -19,7 +19,7 @@ export function ThemeToggle() {
     // Immediately apply theme change to DOM for instant feedback
     const root = document.documentElement;
     let newTheme: Theme;
-    
+
     if (theme === "light") {
       newTheme = "dark";
       root.classList.add("dark");
@@ -31,28 +31,27 @@ export function ThemeToggle() {
       newTheme = "light";
       root.classList.remove("dark");
     }
-    
+
     // Update state (this will trigger useEffect in useTheme)
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
-    
-    // Debug logging
-    console.log('Theme changed to:', newTheme, 'Dark class present:', root.classList.contains('dark'));
+
+
   };
 
   const icon =
     theme === "system"
       ? <Monitor className="h-4 w-4" />
       : resolvedTheme === "dark"
-      ? <Moon className="h-4 w-4" />
-      : <Sun className="h-4 w-4" />;
+        ? <Moon className="h-4 w-4" />
+        : <Sun className="h-4 w-4" />;
 
   const title =
     theme === "light"
       ? "Light mode"
       : theme === "dark"
-      ? "Dark mode"
-      : "System theme";
+        ? "Dark mode"
+        : "System theme";
 
   return (
     <Button

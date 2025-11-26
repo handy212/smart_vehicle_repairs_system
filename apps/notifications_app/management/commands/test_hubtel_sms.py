@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from apps.notifications_app.hubtel_sms import (
     send_sms, is_hubtel_available, validate_phone_number,
-    check_sms_balance, get_supported_networks
+    check_sms_balance
 )
 
 User = get_user_model()

@@ -23,9 +23,9 @@ const workOrderSchema = z.object({
   vehicle: z.number().min(1, "Vehicle is required"),
   priority: z.enum(["low", "normal", "high", "urgent"]),
   status: z.enum([
-    "draft", "inspection", "intake", "diagnosis", 
-    "awaiting_approval", "approved", "in_progress", 
-    "additional_work_found", "paused", "quality_check", 
+    "draft", "inspection", "intake", "diagnosis",
+    "awaiting_approval", "approved", "in_progress",
+    "additional_work_found", "paused", "quality_check",
     "completed", "invoiced", "closed"
   ]),
   customer_concerns: z.string().optional(),
@@ -70,11 +70,11 @@ const STATUS_LABELS: Record<string, string> = {
 function getValidStatuses(currentStatus: string): string[] {
   // Always include current status
   const validStatuses = [currentStatus];
-  
+
   // Add valid transitions
   const transitions = VALID_TRANSITIONS[currentStatus] || [];
   validStatuses.push(...transitions);
-  
+
   return [...new Set(validStatuses)]; // Remove duplicates
 }
 
@@ -94,6 +94,17 @@ export default function EditWorkOrderPage() {
     customer_number?: string;
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    watch,
+    setValue,
+    reset,
+  } = useForm<WorkOrderFormData>({
+    resolver: zodResolver(workOrderSchema),
+  });
 
   const { data: workOrder, isLoading } = useQuery({
     queryKey: ["workorder", workOrderId],
@@ -119,27 +130,18 @@ export default function EditWorkOrderPage() {
     ? vehiclesData.results.find((v) => v.id === vehicle) || null
     : null;
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    watch,
-    setValue,
-    reset,
-  } = useForm<WorkOrderFormData>({
-    resolver: zodResolver(workOrderSchema),
-  });
+
 
   // Populate form when work order data loads
   useEffect(() => {
     if (workOrder && !isLoading) {
-      const customerId = typeof workOrder.customer === 'object' && workOrder.customer !== null 
-        ? workOrder.customer.id 
+      const customerId = typeof workOrder.customer === 'object' && workOrder.customer !== null
+        ? workOrder.customer.id
         : workOrder.customer || 0;
-      const vehicleId = typeof workOrder.vehicle === 'object' && workOrder.vehicle !== null 
-        ? workOrder.vehicle.id 
+      const vehicleId = typeof workOrder.vehicle === 'object' && workOrder.vehicle !== null
+        ? workOrder.vehicle.id
         : workOrder.vehicle || 0;
-      
+
       reset({
         customer: customerId,
         vehicle: vehicleId,
@@ -148,7 +150,7 @@ export default function EditWorkOrderPage() {
         customer_concerns: workOrder.customer_concerns || "",
       });
       setSelectedCustomer(customerId || null);
-      
+
       // Set customer data if available from workOrder
       if (typeof workOrder.customer === 'object' && workOrder.customer !== null) {
         setSelectedCustomerData({
@@ -169,7 +171,7 @@ export default function EditWorkOrderPage() {
   useEffect(() => {
     if (customer && customer !== selectedCustomer) {
       setSelectedCustomer(customer);
-      
+
       // Find and store selected customer data
       const customerData = customersData?.results?.find((c) => c.id === customer);
       if (customerData) {
@@ -220,8 +222,8 @@ export default function EditWorkOrderPage() {
         const errorData = error.response.data;
         // Handle status transition errors
         if (errorData.status) {
-          let statusError = Array.isArray(errorData.status) 
-            ? errorData.status[0] 
+          let statusError = Array.isArray(errorData.status)
+            ? errorData.status[0]
             : errorData.status;
           // Handle case where error might be a string representation of an array
           if (typeof statusError === 'string' && statusError.startsWith('[') && statusError.endsWith(']')) {
@@ -317,167 +319,167 @@ export default function EditWorkOrderPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Customer & Vehicle */}
             <Card>
-            <CardHeader>
-              <CardTitle>Customer & Vehicle</CardTitle>
-              <CardDescription>Select customer and vehicle</CardDescription>
-            </CardHeader>
+              <CardHeader>
+                <CardTitle>Customer & Vehicle</CardTitle>
+                <CardDescription>Select customer and vehicle</CardDescription>
+              </CardHeader>
 
-  <CardContent className="space-y-6">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      
-      {/* Customer */}
-      <div className="space-y-3">
-        <div>
-          <label
-            htmlFor="customer"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-          >
-            Customer *
-          </label>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          <Select
-            id="customer"
-            {...register("customer", { valueAsNumber: true })}
-            className={`w-full ${errors.customer ? "border-red-500" : ""}`}
-            onChange={(e) => {
-              const val = parseInt(e.target.value);
-              setValue("customer", val);
-              setSelectedCustomer(val);
-              
-              // Update selected customer data
-              const customerData = customersData?.results?.find((c) => c.id === val);
-              if (customerData) {
-                setSelectedCustomerData({
-                  id: customerData.id,
-                  full_name: customerData.full_name,
-                  email: customerData.email,
-                  phone: customerData.phone,
-                  customer_type: customerData.customer_type,
-                  customer_number: customerData.customer_number,
-                });
-              } else {
-                setSelectedCustomerData(null);
-              }
-            }}
-          >
-            <option value="">Select a customer</option>
-            {customersData?.results?.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.full_name || `${customer.user?.first_name || ''} ${customer.user?.last_name || ''}`.trim() || 'Unknown'}
-              </option>
-            ))}
-          </Select>
+                  {/* Customer */}
+                  <div className="space-y-3">
+                    <div>
+                      <label
+                        htmlFor="customer"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                      >
+                        Customer *
+                      </label>
 
-          {errors.customer && (
-            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-              {errors.customer.message}
-            </p>
-          )}
-        </div>
+                      <Select
+                        id="customer"
+                        {...register("customer", { valueAsNumber: true })}
+                        className={`w-full ${errors.customer ? "border-red-500" : ""}`}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setValue("customer", val);
+                          setSelectedCustomer(val);
 
-        {/* Customer Info Display */}
-        {selectedCustomerData && (
-          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
-            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Customer Information
-            </div>
-            <div className="space-y-2 text-sm">
-              {selectedCustomerData.phone && (
-                <div className="flex items-start">
-                  <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Phone:</span>
-                  <span className="text-gray-900 dark:text-gray-100">{selectedCustomerData.phone}</span>
+                          // Update selected customer data
+                          const customerData = customersData?.results?.find((c) => c.id === val);
+                          if (customerData) {
+                            setSelectedCustomerData({
+                              id: customerData.id,
+                              full_name: customerData.full_name,
+                              email: customerData.email,
+                              phone: customerData.phone,
+                              customer_type: customerData.customer_type,
+                              customer_number: customerData.customer_number,
+                            });
+                          } else {
+                            setSelectedCustomerData(null);
+                          }
+                        }}
+                      >
+                        <option value="">Select a customer</option>
+                        {customersData?.results?.map((customer) => (
+                          <option key={customer.id} value={customer.id}>
+                            {customer.full_name || `${customer.user?.first_name || ''} ${customer.user?.last_name || ''}`.trim() || 'Unknown'}
+                          </option>
+                        ))}
+                      </Select>
+
+                      {errors.customer && (
+                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                          {errors.customer.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Customer Info Display */}
+                    {selectedCustomerData && (
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                          Customer Information
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          {selectedCustomerData.phone && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Phone:</span>
+                              <span className="text-gray-900 dark:text-gray-100">{selectedCustomerData.phone}</span>
+                            </div>
+                          )}
+                          {selectedCustomerData.email && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Email:</span>
+                              <span className="text-gray-900 dark:text-gray-100 break-words">{selectedCustomerData.email}</span>
+                            </div>
+                          )}
+                          {selectedCustomerData.customer_type && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Type:</span>
+                              <span className="text-gray-900 dark:text-gray-100 capitalize">
+                                {selectedCustomerData.customer_type.replace('_', ' ')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Vehicle */}
+                  <div className="space-y-3">
+                    <div>
+                      <label
+                        htmlFor="vehicle"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                      >
+                        Vehicle *
+                      </label>
+
+                      <Select
+                        id="vehicle"
+                        {...register("vehicle", { valueAsNumber: true })}
+                        className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}
+                        disabled={!selectedCustomer || !vehiclesData?.results?.length}
+                      >
+                        <option value="">
+                          {!selectedCustomer
+                            ? "Select a customer first"
+                            : !vehiclesData?.results?.length
+                              ? "No vehicles found"
+                              : "Select a vehicle"}
+                        </option>
+
+                        {vehiclesData?.results?.map((vehicle) => (
+                          <option key={vehicle.id} value={vehicle.id}>
+                            {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
+                          </option>
+                        ))}
+                      </Select>
+
+                      {errors.vehicle && (
+                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                          {errors.vehicle.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Vehicle Info Display */}
+                    {selectedVehicle && (
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                          Vehicle Information
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-start">
+                            <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">Make/Model:</span>
+                            <span className="text-gray-900 dark:text-gray-100">
+                              {selectedVehicle.make} {selectedVehicle.model} {selectedVehicle.year}
+                            </span>
+                          </div>
+                          {selectedVehicle.license_plate && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">License:</span>
+                              <span className="text-gray-900 dark:text-gray-100">{selectedVehicle.license_plate}</span>
+                            </div>
+                          )}
+                          {selectedVehicle.vin && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">VIN:</span>
+                              <span className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">{selectedVehicle.vin}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
-              )}
-              {selectedCustomerData.email && (
-                <div className="flex items-start">
-                  <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Email:</span>
-                  <span className="text-gray-900 dark:text-gray-100 break-words">{selectedCustomerData.email}</span>
-                </div>
-              )}
-              {selectedCustomerData.customer_type && (
-                <div className="flex items-start">
-                  <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Type:</span>
-                  <span className="text-gray-900 dark:text-gray-100 capitalize">
-                    {selectedCustomerData.customer_type.replace('_', ' ')}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Vehicle */}
-      <div className="space-y-3">
-        <div>
-          <label
-            htmlFor="vehicle"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-          >
-            Vehicle *
-          </label>
-
-          <Select
-            id="vehicle"
-            {...register("vehicle", { valueAsNumber: true })}
-            className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}
-            disabled={!selectedCustomer || !vehiclesData?.results?.length}
-          >
-            <option value="">
-              {!selectedCustomer
-                ? "Select a customer first"
-                : !vehiclesData?.results?.length
-                ? "No vehicles found"
-                : "Select a vehicle"}
-            </option>
-
-            {vehiclesData?.results?.map((vehicle) => (
-              <option key={vehicle.id} value={vehicle.id}>
-                {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
-              </option>
-            ))}
-          </Select>
-
-          {errors.vehicle && (
-            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-              {errors.vehicle.message}
-            </p>
-          )}
-        </div>
-
-        {/* Vehicle Info Display */}
-        {selectedVehicle && (
-          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
-            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Vehicle Information
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-start">
-                <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">Make/Model:</span>
-                <span className="text-gray-900 dark:text-gray-100">
-                  {selectedVehicle.make} {selectedVehicle.model} {selectedVehicle.year}
-                </span>
-              </div>
-              {selectedVehicle.license_plate && (
-                <div className="flex items-start">
-                  <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">License:</span>
-                  <span className="text-gray-900 dark:text-gray-100">{selectedVehicle.license_plate}</span>
-                </div>
-              )}
-              {selectedVehicle.vin && (
-                <div className="flex items-start">
-                  <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">VIN:</span>
-                  <span className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">{selectedVehicle.vin}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-    </div>
-  </CardContent>
-</Card>
+              </CardContent>
+            </Card>
 
 
             {/* Work Order Details */}

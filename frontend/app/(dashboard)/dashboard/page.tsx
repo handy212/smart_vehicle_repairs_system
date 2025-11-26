@@ -6,13 +6,13 @@ import { vehiclesApi } from "@/lib/api/vehicles";
 import { appointmentsApi } from "@/lib/api/appointments";
 import { workordersApi } from "@/lib/api/workorders";
 import { reportingApi } from "@/lib/api/reporting";
-import { inventoryApi } from "@/lib/api/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Car, Calendar, Wrench, DollarSign, Package, TrendingUp, AlertTriangle, FileText, Clock, CheckCircle } from "lucide-react";
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { Users, Car, Calendar, Wrench, DollarSign, Package, TrendingUp, AlertTriangle, FileText } from "lucide-react";
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from "recharts";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { DashboardSkeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   // Fetch dashboard overview from reporting API
@@ -124,11 +124,7 @@ export default function DashboardPage() {
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const statCards = [
@@ -180,26 +176,26 @@ export default function DashboardPage() {
   const alertCards = [
     ...(stats?.overdue_invoices > 0
       ? [
-          {
-            title: "Overdue Invoices",
-            value: stats.overdue_invoices,
-            amount: `$${parseFloat(String(stats.overdue_amount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            icon: AlertTriangle,
-            color: "bg-red-500",
-            link: "/billing",
-          },
-        ]
+        {
+          title: "Overdue Invoices",
+          value: stats.overdue_invoices,
+          amount: `$${parseFloat(String(stats.overdue_amount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          icon: AlertTriangle,
+          color: "bg-red-500",
+          link: "/billing",
+        },
+      ]
       : []),
     ...(stats?.pending_estimates > 0
       ? [
-          {
-            title: "Pending Estimates",
-            value: stats.pending_estimates,
-            icon: FileText,
-            color: "bg-orange-500",
-            link: "/billing/estimates",
-          },
-        ]
+        {
+          title: "Pending Estimates",
+          value: stats.pending_estimates,
+          icon: FileText,
+          color: "bg-orange-500",
+          link: "/billing/estimates",
+        },
+      ]
       : []),
   ];
 
@@ -423,8 +419,8 @@ export default function DashboardPage() {
                         apt.status === "confirmed"
                           ? "success"
                           : apt.status === "pending"
-                          ? "warning"
-                          : "secondary"
+                            ? "warning"
+                            : "secondary"
                       }
                       className="ml-2"
                     >
@@ -466,8 +462,8 @@ export default function DashboardPage() {
                         wo.status === "in_progress"
                           ? "default"
                           : wo.status === "pending"
-                          ? "warning"
-                          : "secondary"
+                            ? "warning"
+                            : "secondary"
                       }
                       className="ml-2"
                     >

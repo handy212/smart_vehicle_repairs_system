@@ -3,6 +3,7 @@ Tests for repeat issue detection functionality.
 """
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 
 from apps.branches.models import Branch
 from apps.customers.models import Customer
@@ -110,7 +111,8 @@ class RepeatIssueAPITests(TestCase):
             branch=self.branch,
             customer_concerns='Battery drains overnight when vehicle is parked',
             odometer_in=60000,
-            status='draft',
+            status='completed',
+            completed_at=timezone.now(),
             priority='normal',
         )
 

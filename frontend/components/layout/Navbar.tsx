@@ -129,9 +129,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
       if (searchQuery.length >= 2) {
         try {
           const trimmedQuery = searchQuery.trim();
-          console.log("Searching for:", trimmedQuery);
           const results = await searchApi.global(trimmedQuery);
-          console.log("Search results:", results);
           setSearchResults(results.results || []);
           setShowSearchResults(true);
         } catch (error: any) {
@@ -198,7 +196,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
                 <Menu className="w-6 h-6" />
               )}
             </button>
-            
+
             <Link href="/dashboard" className="flex items-center space-x-2 group">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                 <Car className="w-5 h-5 text-white" />

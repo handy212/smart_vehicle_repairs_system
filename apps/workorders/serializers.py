@@ -213,6 +213,25 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
                 self.context['repeat_visit_matches'] = matches
         
         return data
+
+    def to_representation(self, instance):
+        """Include repeat visit matches in response"""
+        data = super().to_representation(instance)
+        
+        # Add repeat visit matches if found during validation
+        repeat_matches = self.context.get('repeat_visit_matches')
+        if repeat_matches:
+            # Clean up matches for JSON serialization (remove work_order instances)
+            serializable_matches = []
+            for match in repeat_matches:
+                clean_match = {k: v for k, v in match.items() if k != 'work_order'}
+                # Convert datetime to ISO format
+                if 'completed_at' in clean_match and clean_match['completed_at']:
+                    clean_match['completed_at'] = clean_match['completed_at'].isoformat()
+                serializable_matches.append(clean_match)
+            data['repeat_issue_matches'] = serializable_matches
+            
+        return data
     
     def create(self, validated_data):
         # Extract many-to-many field
