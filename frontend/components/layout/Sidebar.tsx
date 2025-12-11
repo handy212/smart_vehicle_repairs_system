@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
+  Stethoscope,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ const navigationGroups = [
     name: "Tools & Reports",
     items: [
       { name: "Inspections", href: "/inspections", icon: FileText },
+      { name: "Diagnosis", href: "/diagnosis", icon: Stethoscope },
       { name: "Reports", href: "/reports", icon: BarChart3 },
     ],
   },

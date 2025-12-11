@@ -1,0 +1,983 @@
+from django.db import models
+from django.core.validators import MinValueValidator
+from django.utils import timezone
+from decimal import Decimal
+from collections import Counter
+from apps.accounts.models import User
+from apps.workorders.models import WorkOrder
+
+
+class Diagnosis(models.Model):
+    """
+    Diagnosis Record - One per work order
+    Tracks the entire diagnostic session
+    """
+    
+    STATUS_CHOICES = [
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('on_hold', 'On Hold'),
+    ]
+    
+    # One diagnosis per work order
+    work_order = models.OneToOneField(
+        WorkOrder,
+        on_delete=models.CASCADE,
+        related_name='diagnosis',
+        help_text="Work order this diagnosis belongs to"
+    )
+    
+    # Technician assignment
+    technician = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='diagnoses_performed',
+        limit_choices_to={'role__in': ['technician', 'manager']},
+        help_text="Technician performing the diagnosis"
+    )
+    
+    # Timing
+    started_at = models.DateTimeField(default=timezone.now, help_text="When diagnosis began")
+    completed_at = models.DateTimeField(null=True, blank=True, help_text="When diagnosis finished")
+    
+    # Status
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='in_progress',
+        db_index=True
+    )
+    
+    # Customer Information
+    customer_complaint = models.TextField(
+        help_text="What the customer reported (in their words)"
+    )
+    initial_observations = models.TextField(
+        blank=True,
+        help_text="Initial visual observations during intake"
+    )
+    
+    # Diagnostic Process
+    diagnostic_notes = models.TextField(
+        blank=True,
+        help_text="Technician's notes during diagnosis process"
+    )
+    diagnostic_time_hours = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Actual time spent on diagnosis"
+    )
+    diagnostic_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Charge for diagnostic work"
+    )
+    
+    # Findings Summary
+    root_cause = models.TextField(
+        blank=True,
+        help_text="Confirmed root cause of the problem"
+    )
+    root_cause_explanation = models.TextField(
+        blank=True,
+        help_text="Explanation in customer-friendly terms - why this happened"
+    )
+    
+    # Flags
+    is_completed = models.BooleanField(default=False)
+    requires_approval = models.BooleanField(
+        default=True,
+        help_text="Whether customer approval is required before proceeding"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-started_at']
+        verbose_name = 'Diagnosis'
+        verbose_name_plural = 'Diagnoses'
+        indexes = [
+            models.Index(fields=['work_order', 'status']),
+            models.Index(fields=['technician', 'status']),
+            models.Index(fields=['status', 'started_at']),
+        ]
+    
+    def __str__(self):
+        return f"Diagnosis for {self.work_order.work_order_number}"
+    
+    def complete(self):
+        """Mark diagnosis as completed"""
+        if not self.is_completed:
+            self.is_completed = True
+            self.status = 'completed'
+            self.completed_at = timezone.now()
+            self.save(update_fields=['is_completed', 'status', 'completed_at'])
+    
+    @property
+    def diagnostic_time_formatted(self):
+        """Format diagnostic time as hours:minutes"""
+        if self.diagnostic_time_hours:
+            hours = int(self.diagnostic_time_hours)
+            minutes = int((self.diagnostic_time_hours - hours) * 60)
+            return f"{hours}h {minutes}m"
+        return "0h 0m"
+
+
+class RepairRecommendation(models.Model):
+    """
+    Repair Recommendations - What needs to be fixed
+    Created during diagnosis phase, converted to ServiceTasks when approved
+    """
+    
+    RECOMMENDATION_TYPE_CHOICES = [
+        ('repair', 'Repair'),
+        ('replace', 'Replace'),
+        ('service', 'Service'),
+        ('adjust', 'Adjust'),
+        ('clean', 'Clean'),
+        ('inspect', 'Inspect'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('critical', 'Critical'),
+        ('necessary', 'Necessary'),
+        ('recommended', 'Recommended'),
+        ('advisory', 'Advisory'),
+    ]
+    
+    # Link to diagnosis
+    diagnosis = models.ForeignKey(
+        Diagnosis,
+        on_delete=models.CASCADE,
+        related_name='repair_recommendations',
+        help_text="Diagnosis this recommendation belongs to"
+    )
+    
+    # Recommendation details
+    recommendation_type = models.CharField(
+        max_length=20,
+        choices=RECOMMENDATION_TYPE_CHOICES,
+        default='repair',
+        help_text="Type of work recommended"
+    )
+    description = models.TextField(
+        help_text="Detailed description of what needs to be done"
+    )
+    priority = models.CharField(
+        max_length=20,
+        choices=PRIORITY_CHOICES,
+        default='necessary',
+        help_text="Priority level of this repair"
+    )
+    
+    # Parts
+    parts_needed = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of parts with quantities: [{'part_id': 1, 'part_name': 'Brake Pad', 'quantity': 2, 'unit_cost': 25.00}]"
+    )
+    estimated_parts_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Estimated total cost of parts"
+    )
+    
+    # Labor
+    estimated_labor_hours = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Estimated labor hours required"
+    )
+    estimated_labor_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Estimated labor cost"
+    )
+    
+    # Total
+    estimated_total_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Estimated total cost (parts + labor)"
+    )
+    
+    # Status
+    customer_approved = models.BooleanField(
+        default=False,
+        help_text="Whether customer has approved this recommendation"
+    )
+    converted_to_task = models.ForeignKey(
+        'workorders.ServiceTask',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='diagnosis_recommendation',
+        help_text="Link to ServiceTask if recommendation was converted"
+    )
+    
+    # Ordering
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Display order"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['priority', 'order', 'created_at']
+        verbose_name = 'Repair Recommendation'
+        verbose_name_plural = 'Repair Recommendations'
+        indexes = [
+            models.Index(fields=['diagnosis', 'priority']),
+            models.Index(fields=['customer_approved']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_recommendation_type_display()} - {self.description[:50]}"
+    
+    def save(self, *args, **kwargs):
+        """Auto-calculate total cost"""
+        self.estimated_total_cost = self.estimated_parts_cost + self.estimated_labor_cost
+        super().save(*args, **kwargs)
+    
+    def approve(self):
+        """Mark recommendation as approved by customer"""
+        self.customer_approved = True
+        self.save(update_fields=['customer_approved'])
+
+
+class DiagnosticCode(models.Model):
+    """
+    Diagnostic Trouble Codes (DTCs) - OBD codes and other diagnostic codes
+    """
+    
+    CODE_TYPE_CHOICES = [
+        ('obd_ii', 'OBD-II'),
+        ('manufacturer', 'Manufacturer'),
+        ('abs', 'ABS'),
+        ('airbag', 'Airbag'),
+        ('transmission', 'Transmission'),
+        ('body', 'Body'),
+        ('chassis', 'Chassis'),
+        ('other', 'Other'),
+    ]
+    
+    SEVERITY_CHOICES = [
+        ('critical', 'Critical'),
+        ('warning', 'Warning'),
+        ('info', 'Information'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('pending', 'Pending'),
+        ('resolved', 'Resolved'),
+    ]
+    
+    diagnosis = models.ForeignKey(
+        Diagnosis,
+        on_delete=models.CASCADE,
+        related_name='diagnostic_codes',
+        help_text="Diagnosis this code belongs to"
+    )
+    
+    code_number = models.CharField(
+        max_length=20,
+        help_text="Code number, e.g., P0301, B1234"
+    )
+    code_type = models.CharField(
+        max_length=20,
+        choices=CODE_TYPE_CHOICES,
+        default='obd_ii',
+        help_text="Type of diagnostic code"
+    )
+    description = models.TextField(
+        help_text="What the code means"
+    )
+    severity = models.CharField(
+        max_length=20,
+        choices=SEVERITY_CHOICES,
+        default='warning',
+        help_text="Severity level"
+    )
+    
+    # Freeze frame data - snapshot when code occurred
+    freeze_frame_data = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Freeze frame data: RPM, speed, load, etc."
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='active',
+        db_index=True,
+        help_text="Current status of the code"
+    )
+    
+    recorded_at = models.DateTimeField(
+        default=timezone.now,
+        help_text="When code was pulled/scanned"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-recorded_at', 'code_number']
+        verbose_name = 'Diagnostic Code'
+        verbose_name_plural = 'Diagnostic Codes'
+        indexes = [
+            models.Index(fields=['diagnosis', 'status']),
+            models.Index(fields=['code_number', 'code_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.code_number} - {self.diagnosis.work_order.work_order_number}"
+
+
+class DiagnosticTest(models.Model):
+    """
+    Diagnostic Tests - Tests performed during diagnosis
+    """
+    
+    CATEGORY_CHOICES = [
+        ('electrical', 'Electrical'),
+        ('mechanical', 'Mechanical'),
+        ('performance', 'Performance'),
+        ('fluid', 'Fluid Analysis'),
+        ('pressure', 'Pressure Test'),
+        ('temperature', 'Temperature Test'),
+        ('visual', 'Visual Inspection'),
+        ('road_test', 'Road Test'),
+        ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pass', 'Pass'),
+        ('fail', 'Fail'),
+        ('inconclusive', 'Inconclusive'),
+    ]
+    
+    diagnosis = models.ForeignKey(
+        Diagnosis,
+        on_delete=models.CASCADE,
+        related_name='diagnostic_tests',
+        help_text="Diagnosis this test belongs to"
+    )
+    
+    test_name = models.CharField(
+        max_length=200,
+        help_text="Name of the test, e.g., 'Compression Test', 'Voltage Check'"
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        default='other',
+        help_text="Category of test"
+    )
+    
+    test_procedure = models.TextField(
+        blank=True,
+        help_text="How the test was performed"
+    )
+    expected_result = models.TextField(
+        blank=True,
+        help_text="What should happen (expected result)"
+    )
+    actual_result = models.TextField(
+        blank=True,
+        help_text="What actually happened (actual result)"
+    )
+    
+    # Measurements - key/value pairs
+    measurements = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Test measurements: {'voltage': 12.4, 'pressure': 45, etc.}"
+    )
+    
+    tools_used = models.TextField(
+        blank=True,
+        help_text="What tools were needed for this test"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='inconclusive',
+        help_text="Test result status"
+    )
+    
+    performed_at = models.DateTimeField(
+        default=timezone.now,
+        help_text="When test was performed"
+    )
+    performed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='diagnostic_tests_performed',
+        limit_choices_to={'role__in': ['technician', 'manager']},
+        help_text="Technician who performed the test"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['performed_at']
+        verbose_name = 'Diagnostic Test'
+        verbose_name_plural = 'Diagnostic Tests'
+        indexes = [
+            models.Index(fields=['diagnosis', 'category']),
+            models.Index(fields=['status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.test_name} - {self.diagnosis.work_order.work_order_number}"
+
+
+class DiagnosisFinding(models.Model):
+    """
+    Diagnosis Findings - Problems discovered during diagnosis
+    Structured findings with evidence
+    """
+    
+    CATEGORY_CHOICES = [
+        ('engine', 'Engine'),
+        ('transmission', 'Transmission'),
+        ('electrical', 'Electrical'),
+        ('brakes', 'Brakes'),
+        ('suspension', 'Suspension'),
+        ('steering', 'Steering'),
+        ('exhaust', 'Exhaust'),
+        ('cooling', 'Cooling System'),
+        ('fuel', 'Fuel System'),
+        ('ac', 'AC/Climate Control'),
+        ('body', 'Body/Exterior'),
+        ('interior', 'Interior'),
+        ('other', 'Other'),
+    ]
+    
+    SEVERITY_CHOICES = [
+        ('critical', 'Critical'),
+        ('major', 'Major'),
+        ('minor', 'Minor'),
+        ('advisory', 'Advisory'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('identified', 'Identified'),
+        ('confirmed', 'Confirmed'),
+        ('fixed', 'Fixed'),
+    ]
+    
+    diagnosis = models.ForeignKey(
+        Diagnosis,
+        on_delete=models.CASCADE,
+        related_name='findings',
+        help_text="Diagnosis this finding belongs to"
+    )
+    
+    finding_title = models.CharField(
+        max_length=200,
+        help_text="Short summary of the finding"
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        default='other',
+        help_text="Category of the finding"
+    )
+    description = models.TextField(
+        help_text="Detailed description of the problem"
+    )
+    severity = models.CharField(
+        max_length=20,
+        choices=SEVERITY_CHOICES,
+        default='major',
+        help_text="Severity level"
+    )
+    
+    # Evidence - Many-to-Many relationships
+    diagnostic_codes = models.ManyToManyField(
+        DiagnosticCode,
+        related_name='findings',
+        blank=True,
+        help_text="Related diagnostic codes that support this finding"
+    )
+    diagnostic_tests = models.ManyToManyField(
+        DiagnosticTest,
+        related_name='findings',
+        blank=True,
+        help_text="Tests that support this finding"
+    )
+    
+    # Analysis
+    root_cause = models.TextField(
+        blank=True,
+        help_text="Why this happened"
+    )
+    contributing_factors = models.TextField(
+        blank=True,
+        help_text="Other factors involved"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='identified',
+        db_index=True,
+        help_text="Current status"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['severity', 'created_at']
+        verbose_name = 'Diagnosis Finding'
+        verbose_name_plural = 'Diagnosis Findings'
+        indexes = [
+            models.Index(fields=['diagnosis', 'severity']),
+            models.Index(fields=['status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.finding_title} - {self.diagnosis.work_order.work_order_number}"
+
+
+class DiagnosisPhoto(models.Model):
+    """
+    Diagnosis Photos - Visual evidence for diagnosis
+    """
+    
+    PHOTO_TYPE_CHOICES = [
+        ('problem', 'Problem'),
+        ('evidence', 'Evidence'),
+        ('component', 'Component'),
+        ('before', 'Before'),
+        ('after', 'After'),
+        ('damage', 'Damage'),
+        ('test_result', 'Test Result'),
+        ('other', 'Other'),
+    ]
+    
+    diagnosis = models.ForeignKey(
+        Diagnosis,
+        on_delete=models.CASCADE,
+        related_name='photos',
+        help_text="Diagnosis this photo belongs to"
+    )
+    
+    finding = models.ForeignKey(
+        DiagnosisFinding,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='photos',
+        help_text="Optional - link to specific finding if tied to one"
+    )
+    
+    photo = models.ImageField(
+        upload_to='diagnosis/photos/%Y/%m/',
+        help_text="Photo image"
+    )
+    caption = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="What the photo shows"
+    )
+    photo_type = models.CharField(
+        max_length=20,
+        choices=PHOTO_TYPE_CHOICES,
+        default='evidence',
+        help_text="Type of photo"
+    )
+    
+    taken_at = models.DateTimeField(
+        default=timezone.now,
+        help_text="When photo was taken"
+    )
+    taken_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='diagnosis_photos',
+        limit_choices_to={'role__in': ['technician', 'manager']},
+        help_text="Who took the photo"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['taken_at', 'created_at']
+        verbose_name = 'Diagnosis Photo'
+        verbose_name_plural = 'Diagnosis Photos'
+        indexes = [
+            models.Index(fields=['diagnosis', 'photo_type']),
+            models.Index(fields=['finding']),
+        ]
+    
+    def __str__(self):
+        return f"Photo for {self.diagnosis.work_order.work_order_number} - {self.caption}"
+
+
+# ============================================================================
+# Phase 3: Advanced Features - Libraries
+# ============================================================================
+
+class TestProcedureLibrary(models.Model):
+    """
+    Library of reusable diagnostic test procedures
+    Phase 3: Test Procedures Library
+    """
+    
+    CATEGORY_CHOICES = [
+        ('electrical', 'Electrical'),
+        ('mechanical', 'Mechanical'),
+        ('performance', 'Performance'),
+        ('fluid', 'Fluid Analysis'),
+        ('pressure', 'Pressure Test'),
+        ('temperature', 'Temperature Test'),
+        ('visual', 'Visual Inspection'),
+        ('road_test', 'Road Test'),
+        ('other', 'Other'),
+    ]
+    
+    name = models.CharField(
+        max_length=200,
+        unique=True,
+        help_text="Test procedure name, e.g., 'Compression Test', 'Voltage Check'"
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        default='other',
+        help_text="Category of test"
+    )
+    description = models.TextField(
+        help_text="Description of what this test is for"
+    )
+    
+    # Standard procedure details
+    test_procedure = models.TextField(
+        help_text="Step-by-step procedure for performing this test"
+    )
+    expected_result = models.TextField(
+        blank=True,
+        help_text="What should happen (expected result)"
+    )
+    
+    # Tools and requirements
+    tools_needed = models.TextField(
+        blank=True,
+        help_text="What tools are needed for this test"
+    )
+    measurement_fields = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Standard measurement fields: [{'name': 'Voltage', 'unit': 'V', 'min': 12, 'max': 14}]"
+    )
+    
+    # Metadata
+    is_active = models.BooleanField(default=True)
+    use_count = models.PositiveIntegerField(
+        default=0,
+        help_text="How many times this procedure has been used"
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='test_procedures_created',
+        limit_choices_to={'role__in': ['technician', 'manager']}
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['category', 'name']
+        verbose_name = 'Test Procedure'
+        verbose_name_plural = 'Test Procedures'
+        indexes = [
+            models.Index(fields=['category', 'is_active']),
+            models.Index(fields=['is_active', 'use_count']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
+    
+    def increment_use_count(self):
+        """Increment use count when procedure is used"""
+        self.use_count += 1
+        self.save(update_fields=['use_count'])
+
+
+class DiagnosticCodeLibrary(models.Model):
+    """
+    Library of diagnostic codes (DTCs) with descriptions and common fixes
+    Phase 3: Code Lookup Integration
+    """
+    
+    CODE_TYPE_CHOICES = [
+        ('obd_ii', 'OBD-II'),
+        ('manufacturer', 'Manufacturer'),
+        ('abs', 'ABS'),
+        ('airbag', 'Airbag'),
+        ('transmission', 'Transmission'),
+        ('body', 'Body'),
+        ('chassis', 'Chassis'),
+        ('other', 'Other'),
+    ]
+    
+    SEVERITY_CHOICES = [
+        ('critical', 'Critical'),
+        ('warning', 'Warning'),
+        ('info', 'Information'),
+    ]
+    
+    code_number = models.CharField(
+        max_length=20,
+        db_index=True,
+        help_text="Code number, e.g., P0301, B1234"
+    )
+    code_type = models.CharField(
+        max_length=20,
+        choices=CODE_TYPE_CHOICES,
+        default='obd_ii',
+        db_index=True,
+        help_text="Type of diagnostic code"
+    )
+    
+    # Code information
+    title = models.CharField(
+        max_length=200,
+        help_text="Short title/name of the code"
+    )
+    description = models.TextField(
+        help_text="What the code means"
+    )
+    severity = models.CharField(
+        max_length=20,
+        choices=SEVERITY_CHOICES,
+        default='warning',
+        help_text="Typical severity level"
+    )
+    
+    # Common fixes and information
+    common_causes = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Common causes: ['Faulty spark plug', 'Bad ignition coil']"
+    )
+    common_fixes = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Common fixes: ['Replace spark plug', 'Test ignition system']"
+    )
+    
+    # Additional information
+    tsb_references = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Technical Service Bulletin references"
+    )
+    notes = models.TextField(
+        blank=True,
+        help_text="Additional notes and information"
+    )
+    
+    # Usage tracking
+    use_count = models.PositiveIntegerField(
+        default=0,
+        help_text="How many times this code has been encountered"
+    )
+    
+    # Metadata
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['code_type', 'code_number']
+        verbose_name = 'Diagnostic Code Library Entry'
+        verbose_name_plural = 'Diagnostic Code Library'
+        unique_together = [['code_number', 'code_type']]
+        indexes = [
+            models.Index(fields=['code_number', 'code_type']),
+            models.Index(fields=['code_type', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.code_number} - {self.title}"
+    
+    def increment_use_count(self):
+        """Increment use count when code is looked up"""
+        self.use_count += 1
+        self.save(update_fields=['use_count'])
+
+
+class DiagnosisHistory(models.Model):
+    """
+    Historical data and analytics for learning from past diagnoses
+    Phase 3: Historical Data/Learning
+    """
+    
+    # Aggregated data
+    vehicle_make = models.CharField(max_length=50, db_index=True)
+    vehicle_model = models.CharField(max_length=50, db_index=True)
+    vehicle_year = models.IntegerField(null=True, blank=True, db_index=True)
+    
+    # Common issues pattern
+    common_complaints = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Common customer complaints for this vehicle"
+    )
+    common_root_causes = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Common root causes found"
+    )
+    common_codes = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Most frequently encountered codes"
+    )
+    
+    # Cost and time averages
+    avg_diagnostic_time = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Average diagnostic time in hours"
+    )
+    avg_repair_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Average repair cost"
+    )
+    
+    # Statistics
+    diagnosis_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of diagnoses for this vehicle type"
+    )
+    
+    # Metadata
+    last_updated = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-diagnosis_count']
+        verbose_name = 'Diagnosis History'
+        verbose_name_plural = 'Diagnosis History'
+        unique_together = [['vehicle_make', 'vehicle_model', 'vehicle_year']]
+        indexes = [
+            models.Index(fields=['vehicle_make', 'vehicle_model', 'vehicle_year']),
+            models.Index(fields=['-diagnosis_count']),
+        ]
+    
+    def __str__(self):
+        year_str = f" {self.vehicle_year}" if self.vehicle_year else ""
+        return f"{self.vehicle_make} {self.vehicle_model}{year_str} ({self.diagnosis_count} diagnoses)"
+    
+    @classmethod
+    def update_from_diagnosis(cls, diagnosis):
+        """Update or create history entry from a completed diagnosis"""
+        work_order = diagnosis.work_order
+        vehicle = work_order.vehicle
+        
+        # Get or create history entry
+        history, created = cls.objects.get_or_create(
+            vehicle_make=vehicle.make,
+            vehicle_model=vehicle.model,
+            vehicle_year=vehicle.year,
+            defaults={
+                'diagnosis_count': 0,
+                'common_complaints': [],
+                'common_root_causes': [],
+                'common_codes': [],
+            }
+        )
+        
+        # Update statistics
+        history.diagnosis_count += 1
+        
+        # Update common complaints
+        if diagnosis.customer_complaint:
+            complaints = history.common_complaints or []
+            complaints.append(diagnosis.customer_complaint[:100])  # First 100 chars
+            history.common_complaints = complaints[-10:]  # Keep last 10
+        
+        # Update common root causes
+        if diagnosis.root_cause:
+            causes = history.common_root_causes or []
+            causes.append(diagnosis.root_cause[:100])
+            history.common_root_causes = causes[-10:]
+        
+        # Update common codes
+        codes = diagnosis.diagnostic_codes.all()
+        code_list = history.common_codes or []
+        for code in codes:
+            code_list.append(code.code_number)
+        # Count frequencies and keep top 5
+        code_counts = Counter(code_list)
+        history.common_codes = [code for code, count in code_counts.most_common(5)]
+        
+        # Update averages
+        if diagnosis.diagnostic_time_hours:
+            if history.avg_diagnostic_time:
+                # Moving average (simple)
+                history.avg_diagnostic_time = (
+                    history.avg_diagnostic_time * (history.diagnosis_count - 1) +
+                    diagnosis.diagnostic_time_hours
+                ) / history.diagnosis_count
+            else:
+                history.avg_diagnostic_time = diagnosis.diagnostic_time_hours
+        
+        total_cost = sum(
+            rec.estimated_total_cost for rec in diagnosis.repair_recommendations.all()
+        )
+        if total_cost > 0:
+            if history.avg_repair_cost:
+                history.avg_repair_cost = (
+                    history.avg_repair_cost * (history.diagnosis_count - 1) + total_cost
+                ) / history.diagnosis_count
+            else:
+                history.avg_repair_cost = total_cost
+        
+        history.save()
+        return history
+

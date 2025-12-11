@@ -20,12 +20,12 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
       <div className="lg:col-span-2 space-y-6">
         {/* Customer & Vehicle */}
         <Card>
-          <CardHeader>
-            <CardTitle>Customer & Vehicle</CardTitle>
-          </CardHeader>
+  <CardHeader>
+    <CardTitle>Customer & Vehicle</CardTitle>
+  </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Customer */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Customer */}
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <User className="w-5 h-5 text-gray-400" />
@@ -33,7 +33,7 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
                 </div>
                 {workOrder.customer ? (
                   <>
-                    <div>
+        <div>
                       {typeof workOrder.customer === "object" && workOrder.customer !== null ? (
                         <Link
                           href={`/customers/${workOrder.customer.id}`}
@@ -42,12 +42,12 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
                           {workOrder.customer.full_name || workOrder.customer_name || "View Customer"}
                         </Link>
                       ) : (
-                        <Link
+            <Link
                           href={`/customers/${workOrder.customer}`}
                           className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-base"
-                        >
-                          {workOrder.customer_name || "View Customer"}
-                        </Link>
+            >
+              {workOrder.customer_name || "View Customer"}
+            </Link>
                       )}
                     </div>
                     {typeof workOrder.customer === "object" && workOrder.customer !== null && (
@@ -75,17 +75,17 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
                                 {workOrder.customer.customer_type.replace('_', ' ')}
                               </span>
                             </div>
-                          )}
-                        </div>
+          )}
+        </div>
                       </div>
                     )}
                   </>
                 ) : (
                   <p className="text-gray-900 dark:text-gray-100">{workOrder.customer_name || "-"}</p>
                 )}
-              </div>
+      </div>
 
-              {/* Vehicle */}
+      {/* Vehicle */}
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <Car className="w-5 h-5 text-gray-400" />
@@ -93,7 +93,7 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
                 </div>
                 {workOrder.vehicle ? (
                   <>
-                    <div>
+        <div>
                       {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null ? (
                         <Link
                           href={`/vehicles/${workOrder.vehicle.id}`}
@@ -102,12 +102,12 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
                           {workOrder.vehicle.year} {workOrder.vehicle.make} {workOrder.vehicle.model}
                         </Link>
                       ) : (
-                        <Link
+            <Link
                           href={`/vehicles/${workOrder.vehicle}`}
                           className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-base"
-                        >
-                          {workOrder.vehicle_info || "View Vehicle"}
-                        </Link>
+            >
+              {workOrder.vehicle_info || "View Vehicle"}
+            </Link>
                       )}
                     </div>
                     {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null && (
@@ -133,18 +133,18 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
                               <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">VIN:</span>
                               <span className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">{workOrder.vehicle.vin}</span>
                             </div>
-                          )}
-                        </div>
-                      </div>
+          )}
+        </div>
+      </div>
                     )}
                   </>
                 ) : (
                   <p className="text-gray-900 dark:text-gray-100">{workOrder.vehicle_info || "-"}</p>
                 )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+    </div>
+  </CardContent>
+</Card>
 
 
         {/* Customer Concerns */}

@@ -5,6 +5,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
 import { inspectionsApi } from "@/lib/api/inspections";
+import { diagnosisApi } from "@/lib/api/diagnosis";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -241,40 +242,61 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
           variant: "destructive",
         });
       } else {
-        toast({
-          title: "Error",
+      toast({
+        title: "Error",
           description: errorMessage,
-          variant: "destructive",
-        });
+        variant: "destructive",
+      });
       }
     },
   });
 
-  // Start Diagnosis (Phase 1: Diagnosis)
+  // Start Diagnosis (Phase 1: Diagnosis) - Using new diagnosis system
   const startDiagnosisMutation = useMutation({
     mutationFn: async (data?: { primary_technician?: number; initial_notes?: string; priority?: string }) => {
-      // First start diagnosis
+      // Check if diagnosis already exists for this work order
+      let diagnosis = await diagnosisApi.getByWorkOrder(workOrderId);
+      
+      if (!diagnosis) {
+        // Create new Diagnosis record using the new diagnosis system
+        const customerComplaint = currentWorkOrder?.customer_concerns || "No complaint specified";
+        diagnosis = await diagnosisApi.create({
+          work_order: workOrderId,
+          technician: data?.primary_technician || undefined,
+          customer_complaint: customerComplaint,
+          initial_observations: data?.initial_notes || undefined,
+        });
+      }
+      
+      // Update work order status to diagnosis
       await workordersApi.startDiagnosis(workOrderId);
       
-      // Then update work order with additional info if provided
-      if (data && (data.primary_technician || data.initial_notes || data.priority)) {
+      // Update work order with additional info if provided
+      if (data && (data.primary_technician || data.priority)) {
         const updateData: any = {};
         if (data.primary_technician) updateData.primary_technician = data.primary_technician;
-        if (data.initial_notes) updateData.diagnosis_notes = data.initial_notes;
         if (data.priority) updateData.priority = data.priority;
         
         await workordersApi.update(workOrderId, updateData);
       }
+      
+      return diagnosis;
     },
-    onSuccess: () => {
-      toast({ title: "Success", description: "Diagnosis started." });
+    onSuccess: (diagnosis) => {
+      toast({ 
+        title: "Success", 
+        description: "Diagnosis started. Redirecting to diagnosis page..." 
+      });
       setShowStartDiagnosisDialog(false);
       refreshWorkOrder();
+      // Navigate to the diagnosis detail page
+      router.push(`/workorders/${workOrderId}/diagnosis`);
     },
     onError: (error: any) => {
+      console.error("Start diagnosis error:", error);
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to start diagnosis",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to start diagnosis",
         variant: "destructive",
       });
     },
@@ -604,18 +626,17 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
       case "diagnosis":
         actions.push(
           {
-            label: "Complete Diagnosis",
-            icon: CheckCircle,
-            onClick: () => setShowCompleteDiagnosisDialog(true),
-            disabled: completeDiagnosisMutation.isPending,
-            description: "Finish diagnosis and create estimate",
+            label: "Open Diagnosis",
+            icon: Eye,
+            onClick: () => router.push(`/workorders/${workOrderId}/diagnosis`),
+            variant: "default",
+            description: "View and manage diagnosis details",
           },
           {
             label: "Request Approval",
             icon: Send,
             onClick: () => setShowRequestApprovalDialog(true),
             disabled: requestApprovalMutation.isPending,
-            variant: "outline",
             description: "Request customer approval for existing estimate",
           }
         );
@@ -1513,7 +1534,7 @@ function StartDiagnosisForm({
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
             <p className="text-sm text-blue-800 dark:text-blue-400">
               <AlertCircle className="w-4 h-4 inline mr-1" />
-              Diagnosis will begin. You can add detailed diagnosis notes when completing the diagnosis.
+              Diagnosis will begin and you'll be redirected to the diagnosis page where you can add diagnostic codes, tests, findings, and recommendations.
             </p>
           </div>
         </div>

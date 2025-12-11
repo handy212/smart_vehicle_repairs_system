@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, FileText, User, Car, DollarSign, Calendar, Wrench, Package, MessageSquare, Image, Clock, Plus, Printer } from "lucide-react";
+import { ArrowLeft, Edit, FileText, User, Car, DollarSign, Calendar, Wrench, Package, MessageSquare, Image, Clock, Plus, Printer, Search } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import WorkOrderOverviewTab from "./components/OverviewTab";
@@ -19,6 +19,7 @@ import WorkOrderTasksTab from "./components/TasksTab";
 import WorkOrderPartsTab from "./components/PartsTab";
 import WorkOrderNotesTab from "./components/NotesTab";
 import PhotosTab from "./components/PhotosTab";
+import DiagnosisTab from "./components/DiagnosisTab";
 
 export default function WorkOrderDetailPage() {
   const params = useParams();
@@ -182,6 +183,10 @@ export default function WorkOrderDetailPage() {
             <Image className="w-4 h-4 mr-2" />
             Photos
           </TabsTrigger>
+          <TabsTrigger value="diagnosis">
+            <Search className="w-4 h-4 mr-2" />
+            Diagnosis
+          </TabsTrigger>
           <TabsTrigger value="timeline">
             <Clock className="w-4 h-4 mr-2" />
             Timeline
@@ -218,6 +223,14 @@ export default function WorkOrderDetailPage() {
 
         <TabsContent value="photos" className="mt-6">
           <PhotosTab workOrderId={workOrderId} />
+        </TabsContent>
+
+        <TabsContent value="diagnosis" className="mt-6">
+          <DiagnosisTab 
+            workOrderId={workOrderId} 
+            workOrder={workOrder}
+            onRefresh={refreshData}
+          />
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-6">
