@@ -78,7 +78,14 @@ echo -e "${YELLOW}[4/10] Verifying installations...${NC}"
 python3 --version
 node --version
 npm --version
-postgresql --version
+# PostgreSQL - check via psql client or service status
+if command -v psql &> /dev/null; then
+    psql --version
+elif systemctl list-unit-files | grep -q postgresql; then
+    echo "PostgreSQL installed (service: $(systemctl status postgresql --no-pager -l | head -1 | awk '{print $2}'))"
+else
+    echo -e "${YELLOW}Warning: Could not verify PostgreSQL installation${NC}"
+fi
 redis-server --version
 nginx -v
 
