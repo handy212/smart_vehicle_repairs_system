@@ -66,6 +66,7 @@ htmlcov/
 .coverage.*
 coverage.xml
 *.cover
+docs/
 
 # pytest
 .pytest_cache/
