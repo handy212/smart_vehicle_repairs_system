@@ -19,6 +19,7 @@ wheels/
 .installed.cfg
 *.egg
 
+
 # Virtual Environment
 venv/
 ENV/
@@ -66,7 +67,12 @@ htmlcov/
 .coverage.*
 coverage.xml
 *.cover
+
+# Documentation - exclude docs folder and all .md files except README files
 docs/
+*.md
+!README*.md
+!**/README*.md
 
 # pytest
 .pytest_cache/
