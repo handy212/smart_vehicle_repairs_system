@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { Plus, Search, Wrench, LayoutGrid, Trash2, Download } from "lucide-react";
+import { Plus, Search, Wrench, LayoutGrid, Trash2, Download, X, ChevronDown, MoreVertical, Eye, Edit, FileText, Printer, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +22,8 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 export default function WorkOrdersPage() {
   const [search, setSearch] = useState("");
@@ -34,8 +36,11 @@ export default function WorkOrdersPage() {
   const [newStatus, setNewStatus] = useState<string>("in_progress");
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
   // Advanced filter options
   const filterOptions: FilterOption[] = [
@@ -110,7 +115,7 @@ export default function WorkOrdersPage() {
   };
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["workorders", page, debouncedSearch, statusFilter, startDate, endDate, advancedFilters, sortConfig],
+    queryKey: ["workorders", page, debouncedSearch, advancedFilters, sortConfig],
     queryFn: () => {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
@@ -118,10 +123,10 @@ export default function WorkOrdersPage() {
       return workordersApi.list({
         page,
         search: debouncedSearch || undefined,
-        status: advancedFilters.status || statusFilter || undefined,
+        status: advancedFilters.status || undefined,
         priority: advancedFilters.priority || undefined,
-        created_at__gte: advancedFilters.created_at_from || startDate || undefined,
-        created_at__lte: advancedFilters.created_at_to || endDate || undefined,
+        created_at__gte: advancedFilters.created_at_from || undefined,
+        created_at__lte: advancedFilters.created_at_to || undefined,
         ordering,
       });
     },
@@ -304,100 +309,169 @@ export default function WorkOrdersPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
+          <div className="relative">
+            <Button
+              variant="outline"
+              onClick={() => setShowActionsMenu(!showActionsMenu)}
+              className="dark:border-gray-700 dark:text-gray-200"
+            >
+              Actions
+              <ChevronDown className="w-4 h-4 ml-2" />
+            </Button>
+            {showActionsMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowActionsMenu(false)}
+                />
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                  <div className="py-1">
+                    <PermissionGuard permission="export_workorders">
+                      <button
+                        onClick={() => {
+                          handleExport();
+                          setShowActionsMenu(false);
+                        }}
+                        disabled={!data?.results || data.results.length === 0}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export CSV
+                      </button>
+                    </PermissionGuard>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <Link href="/workorders/kanban">
             <Button variant="outline">
               <LayoutGrid className="w-4 h-4 mr-2" />
               Kanban View
             </Button>
           </Link>
-          <Link href="/workorders/new">
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              New Work Order
-            </Button>
-          </Link>
+          <PermissionGuard permission="create_workorders">
+            <Link href="/workorders/new">
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                New Work Order
+              </Button>
+            </Link>
+          </PermissionGuard>
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
-                <Input
-                  type="text"
-                  placeholder="Search work orders..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="pl-10"
-                />
-              </div>
-              <AdvancedFilters
-                filters={filterOptions}
-                quickFilters={quickFilters}
-                activeFilters={advancedFilters}
-                onFiltersChange={(filters) => {
-                  setAdvancedFilters(filters);
-                  setPage(1);
-                }}
-                onClear={() => {
-                  setAdvancedFilters({});
-                  setStatusFilter("");
-                  setStartDate("");
-                  setEndDate("");
-                }}
-                title="Advanced Work Order Filters"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Status
-                </label>
-                <Select
-                  id="status-filter"
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setPage(1);
-                  }}
-                >
-                  <option value="">All Statuses</option>
-                  <option value="draft">Draft</option>
-                  <option value="pending">Pending</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </Select>
-              </div>
-              <div className="md:col-span-2">
-                <DateRangePicker
-                  startDate={startDate}
-                  endDate={endDate}
-                  onStartDateChange={(date) => {
-                    setStartDate(date);
-                    setPage(1);
-                  }}
-                  onEndDateChange={(date) => {
-                    setEndDate(date);
-                    setPage(1);
-                  }}
-                  label="Created Date Range"
-                />
-              </div>
-            </div>
+      {/* Compact Filter Bar */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Search work orders..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 h-9"
+            />
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Advanced Filters Button */}
+          <AdvancedFilters
+            filters={filterOptions}
+            quickFilters={quickFilters}
+            activeFilters={advancedFilters}
+            onFiltersChange={(filters) => {
+              setAdvancedFilters(filters);
+              setPage(1);
+            }}
+            onClear={() => {
+              setAdvancedFilters({});
+              setStatusFilter("");
+              setStartDate("");
+              setEndDate("");
+            }}
+            title="Advanced Work Order Filters"
+          />
+
+          {/* Clear Filters */}
+          {(search || Object.keys(advancedFilters).length > 0) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearch("");
+                setAdvancedFilters({});
+                setStatusFilter("");
+                setStartDate("");
+                setEndDate("");
+                setPage(1);
+              }}
+              className="h-9"
+            >
+              <X className="w-4 h-4 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
+
+        {/* Active Filter Badges */}
+        {(search || Object.keys(advancedFilters).length > 0) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {search && (
+              <Badge variant="secondary" className="flex items-center gap-1.5">
+                <span className="text-xs">Search: {search}</span>
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setPage(1);
+                  }}
+                  className="hover:text-red-600"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
+            {Object.entries(advancedFilters).map(([key, value]) => {
+              if (!value || (typeof value === 'string' && value === '')) return null;
+              const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
+              if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
+              if (key.includes("_to")) return null;
+              
+              const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
+                ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
+                : String(value);
+              
+              const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
+
+              return (
+                <Badge key={key} variant="secondary" className="flex items-center gap-1.5">
+                  <span className="text-xs">{displayLabel}: {displayValue}</span>
+                  <button
+                    onClick={() => {
+                      const newFilters = { ...advancedFilters };
+                      if (key.includes("_from")) {
+                        delete newFilters[key];
+                        delete newFilters[key.replace("_from", "_to")];
+                      } else {
+                        delete newFilters[key];
+                      }
+                      setAdvancedFilters(newFilters);
+                      setPage(1);
+                    }}
+                    className="hover:text-red-600"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Bulk Action Toolbar */}
       <BulkActionToolbar
@@ -514,23 +588,78 @@ export default function WorkOrdersPage() {
                           ? format(new Date(workorder.created_at), "MMM dd, yyyy")
                           : "-"}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Link
-                            href={`/workorders/${workorder.id}`}
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 text-sm font-medium"
-                          >
-                            View
-                          </Link>
+                      <TableCell className="text-right">
+                        <div className="relative flex justify-end">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(workorder)}
-                            disabled={deleteMutation.isPending}
-                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            onClick={() => setActionMenuOpen(actionMenuOpen === workorder.id ? null : workorder.id)}
+                            className="h-8 w-8 p-0 dark:hover:bg-gray-700"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <MoreVertical className="w-4 h-4" />
                           </Button>
+                          {actionMenuOpen === workorder.id && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setActionMenuOpen(null)}
+                              />
+                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                                <div className="py-1">
+                                  <Link
+                                    href={`/workorders/${workorder.id}`}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                    onClick={() => setActionMenuOpen(null)}
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View Details
+                                  </Link>
+                                  <Link
+                                    href={`/workorders/${workorder.id}/edit`}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                    onClick={() => setActionMenuOpen(null)}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                    Edit Work Order
+                                  </Link>
+                                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                                  <Link
+                                    href={`/workorders/${workorder.id}/print`}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                    onClick={() => setActionMenuOpen(null)}
+                                    target="_blank"
+                                  >
+                                    <Printer className="w-4 h-4" />
+                                    Print Job Card
+                                  </Link>
+                                  <Link
+                                    href={`/workorders/${workorder.id}/diagnosis`}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                    onClick={() => setActionMenuOpen(null)}
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                    View Diagnosis
+                                  </Link>
+                                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                                    <PermissionGuard permission="delete_workorders">
+                                      <button
+                                        onClick={() => {
+                                          if (window.confirm(`Are you sure you want to delete work order "${workorder.work_order_number}"? This action cannot be undone.`)) {
+                                            handleDelete(workorder);
+                                          }
+                                          setActionMenuOpen(null);
+                                        }}
+                                        disabled={deleteMutation.isPending}
+                                        className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                        Delete Work Order
+                                      </button>
+                                    </PermissionGuard>
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

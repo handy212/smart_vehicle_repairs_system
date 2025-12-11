@@ -120,6 +120,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Branches", href: "/admin/branches" },
     { name: "Backups", href: "/admin/backups" },
     { name: "Settings", href: "/admin/settings" },
+    { name: "Email Templates", href: "/admin/settings/email-templates" },
     { name: "Audit Log", href: "/admin/audit-log" },
     { name: "Import History", href: "/admin/import-history" },
   ],

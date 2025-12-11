@@ -63,6 +63,7 @@ export default function RecordPaymentDialog({
   const amount = watch("amount") || 0;
   const balanceDue = parseFloat(invoice.balance_due || invoice.total || "0");
   const isOverPayment = amount > balanceDue;
+  const overPaymentAmount = isOverPayment ? (amount - balanceDue) : 0;
 
   const createPaymentMutation = useMutation({
     mutationFn: (data: PaymentFormData) =>
@@ -200,9 +201,17 @@ export default function RecordPaymentDialog({
               <p className="mt-1 text-sm text-red-600">{errors.amount.message}</p>
             )}
             {isOverPayment && (
-              <p className="mt-1 text-sm text-amber-600">
-                Warning: Payment amount exceeds balance due. Overpayment will be applied as credit.
-              </p>
+              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <p className="text-sm font-medium text-amber-800">
+                  Overpayment Detected
+                </p>
+                <p className="text-sm text-amber-700 mt-1">
+                  Payment amount (${amount.toFixed(2)}) exceeds balance due (${balanceDue.toFixed(2)}).
+                </p>
+                <p className="text-sm text-amber-700 mt-1">
+                  Overpayment of <strong>${overPaymentAmount.toFixed(2)}</strong> will be applied as customer credit.
+                </p>
+              </div>
             )}
           </div>
 
@@ -268,8 +277,13 @@ export default function RecordPaymentDialog({
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting || isOverPayment}>
-            {isSubmitting ? "Recording..." : "Record Payment"}
+          <Button 
+            type="button" 
+            onClick={handleSubmit(onSubmit)} 
+            disabled={isSubmitting}
+            className={isOverPayment ? "bg-amber-600 hover:bg-amber-700" : ""}
+          >
+            {isSubmitting ? "Recording..." : isOverPayment ? `Record Payment (Credit: $${overPaymentAmount.toFixed(2)})` : "Record Payment"}
           </Button>
         </DialogFooter>
       </DialogContent>

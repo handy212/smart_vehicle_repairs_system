@@ -1,14 +1,16 @@
 "use client";
 
 import { Button } from "./button";
-import { X, Trash2, CheckCircle } from "lucide-react";
+import { X, Trash2, CheckCircle, Mail, FileText } from "lucide-react";
 
 interface BulkActionToolbarProps {
   selectedCount: number;
   onClearSelection: () => void;
   onBulkDelete?: () => void;
   onBulkStatusUpdate?: () => void;
+  onBulkSend?: () => void;
   showStatusUpdate?: boolean;
+  showBulkSend?: boolean;
   className?: string;
 }
 
@@ -17,7 +19,9 @@ export function BulkActionToolbar({
   onClearSelection,
   onBulkDelete,
   onBulkStatusUpdate,
+  onBulkSend,
   showStatusUpdate = false,
+  showBulkSend = false,
   className = "",
 }: BulkActionToolbarProps) {
   if (selectedCount === 0) return null;
@@ -41,6 +45,17 @@ export function BulkActionToolbar({
           </Button>
         </div>
         <div className="flex items-center gap-2">
+          {showBulkSend && onBulkSend && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onBulkSend}
+              className="h-8"
+            >
+              <Mail className="w-4 h-4 mr-1" />
+              Send Selected
+            </Button>
+          )}
           {showStatusUpdate && onBulkStatusUpdate && (
             <Button
               variant="outline"

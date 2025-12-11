@@ -16,49 +16,50 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal,
   Stethoscope,
+  Keyboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
-// Group navigation items by category for better organization
+// Group navigation items by category for better organization with permission requirements
 const navigationGroups = [
   {
     name: "Main",
     items: [
-      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permission: "view_dashboard" },
     ],
   },
   {
     name: "Operations",
     items: [
-      { name: "Customers", href: "/customers", icon: Users },
-      { name: "Vehicles", href: "/vehicles", icon: Car },
-      { name: "Appointments", href: "/appointments", icon: Calendar },
-      { name: "Work Orders", href: "/workorders", icon: Wrench },
+      { name: "Customers", href: "/customers", icon: Users, permission: "view_customers" },
+      { name: "Vehicles", href: "/vehicles", icon: Car, permission: "view_vehicles" },
+      { name: "Appointments", href: "/appointments", icon: Calendar, permission: "view_appointments" },
+      { name: "Work Orders", href: "/workorders", icon: Wrench, permission: "view_workorders" },
     ],
   },
   {
     name: "Inventory & Billing",
     items: [
-      { name: "Inventory", href: "/inventory", icon: Package },
-      { name: "Billing", href: "/billing", icon: Receipt },
+      { name: "Inventory", href: "/inventory", icon: Package, permission: "view_inventory" },
+      { name: "Billing", href: "/billing", icon: Receipt, permission: "view_billing" },
     ],
   },
   {
     name: "Tools & Reports",
     items: [
-      { name: "Inspections", href: "/inspections", icon: FileText },
-      { name: "Diagnosis", href: "/diagnosis", icon: Stethoscope },
-      { name: "Reports", href: "/reports", icon: BarChart3 },
+      { name: "Inspections", href: "/inspections", icon: FileText, permission: "view_inspections" },
+      { name: "Diagnosis", href: "/diagnosis", icon: Stethoscope, permission: "view_diagnosis" },
+      { name: "Reports", href: "/reports", icon: BarChart3, permission: "view_reports" },
     ],
   },
   {
     name: "System",
     items: [
-      { name: "Notifications", href: "/notifications", icon: Bell },
-      { name: "Administration", href: "/admin", icon: Settings },
+      { name: "Notifications", href: "/notifications", icon: Bell, permission: undefined },
+      { name: "Administration", href: "/admin", icon: Settings, permission: "view_admin" },
     ],
   },
 ];
@@ -92,29 +93,20 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
           isCollapsed ? "w-20" : "w-64"
         )}
       >
-      {/* Collapse/Expand Toggle Button - Positioned at the top of sidebar */}
+      {/* Collapse/Expand Toggle Button - Inside sidebar at top */}
       {onToggleCollapse && (
-        <div
-          className={cn(
-            "hidden lg:block fixed z-50 transition-all duration-300 ease-in-out",
-            isCollapsed ? "left-20" : "left-64"
-          )}
-          style={{ 
-            top: '4rem', // 64px - at the top, aligned with header
-            transform: "translateX(-50%)" 
-          }}
-        >
+        <div className="hidden lg:flex items-center justify-end p-3 border-b border-gray-200 dark:border-gray-800">
           <Button
-            variant="default"
+            variant="ghost"
             size="icon"
             onClick={onToggleCollapse}
-            className="h-10 w-10 rounded-full shadow-md border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-lg transition-all"
-            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="h-8 w-8 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+            title={`${isCollapsed ? "Expand" : "Collapse"} sidebar (Ctrl+B)`}
           >
             {isCollapsed ? (
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-4 h-4" />
             ) : (
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-4 h-4" />
             )}
           </Button>
         </div>
@@ -132,7 +124,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
                 const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
                 const Icon = item.icon;
                 
-                return (
+                const navItem = (
                   <Link
                     key={item.name}
                     href={item.href}
@@ -146,14 +138,14 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
                       "group flex items-center rounded-lg transition-all duration-200 relative",
                       isCollapsed ? "px-2 py-2.5 justify-center" : "px-3 py-2.5",
                       isActive
-                        ? "bg-gradient-to-r from-blue-50 dark:from-blue-900/30 to-blue-50/50 dark:to-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm"
+                        ? "bg-gradient-to-r from-blue-50 dark:from-blue-900/30 to-blue-50/50 dark:to-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm font-medium"
                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
                     )}
                     title={isCollapsed ? item.name : undefined}
                   >
                     {/* Active indicator */}
                     {isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-r-full" />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 dark:bg-blue-500 rounded-r-full" />
                     )}
                     <Icon
                       className={cn(
@@ -168,12 +160,24 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
                       <>
                         <span className="flex-1">{item.name}</span>
                         {isActive && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-blue-600 ml-auto" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 ml-auto" />
                         )}
                       </>
                     )}
                   </Link>
                 );
+
+                // Wrap with permission guard if permission is specified
+                if (item.permission) {
+                  return (
+                    <PermissionGuard key={item.name} permission={item.permission}>
+                      {navItem}
+                    </PermissionGuard>
+                  );
+                }
+
+                // No permission check - show item
+                return navItem;
               })}
             </div>
           </div>

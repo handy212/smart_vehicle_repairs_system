@@ -72,6 +72,7 @@ class SystemSettings(models.Model):
     @classmethod
     def set_setting(cls, key, value, category='general', description='', user=None):
         """Set or update a setting"""
+        from .settings_utils import clear_setting_cache
         setting, created = cls.objects.update_or_create(
             key=key,
             defaults={
@@ -81,7 +82,28 @@ class SystemSettings(models.Model):
                 'updated_by': user
             }
         )
+        # Clear cache for this specific setting
+        clear_setting_cache(key)
         return setting
+    
+    def save(self, *args, **kwargs):
+        """Override save to clear cache when settings are updated"""
+        from .settings_utils import clear_setting_cache
+        # Get the old key before saving (in case key changed)
+        old_key = None
+        if self.pk:
+            try:
+                old_setting = SystemSettings.objects.get(pk=self.pk)
+                old_key = old_setting.key
+            except SystemSettings.DoesNotExist:
+                pass
+        
+        super().save(*args, **kwargs)
+        
+        # Clear cache for both old and new keys
+        if old_key and old_key != self.key:
+            clear_setting_cache(old_key)
+        clear_setting_cache(self.key)
 
     @classmethod
     def ensure_tax_settings(cls):

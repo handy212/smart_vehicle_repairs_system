@@ -5,12 +5,15 @@ import { inspectionsApi, InspectionTemplate } from "@/lib/api/inspections";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Plus, ArrowLeft } from "lucide-react";
+import { FileText, Plus, ArrowLeft, MoreVertical, Eye, Edit, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function InspectionTemplatesPage() {
+  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
+  
   const { data, isLoading } = useQuery({
     queryKey: ["inspection-templates", "list"],
     queryFn: () => inspectionsApi.templates.list({ page: 1 }),
@@ -42,10 +45,12 @@ export default function InspectionTemplatesPage() {
             </p>
           </div>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          New Template
-        </Button>
+        <Link href="/inspections/templates/new">
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            New Template
+          </Button>
+        </Link>
       </div>
 
       <Card>
@@ -61,10 +66,12 @@ export default function InspectionTemplatesPage() {
                 Get started by creating a new inspection template.
               </p>
               <div className="mt-6">
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Template
-                </Button>
+                <Link href="/inspections/templates/new">
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Template
+                  </Button>
+                </Link>
               </div>
             </div>
           ) : (
@@ -78,7 +85,7 @@ export default function InspectionTemplatesPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Created By</TableHead>
                     <TableHead>Created</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -109,12 +116,45 @@ export default function InspectionTemplatesPage() {
                       <TableCell>
                         {format(new Date(template.created_at), "MMM dd, yyyy")}
                       </TableCell>
-                      <TableCell>
-                        <Link href={`/inspections/templates/${template.id}`}>
-                          <Button variant="outline" size="sm">
-                            View
+                      <TableCell className="text-right">
+                        <div className="relative flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setActionMenuOpen(actionMenuOpen === template.id ? null : template.id)}
+                            className="h-8 w-8 p-0 dark:hover:bg-gray-700"
+                          >
+                            <MoreVertical className="w-4 h-4" />
                           </Button>
-                        </Link>
+                          {actionMenuOpen === template.id && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setActionMenuOpen(null)}
+                              />
+                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                                <div className="py-1">
+                                  <Link
+                                    href={`/inspections/templates/${template.id}`}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                    onClick={() => setActionMenuOpen(null)}
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View Template
+                                  </Link>
+                                  <Link
+                                    href={`/inspections/templates/${template.id}/edit`}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                    onClick={() => setActionMenuOpen(null)}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                    Edit Template
+                                  </Link>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

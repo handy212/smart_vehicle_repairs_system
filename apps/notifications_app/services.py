@@ -1,11 +1,13 @@
-from django.core.mail import send_mail
-from django.conf import settings
-from django.template import Template, Context
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.conf import settings as django_settings
 from django.utils import timezone
+from decimal import Decimal
+from string import Formatter
 import logging
 
 from .models import Notification, NotificationLog
 from .firebase import send_push_notification, is_firebase_available
+from apps.accounts.settings_utils import get_setting, get_email_settings, get_notification_settings
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,46 @@ class NotificationService:
                 notification.mark_as_failed("Notification expired")
                 self._log_action(notification, 'failed', 'Notification expired')
                 return False
+            
+            # Check system-level notification settings first
+            notification_settings = get_notification_settings()
+            
+            # Check if channel is globally enabled
+            channel_enabled = {
+                'email': notification_settings.get('notification_email_enabled', 'true').lower() == 'true',
+                'sms': notification_settings.get('notification_sms_enabled', 'true').lower() == 'true',
+                'push': notification_settings.get('notification_push_enabled', 'true').lower() == 'true',
+            }.get(notification.channel, True)
+            
+            if not channel_enabled:
+                notification.mark_as_failed(f"Channel {notification.channel} is disabled in system settings")
+                self._log_action(notification, 'failed', f'Channel {notification.channel} disabled globally')
+                return False
+            
+            # Check system quiet hours
+            quiet_hours_start = notification_settings.get('notification_quiet_hours_start', '22:00')
+            quiet_hours_end = notification_settings.get('notification_quiet_hours_end', '08:00')
+            
+            if quiet_hours_start and quiet_hours_end:
+                from datetime import datetime, time
+                try:
+                    start_time = datetime.strptime(quiet_hours_start, '%H:%M').time()
+                    end_time = datetime.strptime(quiet_hours_end, '%H:%M').time()
+                    current_time = timezone.now().time()
+                    
+                    # Handle overnight quiet hours (e.g., 22:00 to 08:00)
+                    if start_time > end_time:  # Overnight
+                        if current_time >= start_time or current_time <= end_time:
+                            notification.mark_as_failed("Notification blocked by system quiet hours")
+                            self._log_action(notification, 'failed', f'Blocked by quiet hours ({quiet_hours_start}-{quiet_hours_end})')
+                            return False
+                    else:  # Same day
+                        if start_time <= current_time <= end_time:
+                            notification.mark_as_failed("Notification blocked by system quiet hours")
+                            self._log_action(notification, 'failed', f'Blocked by quiet hours ({quiet_hours_start}-{quiet_hours_end})')
+                            return False
+                except (ValueError, AttributeError):
+                    pass  # Skip quiet hours check if parsing fails
             
             # Check user preferences
             if hasattr(notification.recipient, 'notification_preferences'):
@@ -60,7 +102,7 @@ class NotificationService:
     
     def _send_email(self, notification):
         """
-        Send email notification
+        Send email notification with HTML support
         """
         try:
             recipient_email = notification.recipient.email
@@ -69,17 +111,40 @@ class NotificationService:
             if notification.template and notification.template.subject:
                 subject = self._render_template(notification.template.subject, notification.data)
                 body = self._render_template(notification.template.body, notification.data)
+                html_body = None
+                if notification.template.html_body:
+                    html_body = self._render_template(notification.template.html_body, notification.data)
             else:
                 subject = notification.title
                 body = notification.message
+                html_body = None
             
-            send_mail(
-                subject=subject,
-                message=body,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[recipient_email],
-                fail_silently=False,
-            )
+            # Get email from address from settings, fallback to Django default
+            email_settings = get_email_settings()
+            from_email = email_settings.get('email_from_address') or django_settings.DEFAULT_FROM_EMAIL
+            from_name = email_settings.get('email_from_name', '')
+            if from_name:
+                # Format: "Name <email@example.com>"
+                from_email = f"{from_name} <{from_email}>"
+            
+            # Use EmailMultiAlternatives if HTML content exists, otherwise use send_mail
+            if html_body:
+                email = EmailMultiAlternatives(
+                    subject=subject,
+                    body=body,
+                    from_email=from_email,
+                    to=[recipient_email],
+                )
+                email.attach_alternative(html_body, "text/html")
+                email.send()
+            else:
+                send_mail(
+                    subject=subject,
+                    message=body,
+                    from_email=from_email,
+                    recipient_list=[recipient_email],
+                    fail_silently=False,
+                )
             
             notification.mark_as_sent()
             notification.mark_as_delivered()
@@ -242,12 +307,58 @@ class NotificationService:
     
     def _render_template(self, template_string, context_data):
         """
-        Render a template string with context data
+        Render a template string with context data using Python .format() syntax.
+        Supports {variable} syntax (not Django Template {{variable}}).
+        
+        Handles missing keys gracefully by leaving them as {key} in the output.
         """
         try:
-            template = Template(template_string)
-            context = Context(context_data)
-            return template.render(context)
+            if not template_string:
+                return ""
+            
+            if not context_data:
+                return template_string
+            
+            # Convert all values to strings for safety, but preserve None as empty string
+            safe_context = {}
+            for key, value in context_data.items():
+                if value is None:
+                    safe_context[key] = ""
+                elif isinstance(value, (int, float, Decimal)):
+                    safe_context[key] = str(value)
+                elif isinstance(value, (list, dict)):
+                    safe_context[key] = str(value)
+                else:
+                    safe_context[key] = str(value)
+            
+            # Use .format() with safe replacement
+            # Handle missing keys by using a custom formatter
+            from string import Formatter
+            
+            formatter = Formatter()
+            result_parts = []
+            last_end = 0
+            
+            for literal_text, field_name, format_spec, conversion in formatter.parse(template_string):
+                # Add literal text
+                if literal_text:
+                    result_parts.append(literal_text)
+                
+                # Handle field replacement
+                if field_name:
+                    if field_name in safe_context:
+                        value = safe_context[field_name]
+                        # Apply format spec and conversion if any
+                        if conversion:
+                            value = formatter.convert_field(value, conversion)
+                        if format_spec:
+                            value = format(value, format_spec)
+                        result_parts.append(str(value))
+                    else:
+                        # Missing key - keep as placeholder
+                        result_parts.append(f"{{{field_name}}}")
+            
+            return ''.join(result_parts)
         except Exception as e:
             logger.error(f"Template rendering error: {str(e)}")
             return template_string

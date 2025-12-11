@@ -62,7 +62,56 @@ class BranchCreateUpdateSerializer(serializers.ModelSerializer):
         ]
     
     def validate_code(self, value):
-        """Ensure code is uppercase"""
+        """Ensure code is uppercase and valid"""
         if value:
-            return value.upper()
+            value = value.upper().strip()
+            # Check if code matches pattern (only uppercase letters and numbers)
+            import re
+            if not re.match(r'^[A-Z0-9]+$', value):
+                raise serializers.ValidationError(
+                    'Branch code must contain only uppercase letters and numbers'
+                )
+            # Check uniqueness (exclude current instance if updating)
+            instance = self.instance
+            if instance and Branch.objects.filter(code=value).exclude(pk=instance.pk).exists():
+                raise serializers.ValidationError(
+                    'A branch with this code already exists'
+                )
+            elif not instance and Branch.objects.filter(code=value).exists():
+                raise serializers.ValidationError(
+                    'A branch with this code already exists'
+                )
         return value
+    
+    def validate_name(self, value):
+        """Validate branch name"""
+        if value:
+            value = value.strip()
+            if len(value) < 2:
+                raise serializers.ValidationError('Branch name must be at least 2 characters long')
+            # Check uniqueness (exclude current instance if updating)
+            instance = self.instance
+            if Branch.objects.filter(name__iexact=value).exclude(pk=instance.pk if instance else None).exists():
+                raise serializers.ValidationError(
+                    'A branch with this name already exists'
+                )
+        return value
+    
+    def validate(self, data):
+        """Cross-field validation"""
+        # Validate opening/closing times
+        opening_time = data.get('opening_time')
+        closing_time = data.get('closing_time')
+        
+        if opening_time and closing_time:
+            if opening_time >= closing_time:
+                raise serializers.ValidationError({
+                    'closing_time': 'Closing time must be after opening time'
+                })
+        
+        # If setting as headquarters, ensure no other branch is headquarters
+        if data.get('is_headquarters') and not self.instance:
+            # Creating new headquarters - this is handled in model save()
+            pass
+        
+        return data

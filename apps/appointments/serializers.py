@@ -82,6 +82,15 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             'assigned_technicians'
         ]
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set default duration from system settings
+        from apps.accounts.settings_utils import get_business_settings
+        business_settings = get_business_settings()
+        default_duration = int(business_settings.get('appointment_duration', '60'))
+        if self.instance is None:  # Only for creation
+            self.fields['estimated_duration'].default = default_duration
+    
     def validate(self, attrs):
         """Validate appointment data"""
         appointment_date = attrs.get('appointment_date')
@@ -96,6 +105,40 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'appointment_date': 'Cannot schedule appointments in the past'
             })
+        
+        # Validate appointment is within business hours
+        from apps.accounts.settings_utils import get_business_settings
+        business_settings = get_business_settings()
+        
+        weekday = appointment_date.weekday()  # 0 = Monday, 6 = Sunday
+        if weekday == 5:  # Saturday
+            hours_str = business_settings.get('business_hours_saturday', '09:00-15:00')
+        elif weekday == 6:  # Sunday
+            hours_str = business_settings.get('business_hours_sunday', 'Closed')
+        else:  # Weekday
+            hours_str = business_settings.get('business_hours_weekday', '08:00-18:00')
+        
+        if hours_str.lower() == 'closed':
+            raise serializers.ValidationError({
+                'appointment_date': 'Business is closed on this day'
+            })
+        
+        try:
+            start_str, end_str = hours_str.split('-')
+            start_time = datetime.strptime(start_str.strip(), '%H:%M').time()
+            end_time = datetime.strptime(end_str.strip(), '%H:%M').time()
+            
+            # Get estimated duration
+            duration = attrs.get('estimated_duration', 60)
+            from datetime import timedelta
+            appointment_end = datetime.combine(appointment_date, appointment_time) + timedelta(minutes=duration)
+            
+            if appointment_time < start_time or appointment_end.time() > end_time:
+                raise serializers.ValidationError({
+                    'appointment_time': f'Appointment must be within business hours: {start_str} - {end_str}'
+                })
+        except (ValueError, AttributeError):
+            pass  # Skip validation if hours parsing fails
         
         # Check if vehicle belongs to customer
         vehicle = attrs.get('vehicle')

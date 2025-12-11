@@ -55,6 +55,25 @@ export interface NotificationListResponse {
   results: Notification[];
 }
 
+export interface NotificationTemplate {
+  id: number;
+  name: string;
+  template_type: string;
+  channel: string;
+  subject: string;
+  body: string;
+  html_body?: string;
+  sms_body?: string;
+  push_title?: string;
+  push_body?: string;
+  is_active: boolean;
+  variables?: Record<string, string>;
+  created_at: string;
+  updated_at: string;
+  created_by?: number;
+  created_by_name?: string;
+}
+
 export const notificationsApi = {
   list: async (params?: {
     page?: number;
@@ -110,6 +129,38 @@ export const notificationsApi = {
   updatePreferences: async (data: Partial<NotificationPreference>): Promise<NotificationPreference> => {
     const response = await apiClient.patch("/notifications/preferences/update_preferences/", data);
     return response.data;
+  },
+
+  // Templates
+  templates: {
+    list: async (params?: {
+      template_type?: string;
+      channel?: string;
+      is_active?: boolean;
+      search?: string;
+    }): Promise<NotificationTemplate[] | { results: NotificationTemplate[] }> => {
+      const response = await apiClient.get("/notifications/templates/", { params });
+      return response.data;
+    },
+
+    get: async (id: number): Promise<NotificationTemplate> => {
+      const response = await apiClient.get(`/notifications/templates/${id}/`);
+      return response.data;
+    },
+
+    create: async (data: Partial<NotificationTemplate>): Promise<NotificationTemplate> => {
+      const response = await apiClient.post("/notifications/templates/", data);
+      return response.data;
+    },
+
+    update: async (id: number, data: Partial<NotificationTemplate>): Promise<NotificationTemplate> => {
+      const response = await apiClient.patch(`/notifications/templates/${id}/`, data);
+      return response.data;
+    },
+
+    delete: async (id: number): Promise<void> => {
+      await apiClient.delete(`/notifications/templates/${id}/`);
+    },
   },
 };
 

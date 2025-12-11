@@ -5,6 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from apps.accounts.permissions import HasPermission, user_has_permission
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count, Sum, Avg
 from django.utils import timezone
@@ -31,6 +32,18 @@ class CustomerViewSet(viewsets.ModelViewSet):
     destroy: Delete customer (soft delete recommended)
     """
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_customers')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('create_customers')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_customers')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('delete_customers')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'customer_type', 'payment_terms', 'loyalty_tier']
     search_fields = [
@@ -47,6 +60,16 @@ class CustomerViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Get queryset with optimizations"""
         queryset = Customer.objects.select_related('user').prefetch_related('vehicles')
+        user = self.request.user
+        
+        # Filter based on permissions - if user can only view own, filter accordingly
+        if user_has_permission(user, 'view_own_customers') and not user_has_permission(user, 'view_customers'):
+            # User can only view own customer profile
+            if hasattr(user, 'customer_profile'):
+                queryset = queryset.filter(id=user.customer_profile.id)
+            else:
+                queryset = queryset.none()
+            return queryset
         
         # Filter by status (exclude inactive by default)
         if self.action == 'list':
@@ -321,6 +344,171 @@ class CustomerViewSet(viewsets.ModelViewSet):
             'message': f'Customer {customer.customer_number} has been activated',
             'status': customer.status
         })
+    
+    @action(detail=True, methods=['post'])
+    def reset_password(self, request, pk=None):
+        """
+        Admin action: Reset customer password and optionally send reset link via email
+        """
+        customer = self.get_object()
+        user = customer.user
+        
+        new_password = request.data.get('new_password')
+        send_email = request.data.get('send_email', False)
+        
+        if not new_password:
+            return Response(
+                {'detail': 'New password is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate password
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError
+        try:
+            validate_password(new_password, user)
+        except ValidationError as e:
+            return Response(
+                {'detail': 'Password validation failed.', 'errors': list(e.messages)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Set new password
+        user.set_password(new_password)
+        user.is_active = True  # Activate user if portal access is granted
+        user.save()
+        
+        # Send password reset email if requested
+        if send_email:
+            try:
+                self._send_password_reset_email(user, new_password, request)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send password reset email to {user.email}: {str(e)}")
+        
+        return Response({
+            'detail': 'Password reset successfully.',
+            'email_sent': send_email
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'])
+    def send_password_reset_link(self, request, pk=None):
+        """
+        Admin action: Send password reset link to customer via email
+        """
+        customer = self.get_object()
+        user = customer.user
+        
+        try:
+            self._send_password_reset_link_email(user, request)
+            return Response({
+                'detail': f'Password reset link sent to {user.email}'
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send password reset link to {user.email}: {str(e)}")
+            return Response(
+                {'detail': f'Failed to send password reset link: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def grant_portal_access(self, request, pk=None):
+        """
+        Grant portal access to customer (activate user account)
+        """
+        customer = self.get_object()
+        user = customer.user
+        password = request.data.get('password', None)
+        send_email = request.data.get('send_email', False)
+        
+        # Generate password if not provided
+        if not password:
+            import secrets
+            import string
+            alphabet = string.ascii_letters + string.digits + string.punctuation
+            password = ''.join(secrets.choice(alphabet) for i in range(16))
+        
+        # Validate password
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError
+        try:
+            validate_password(password, user)
+        except ValidationError as e:
+            return Response(
+                {'detail': 'Password validation failed.', 'errors': list(e.messages)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Set password and activate
+        user.set_password(password)
+        user.is_active = True
+        user.save()
+        
+        # Send welcome email if requested
+        if send_email:
+            try:
+                self._send_welcome_email(user, password, request)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send welcome email to {user.email}: {str(e)}")
+        
+        return Response({
+            'detail': 'Portal access granted successfully.',
+            'email_sent': send_email,
+            'password': password if not send_email else None  # Only return password if email not sent
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'])
+    def revoke_portal_access(self, request, pk=None):
+        """
+        Revoke portal access from customer (deactivate user account)
+        """
+        customer = self.get_object()
+        user = customer.user
+        
+        user.is_active = False
+        user.save()
+        
+        return Response({
+            'detail': 'Portal access revoked successfully.'
+        }, status=status.HTTP_200_OK)
+    
+    def _send_password_reset_email(self, user, new_password, request):
+        """Send email with new password to user using notification trigger"""
+        from apps.notifications_app.triggers import NotificationTriggers
+        
+        triggers = NotificationTriggers()
+        triggers.password_reset(user, new_password, request)
+    
+    def _send_password_reset_link_email(self, user, request):
+        """Send password reset link to user using notification trigger"""
+        from apps.notifications_app.triggers import NotificationTriggers
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+        
+        # Generate reset token
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        
+        # Build reset link (use customer portal reset URL)
+        reset_link = request.build_absolute_uri(f'/customer/reset-password/{uid}/{token}/')
+        
+        triggers = NotificationTriggers()
+        triggers.password_reset_link(user, reset_link, request)
+    
+    def _send_welcome_email(self, user, password, request):
+        """Send welcome email to customer"""
+        from apps.notifications_app.triggers import NotificationTriggers
+        
+        triggers = NotificationTriggers()
+        # Use user_welcome template for now (customers are users with role='customer')
+        if hasattr(triggers, 'user_welcome'):
+            triggers.user_welcome(user, password, 'customer', None)
 
 
 class CustomerNoteViewSet(viewsets.ModelViewSet):

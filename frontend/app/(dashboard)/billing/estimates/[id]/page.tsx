@@ -7,7 +7,8 @@ import { billingApi } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Mail, FileText, CheckCircle, XCircle, Download, Wrench, Printer } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { ArrowLeft, Edit, Mail, FileText, CheckCircle, XCircle, Download, Wrench, Printer, ChevronDown, MoreVertical, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +23,8 @@ export default function EstimateDetailPage() {
   const { toast } = useToast();
   const [isConverting, setIsConverting] = useState(false);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
 
   const { data: estimate, isLoading, error } = useQuery({
     queryKey: ["estimate", estimateId],
@@ -84,18 +87,21 @@ export default function EstimateDetailPage() {
   const convertToInvoiceMutation = useMutation({
     mutationFn: () => billingApi.estimates.convertToInvoice(estimateId),
     onSuccess: (invoice) => {
+      setIsConverting(false);
       toast({
         title: "Success",
         description: "Estimate converted to invoice successfully",
       });
+      queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       router.push(`/billing/invoices/${invoice.id}`);
     },
     onError: (error: any) => {
+      setIsConverting(false);
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to convert estimate",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to convert estimate",
         variant: "destructive",
       });
     },
@@ -104,18 +110,41 @@ export default function EstimateDetailPage() {
   const convertToWorkOrderMutation = useMutation({
     mutationFn: () => billingApi.estimates.convertToWorkOrder(estimateId),
     onSuccess: (data) => {
+      setIsConverting(false);
       toast({
         title: "Success",
         description: "Estimate converted to work order successfully",
       });
+      queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
       queryClient.invalidateQueries({ queryKey: ["estimates"] });
       queryClient.invalidateQueries({ queryKey: ["workorders"] });
       router.push(`/workorders/${data.work_order_id}`);
     },
     onError: (error: any) => {
+      setIsConverting(false);
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to convert estimate",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to convert estimate",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const approveEstimateMutation = useMutation({
+    mutationFn: () => billingApi.estimates.approve(estimateId),
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Estimate approved successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["estimate", estimateId] });
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      setLocalStatus("approved");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || error.response?.data?.error || "Failed to approve estimate",
         variant: "destructive",
       });
     },
@@ -181,6 +210,15 @@ export default function EstimateDetailPage() {
       setIsConverting(true);
       convertToWorkOrderMutation.mutate();
     }
+  };
+
+  const handleApproveEstimate = () => {
+    setShowApproveDialog(true);
+  };
+
+  const confirmApproveEstimate = () => {
+    setShowApproveDialog(false);
+    approveEstimateMutation.mutate();
   };
 
   if (isLoading) {
@@ -265,37 +303,127 @@ export default function EstimateDetailPage() {
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Estimate #{estimate.estimate_number}
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-300">
+                Estimate #{estimate.estimate_number}
+              </span>
+              {estimate.work_order && estimate.work_order_number && (
+                <Link href={`/workorders/${typeof estimate.work_order === 'object' ? estimate.work_order.id : estimate.work_order}`}>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors dark:bg-blue-950/20 dark:border-blue-800 dark:text-blue-400">
+                    <span className="h-2 w-2 rounded-full bg-blue-500" />
+                    Work Order #{estimate.work_order_number}
+                  </span>
+                </Link>
+              )}
+            </div>
+            <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">
               {estimate.customer_name || "Customer"}
             </p>
           </div>
         </div>
-        <div className="flex space-x-2 no-print">
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="w-4 h-4 mr-2" />
-            Print
-          </Button>
-          <Button variant="outline" onClick={handleDownloadPDF}>
-            <Download className="w-4 h-4 mr-2" />
-            Download PDF
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleSendEmail}
-            disabled={sendEmailMutation.isPending}
+        <div className="relative no-print">
+          <Button
+            variant="outline"
+            onClick={() => setShowActionsMenu(!showActionsMenu)}
+            className="gap-2"
           >
-            <Mail className="w-4 h-4 mr-2" />
-            {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
+            <MoreVertical className="w-4 h-4" />
+            Actions
+            <ChevronDown className={`w-4 h-4 transition-transform ${showActionsMenu ? 'rotate-180' : ''}`} />
           </Button>
-          <Link href={`/billing/estimates/${estimateId}/edit`}>
-            <Button>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit
-            </Button>
-          </Link>
+          
+          {showActionsMenu && (
+            <>
+              <div 
+                className="fixed inset-0 z-10" 
+                onClick={() => setShowActionsMenu(false)}
+              />
+              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      handlePrint();
+                      setShowActionsMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Print
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleDownloadPDF();
+                      setShowActionsMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download PDF
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSendEmail();
+                      setShowActionsMenu(false);
+                    }}
+                    disabled={sendEmailMutation.isPending}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Mail className="w-4 h-4" />
+                    {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
+                  </button>
+                  <Link href={`/billing/estimates/${estimateId}/edit`}>
+                    <button
+                      onClick={() => setShowActionsMenu(false)}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                  </Link>
+                  {estimate.can_be_approved && estimate.status !== "approved" && (
+                    <button
+                      onClick={() => {
+                        handleApproveEstimate();
+                        setShowActionsMenu(false);
+                      }}
+                      disabled={approveEstimateMutation.isPending}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed border-t border-gray-200 dark:border-gray-700 mt-1"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      {approveEstimateMutation.isPending ? "Approving..." : "Approve Estimate"}
+                    </button>
+                  )}
+                  {estimate.can_be_converted && estimate.status !== "converted" && (
+                    <>
+                      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                      <button
+                        onClick={() => {
+                          handleConvertToInvoice();
+                          setShowActionsMenu(false);
+                        }}
+                        disabled={isConverting}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <FileText className="w-4 h-4" />
+                        To Invoice
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleConvertToWorkOrder();
+                          setShowActionsMenu(false);
+                        }}
+                        disabled={isConverting}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Wrench className="w-4 h-4" />
+                        To Work Order
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -560,43 +688,6 @@ export default function EstimateDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {estimate.can_be_converted && estimate.status !== "converted" && (
-                <>
-                  <Button
-                    className="w-full"
-                    variant="default"
-                    onClick={handleConvertToInvoice}
-                    disabled={isConverting}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Convert to Invoice
-                  </Button>
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    onClick={handleConvertToWorkOrder}
-                    disabled={isConverting}
-                  >
-                    <Wrench className="w-4 h-4 mr-2" />
-                    Convert to Work Order
-                  </Button>
-                </>
-              )}
-              {estimate.can_be_approved && estimate.status !== "approved" && (
-                <Button className="w-full" variant="outline">
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Approve Estimate
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Estimate Info */}
           <Card>
             <CardHeader>
@@ -631,6 +722,64 @@ export default function EstimateDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Approve Estimate Confirmation Dialog */}
+      <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <DialogTitle className="text-xl">Approve Estimate {estimate?.estimate_number}</DialogTitle>
+            </div>
+            <DialogDescription className="pt-2">
+              <div className="space-y-4">
+                <p className="text-base text-gray-700 dark:text-gray-300">
+                  This will mark the estimate as <strong>approved by the customer</strong>.
+                </p>
+                
+                {estimate?.total && (
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Amount:</span>
+                      <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        ${parseFloat(estimate.total).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowApproveDialog(false)}
+              disabled={approveEstimateMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmApproveEstimate}
+              disabled={approveEstimateMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {approveEstimateMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Approving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Approve Estimate
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
     </>
   );

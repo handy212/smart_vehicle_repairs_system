@@ -23,6 +23,14 @@ class NotificationTemplate(models.Model):
         ('service_due', 'Service Due'),
         ('vehicle_ready', 'Vehicle Ready'),
         ('parts_arrived', 'Parts Arrived'),
+        ('estimate_sent', 'Estimate Sent'),
+        ('estimate_approved', 'Estimate Approved'),
+        ('estimate_declined', 'Estimate Declined'),
+        ('estimate_expiring_soon', 'Estimate Expiring Soon'),
+        ('estimate_expired', 'Estimate Expired'),
+        ('user_welcome', 'User Welcome'),
+        ('password_reset', 'Password Reset'),
+        ('password_reset_link', 'Password Reset Link'),
         ('custom', 'Custom'),
     ]
     

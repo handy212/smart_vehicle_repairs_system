@@ -13,13 +13,14 @@ from apps.appointments.serializers import AppointmentListSerializer
 
 class WorkOrderListSerializer(serializers.ModelSerializer):
     """List view with nested customer/vehicle info"""
-    customer_name = serializers.CharField(source='customer.get_full_name', read_only=True)
+    customer_name = serializers.SerializerMethodField()
     vehicle_info = serializers.SerializerMethodField()
     primary_technician_name = serializers.SerializerMethodField()
     is_overdue = serializers.BooleanField(read_only=True)
     days_in_shop = serializers.IntegerField(read_only=True)
     task_count = serializers.SerializerMethodField()
     parts_count = serializers.SerializerMethodField()
+    total_cost = serializers.SerializerMethodField()
     
     class Meta:
         model = WorkOrder
@@ -28,14 +29,26 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
             'customer', 'customer_name', 'vehicle', 'vehicle_info',
             'primary_technician', 'primary_technician_name',
             'created_at', 'started_at', 'completed_at', 'estimated_completion',
-            'estimated_total', 'actual_total', 'is_overdue', 'days_in_shop',
+            'estimated_total', 'actual_total', 'total_cost', 'is_overdue', 'days_in_shop',
             'is_customer_waiting', 'requires_approval', 'approved_by_customer',
             'quality_check_required', 'quality_check_completed',
             'task_count', 'parts_count'
         ]
     
+    def get_customer_name(self, obj):
+        """Get customer name from user"""
+        if obj.customer and obj.customer.user:
+            return obj.customer.user.get_full_name() or obj.customer.user.username or "N/A"
+        return "N/A"
+    
     def get_vehicle_info(self, obj):
-        return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model} - {obj.vehicle.license_plate}"
+        if obj.vehicle:
+            return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model} - {obj.vehicle.license_plate}"
+        return "N/A"
+    
+    def get_total_cost(self, obj):
+        """Get total cost (use actual_total if available, otherwise estimated_total)"""
+        return obj.actual_total if obj.actual_total else obj.estimated_total
     
     def get_primary_technician_name(self, obj):
         if obj.primary_technician:
@@ -130,6 +143,7 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
         fields = [
             'appointment', 'customer', 'vehicle',
             'status', 'priority',
+            'service_coordinator',
             'primary_technician', 'assigned_technicians',
             'estimated_completion',
             'customer_concerns', 'special_instructions',
@@ -325,6 +339,7 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         model = WorkOrder
         fields = [
             'status', 'priority',
+            'service_coordinator',
             'primary_technician', 'assigned_technicians',
             'started_at', 'completed_at', 'estimated_completion',
             'customer_concerns', 'special_instructions',
@@ -338,6 +353,31 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             'is_customer_waiting'
         ]
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Override the queryset for service_coordinator to include all users
+        # We'll validate the role in validate_service_coordinator instead
+        from apps.accounts.models import User
+        # Use all users as queryset so we can validate role in validate_service_coordinator
+        self.fields['service_coordinator'].queryset = User.objects.all()
+    
+    def validate_service_coordinator(self, value):
+        """Validate that service_coordinator has the correct role"""
+        if value is None:
+            return value  # Allow null/None
+        
+        # value will be a User instance at this point due to PrimaryKeyRelatedField
+        user = value
+        
+        # Check if user has service_coordinator or manager role
+        if user.role not in ['service_coordinator', 'manager']:
+            raise serializers.ValidationError(
+                f"User '{user.get_full_name()}' (ID: {user.id}, Role: {user.role}) does not have the required role. "
+                f"Only users with role 'service_coordinator' or 'manager' can be assigned as Service Coordinator."
+            )
+        
+        return user
+    
     def update(self, instance, validated_data):
         """
         Override update to handle status transitions properly using transition_to method.
@@ -347,6 +387,17 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         
         # Extract status if it's being updated
         new_status = validated_data.pop('status', None)
+        
+        # Check if service_coordinator is being assigned/changed (before updating)
+        old_service_coordinator_id = instance.service_coordinator.id if instance.service_coordinator else None
+        new_service_coordinator = validated_data.get('service_coordinator')
+        # After validation, service_coordinator will be a User instance
+        new_service_coordinator_id = new_service_coordinator.id if new_service_coordinator and hasattr(new_service_coordinator, 'id') else None
+        
+        service_coordinator_changed = (
+            new_service_coordinator is not None and 
+            (old_service_coordinator_id is None or old_service_coordinator_id != new_service_coordinator_id)
+        )
         
         # Update other fields first
         for attr, value in validated_data.items():
@@ -365,6 +416,14 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             # If no status change or same status, just save normally
             instance.save()
         
+        # Send notification if service coordinator was assigned/changed
+        if service_coordinator_changed and instance.service_coordinator:
+            from apps.notifications_app.triggers import notification_triggers
+            notification_triggers.work_order_service_coordinator_assigned(
+                work_order=instance,
+                service_coordinator=instance.service_coordinator
+            )
+        
         return instance
 
 
@@ -373,6 +432,7 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
 class ServiceTaskSerializer(serializers.ModelSerializer):
     """Service task with technician info"""
     assigned_to_name = serializers.SerializerMethodField()
+    calculated_hours = serializers.SerializerMethodField()
     
     class Meta:
         model = ServiceTask
@@ -381,7 +441,19 @@ class ServiceTaskSerializer(serializers.ModelSerializer):
     def get_assigned_to_name(self, obj):
         if obj.assigned_to:
             return f"{obj.assigned_to.first_name} {obj.assigned_to.last_name}"
+        # For workflow tasks in 'assigned' phase, show service coordinator if task is assigned to them
+        if obj.is_workflow_task and obj.workflow_phase == 'assigned' and obj.work_order.service_coordinator:
+            sc = obj.work_order.service_coordinator
+            return f"{sc.first_name} {sc.last_name}"
         return None
+    
+    def get_calculated_hours(self, obj):
+        """Return calculated actual hours from time logs or actual_hours field"""
+        try:
+            hours = obj.calculated_actual_hours
+            return float(hours) if hours is not None else 0.0
+        except (AttributeError, TypeError):
+            return 0.0
 
 
 class ServiceTaskCreateSerializer(serializers.ModelSerializer):

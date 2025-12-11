@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from apps.accounts.permissions import HasPermission
 from django.db.models import Count, Q, Avg
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -14,11 +15,11 @@ from apps.branches.utils import filter_queryset_for_user_branches, resolve_branc
 from apps.inspections.serializers import (
     InspectionTemplateListSerializer, InspectionTemplateDetailSerializer,
     InspectionTemplateCreateSerializer, InspectionCategorySerializer,
-    InspectionItemSerializer, VehicleInspectionListSerializer,
-    VehicleInspectionDetailSerializer, VehicleInspectionCreateSerializer,
-    VehicleInspectionUpdateSerializer, InspectionResultSerializer,
-    InspectionResultCreateSerializer, InspectionPhotoSerializer,
-    InspectionSummarySerializer
+    InspectionItemSerializer, InspectionItemCreateSerializer,
+    VehicleInspectionListSerializer, VehicleInspectionDetailSerializer,
+    VehicleInspectionCreateSerializer, VehicleInspectionUpdateSerializer,
+    InspectionResultSerializer, InspectionResultCreateSerializer,
+    InspectionPhotoSerializer, InspectionSummarySerializer
 )
 
 
@@ -38,6 +39,18 @@ class InspectionTemplateViewSet(viewsets.ModelViewSet):
     """
     queryset = InspectionTemplate.objects.all()
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_inspection_templates')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('manage_inspection_templates')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('manage_inspection_templates')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('manage_inspection_templates')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['is_active', 'is_default']
     search_fields = ['name', 'description']
@@ -124,6 +137,89 @@ class InspectionTemplateViewSet(viewsets.ModelViewSet):
             'message': 'Template duplicated successfully',
             'template': InspectionTemplateDetailSerializer(new_template).data
         }, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['put', 'patch'])
+    def update_category(self, request, pk=None, category_id=None):
+        """Update a category in this template"""
+        template = self.get_object()
+        try:
+            category = template.categories.get(id=request.data.get('category_id') or category_id)
+        except InspectionCategory.DoesNotExist:
+            return Response({'error': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = InspectionCategorySerializer(category, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['delete'])
+    def delete_category(self, request, pk=None):
+        """Delete a category from this template"""
+        template = self.get_object()
+        category_id = request.data.get('category_id') or request.query_params.get('category_id')
+        if not category_id:
+            return Response({'error': 'category_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            category = template.categories.get(id=category_id)
+            category.delete()
+            return Response({'message': 'Category deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        except InspectionCategory.DoesNotExist:
+            return Response({'error': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=True, methods=['post'])
+    def add_item(self, request, pk=None):
+        """Add an item to a category in this template"""
+        template = self.get_object()
+        category_id = request.data.get('category_id')
+        if not category_id:
+            return Response({'error': 'category_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            category = template.categories.get(id=category_id)
+        except InspectionCategory.DoesNotExist:
+            return Response({'error': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = InspectionItemCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(category=category)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['put', 'patch'])
+    def update_item(self, request, pk=None):
+        """Update an item in this template"""
+        template = self.get_object()
+        item_id = request.data.get('item_id')
+        if not item_id:
+            return Response({'error': 'item_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            item = InspectionItem.objects.get(id=item_id, category__template=template)
+        except InspectionItem.DoesNotExist:
+            return Response({'error': 'Item not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = InspectionItemCreateSerializer(item, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['delete'])
+    def delete_item(self, request, pk=None):
+        """Delete an item from this template"""
+        template = self.get_object()
+        item_id = request.data.get('item_id') or request.query_params.get('item_id')
+        if not item_id:
+            return Response({'error': 'item_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            item = InspectionItem.objects.get(id=item_id, category__template=template)
+            item.delete()
+            return Response({'message': 'Item deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        except InspectionItem.DoesNotExist:
+            return Response({'error': 'Item not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class VehicleInspectionViewSet(viewsets.ModelViewSet):
@@ -150,6 +246,19 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         'vehicle', 'work_order', 'template', 'performed_by', 'approved_by'
     ).prefetch_related('results', 'results__photos')
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_inspections')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('create_inspections')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_inspections')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('delete_inspections')]
+        return [IsAuthenticated()]
+    
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'overall_result', 'vehicle', 'work_order', 'template', 'performed_by']
     search_fields = ['inspection_number', 'vehicle__vin', 'vehicle__license_plate', 'notes']
@@ -251,6 +360,32 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Check if technician signature is required
+        if inspection.template.requires_technician_signature:
+            technician_signature = request.data.get('technician_signature')
+            if not technician_signature:
+                return Response(
+                    {'error': 'Technician signature is required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            inspection.technician_signature = technician_signature
+        
+        # Validate that inspection has results before completing
+        result_count = inspection.results.count()
+        if result_count == 0:
+            return Response(
+                {'error': 'Cannot complete inspection without any results. Please record inspection results first.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate that at least some results have been checked (not all "not_checked")
+        checked_results_count = inspection.results.exclude(result='not_checked').count()
+        if checked_results_count == 0:
+            return Response(
+                {'error': 'Cannot complete inspection with only unchecked items. Please record actual inspection results for at least some items.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         # Calculate overall result based on results
         fail_count = inspection.fail_count
         advisory_count = inspection.advisory_count
@@ -281,6 +416,28 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
                 {'error': 'Only completed inspections can be approved'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+        # Validate that inspection has results
+        result_count = inspection.results.count()
+        if result_count == 0:
+            return Response(
+                {'error': 'Cannot approve inspection without any results. The inspection must have recorded results before approval.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate that at least some results have been checked (not all "not_checked")
+        checked_results_count = inspection.results.exclude(result='not_checked').count()
+        if checked_results_count == 0:
+            return Response(
+                {'error': 'Cannot approve inspection with only unchecked items. Please ensure actual inspection results have been recorded.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check completion percentage - warn if very low (optional validation)
+        completion_percentage = inspection.completion_percentage
+        if completion_percentage < 50:
+            # Allow but warn - this is informational, not blocking
+            pass
         
         inspection.status = 'approved'
         inspection.approved_by = request.user
@@ -407,15 +564,19 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
         """Send inspection report to customer"""
         inspection = self.get_object()
         
-        if inspection.status != 'completed':
+        # Allow both 'completed' and 'approved' statuses
+        if inspection.status not in ['completed', 'approved']:
             return Response(
-                {'error': 'Only completed inspections can be sent to customers'},
+                {'error': 'Only completed or approved inspections can be sent to customers'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Note: Customer signature is collected AFTER sending, not before
+        # The customer will sign the inspection when they receive and review it
+        
         # In a real implementation, this would:
         # 1. Generate PDF report
-        # 2. Send email/SMS to customer
+        # 2. Send email/SMS to customer with link to view/sign
         # 3. Create notification
         
         inspection.sent_to_customer_at = timezone.now()

@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from apps.accounts.permissions import HasPermission, user_has_permission
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -128,6 +129,18 @@ class EstimateViewSet(viewsets.ModelViewSet):
         'customer', 'vehicle', 'work_order', 'created_by', 'approved_by', 'sent_by'
     ).prefetch_related('line_items')
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_billing')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('create_estimates')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_estimates')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('manage_billing')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'customer', 'vehicle', 'estimate_date']
     search_fields = ['estimate_number', 'title', 'description', 'customer__first_name', 'customer__last_name']
@@ -185,6 +198,10 @@ class EstimateViewSet(viewsets.ModelViewSet):
         estimate.sent_at = timezone.now()
         estimate.save()
         
+        # Send notification
+        from apps.notifications_app.triggers import notification_triggers
+        notification_triggers.estimate_sent(estimate)
+        
         serializer = self.get_serializer(estimate)
         return Response({
             "message": "Estimate sent successfully",
@@ -205,6 +222,138 @@ class EstimateViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     @action(detail=True, methods=['post'])
+    def duplicate(self, request, pk=None):
+        """Duplicate an existing estimate"""
+        original = self.get_object()
+        
+        # Create new estimate with same data
+        new_estimate = Estimate.objects.create(
+            customer=original.customer,
+            vehicle=original.vehicle,
+            work_order=None,  # Don't link to same work order
+            branch=original.branch or resolve_branch(request),
+            status='draft',
+            estimate_date=timezone.now().date(),
+            valid_until=(timezone.now() + timedelta(days=30)).date(),
+            title=f"{original.title} (Copy)" if original.title else "Estimate Copy",
+            description=original.description or '',
+            notes=original.notes or '',
+            customer_notes=original.customer_notes or '',
+            discount_percentage=original.discount_percentage,
+            discount_reason=original.discount_reason,
+            shop_supplies_fee=original.shop_supplies_fee,
+            environmental_fee=original.environmental_fee,
+            created_by=request.user,
+        )
+        
+        # Copy line items
+        for line_item in original.line_items.all():
+            EstimateLineItem.objects.create(
+                estimate=new_estimate,
+                item_type=line_item.item_type,
+                description=line_item.description,
+                notes=line_item.notes or '',
+                part=line_item.part,
+                part_number=line_item.part_number or '',
+                quantity=line_item.quantity,
+                unit_price=line_item.unit_price,
+                labor_hours=line_item.labor_hours,
+                labor_rate=line_item.labor_rate,
+                is_taxable=line_item.is_taxable,
+                order=line_item.order or 0,
+            )
+        
+        # Recalculate totals
+        new_estimate.calculate_totals()
+        new_estimate.save()
+        
+        serializer = self.get_serializer(new_estimate)
+        return Response({
+            "message": "Estimate duplicated successfully",
+            "estimate": serializer.data
+        }, status=status.HTTP_201_CREATED)
+    
+    @action(detail=False, methods=['post'])
+    def bulk_send(self, request):
+        """Send multiple estimates to customers"""
+        estimate_ids = request.data.get('ids', [])
+        if not estimate_ids:
+            return Response(
+                {"error": "No estimate IDs provided"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        estimates = self.get_queryset().filter(id__in=estimate_ids)
+        sent_count = 0
+        errors = []
+        
+        for estimate in estimates:
+            if estimate.status not in ['draft', 'sent']:
+                errors.append(f"Estimate {estimate.estimate_number} cannot be sent in current status")
+                continue
+            
+            estimate.status = 'sent'
+            estimate.sent_by = request.user
+            estimate.sent_at = timezone.now()
+            estimate.save()
+            sent_count += 1
+        
+        return Response({
+            "message": f"Successfully sent {sent_count} estimate(s)",
+            "sent_count": sent_count,
+            "errors": errors if errors else None
+        })
+    
+    @action(detail=False, methods=['post'])
+    def bulk_update_status(self, request):
+        """Bulk update estimate statuses"""
+        estimate_ids = request.data.get('ids', [])
+        new_status = request.data.get('status')
+        
+        if not estimate_ids:
+            return Response(
+                {"error": "No estimate IDs provided"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not new_status:
+            return Response(
+                {"error": "Status is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        valid_statuses = [choice[0] for choice in Estimate.STATUS_CHOICES]
+        if new_status not in valid_statuses:
+            return Response(
+                {"error": f"Invalid status. Must be one of: {', '.join(valid_statuses)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        estimates = self.get_queryset().filter(id__in=estimate_ids)
+        updated_count = 0
+        errors = []
+        
+        for estimate in estimates:
+            # Validate status transition
+            if new_status == 'approved' and not estimate.can_be_approved:
+                errors.append(f"Estimate {estimate.estimate_number} cannot be approved (expired or wrong status)")
+                continue
+            
+            if new_status == 'approved':
+                estimate.approved_date = timezone.now()
+                estimate.approved_by = request.user
+            
+            estimate.status = new_status
+            estimate.save()
+            updated_count += 1
+        
+        return Response({
+            "message": f"Successfully updated {updated_count} estimate(s)",
+            "updated_count": updated_count,
+            "errors": errors if errors else None
+        })
+    
+    @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         """Approve estimate"""
         estimate = self.get_object()
@@ -219,6 +368,10 @@ class EstimateViewSet(viewsets.ModelViewSet):
         estimate.approved_date = timezone.now()
         estimate.approved_by = request.user
         estimate.save()
+        
+        # Send notification
+        from apps.notifications_app.triggers import notification_triggers
+        notification_triggers.estimate_approved(estimate)
         
         serializer = self.get_serializer(estimate)
         return Response({
@@ -240,6 +393,10 @@ class EstimateViewSet(viewsets.ModelViewSet):
         estimate.status = 'declined'
         estimate.declined_date = timezone.now()
         estimate.save()
+        
+        # Send notification
+        from apps.notifications_app.triggers import notification_triggers
+        notification_triggers.estimate_declined(estimate)
         
         serializer = self.get_serializer(estimate)
         return Response({
@@ -291,6 +448,128 @@ class EstimateViewSet(viewsets.ModelViewSet):
             "work_order_id": work_order.id,
             "work_order_number": work_order.work_order_number
         })
+    
+    @action(detail=True, methods=['post'])
+    def convert_to_invoice(self, request, pk=None):
+        """Convert estimate to invoice"""
+        from datetime import timedelta
+        from django.db import transaction
+        from apps.billing.models import Invoice, InvoiceLineItem
+        
+        estimate = self.get_object()
+        
+        if not estimate.can_be_converted:
+            return Response(
+                {"error": "Estimate cannot be converted. It must be approved and not already converted."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        branch = estimate.branch or resolve_branch(request)
+        if branch is None:
+            return Response(
+                {"error": "Unable to determine branch for new invoice."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        with transaction.atomic():
+            # Prefetch line items with parts to avoid N+1 queries
+            estimate_line_items = list(estimate.line_items.select_related('part').all())
+            
+            # Temporarily disconnect the post_save signal to prevent Django Ledger
+            # invoice creation from breaking the transaction if it fails
+            from django.db.models.signals import post_save
+            from apps.billing.signals import invoice_post_save
+            post_save.disconnect(invoice_post_save, sender=Invoice)
+            
+            try:
+                # Create invoice from estimate
+                invoice = Invoice.objects.create(
+                    customer=estimate.customer,
+                    vehicle=estimate.vehicle,
+                    work_order=estimate.work_order,
+                    estimate=estimate,
+                    branch=branch,
+                    status='draft',
+                    invoice_date=timezone.now().date(),
+                    due_date=(timezone.now() + timedelta(days=30)).date(),
+                    description=estimate.description or '',
+                    notes=estimate.notes or '',
+                    customer_notes=estimate.customer_notes or '',
+                    labor_subtotal=estimate.labor_subtotal,
+                    parts_subtotal=estimate.parts_subtotal,
+                    sublet_subtotal=estimate.sublet_subtotal,
+                    subtotal=estimate.subtotal,
+                    discount_amount=estimate.discount_amount,
+                    discount_percentage=estimate.discount_percentage,
+                    discount_reason=estimate.discount_reason,
+                    tax_amount=estimate.tax_amount,
+                    shop_supplies_fee=estimate.shop_supplies_fee,
+                    environmental_fee=estimate.environmental_fee,
+                    total=estimate.total,
+                    amount_due=estimate.total,
+                    created_by=request.user,
+                )
+            finally:
+                # Reconnect the signal
+                post_save.connect(invoice_post_save, sender=Invoice)
+            
+            # Copy line items from estimate to invoice
+            for estimate_item in estimate_line_items:
+                InvoiceLineItem.objects.create(
+                    invoice=invoice,
+                    item_type=estimate_item.item_type,
+                    description=estimate_item.description,
+                    notes=estimate_item.notes or '',
+                    part=estimate_item.part,
+                    part_number=estimate_item.part_number or '',
+                    quantity=estimate_item.quantity,
+                    unit_price=estimate_item.unit_price,
+                    labor_hours=estimate_item.labor_hours,
+                    labor_rate=estimate_item.labor_rate,
+                    is_taxable=estimate_item.is_taxable,
+                    order=estimate_item.order or 0,
+                )
+            
+            # Update estimate status
+            estimate.status = 'converted'
+            estimate.converted_date = timezone.now()
+            estimate.save()
+            
+            # Update work order status if linked
+            if estimate.work_order:
+                estimate.work_order.status = 'in_progress'
+                estimate.work_order.save()
+                
+                # Create activity note
+                from apps.workorders.models import WorkOrderNote
+                WorkOrderNote.objects.create(
+                    work_order=estimate.work_order,
+                    note_type='status',
+                    note=f'Estimate #{estimate.estimate_number} converted to Invoice #{invoice.invoice_number}',
+                    created_by=request.user
+                )
+        
+        # Attempt to create Django Ledger invoice outside the transaction
+        # This way if it fails, it won't break the conversion
+        try:
+            from apps.billing.accounting_service import AccountingService
+            AccountingService.create_dl_invoice(invoice)
+        except Exception as e:
+            # Log error but don't fail the conversion
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"Failed to create Django Ledger invoice for {invoice.invoice_number}: {e}",
+                exc_info=True
+            )
+        
+        from apps.billing.serializers import InvoiceDetailSerializer
+        invoice_serializer = InvoiceDetailSerializer(invoice)
+        
+        return Response({
+            "message": "Estimate converted to invoice successfully",
+            "invoice": invoice_serializer.data
+        }, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=['post'])
     def add_line_item(self, request, pk=None):
@@ -452,6 +731,18 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         'created_by', 'sent_by', 'voided_by'
     ).prefetch_related('payments', 'line_items')
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_billing')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('create_invoices')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_invoices')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('delete_invoices')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'customer', 'vehicle', 'work_order', 'invoice_date', 'due_date']
     search_fields = ['invoice_number', 'description', 'customer__first_name', 'customer__last_name', 'work_order__work_order_number']

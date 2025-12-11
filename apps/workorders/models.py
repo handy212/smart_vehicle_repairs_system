@@ -20,6 +20,7 @@ class WorkOrder(models.Model):
         ('draft', 'Draft'),
         ('inspection', 'Initial Inspection'),
         ('intake', 'Intake'),
+        ('assigned', 'Assigned'),
         ('diagnosis', 'Diagnosis'),
         ('awaiting_approval', 'Awaiting Customer Approval'),
         ('approved', 'Approved'),
@@ -67,6 +68,17 @@ class WorkOrder(models.Model):
     # Status and Priority
     status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='draft', db_index=True)
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal')
+    
+    # Service Coordinator Assignment (Required before diagnosis)
+    service_coordinator = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='coordinated_work_orders',
+        limit_choices_to={'role__in': ['service_coordinator', 'manager']},
+        help_text="Service Coordinator assigned to this work order. Required before diagnosis can be carried out."
+    )
     
     # Technician Assignment
     primary_technician = models.ForeignKey(
@@ -343,7 +355,8 @@ class WorkOrder(models.Model):
         VALID_TRANSITIONS = {
             'draft': ['inspection', 'intake'],
             'inspection': ['intake', 'draft'],
-            'intake': ['diagnosis', 'draft'],
+            'intake': ['assigned', 'draft'],
+            'assigned': ['diagnosis', 'intake'],
             'diagnosis': ['awaiting_approval', 'approved', 'in_progress'],
             'awaiting_approval': ['approved', 'diagnosis'],
             'approved': ['in_progress', 'awaiting_approval'],
@@ -361,6 +374,14 @@ class WorkOrder(models.Model):
         if new_status not in valid_next_statuses:
             return False, f"Cannot transition from {self.get_status_display()} to {new_status}"
         
+        # Validate Service Coordinator is assigned before diagnosis
+        if new_status == 'diagnosis' and not self.service_coordinator:
+            return (False, 'A Service Coordinator must be assigned before diagnosis can be carried out.')
+        
+        # Validate Service Coordinator is assigned when transitioning to assigned status
+        if new_status == 'assigned' and not self.service_coordinator:
+            return (False, 'A Service Coordinator must be assigned when moving to assigned status.')
+        
         # Check prerequisites
         if new_status == 'awaiting_approval':
             if not self.diagnosis_notes:
@@ -373,10 +394,15 @@ class WorkOrder(models.Model):
                 return False, "Work order does not require approval"
         
         if new_status == 'in_progress':
-            if not self.is_approved:
-                return False, "Work order must be approved before starting work"
-            if not self.primary_technician and not self.assigned_technicians.exists():
-                return False, "At least one technician must be assigned before starting work"
+            # Special case: If transitioning from quality_check, this means QC failed
+            # Work order should already be approved and have technicians, so bypass strict checks
+            current_status = self.status  # Current status before transition (old_status)
+            if current_status != 'quality_check':
+                # Only check approval for new transitions to in_progress (not returning from QC)
+                if not self.is_approved:
+                    return False, "Work order must be approved before starting work"
+                if not self.primary_technician and not self.assigned_technicians.exists():
+                    return False, "At least one technician must be assigned before starting work"
         
         if new_status == 'quality_check':
             if not self.tasks.exists():
@@ -408,7 +434,7 @@ class WorkOrder(models.Model):
         """
         errors = []
         
-        if new_status in ['diagnosis', 'intake']:
+        if new_status in ['diagnosis', 'intake', 'assigned']:
             if not self.customer_concerns or not self.customer_concerns.strip():
                 errors.append("Customer concerns are required")
         
@@ -483,6 +509,13 @@ class WorkOrder(models.Model):
             self.completed_at = now
         
         self.save()
+        
+        # Convert repair recommendations to tasks when starting work
+        if new_status == 'in_progress' and old_status != 'in_progress':
+            # This will be called from start_work endpoint, but also handle here as backup
+            # Only convert if no tasks exist yet (to avoid duplicates)
+            if not self.tasks.filter(is_workflow_task=False).exists():
+                self.convert_recommendations_to_tasks(user=user)
         
         # Handle workflow task creation and completion
         self._handle_workflow_tasks(old_status, new_status, user)
@@ -601,12 +634,169 @@ class WorkOrder(models.Model):
         if not self.primary_technician and not self.assigned_technicians.exists():
             errors.append("No technician assigned")
         
+        # Check if there are any tasks (either existing or recommendations to convert)
+        has_tasks = self.tasks.filter(is_workflow_task=False).exists()
+        has_recommendations = False
+        try:
+            from apps.diagnosis.models import Diagnosis
+            diagnosis = Diagnosis.objects.filter(work_order=self).first()
+            if diagnosis:
+                # If work order is approved, allow converting any recommendations (approved or not)
+                # Otherwise, only allow approved recommendations
+                if self.status == 'approved':
+                    has_recommendations = diagnosis.repair_recommendations.filter(
+                        converted_to_task__isnull=True
+                    ).exists()
+                else:
+                    has_recommendations = diagnosis.repair_recommendations.filter(
+                        customer_approved=True,
+                        converted_to_task__isnull=True
+                    ).exists()
+        except Exception:
+            pass  # If diagnosis app not available, skip this check
+        
+        if not has_tasks and not has_recommendations:
+            errors.append("No tasks or repair recommendations found. Please create tasks or add recommendations before starting work.")
+        
         unavailable_parts = self.check_parts_availability()
         critical_parts = [p for p in unavailable_parts if p['part'].task is not None]
         if critical_parts:
             errors.append(f"{len(critical_parts)} required part(s) not available")
         
         return len(errors) == 0, errors
+    
+    def convert_recommendations_to_tasks(self, user=None):
+        """
+        Convert approved RepairRecommendations to ServiceTasks.
+        Also links parts from recommendations to the created tasks.
+        Returns (tasks_created: int, parts_linked: int)
+        """
+        try:
+            from apps.diagnosis.models import Diagnosis, RepairRecommendation
+        except ImportError:
+            return 0, 0
+        
+        try:
+            diagnosis = Diagnosis.objects.filter(work_order=self).first()
+            if not diagnosis:
+                return 0, 0
+            
+            # Get recommendations that haven't been converted yet
+            # If work order is approved, convert all recommendations (not just customer_approved ones)
+            # Otherwise, only convert approved recommendations
+            if self.status == 'approved':
+                recommendations = diagnosis.repair_recommendations.filter(
+                    converted_to_task__isnull=True
+                )
+            else:
+                recommendations = diagnosis.repair_recommendations.filter(
+                    customer_approved=True,
+                    converted_to_task__isnull=True
+                )
+            
+            if not recommendations.exists():
+                return 0, 0
+            
+            tasks_created = 0
+            parts_linked = 0
+            
+            # Get max sequence order for non-workflow tasks
+            max_sequence = self.tasks.filter(is_workflow_task=False).aggregate(
+                max_seq=Max('sequence_order')
+            )['max_seq'] or 0
+            
+            # Get primary technician or first assigned technician
+            assigned_user = self.primary_technician
+            if not assigned_user:
+                assigned_user = self.assigned_technicians.first()
+            
+            for rec in recommendations:
+                # Map recommendation type to task type
+                task_type_map = {
+                    'repair': 'repair',
+                    'replace': 'replacement',
+                    'service': 'maintenance',
+                    'adjust': 'adjustment',
+                    'clean': 'cleaning',
+                    'inspect': 'inspection',
+                }
+                task_type = task_type_map.get(rec.recommendation_type, 'repair')
+                
+                # Create ServiceTask from recommendation
+                task = ServiceTask.objects.create(
+                    work_order=self,
+                    task_type=task_type,
+                    description=rec.description,
+                    detailed_notes=f"Converted from repair recommendation: {rec.description}",
+                    status='pending',  # Tasks start as pending, technician will start them
+                    sequence_order=max_sequence + tasks_created + 1,
+                    assigned_to=assigned_user,
+                    estimated_hours=rec.estimated_labor_hours or Decimal('0'),
+                    labor_rate=getattr(self.primary_technician, 'hourly_rate', Decimal('0')) if self.primary_technician else Decimal('0'),
+                    workflow_phase=None,
+                    is_workflow_task=False,
+                )
+                
+                # Calculate labor cost
+                if task.estimated_hours and task.labor_rate:
+                    task.labor_cost = task.estimated_hours * task.labor_rate
+                    task.save()
+                
+                # Link recommendation to task
+                rec.converted_to_task = task
+                rec.save()
+                
+                tasks_created += 1
+                
+                # Link parts from recommendation to task
+                if rec.parts_needed and isinstance(rec.parts_needed, list):
+                    for part_data in rec.parts_needed:
+                        try:
+                            part_name = part_data.get('part_name', '').strip()
+                            part_number = part_data.get('part_number', '').strip()
+                            
+                            if not part_name:
+                                continue
+                            
+                            # Try to find existing WorkOrderPart by part_name or part_number
+                            existing_part = None
+                            if part_number:
+                                existing_part = self.parts.filter(
+                                    part_number=part_number
+                                ).first()
+                            
+                            if not existing_part:
+                                existing_part = self.parts.filter(
+                                    part_name=part_name
+                                ).first()
+                            
+                            if existing_part:
+                                # Link existing part to task if not already linked
+                                if not existing_part.task:
+                                    existing_part.task = task
+                                    existing_part.save()
+                                    parts_linked += 1
+                                elif existing_part.task != task:
+                                    # Part is linked to different task - create a note but don't change
+                                    import logging
+                                    logger = logging.getLogger(__name__)
+                                    logger.info(f"Part {part_name} already linked to task {existing_part.task.id}, skipping link to task {task.id}")
+                        except Exception as e:
+                            # Log error but continue with other parts
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.warning(f"Failed to link part from recommendation {rec.id} to task: {e}")
+            
+            # Recalculate totals after creating tasks and linking parts
+            self.recalculate_totals()
+            
+            return tasks_created, parts_linked
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error converting recommendations to tasks for WO {self.work_order_number}: {e}", exc_info=True)
+            return 0, 0
     
     def check_auto_complete(self):
         """
@@ -652,49 +842,54 @@ class WorkOrder(models.Model):
                 'sequence_order': 1,
             },
             'intake': {
-                'task_type': 'other',
+                'task_type': 'inspection',
                 'description': 'Customer Intake',
                 'sequence_order': 2,
+            },
+            'assigned': {
+                'task_type': 'coordination',
+                'description': 'Service Coordinator Assigned - Ready for Diagnosis',
+                'sequence_order': 3,
             },
             'diagnosis': {
                 'task_type': 'diagnostic',
                 'description': 'Perform Diagnosis',
-                'sequence_order': 3,
+                'sequence_order': 4,
             },
             'awaiting_approval': {
                 'task_type': 'other',
                 'description': 'Await Customer Approval',
-                'sequence_order': 4,
+                'sequence_order': 5,
             },
             'approved': {
                 'task_type': 'other',
                 'description': 'Customer Approval Received',
-                'sequence_order': 5,
+                'sequence_order': 6,
             },
             'in_progress': {
                 'task_type': 'repair',
                 'description': 'Repair Work',
-                'sequence_order': 6,
+                'sequence_order': 7,
             },
             'quality_check': {
                 'task_type': 'inspection',
-                'description': 'Quality Check',
-                'sequence_order': 7,
+                'description': 'Perform Quality Check',
+                'sequence_order': 8,
             },
             'completed': {
                 'task_type': 'other',
                 'description': 'Finalize Work Order',
-                'sequence_order': 8,
+                'sequence_order': 9,
             },
             'invoiced': {
                 'task_type': 'other',
                 'description': 'Generate Invoice',
-                'sequence_order': 9,
+                'sequence_order': 10,
             },
             'closed': {
                 'task_type': 'other',
                 'description': 'Close Work Order',
-                'sequence_order': 10,
+                'sequence_order': 11,
             },
         }
         return WORKFLOW_TASK_CONFIG.get(status)
@@ -723,30 +918,77 @@ class WorkOrder(models.Model):
                 return
             
             # Complete the task for the old status if it exists
+            # BUT: Don't complete if transitioning to/from paused - just pause/resume the task
             if old_status:
-                try:
-                    old_task = self.tasks.filter(
-                        workflow_phase=old_status,
-                        is_workflow_task=True
-                    ).first()
-                    
-                    if old_task and old_task.status != 'completed':
-                        old_task.status = 'completed'
-                        old_task.completed_at = timezone.now()
-                        # Bypass save() recursion by using update()
-                        ServiceTask.objects.filter(pk=old_task.pk).update(
-                            status='completed',
-                            completed_at=timezone.now()
-                        )
-                        # Update totals after completion
-                        self.recalculate_totals()
-                except (DatabaseError, AttributeError) as e:
-                    # Log error but don't fail the status transition
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"Failed to complete workflow task for phase {old_status}: {e}")
+                # Special handling for paused status - don't complete tasks when pausing/resuming
+                if new_status == 'paused' or old_status == 'paused':
+                    # When pausing: just pause the workflow task, don't complete it
+                    if new_status == 'paused' and old_status in ['in_progress']:
+                        try:
+                            old_task = self.tasks.filter(
+                                workflow_phase=old_status,
+                                is_workflow_task=True
+                            ).first()
+                            
+                            if old_task and old_task.status == 'in_progress':
+                                # Pause the task instead of completing it
+                                ServiceTask.objects.filter(pk=old_task.pk).update(
+                                    status='pending',  # Set back to pending when paused
+                                )
+                        except (DatabaseError, AttributeError) as e:
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.warning(f"Failed to pause workflow task for phase {old_status}: {e}")
+                    # When resuming: reactivate the existing workflow task
+                    elif old_status == 'paused' and new_status == 'in_progress':
+                        try:
+                            # Find existing workflow task for in_progress
+                            existing_task = self.tasks.filter(
+                                workflow_phase='in_progress',
+                                is_workflow_task=True
+                            ).first()
+                            
+                            if existing_task:
+                                # Reactivate the task
+                                ServiceTask.objects.filter(pk=existing_task.pk).update(
+                                    status='in_progress',
+                                    started_at=timezone.now()
+                                )
+                                # Don't create a new task - we'll return early
+                                return
+                        except (DatabaseError, AttributeError) as e:
+                            import logging
+                            logger = logging.getLogger(__name__)
+                            logger.warning(f"Failed to resume workflow task: {e}")
+                else:
+                    # Normal transition - complete the old task
+                    try:
+                        old_task = self.tasks.filter(
+                            workflow_phase=old_status,
+                            is_workflow_task=True
+                        ).first()
+                        
+                        if old_task and old_task.status != 'completed':
+                            old_task.status = 'completed'
+                            old_task.completed_at = timezone.now()
+                            # Bypass save() recursion by using update()
+                            ServiceTask.objects.filter(pk=old_task.pk).update(
+                                status='completed',
+                                completed_at=timezone.now()
+                            )
+                            # Update totals after completion
+                            self.recalculate_totals()
+                    except (DatabaseError, AttributeError) as e:
+                        # Log error but don't fail the status transition
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Failed to complete workflow task for phase {old_status}: {e}")
             
             # Create task for new status if config exists and task doesn't already exist
+            # Skip creating workflow task for paused status (no config exists anyway)
+            if new_status == 'paused':
+                return  # Don't create a workflow task for paused status
+            
             task_config = self._get_workflow_task_config(new_status)
             if task_config:
                 try:
@@ -755,6 +997,10 @@ class WorkOrder(models.Model):
                         is_workflow_task=True
                     ).first()
                     
+                    # If resuming from paused, we already reactivated the task above, so skip creating new one
+                    if old_status == 'paused' and new_status == 'in_progress' and existing_task:
+                        return
+                    
                     if not existing_task:
                         # Get max sequence order for non-workflow tasks to place workflow tasks appropriately
                         max_manual_seq = self.tasks.filter(is_workflow_task=False).aggregate(
@@ -762,8 +1008,17 @@ class WorkOrder(models.Model):
                         )['max_seq'] or 0
                         
                         # Auto-start workflow tasks for certain phases
-                        auto_start_phases = ['inspection', 'intake', 'diagnosis', 'in_progress', 'quality_check']
+                        auto_start_phases = ['inspection', 'intake', 'assigned', 'diagnosis', 'in_progress', 'quality_check']
                         initial_status = 'in_progress' if new_status in auto_start_phases else 'pending'
+                        
+                        # Assign task based on phase
+                        # For "assigned" phase, assign to Service Coordinator
+                        # For other phases, assign to primary technician or keep unassigned
+                        assigned_user = None
+                        if new_status == 'assigned' and self.service_coordinator:
+                            assigned_user = self.service_coordinator
+                        elif self.primary_technician:
+                            assigned_user = self.primary_technician
                         
                         workflow_task = ServiceTask.objects.create(
                             work_order=self,
@@ -773,7 +1028,7 @@ class WorkOrder(models.Model):
                             description=task_config['description'],
                             sequence_order=task_config['sequence_order'] + max_manual_seq,
                             status=initial_status,
-                            assigned_to=self.primary_technician if self.primary_technician else None,
+                            assigned_to=assigned_user,
                         )
                         
                         # Set started_at if auto-started
@@ -813,6 +1068,7 @@ class ServiceTask(models.Model):
         ('replacement', 'Replacement'),
         ('adjustment', 'Adjustment'),
         ('cleaning', 'Cleaning'),
+        ('coordination', 'Coordination'),
         ('other', 'Other'),
     ]
     
@@ -874,6 +1130,7 @@ class ServiceTask(models.Model):
             ('draft', 'Draft'),
             ('inspection', 'Initial Inspection'),
             ('intake', 'Intake'),
+            ('assigned', 'Assigned'),
             ('diagnosis', 'Diagnosis'),
             ('awaiting_approval', 'Awaiting Customer Approval'),
             ('approved', 'Approved'),
@@ -907,6 +1164,59 @@ class ServiceTask(models.Model):
     
     def __str__(self):
         return f"{self.work_order.work_order_number} - {self.description}"
+    
+    @property
+    def calculated_actual_hours(self):
+        """
+        Calculate actual hours from multiple sources:
+        1. actual_hours field if set (> 0)
+        2. Sum of duration_hours from time_logs
+        3. Duration from started_at to completed_at timestamps (for workflow tasks)
+        """
+        # If actual_hours is explicitly set, use it
+        if self.actual_hours and self.actual_hours > 0:
+            return self.actual_hours
+        
+        # Otherwise, calculate from time logs
+        from django.db.models import Sum
+        total = self.time_logs.aggregate(
+            total_hours=Sum('duration_hours')
+        )['total_hours']
+        
+        if total and total > 0:
+            return total
+        
+        # If no time logs, calculate from timestamps (for workflow tasks or tasks without time logs)
+        if self.started_at and self.completed_at:
+            delta = self.completed_at - self.started_at
+            hours = Decimal(str(delta.total_seconds() / 3600))
+            if hours > 0:
+                return hours.quantize(Decimal('0.01'))
+        
+        # If task is completed but started_at is missing, use created_at as fallback
+        if self.status == 'completed' and self.completed_at:
+            start_time = self.started_at if self.started_at else self.created_at
+            if start_time:
+                delta = self.completed_at - start_time
+                hours = Decimal(str(delta.total_seconds() / 3600))
+                if hours > 0:
+                    return hours.quantize(Decimal('0.01'))
+        
+        # For workflow tasks that are completed, even if duration is 0, try to show something
+        # This handles cases where tasks are auto-completed instantly
+        if self.status == 'completed' and self.is_workflow_task and self.completed_at:
+            # If it was completed, there was at least some time, even if very small
+            # Use a minimum of 0.01 hours for completed workflow tasks
+            start_time = self.started_at if self.started_at else self.created_at
+            if start_time:
+                delta = self.completed_at - start_time
+                hours = Decimal(str(delta.total_seconds() / 3600))
+                # For very short durations (< 1 minute), show 0.01 as minimum
+                if hours < Decimal('0.02'):
+                    return Decimal('0.01')
+                return hours.quantize(Decimal('0.01'))
+        
+        return Decimal('0')
     
     def save(self, *args, **kwargs):
         # Calculate labor cost from hours and rate

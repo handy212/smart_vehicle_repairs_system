@@ -18,6 +18,7 @@ export interface User {
   role: string;
   phone?: string;
   profile_picture?: string;
+  permissions?: string[];
   customer_profile?: {
     id: number;
   };
@@ -47,6 +48,11 @@ export const authApi = {
   getCurrentUser: async (): Promise<User> => {
     const response = await apiClient.get("/auth/users/me/");
     return response.data;
+  },
+
+  getPermissions: async (): Promise<string[]> => {
+    const response = await apiClient.get("/auth/users/permissions/");
+    return response.data.permissions || [];
   },
 
   updateProfile: async (data: UpdateProfileData): Promise<User> => {

@@ -5,6 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from apps.accounts.permissions import HasPermission, user_has_permission
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.shortcuts import get_object_or_404
 from django.http import FileResponse, HttpResponse
@@ -108,6 +109,29 @@ class DocumentViewSet(viewsets.ModelViewSet):
         'estimate'
     ).all()
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_documents')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('upload_documents')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_documents')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('delete_documents')]
+        return [IsAuthenticated()]
+    
+    def get_queryset(self):
+        """Filter queryset based on permissions"""
+        queryset = super().get_queryset()
+        user = self.request.user
+        
+        # If user can only view own, filter accordingly
+        if user_has_permission(user, 'view_own_documents') and not user_has_permission(user, 'view_documents'):
+            queryset = queryset.filter(uploaded_by=user)
+        
+        return queryset
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
     search_fields = ['document_number', 'title', 'description', 'tags', 'original_filename']

@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 
 export type Theme = 'light' | 'dark' | 'system';
 
+let systemThemeMode: Theme | null = null;
+
+export function setSystemThemeMode(theme: Theme | null) {
+  systemThemeMode = theme;
+}
+
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>('system');
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
@@ -26,10 +32,25 @@ export function useTheme() {
     
   }, []);
 
-  // Initial load
+  // Initial load - check system theme_mode setting first, then localStorage
   useEffect(() => {
+    // If system theme_mode is set, use it (unless user has manually overridden)
+    const userOverride = localStorage.getItem('theme_override');
     const stored = localStorage.getItem('theme') as Theme | null;
-    const initial = stored || 'system';
+    
+    let initial: Theme;
+    if (userOverride === 'true' && stored) {
+      // User has manually changed theme, respect their choice
+      initial = stored;
+    } else if (systemThemeMode) {
+      // Use system setting
+      initial = systemThemeMode as Theme;
+      // Sync to localStorage
+      localStorage.setItem('theme', initial);
+    } else {
+      initial = stored || 'system';
+    }
+    
     setTheme(initial);
     setMounted(true);
     applyTheme(initial);
@@ -40,6 +61,8 @@ export function useTheme() {
     if (!mounted) return;
     applyTheme(theme);
     localStorage.setItem('theme', theme);
+    // Mark that user has manually overridden theme
+    localStorage.setItem('theme_override', 'true');
   }, [theme, mounted, applyTheme]);
 
   // Update if system preferences change
@@ -50,6 +73,25 @@ export function useTheme() {
     mq.addEventListener('change', handle);
     return () => mq.removeEventListener('change', handle);
   }, [theme, mounted, applyTheme]);
+
+  // Listen for system theme_mode changes from branding settings
+  useEffect(() => {
+    const handleSystemThemeChange = (e: CustomEvent) => {
+      const newTheme = e.detail as Theme;
+      // Only apply if user hasn't manually overridden
+      const userOverride = localStorage.getItem('theme_override');
+      if (userOverride !== 'true') {
+        setTheme(newTheme);
+        applyTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+      }
+    };
+
+    window.addEventListener('systemThemeModeChanged', handleSystemThemeChange as EventListener);
+    return () => {
+      window.removeEventListener('systemThemeModeChanged', handleSystemThemeChange as EventListener);
+    };
+  }, [applyTheme]);
 
   return {
     theme,

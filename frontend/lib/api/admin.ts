@@ -45,6 +45,7 @@ export interface UserCreate {
   hire_date?: string;
   hourly_rate?: string;
   is_active?: boolean;
+  send_welcome_email?: boolean;
 }
 
 export interface UserUpdate {
@@ -256,6 +257,7 @@ export const adminApi = {
       role?: string;
       is_active?: boolean;
       search?: string;
+      branch?: number;
     }): Promise<UserListResponse> => {
       const response = await apiClient.get("/accounts/users/", { params });
       return response.data;
@@ -280,6 +282,19 @@ export const adminApi = {
       await apiClient.delete(`/accounts/users/${id}/`);
     },
 
+    resetPassword: async (id: number, newPassword: string, sendEmail: boolean = false): Promise<{ detail: string; email_sent: boolean }> => {
+      const response = await apiClient.post(`/accounts/users/${id}/reset_password/`, {
+        new_password: newPassword,
+        send_email: sendEmail,
+      });
+      return response.data;
+    },
+
+    sendPasswordResetLink: async (id: number): Promise<{ detail: string }> => {
+      const response = await apiClient.post(`/accounts/users/${id}/send_password_reset_link/`);
+      return response.data;
+    },
+
     staffList: async (): Promise<User[]> => {
       const response = await apiClient.get("/accounts/users/staff_list/");
       return response.data;
@@ -287,6 +302,11 @@ export const adminApi = {
 
     technicians: async (): Promise<User[]> => {
       const response = await apiClient.get("/accounts/users/technicians/");
+      return response.data;
+    },
+    
+    serviceCoordinators: async (): Promise<User[]> => {
+      const response = await apiClient.get("/accounts/users/service_coordinators/");
       return response.data;
     },
   },
@@ -334,11 +354,28 @@ export const adminApi = {
       });
       return response.data;
     },
+    publicBranding: async (): Promise<SystemSetting[]> => {
+      // Public endpoint that doesn't require authentication
+      const response = await apiClient.get("/accounts/admin/settings/public/branding/");
+      return response.data;
+    },
 
     bulkUpdate: async (settings: Array<{ id: number; value?: string; description?: string; is_active?: boolean }>): Promise<{ message: string; updated_ids: number[] }> => {
       const response = await apiClient.post("/accounts/admin/settings/bulk_update/", {
         settings,
       });
+      return response.data;
+    },
+
+    uploadFile: async (settingId: number, file: File): Promise<{ message: string; file_path: string; file_url: string; setting: SystemSetting }> => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Request interceptor will handle FormData Content-Type automatically
+      const response = await apiClient.post(
+        `/accounts/admin/settings/${settingId}/upload_file/`,
+        formData
+      );
       return response.data;
     },
   },
@@ -518,8 +555,31 @@ export const permissionsApi = {
     is_system?: boolean;
     search?: string;
   }): Promise<Permission[]> => {
-    const response = await apiClient.get("/accounts/admin/permissions/", { params });
-    return response.data.results || response.data;
+    // Fetch all pages to avoid missing categories when pagination is applied
+    let page = 1;
+    const allPermissions: Permission[] = [];
+    while (true) {
+      const response = await apiClient.get("/accounts/admin/permissions/", {
+        params: { ...params, page },
+      });
+      const data = response.data;
+
+      if (data?.results) {
+        allPermissions.push(...data.results);
+        if (!data.next) break;
+        page += 1;
+        continue;
+      }
+
+      // Non-paginated response fallback
+      if (Array.isArray(data)) {
+        return data;
+      }
+
+      break;
+    }
+
+    return allPermissions;
   },
 
   get: async (id: number): Promise<Permission> => {

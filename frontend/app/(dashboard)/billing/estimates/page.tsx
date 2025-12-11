@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { Plus, Search, FileText, AlertCircle, CheckCircle, XCircle, Clock, Trash2, Download } from "lucide-react";
+import { Plus, Search, FileText, AlertCircle, CheckCircle, XCircle, Clock, Trash2, Download, Mail, Edit, Copy, MoreVertical, ChevronDown, Eye, Filter, X, Printer } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
@@ -20,6 +20,8 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 export default function EstimatesPage() {
   const [search, setSearch] = useState("");
@@ -29,6 +31,11 @@ export default function EstimatesPage() {
   const [page, setPage] = useState(1);
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const menuRefs = useRef<Record<number, HTMLButtonElement>>({});
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -95,17 +102,17 @@ export default function EstimatesPage() {
   };
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["estimates", page, search, statusFilter, startDate, endDate, advancedFilters, sortConfig],
+    queryKey: ["estimates", page, search, advancedFilters, sortConfig],
     queryFn: () => {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
         : undefined;
       return billingApi.estimates.list({
         page,
-        status: advancedFilters.status || statusFilter || undefined,
+        status: advancedFilters.status || undefined,
         search: search || undefined,
-        estimate_date__gte: advancedFilters.estimate_date_from || startDate || undefined,
-        estimate_date__lte: advancedFilters.estimate_date_to || endDate || undefined,
+        estimate_date__gte: advancedFilters.estimate_date_from || undefined,
+        estimate_date__lte: advancedFilters.estimate_date_to || undefined,
         ordering,
       });
     },
@@ -153,9 +160,78 @@ export default function EstimatesPage() {
     },
   });
 
+  const bulkSendMutation = useMutation({
+    mutationFn: (ids: number[]) => billingApi.estimates.bulkSend(ids),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      bulkSelection.clearSelection();
+      if (data.errors && data.errors.length > 0) {
+        toast({
+          title: "Partial Success",
+          description: `Sent ${data.sent_count} estimate(s). Some failed: ${data.errors.join(", ")}`,
+          variant: "default",
+        });
+      } else {
+        toast({ title: "Success", description: `Sent ${data.sent_count} estimate(s) successfully` });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to send estimates",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const bulkStatusUpdateMutation = useMutation({
+    mutationFn: ({ ids, status }: { ids: number[]; status: string }) => billingApi.estimates.bulkUpdateStatus(ids, status),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["estimates"] });
+      bulkSelection.clearSelection();
+      if (data.errors && data.errors.length > 0) {
+        toast({
+          title: "Partial Success",
+          description: `Updated ${data.updated_count} estimate(s). Some failed: ${data.errors.join(", ")}`,
+          variant: "default",
+        });
+      } else {
+        toast({ title: "Success", description: `Updated ${data.updated_count} estimate(s) successfully` });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to update estimates",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleBulkDelete = () => {
     if (confirm(`Are you sure you want to delete ${bulkSelection.selectedCount} estimate(s)? This action cannot be undone.`)) {
       bulkDeleteMutation.mutate(bulkSelection.selectedIds);
+    }
+  };
+
+  const handleBulkSend = () => {
+    if (confirm(`Send ${bulkSelection.selectedCount} estimate(s) to customers?`)) {
+      bulkSendMutation.mutate(bulkSelection.selectedIds);
+    }
+  };
+
+  const handleBulkStatusUpdate = () => {
+    const newStatus = prompt("Enter new status (draft, sent, viewed, approved, declined, converted, expired):");
+    if (newStatus && ['draft', 'sent', 'viewed', 'approved', 'declined', 'converted', 'expired'].includes(newStatus.toLowerCase())) {
+      if (confirm(`Update ${bulkSelection.selectedCount} estimate(s) to "${newStatus}"?`)) {
+        bulkStatusUpdateMutation.mutate({ ids: bulkSelection.selectedIds, status: newStatus.toLowerCase() });
+      }
+    } else if (newStatus) {
+      toast({
+        title: "Invalid Status",
+        description: "Please enter a valid status",
+        variant: "destructive",
+      });
     }
   };
 
@@ -260,16 +336,47 @@ export default function EstimatesPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Link href="/billing/estimates/new">
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              New Estimate
+          <div className="relative">
+            <Button
+              variant="outline"
+              onClick={() => setShowActionsMenu(!showActionsMenu)}
+              className="dark:border-gray-700 dark:text-gray-200"
+            >
+              Actions
+              <ChevronDown className="w-4 h-4 ml-2" />
             </Button>
-          </Link>
+            {showActionsMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowActionsMenu(false)}
+                />
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        handleExport();
+                        setShowActionsMenu(false);
+                      }}
+                      disabled={!data?.results || data.results.length === 0}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export CSV
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <PermissionGuard permission="create_estimates">
+            <Link href="/billing/estimates/new">
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                New Estimate
+              </Button>
+            </Link>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -321,88 +428,127 @@ export default function EstimatesPage() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="text"
-                  placeholder="Search estimates..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="pl-10"
-                />
-              </div>
-              <AdvancedFilters
-                filters={filterOptions}
-                quickFilters={quickFilters}
-                activeFilters={advancedFilters}
-                onFiltersChange={(filters) => {
-                  setAdvancedFilters(filters);
-                  setPage(1);
-                }}
-                onClear={() => {
-                  setAdvancedFilters({});
-                  setStatusFilter("");
-                  setStartDate("");
-                  setEndDate("");
-                }}
-                title="Advanced Estimate Filters"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <Select
-                  id="status-filter"
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setPage(1);
-                  }}
-                >
-                  <option value="">All Statuses</option>
-                  <option value="draft">Draft</option>
-                  <option value="sent">Sent</option>
-                  <option value="viewed">Viewed</option>
-                  <option value="approved">Approved</option>
-                  <option value="declined">Declined</option>
-                  <option value="converted">Converted</option>
-                </Select>
-              </div>
-              <div className="md:col-span-2">
-                <DateRangePicker
-                  startDate={startDate}
-                  endDate={endDate}
-                  onStartDateChange={(date) => {
-                    setStartDate(date);
-                    setPage(1);
-                  }}
-                  onEndDateChange={(date) => {
-                    setEndDate(date);
-                    setPage(1);
-                  }}
-                  label="Estimate Date Range"
-                />
-              </div>
-            </div>
+      {/* Compact Filter Bar */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Search estimates..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 h-9"
+            />
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Advanced Filters Button */}
+          <AdvancedFilters
+            filters={filterOptions}
+            quickFilters={quickFilters}
+            activeFilters={advancedFilters}
+            onFiltersChange={(filters) => {
+              setAdvancedFilters(filters);
+              setPage(1);
+            }}
+            onClear={() => {
+              setAdvancedFilters({});
+              setStatusFilter("");
+              setStartDate("");
+              setEndDate("");
+            }}
+            title="Advanced Estimate Filters"
+          />
+
+          {/* Clear Filters */}
+          {(search || Object.keys(advancedFilters).length > 0) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearch("");
+                setAdvancedFilters({});
+                setStatusFilter("");
+                setStartDate("");
+                setEndDate("");
+                setPage(1);
+              }}
+              className="h-9"
+            >
+              <X className="w-4 h-4 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
+
+        {/* Active Filter Badges */}
+        {(search || Object.keys(advancedFilters).length > 0) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {search && (
+              <Badge variant="secondary" className="flex items-center gap-1.5">
+                <span className="text-xs">Search: {search}</span>
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setPage(1);
+                  }}
+                  className="hover:text-red-600"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
+            {Object.entries(advancedFilters).map(([key, value]) => {
+              if (!value || (typeof value === 'string' && value === '')) return null;
+              const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
+              if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
+              if (key.includes("_to")) return null;
+              
+              const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
+                ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
+                : String(value);
+              
+              const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
+
+              return (
+                <Badge key={key} variant="secondary" className="flex items-center gap-1.5">
+                  <span className="text-xs">{displayLabel}: {displayValue}</span>
+                  <button
+                    onClick={() => {
+                      const newFilters = { ...advancedFilters };
+                      if (key.includes("_from")) {
+                        delete newFilters[key];
+                        delete newFilters[key.replace("_from", "_to")];
+                      } else {
+                        delete newFilters[key];
+                      }
+                      setAdvancedFilters(newFilters);
+                      setPage(1);
+                    }}
+                    className="hover:text-red-600"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Bulk Action Toolbar */}
       <BulkActionToolbar
         selectedCount={bulkSelection.selectedCount}
         onClearSelection={bulkSelection.clearSelection}
         onBulkDelete={handleBulkDelete}
+        onBulkSend={handleBulkSend}
+        onBulkStatusUpdate={handleBulkStatusUpdate}
+        showBulkSend={true}
+        showStatusUpdate={true}
       />
 
       {/* Estimates Table */}
@@ -479,7 +625,7 @@ export default function EstimatesPage() {
                 </TableHeader>
                 <TableBody>
                   {data.results.map((estimate) => (
-                    <TableRow key={estimate.id} className="transition-colors duration-150 hover:bg-gray-50">
+                    <TableRow key={estimate.id} className="transition-colors duration-150 hover:bg-gray-50" data-estimate-id={estimate.id}>
                       <TableCell>
                         <input
                           type="checkbox"
@@ -525,23 +671,23 @@ export default function EstimatesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Link
-                            href={`/billing/estimates/${estimate.id}`}
-                            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
-                          >
-                            View
-                          </Link>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(estimate)}
-                            disabled={deleteMutation.isPending}
-                            className="text-red-600 hover:text-red-900 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const button = e.currentTarget;
+                            const rect = button.getBoundingClientRect();
+                            setMenuPosition({
+                              top: rect.bottom + 4,
+                              left: rect.right - 192, // 192px = w-48 (48 * 4)
+                            });
+                            setOpenMenuId(openMenuId === estimate.id ? null : estimate.id);
+                          }}
+                          className="h-8 w-8 p-0"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -552,13 +698,130 @@ export default function EstimatesPage() {
             <div className="text-center py-12">
               <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No estimates found.</p>
-              <Link href="/billing/estimates/new">
-                <Button className="mt-4" variant="outline">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create First Estimate
-                </Button>
-              </Link>
+              <PermissionGuard permission="create_estimates">
+                <Link href="/billing/estimates/new">
+                  <Button className="mt-4" variant="outline">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create First Estimate
+                  </Button>
+                </Link>
+              </PermissionGuard>
             </div>
+          )}
+
+          {/* Floating dropdown menu - rendered outside table */}
+          {openMenuId && menuPosition && data?.results && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => {
+                  setOpenMenuId(null);
+                  setMenuPosition(null);
+                }}
+              />
+              <div
+                className="fixed z-50 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700"
+                style={{
+                  top: `${menuPosition.top}px`,
+                  left: `${menuPosition.left}px`,
+                }}
+              >
+                {(() => {
+                  const estimate = data.results.find((e: any) => e.id === openMenuId);
+                  if (!estimate) return null;
+                  
+                  return (
+                    <div className="py-1">
+                      <Link
+                        href={`/billing/estimates/${estimate.id}`}
+                        onClick={() => {
+                          setOpenMenuId(null);
+                          setMenuPosition(null);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        View
+                      </Link>
+                      {estimate.status === 'draft' && (
+                        <Link
+                          href={`/billing/estimates/${estimate.id}/edit`}
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            setMenuPosition(null);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit
+                        </Link>
+                      )}
+                      <button
+                        onClick={async () => {
+                          setOpenMenuId(null);
+                          setMenuPosition(null);
+                          try {
+                            const duplicated = await billingApi.estimates.duplicate(estimate.id);
+                            queryClient.invalidateQueries({ queryKey: ["estimates"] });
+                            toast({ 
+                              title: "Success", 
+                              description: "Estimate duplicated successfully",
+                            });
+                            window.location.href = `/billing/estimates/${duplicated.id}/edit`;
+                          } catch (error: any) {
+                            toast({
+                              title: "Error",
+                              description: error.response?.data?.error || error.response?.data?.detail || "Failed to duplicate estimate",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        <Copy className="w-4 h-4" />
+                        Duplicate
+                      </button>
+                      {(estimate.status === 'draft' || estimate.status === 'sent') && (
+                        <button
+                          onClick={async () => {
+                            setOpenMenuId(null);
+                            setMenuPosition(null);
+                            try {
+                              await billingApi.estimates.send(estimate.id);
+                              queryClient.invalidateQueries({ queryKey: ["estimates"] });
+                              toast({ title: "Success", description: "Estimate sent successfully" });
+                            } catch (error: any) {
+                              toast({
+                                title: "Error",
+                                description: error.response?.data?.error || "Failed to send estimate",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        >
+                          <Mail className="w-4 h-4" />
+                          Send
+                        </button>
+                      )}
+                      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                      <button
+                        onClick={() => {
+                          setOpenMenuId(null);
+                          setMenuPosition(null);
+                          handleDelete(estimate);
+                        }}
+                        disabled={deleteMutation.isPending}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+            </>
           )}
 
           {/* Pagination */}

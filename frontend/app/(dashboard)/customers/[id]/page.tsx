@@ -10,8 +10,9 @@ import { appointmentsApi } from "@/lib/api/appointments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, DollarSign, Package, Car, MessageSquare, FileText, Plus, Receipt, ClipboardList, Wrench } from "lucide-react";
+import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, DollarSign, Package, Car, MessageSquare, FileText, Plus, Receipt, ClipboardList, Wrench, KeyRound, RefreshCw, Copy, Eye, EyeOff, UserCheck, UserX, Mail as MailIcon } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,6 +24,8 @@ import { useToast } from "@/lib/hooks/useToast";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 const noteSchema = z.object({
   note: z.string().min(1, "Note is required"),
@@ -38,6 +41,10 @@ export default function CustomerDetailPage() {
   const customerId = parseInt(params.id as string);
   const [activeTab, setActiveTab] = useState("overview");
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordCopied, setPasswordCopied] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -93,6 +100,126 @@ export default function CustomerDetailPage() {
   const estimates = estimatesData?.results || [];
   const workOrders = workOrdersData?.results || [];
   const appointments = appointmentsData?.results || [];
+
+  // Password management mutations
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ password, sendEmail }: { password: string; sendEmail: boolean }) =>
+      customersApi.resetPassword(customerId, password, sendEmail),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
+      toast({
+        title: "Success",
+        description: data.email_sent 
+          ? "Password reset successfully and email sent to customer"
+          : "Password reset successfully",
+      });
+      setShowPasswordReset(false);
+      setNewPassword("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to reset password",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendResetLinkMutation = useMutation({
+    mutationFn: () => customersApi.sendPasswordResetLink(customerId),
+    onSuccess: (data) => {
+      toast({
+        title: "Success",
+        description: data.detail || "Password reset link sent successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to send password reset link",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const grantPortalAccessMutation = useMutation({
+    mutationFn: ({ password, sendEmail }: { password?: string; sendEmail: boolean }) =>
+      customersApi.grantPortalAccess(customerId, password, sendEmail),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
+      toast({
+        title: "Success",
+        description: data.email_sent 
+          ? "Portal access granted and welcome email sent"
+          : `Portal access granted${data.password ? `. Password: ${data.password}` : ""}`,
+      });
+      if (data.password && !data.email_sent) {
+        setNewPassword(data.password);
+        setShowPasswordReset(true);
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to grant portal access",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const revokePortalAccessMutation = useMutation({
+    mutationFn: () => customersApi.revokePortalAccess(customerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
+      toast({
+        title: "Success",
+        description: "Portal access revoked successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to revoke portal access",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Generate secure password
+  const generatePassword = () => {
+    const length = 16;
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+    const symbols = "!@#$%^&*";
+    const allChars = uppercase + lowercase + numbers + symbols;
+
+    let password = "";
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+
+    for (let i = password.length; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+
+    password = password.split("").sort(() => Math.random() - 0.5).join("");
+    setNewPassword(password);
+    setPasswordCopied(false);
+  };
+
+  const handleCopyPassword = async () => {
+    if (newPassword) {
+      try {
+        await navigator.clipboard.writeText(newPassword);
+        setPasswordCopied(true);
+        setTimeout(() => setPasswordCopied(false), 2000);
+      } catch (err) {
+        console.error("Failed to copy password:", err);
+      }
+    }
+  };
 
   const createNoteMutation = useMutation({
     mutationFn: (data: NoteFormData) => customersApi.notes.create(customerId, data),
@@ -182,19 +309,28 @@ export default function CustomerDetailPage() {
     }
   };
 
+  const hasPortalAccess = customer.user?.is_active ?? false;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 dark:bg-gray-900 min-h-screen p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={() => router.back()}>
+          <Button variant="outline" onClick={() => router.back()} className="dark:border-gray-700 dark:text-gray-200">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              {customer.user?.first_name} {customer.user?.last_name}
-            </h1>
+            <div className="flex items-center space-x-2 flex-wrap">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                {customer.user?.first_name} {customer.user?.last_name}
+              </h1>
+              {customer.customer_type !== "individual" && customer.company_name && (
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  ({customer.company_name})
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Customer #{customer.customer_number}
             </p>
@@ -204,12 +340,19 @@ export default function CustomerDetailPage() {
           <Badge variant={getStatusVariant(customer.status) as any} className="text-sm px-3 py-1">
             {customer.status}
           </Badge>
-          <Link href={`/customers/${customerId}/edit`}>
-            <Button>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Customer
-            </Button>
-          </Link>
+          {hasPortalAccess && (
+            <Badge variant="default" className="text-sm px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+              Portal Access
+            </Badge>
+          )}
+          <PermissionGuard permission="edit_customers">
+            <Link href={`/customers/${customerId}/edit`}>
+              <Button className="dark:bg-blue-600 dark:hover:bg-blue-700">
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Customer
+              </Button>
+            </Link>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -289,42 +432,257 @@ export default function CustomerDetailPage() {
               )}
 
               {/* Account Information */}
-              <Card>
+              <Card className="dark:bg-gray-800 dark:border-gray-700">
                 <CardHeader>
-                  <CardTitle>Account Information</CardTitle>
+                  <CardTitle className="dark:text-white text-lg font-semibold">Account Information</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <CardContent>
+                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer Type</p>
-                      <p className="text-gray-900 dark:text-gray-100 capitalize">{customer.customer_type || "-"}</p>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Customer Type</dt>
+                      <dd className="text-base text-gray-900 dark:text-white capitalize">{customer.customer_type || "-"}</dd>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Terms</p>
-                      <p className="text-gray-900 dark:text-gray-100">{customer.payment_terms?.replace("_", " ") || "-"}</p>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Payment Terms</dt>
+                      <dd className="text-base text-gray-900 dark:text-white">{customer.payment_terms?.replace(/_/g, " ") || "-"}</dd>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Balance</p>
-                      <p className="text-gray-900 dark:text-gray-100 font-semibold">
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Current Balance</dt>
+                      <dd className="text-base text-gray-900 dark:text-white font-semibold">
                         ${parseFloat(customer.current_balance || "0").toFixed(2)}
-                      </p>
+                      </dd>
                     </div>
                     {customer.loyalty_points !== undefined && (
                       <div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loyalty Points</p>
-                        <p className="text-gray-900 dark:text-gray-100">{customer.loyalty_points}</p>
+                        <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Loyalty Points</dt>
+                        <dd className="text-base text-gray-900 dark:text-white">{customer.loyalty_points}</dd>
                       </div>
                     )}
-                  </div>
-                  {customer.customer_since && (
-                    <div className="flex items-start space-x-3">
-                      <Calendar className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer Since</p>
-                        <p className="text-gray-900 dark:text-gray-100">
+                    {customer.customer_since && (
+                      <div className="sm:col-span-2">
+                        <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          Customer Since
+                        </dt>
+                        <dd className="text-base text-gray-900 dark:text-white">
                           {format(new Date(customer.customer_since), "MMMM dd, yyyy")}
-                        </p>
+                        </dd>
                       </div>
+                    )}
+                  </dl>
+                </CardContent>
+              </Card>
+
+              {/* Portal Access & Password Management */}
+              <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-orange-500">
+                <CardHeader>
+                  <CardTitle className="dark:text-white flex items-center gap-2 text-lg font-semibold">
+                    <KeyRound className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                    Portal Access & Password Management
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Portal Access Status</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {hasPortalAccess ? "Customer can log in to the portal" : "Customer cannot access the portal"}
+                      </p>
+                    </div>
+                    <Badge 
+                      variant={hasPortalAccess ? "default" : "secondary"} 
+                      className={hasPortalAccess ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}
+                    >
+                      {hasPortalAccess ? "Enabled" : "Disabled"}
+                    </Badge>
+                  </div>
+
+                  {!hasPortalAccess ? (
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const sendEmail = window.confirm("Send welcome email with login details?");
+                          grantPortalAccessMutation.mutate({ sendEmail });
+                        }}
+                        disabled={grantPortalAccessMutation.isPending}
+                        className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                      >
+                        {grantPortalAccessMutation.isPending ? (
+                          <span className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            Granting...
+                          </span>
+                        ) : (
+                          <>
+                            <UserCheck className="w-4 h-4 mr-2" />
+                            Grant Portal Access
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setShowPasswordReset(true)}
+                          className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                        >
+                          <KeyRound className="w-4 h-4 mr-2" />
+                          Reset Password
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => sendResetLinkMutation.mutate()}
+                          disabled={sendResetLinkMutation.isPending}
+                          className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                        >
+                          {sendResetLinkMutation.isPending ? (
+                            <span className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                              Sending...
+                            </span>
+                          ) : (
+                            <>
+                              <MailIcon className="w-4 h-4 mr-2" />
+                              Send Reset Link
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            if (window.confirm("Are you sure you want to revoke portal access? The customer will not be able to log in.")) {
+                              revokePortalAccessMutation.mutate();
+                            }
+                          }}
+                          disabled={revokePortalAccessMutation.isPending}
+                          className="dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20 flex-1"
+                        >
+                          {revokePortalAccessMutation.isPending ? (
+                            <span className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                              Revoking...
+                            </span>
+                          ) : (
+                            <>
+                              <UserX className="w-4 h-4 mr-2" />
+                              Revoke Access
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      {showPasswordReset && (
+                        <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+                          <div>
+                            <Label htmlFor="new_password" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                              New Password <span className="text-red-500">*</span>
+                            </Label>
+                            <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                <Input
+                                  id="new_password"
+                                  type={showPassword ? "text" : "password"}
+                                  value={newPassword}
+                                  onChange={(e) => setNewPassword(e.target.value)}
+                                  placeholder="Enter new password or generate one"
+                                  className="dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPassword(!showPassword)}
+                                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                                  title={showPassword ? "Hide password" : "Show password"}
+                                >
+                                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={generatePassword}
+                                className="dark:border-gray-600 dark:text-gray-300"
+                                title="Generate secure password"
+                              >
+                                <RefreshCw className="w-4 h-4" />
+                              </Button>
+                              {newPassword && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={handleCopyPassword}
+                                  className="dark:border-gray-600 dark:text-gray-300"
+                                  title="Copy password"
+                                >
+                                  {passwordCopied ? (
+                                    <span className="text-xs text-green-600 dark:text-green-400">Copied!</span>
+                                  ) : (
+                                    <Copy className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="send_password_email_customer"
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                            />
+                            <Label htmlFor="send_password_email_customer" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Send new password to customer via email
+                            </Label>
+                          </div>
+                          <div className="flex gap-3">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                setShowPasswordReset(false);
+                                setNewPassword("");
+                              }}
+                              className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                const sendEmail = (document.getElementById("send_password_email_customer") as HTMLInputElement)?.checked || false;
+                                if (!newPassword) {
+                                  toast({
+                                    title: "Error",
+                                    description: "Please enter or generate a password",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                                resetPasswordMutation.mutate({ password: newPassword, sendEmail });
+                              }}
+                              disabled={resetPasswordMutation.isPending || !newPassword}
+                              className="dark:bg-orange-600 dark:hover:bg-orange-700 flex-1"
+                            >
+                              {resetPasswordMutation.isPending ? (
+                                <span className="flex items-center gap-2">
+                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  Resetting...
+                                </span>
+                              ) : (
+                                <>
+                                  <KeyRound className="w-4 h-4 mr-2" />
+                                  Reset Password
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>

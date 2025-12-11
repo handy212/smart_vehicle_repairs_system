@@ -127,9 +127,11 @@ export interface Diagnosis {
     vin: string;
     license_plate?: string;
   };
-  started_at: string;
+  started_at?: string | null;
+  paused_at?: string | null;
+  resumed_at?: string | null;
   completed_at?: string | null;
-  status: "in_progress" | "completed" | "on_hold";
+  status: "not_started" | "in_progress" | "paused" | "completed" | "on_hold";
   status_display?: string;
   customer_complaint: string;
   initial_observations?: string;
@@ -148,6 +150,18 @@ export interface Diagnosis {
   diagnostic_tests?: DiagnosticTest[];
   findings?: DiagnosisFinding[];
   photos?: DiagnosisPhoto[];
+  time_logs?: Array<{
+    id: number;
+    stage: "started" | "paused" | "resumed" | "completed";
+    stage_display?: string;
+    started_at: string;
+    ended_at?: string | null;
+    duration_hours?: number | string;
+    duration_formatted?: string;
+    technician?: number;
+    technician_name?: string;
+    notes?: string;
+  }>;
   created_at: string;
   updated_at?: string;
 }
@@ -187,7 +201,9 @@ export const diagnosisApi = {
     try {
       const response = await diagnosisApi.list({ work_order: workOrderId });
       if (response.results && response.results.length > 0) {
-        return response.results[0];
+        // Get the full detail using the detail endpoint to include nested arrays
+        const diagnosis = response.results[0];
+        return await diagnosisApi.get(diagnosis.id);
       }
       return null;
     } catch (error: any) {
@@ -214,9 +230,57 @@ export const diagnosisApi = {
     return response.data;
   },
 
-  complete: async (id: number): Promise<Diagnosis> => {
-    const response = await apiClient.post(`/diagnosis/diagnoses/${id}/complete/`);
-    return response.data.diagnosis || response.data;
+  start: async (id: number): Promise<{ diagnosis: Diagnosis; message: string }> => {
+    const response = await apiClient.post(`/diagnosis/diagnoses/${id}/start/`);
+    return response.data;
+  },
+
+  pause: async (id: number, reason?: string): Promise<{ diagnosis: Diagnosis; message: string }> => {
+    const response = await apiClient.post(`/diagnosis/diagnoses/${id}/pause/`, {
+      reason,
+    });
+    return response.data;
+  },
+
+  resume: async (id: number): Promise<{ diagnosis: Diagnosis; message: string }> => {
+    const response = await apiClient.post(`/diagnosis/diagnoses/${id}/resume/`);
+    return response.data;
+  },
+
+  complete: async (id: number, requiresApproval?: boolean): Promise<{ diagnosis: Diagnosis; work_order?: { id: number; status: string; requires_approval: boolean; diagnosis_completed_at: string | null } }> => {
+    const response = await apiClient.post(`/diagnosis/diagnoses/${id}/complete/`, {
+      requires_approval: requiresApproval,
+    });
+    return response.data;
+  },
+
+  convertRecommendationsToTasks: async (
+    id: number,
+    data?: {
+      recommendation_ids?: number[];
+      assign_to_technician?: boolean;
+    }
+  ): Promise<{
+    message: string;
+    tasks_created: Array<{ id: number; description: string; task_type: string; recommendation_id: number }>;
+    errors?: Array<{ recommendation_id: number; error: string }>;
+  }> => {
+    const response = await apiClient.post(`/diagnosis/diagnoses/${id}/convert_recommendations_to_tasks/`, data);
+    return response.data;
+  },
+
+  approveRecommendations: async (
+    id: number,
+    data: {
+      recommendation_ids: number[];
+      approved: boolean;
+    }
+  ): Promise<{
+    message: string;
+    recommendations: RepairRecommendation[];
+  }> => {
+    const response = await apiClient.post(`/diagnosis/diagnoses/${id}/approve_recommendations/`, data);
+    return response.data;
   },
 
   // Recommendations
@@ -261,6 +325,22 @@ export const diagnosisApi = {
   approveRecommendation: async (id: number): Promise<RepairRecommendation> => {
     const response = await apiClient.post(`/diagnosis/recommendations/${id}/approve/`);
     return response.data.recommendation || response.data;
+  },
+
+  // Create Estimate from Diagnosis
+  createEstimate: async (
+    diagnosisId: number,
+    data?: {
+      title?: string;
+      description?: string;
+      notes?: string;
+      customer_notes?: string;
+      valid_until_days?: number;
+      labor_rate?: number;
+    }
+  ): Promise<{ message: string; estimate: any }> => {
+    const response = await apiClient.post(`/diagnosis/diagnoses/${diagnosisId}/create_estimate/`, data || {});
+    return response.data;
   },
 
   // Phase 2: Structured Data API Methods
@@ -352,6 +432,60 @@ export const diagnosisApi = {
     },
     delete: async (id: number): Promise<void> => {
       await apiClient.delete(`/diagnosis/findings/${id}/`);
+    },
+  },
+
+  // Code Library
+  codeLibrary: {
+    list: async (params?: {
+      code_type?: string;
+      severity?: string;
+      is_active?: boolean;
+      search?: string;
+    }): Promise<any[]> => {
+      const response = await apiClient.get("/diagnosis/code-library/", { params });
+      return response.data.results || response.data;
+    },
+    lookup: async (codeNumber: string, codeType: string = "obd_ii"): Promise<any> => {
+      // Trim and uppercase code number, lowercase code type for consistency
+      const cleanCodeNumber = codeNumber.trim().toUpperCase();
+      const cleanCodeType = codeType.trim().toLowerCase();
+      const response = await apiClient.get("/diagnosis/code-library/lookup/", {
+        params: { code_number: cleanCodeNumber, code_type: cleanCodeType },
+      });
+      return response.data;
+    },
+    search: async (query: string, codeType?: string): Promise<any[]> => {
+      const params: any = { search: query, is_active: true };
+      if (codeType) params.code_type = codeType;
+      const response = await apiClient.get("/diagnosis/code-library/", { params });
+      return response.data.results || response.data;
+    },
+  },
+
+  // Test Procedure Library
+  testProcedureLibrary: {
+    list: async (params?: {
+      category?: string;
+      is_active?: boolean;
+      search?: string;
+    }): Promise<any[]> => {
+      const response = await apiClient.get("/diagnosis/test-procedures/", { params });
+      return response.data.results || response.data;
+    },
+    get: async (id: number): Promise<any> => {
+      const response = await apiClient.get(`/diagnosis/test-procedures/${id}/`);
+      return response.data;
+    },
+    search: async (query: string, category?: string): Promise<any[]> => {
+      const params: any = { search: query, is_active: true };
+      if (category) params.category = category;
+      const response = await apiClient.get("/diagnosis/test-procedures/", { params });
+      return response.data.results || response.data;
+    },
+    use: async (id: number): Promise<any> => {
+      const response = await apiClient.post(`/diagnosis/test-procedures/${id}/use/`);
+      return response.data;
     },
   },
 

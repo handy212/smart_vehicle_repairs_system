@@ -8,9 +8,14 @@ import { appointmentsApi } from "@/lib/api/appointments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ArrowLeft, Edit, Car, Calendar, Gauge, Fuel, FileText, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import Image from "next/image";
+import { useState } from "react";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 export default function VehicleDetailPage() {
   const params = useParams();
@@ -34,6 +39,8 @@ export default function VehicleDetailPage() {
     queryFn: () => appointmentsApi.list(),
     enabled: !!vehicleId,
   });
+
+  const [showImageModal, setShowImageModal] = useState(false);
 
   // Filter work orders and appointments for this vehicle
   const vehicleWorkOrders =
@@ -122,12 +129,14 @@ export default function VehicleDetailPage() {
             </p>
           </div>
         </div>
-        <Link href={`/vehicles/${vehicleId}/edit`}>
-          <Button>
-            <Edit className="w-4 h-4 mr-2" />
-            Edit Vehicle
-          </Button>
-        </Link>
+        <PermissionGuard permission="edit_vehicles">
+          <Link href={`/vehicles/${vehicleId}/edit`}>
+            <Button>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Vehicle
+            </Button>
+          </Link>
+        </PermissionGuard>
       </div>
 
       {/* Status Badge */}
@@ -138,9 +147,54 @@ export default function VehicleDetailPage() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Column - Vehicle Info */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-3 space-y-6">
+          {vehicle.image && (
+            <>
+              <div
+                className="w-40 cursor-pointer"
+                onClick={() => setShowImageModal(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === "Enter" && setShowImageModal(true)}
+              >
+                <div className="relative aspect-[4/3] rounded-lg overflow-hidden border border-gray-300">
+                  <Image
+                    src={vehicle.image}
+                    alt={`${vehicle.make} ${vehicle.model} ${vehicle.year}`}
+                    fill
+                    className="object-cover"
+                    sizes="160px"
+                    unoptimized={
+                      vehicle.image?.startsWith("http://localhost") ||
+                      vehicle.image?.startsWith("https://localhost")
+                    }
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Click to view full size</p>
+              </div>
+
+              <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
+                <DialogContent className="max-w-4xl">
+                  <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
+                    <Image
+                      src={vehicle.image}
+                      alt={`${vehicle.make} ${vehicle.model} ${vehicle.year}`}
+                      fill
+                      className="object-contain"
+                      sizes="100vw"
+                      unoptimized={
+                        vehicle.image?.startsWith("http://localhost") ||
+                        vehicle.image?.startsWith("https://localhost")
+                      }
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+
           {/* Vehicle Details */}
           <Card>
             <CardHeader>

@@ -119,18 +119,29 @@ DATABASES = {
 }
 
 # Password validation
+# Use custom validators that read from system settings
+# Note: These can be overridden at runtime based on system settings
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': 'apps.accounts.password_validators.SystemSettingsMinimumLengthValidator',
+    },
+    {
+        'NAME': 'apps.accounts.password_validators.SystemSettingsUppercaseValidator',
+    },
+    {
+        'NAME': 'apps.accounts.password_validators.SystemSettingsLowercaseValidator',
+    },
+    {
+        'NAME': 'apps.accounts.password_validators.SystemSettingsNumericValidator',
+    },
+    {
+        'NAME': 'apps.accounts.password_validators.SystemSettingsSpecialCharacterValidator',
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
 

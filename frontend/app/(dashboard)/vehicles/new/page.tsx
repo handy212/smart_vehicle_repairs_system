@@ -11,11 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle, Upload, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { AxiosError } from "axios";
 import { VINDecoderButton } from "@/components/ui/vin-decoder-button";
+import Image from "next/image";
 
 const vehicleSchema = z.object({
   vin: z.string().min(1, "VIN is required"),
@@ -38,6 +39,8 @@ export default function NewVehiclePage() {
   const customerId = searchParams.get("customer");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Fetch customers for owner dropdown
   const { data: customersData } = useQuery({
@@ -92,10 +95,44 @@ export default function NewVehiclePage() {
     },
   });
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
   const onSubmit = async (data: VehicleFormData) => {
     setServerError(null);
     try {
-      await createMutation.mutateAsync(data);
+      let payload: VehicleFormData | FormData;
+      
+      if (imageFile) {
+        // Use FormData for file upload
+        const formData = new FormData();
+        Object.keys(data).forEach((key) => {
+          const value = data[key as keyof VehicleFormData];
+          if (value !== undefined && value !== null) {
+            formData.append(key, value.toString());
+          }
+        });
+        formData.append('image', imageFile);
+        payload = formData;
+      } else {
+        payload = data;
+      }
+      
+      await createMutation.mutateAsync(payload as any);
     } catch (error) {
       console.error("Error creating vehicle:", error);
       
@@ -171,6 +208,51 @@ export default function NewVehiclePage() {
                 <CardDescription>Basic vehicle details</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Vehicle Image */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Vehicle Image
+                  </label>
+                  <div className="space-y-2">
+                    {imagePreview ? (
+                      <div className="relative w-full max-w-md">
+                        <div className="relative aspect-video rounded-lg overflow-hidden border border-gray-300">
+                          <Image
+                            src={imagePreview}
+                            alt="Vehicle preview"
+                            fill
+                            className="object-cover"
+                            unoptimized={imagePreview?.startsWith('http://localhost') || imagePreview?.startsWith('https://localhost') || imagePreview?.startsWith('data:')}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <ImageIcon className="w-10 h-10 mb-3 text-gray-400" />
+                          <p className="mb-2 text-sm text-gray-500">
+                            <span className="font-semibold">Click to upload</span> or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                        </div>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
                 <div>
                   <label htmlFor="vin" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     VIN (Vehicle Identification Number) *

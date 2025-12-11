@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from apps.accounts.permissions import HasPermission, user_has_permission
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -36,7 +37,7 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     Work Order management with comprehensive workflow actions
     """
     queryset = WorkOrder.objects.all().select_related(
-        'customer', 'vehicle', 'appointment', 'primary_technician', 'created_by'
+        'customer', 'customer__user', 'vehicle', 'appointment', 'primary_technician', 'created_by'
     ).prefetch_related('assigned_technicians', 'tasks', 'parts')
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -190,11 +191,25 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def start_intake(self, request, pk=None):
-        """Move work order to intake status"""
+        """Move work order to intake status, then to assigned status after Service Coordinator is assigned"""
         work_order = self.get_object()
+        service_coordinator_id = request.data.get('service_coordinator')
         
         try:
-            work_order.transition_to('intake', user=request.user)
+            # First transition to intake
+            if work_order.status != 'intake':
+                work_order.transition_to('intake', user=request.user)
+            
+            # If Service Coordinator is provided, assign them and transition to assigned
+            if service_coordinator_id:
+                work_order.service_coordinator_id = service_coordinator_id
+                work_order.save(update_fields=['service_coordinator'])
+                # Transition to assigned status
+                work_order.transition_to('assigned', user=request.user)
+            else:
+                # Just move to intake if no SC provided yet
+                pass
+            
             serializer = self.get_serializer(work_order)
             return Response(serializer.data)
         except ValidationError as e:
@@ -205,8 +220,17 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def start_diagnosis(self, request, pk=None):
-        """Start diagnosis phase"""
+        """Start diagnosis phase - can only be triggered by Service Coordinator from assigned status"""
         work_order = self.get_object()
+        
+        # Validate that user is the assigned Service Coordinator or has manager/admin role
+        user = request.user
+        if work_order.service_coordinator and work_order.service_coordinator != user:
+            if user.role not in ['manager', 'admin']:
+                return Response(
+                    {'error': 'Only the assigned Service Coordinator can trigger diagnosis, or managers/admins.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         
         try:
             work_order.transition_to('diagnosis', user=request.user)
@@ -333,12 +357,86 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def request_approval(self, request, pk=None):
         """Request customer approval"""
+        from apps.billing.models import Estimate, EstimateLineItem
+        from decimal import Decimal
+        
         work_order = self.get_object()
         
         work_order.requires_approval = True
         work_order.approval_requested_at = timezone.now()
         
         try:
+            # Validate prerequisites
+            errors = work_order.validate_before_status_change('awaiting_approval')
+            if errors:
+                return Response(
+                    {'error': '; '.join(errors)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Check if estimate already exists (from diagnosis stage)
+            estimate = None
+            if hasattr(work_order, 'estimate') and work_order.estimate:
+                estimate = work_order.estimate
+                # Recalculate totals to ensure they're up to date
+                estimate.calculate_totals()
+                # Update existing estimate status to 'sent'
+                estimate.status = 'sent'
+                estimate.sent_by = request.user
+                estimate.sent_at = timezone.now()
+                estimate.save()
+            else:
+                # Create new estimate from work order data
+                estimate = Estimate.objects.create(
+                    customer=work_order.customer,
+                    vehicle=work_order.vehicle,
+                    work_order=work_order,
+                    status='sent',
+                    estimate_date=timezone.now().date(),
+                    valid_until=(timezone.now() + timedelta(days=30)).date(),
+                    title=f"Estimate for {work_order.vehicle.year} {work_order.vehicle.make} {work_order.vehicle.model}",
+                    description=work_order.diagnosis_notes or work_order.customer_concerns or "Repair estimate",
+                    labor_subtotal=work_order.estimated_labor_cost or Decimal('0'),
+                    parts_subtotal=work_order.estimated_parts_cost or Decimal('0'),
+                    subtotal=work_order.estimated_total or Decimal('0'),
+                    total=work_order.estimated_total or Decimal('0'),
+                    created_by=request.user,
+                    sent_by=request.user,
+                )
+                
+                # Create line items from work order parts
+                for part in work_order.parts.all():
+                    EstimateLineItem.objects.create(
+                        estimate=estimate,
+                        item_type='part',
+                        description=f"{part.part_name} ({part.part_number})",
+                        quantity=part.quantity,
+                        unit_price=part.unit_cost,
+                        total=part.selling_price,
+                        part_number=part.part_number,
+                        is_taxable=True,
+                    )
+                
+                # Create line items from work order tasks (labor)
+                for task in work_order.tasks.filter(status__in=['pending', 'in_progress', 'completed']):
+                    if task.estimated_hours and task.labor_rate:
+                        EstimateLineItem.objects.create(
+                            estimate=estimate,
+                            item_type='labor',
+                            description=f"{task.get_task_type_display()} - {task.description}",
+                            quantity=task.estimated_hours,
+                            unit_price=task.labor_rate,
+                            total=task.estimated_hours * task.labor_rate,
+                            labor_hours=task.estimated_hours,
+                            labor_rate=task.labor_rate,
+                            is_taxable=True,
+                        )
+                
+                # Recalculate estimate totals from line items
+                estimate.calculate_totals()
+                estimate.save()
+            
+            # Transition work order status
             work_order.transition_to('awaiting_approval', user=request.user)
             
             # Send approval request notification
@@ -348,7 +446,11 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
                 print(f"Failed to send approval request notification: {e}")
             
             serializer = self.get_serializer(work_order)
-            return Response(serializer.data)
+            return Response({
+                **serializer.data,
+                'estimate_number': estimate.estimate_number if estimate else None,
+                'message': f'Estimate #{estimate.estimate_number if estimate else "N/A"} submitted for customer approval'
+            })
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
@@ -387,24 +489,72 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def start_work(self, request, pk=None):
         """Start work on approved work order"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         work_order = self.get_object()
+        logger.info(f"Starting work for WO {work_order.work_order_number}, current status: {work_order.status}")
+        
+        # Auto-assign current user as technician if none assigned and user is eligible
+        # This improves the workflow by removing the friction of manual assignment
+        if not work_order.primary_technician and not work_order.assigned_technicians.exists():
+            if request.user.role in ['technician', 'manager', 'admin']:
+                work_order.primary_technician = request.user
+                work_order.save(update_fields=['primary_technician'])
+                logger.info(f"Auto-assigned {request.user.username} as primary technician for WO {work_order.work_order_number}")
+                
+                # Assign to existing tasks if they are unassigned
+                work_order.tasks.filter(assigned_to__isnull=True).update(assigned_to=request.user)
         
         # Check if work can be started
         can_start, errors = work_order.can_start_work()
         if not can_start:
+            error_msg = '; '.join(errors) if errors else "Cannot start work - validation failed"
+            logger.warning(f"Start work failed for WO {work_order.work_order_number}: {errors}")
             return Response(
-                {'error': '; '.join(errors)},
+                {'error': error_msg, 'errors': errors},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         try:
+            # Convert approved repair recommendations to tasks before starting
+            tasks_created, parts_linked = work_order.convert_recommendations_to_tasks(user=request.user)
+            
+            # Transition to in_progress
             work_order.transition_to('in_progress', user=request.user)
+            
+            # Refresh work order to get updated data
+            work_order.refresh_from_db()
+            
             serializer = self.get_serializer(work_order)
-            return Response(serializer.data)
+            response_data = serializer.data
+            response_data['tasks_created'] = tasks_created
+            response_data['parts_linked'] = parts_linked
+            
+            return Response(response_data)
         except ValidationError as e:
+            # Django ValidationError - convert to string message
+            error_msg = str(e)
+            # Handle ValidationError messages - they might be a list or string
+            if hasattr(e, 'messages') and e.messages:
+                error_msg = '; '.join(str(msg) for msg in e.messages)
+            elif hasattr(e, 'message_dict'):
+                # Handle field-specific errors
+                error_msg = '; '.join(f"{k}: {', '.join(v) if isinstance(v, list) else v}" 
+                                    for k, v in e.message_dict.items())
+            logger.error(f"Django ValidationError starting work for WO {work_order.work_order_number}: {error_msg}")
+            # Convert to DRF ValidationError for proper response formatting
+            raise DRFValidationError({'error': error_msg, 'detail': error_msg})
+        except DRFValidationError as e:
+            # DRF ValidationError - already properly formatted
+            logger.error(f"DRF ValidationError starting work for WO {work_order.work_order_number}: {e.detail}")
+            raise
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Unexpected error starting work for WO {work_order.work_order_number}: {error_msg}", exc_info=True)
             return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
+                {'error': f'Failed to start work: {error_msg}', 'detail': error_msg},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
     @action(detail=True, methods=['get'])
@@ -485,9 +635,15 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def quality_check(self, request, pk=None):
         """Perform quality check"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         work_order = self.get_object()
         passed = request.data.get('passed', False)
         notes = request.data.get('notes', '')
+        checklist = request.data.get('checklist', {})
+        if not isinstance(checklist, dict):
+            checklist = {}
         
         if work_order.status != 'quality_check':
             return Response(
@@ -495,11 +651,35 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Build comprehensive notes including checklist results
+        checklist_notes = []
+        if checklist:
+            checklist_items = {
+                'allTasksCompleted': 'All tasks completed',
+                'allPartsInstalled': 'All parts installed or returned',
+                'vehicleClean': 'Vehicle cleaned and presentable',
+                'noDamage': 'No new damage or scratches',
+                'testDrivePassed': 'Test drive passed',
+                'customerSatisfied': 'Customer satisfaction confirmed',
+            }
+            
+            for key, label in checklist_items.items():
+                check_mark = '✓' if checklist.get(key, False) else '✗'
+                checklist_notes.append(f"{check_mark} {label}")
+        
+        # Combine checklist and notes
+        full_notes = notes
+        if checklist_notes:
+            checklist_summary = "\n".join(checklist_notes)
+            full_notes = f"Quality Check Checklist:\n{checklist_summary}\n\nNotes: {notes}" if notes else f"Quality Check Checklist:\n{checklist_summary}"
+        
         work_order.quality_check_completed = True
         work_order.quality_check_by = request.user
         work_order.quality_check_at = timezone.now()
-        work_order.quality_check_notes = notes
+        work_order.quality_check_notes = full_notes
         work_order.quality_check_passed = passed
+        
+        logger.info(f"Quality check performed for WO {work_order.work_order_number} by {request.user.username}: {'PASSED' if passed else 'FAILED'}")
         
         # Determine next status
         if passed:
@@ -510,9 +690,16 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
                 work_order.vehicle.last_service_date = timezone.now().date()
                 work_order.vehicle.save()
             except ValidationError as e:
+                logger.warning(f"Validation error during QC completion for WO {work_order.work_order_number}: {e}")
                 return Response(
                     {'error': str(e)},
                     status=status.HTTP_400_BAD_REQUEST
+                )
+            except Exception as e:
+                logger.error(f"Unexpected error during QC completion for WO {work_order.work_order_number}: {e}", exc_info=True)
+                return Response(
+                    {'error': f"An unexpected error occurred: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         else:
             # Failed QC, back to in_progress
@@ -523,11 +710,18 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
                 try:
                     notification_triggers.work_order_quality_check_failed(work_order)
                 except Exception as e:
-                    print(f"Failed to send quality check failed notification: {e}")
+                    logger.error(f"Failed to send quality check failed notification: {e}", exc_info=True)
             except ValidationError as e:
+                logger.warning(f"Validation error during QC failure transition for WO {work_order.work_order_number}: {e}")
                 return Response(
                     {'error': str(e)},
                     status=status.HTTP_400_BAD_REQUEST
+                )
+            except Exception as e:
+                logger.error(f"Unexpected error during QC failure transition for WO {work_order.work_order_number}: {e}", exc_info=True)
+                return Response(
+                    {'error': f"An unexpected error occurred: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         
         serializer = self.get_serializer(work_order)
@@ -577,30 +771,69 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def mark_invoiced(self, request, pk=None):
         """Mark work order as invoiced"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         work_order = self.get_object()
+        odometer_out = request.data.get('odometer_out')
+        
+        # Set odometer_out if provided in request
+        if odometer_out and not work_order.odometer_out:
+            try:
+                work_order.odometer_out = int(odometer_out)
+                work_order.save(update_fields=['odometer_out'])
+                logger.info(f"Set odometer_out={odometer_out} for WO {work_order.work_order_number}")
+            except (ValueError, TypeError):
+                return Response(
+                    {'error': 'Invalid odometer_out value. Must be a positive integer.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         
         try:
             work_order.transition_to('invoiced', user=request.user)
             serializer = self.get_serializer(work_order)
             return Response(serializer.data)
         except ValidationError as e:
+            error_msg = str(e)
+            # Provide helpful error message
+            if 'odometer out' in error_msg.lower():
+                error_msg = "Odometer out reading is required. Please provide the odometer reading before marking as invoiced."
+            logger.warning(f"Failed to mark WO {work_order.work_order_number} as invoiced: {error_msg}")
             return Response(
-                {'error': str(e)},
+                {'error': error_msg},
                 status=status.HTTP_400_BAD_REQUEST
             )
     
     @action(detail=True, methods=['post'])
     def close(self, request, pk=None):
-        """Close work order"""
+        """Close work order after customer pickup"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         work_order = self.get_object()
+        payment_received = request.data.get('payment_received', True)
+        closing_notes = request.data.get('closing_notes', '')
+        
+        # Store closing information in notes if provided
+        if closing_notes:
+            from apps.workorders.models import WorkOrderNote
+            WorkOrderNote.objects.create(
+                work_order=work_order,
+                created_by=request.user,
+                note_type='internal',
+                content=f"Closing Notes: {closing_notes}\nPayment Received: {'Yes' if payment_received else 'No'}",
+            )
         
         try:
             work_order.transition_to('closed', user=request.user)
+            logger.info(f"Work order {work_order.work_order_number} closed by {request.user.username}. Payment: {payment_received}")
             serializer = self.get_serializer(work_order)
             return Response(serializer.data)
         except ValidationError as e:
+            error_msg = str(e)
+            logger.warning(f"Failed to close WO {work_order.work_order_number}: {error_msg}")
             return Response(
-                {'error': str(e)},
+                {'error': error_msg},
                 status=status.HTTP_400_BAD_REQUEST
             )
     
@@ -957,7 +1190,7 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
 
 class ServiceTaskViewSet(viewsets.ModelViewSet):
     """Service Task management"""
-    queryset = ServiceTask.objects.all().select_related('work_order', 'assigned_to')
+    queryset = ServiceTask.objects.all().select_related('work_order', 'assigned_to').prefetch_related('time_logs')
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['work_order', 'status', 'task_type', 'assigned_to']

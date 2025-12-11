@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from apps.accounts.permissions import HasPermission
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Sum, Count, F, Q, Avg
@@ -69,6 +70,24 @@ class PartCategoryViewSet(viewsets.ModelViewSet):
 
 class SupplierViewSet(viewsets.ModelViewSet):
     """
+    ViewSet for supplier management
+    """
+    queryset = Supplier.objects.all()
+    permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_suppliers')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('manage_suppliers')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('manage_suppliers')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('manage_suppliers')]
+        return [IsAuthenticated()]
+    
+    """
     ViewSet for suppliers with filtering and custom actions
     """
     queryset = Supplier.objects.prefetch_related('parts', 'purchase_orders')
@@ -133,6 +152,18 @@ class PartViewSet(viewsets.ModelViewSet):
     """
     queryset = Part.objects.select_related('category', 'preferred_supplier', 'created_by').prefetch_related('suppliers')
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_inventory')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('create_parts')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_parts')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('delete_parts')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = [
         'category', 'is_active', 'manufacturer', 'preferred_supplier', 'is_taxable', 'is_core'
@@ -593,6 +624,17 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         'supplier', 'created_by', 'submitted_by', 'received_by'
     ).prefetch_related('items__part')
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_inventory')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('create_purchase_orders')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_purchase_orders')]
+        return [IsAuthenticated()]
+    
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'supplier', 'order_date']
     search_fields = ['po_number', 'supplier__name', 'notes']

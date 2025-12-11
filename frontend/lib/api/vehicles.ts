@@ -14,6 +14,7 @@ export interface Vehicle {
   owner_name?: string;
   status: string;
   created_at: string;
+  image?: string;
   // Legacy fields for backward compatibility
   color?: string;
   mileage?: number;
@@ -53,13 +54,17 @@ export const vehiclesApi = {
     return response.data;
   },
 
-  create: async (data: Partial<Vehicle>): Promise<Vehicle> => {
-    const response = await apiClient.post("/vehicles/vehicles/", data);
+  create: async (data: Partial<Vehicle> | FormData): Promise<Vehicle> => {
+    const response = await apiClient.post("/vehicles/vehicles/", data, {
+      headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined,
+    });
     return response.data;
   },
 
-  update: async (id: number, data: Partial<Vehicle>): Promise<Vehicle> => {
-    const response = await apiClient.put(`/vehicles/vehicles/${id}/`, data);
+  update: async (id: number, data: Partial<Vehicle> | FormData): Promise<Vehicle> => {
+    const response = await apiClient.put(`/vehicles/vehicles/${id}/`, data, {
+      headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined,
+    });
     return response.data;
   },
 

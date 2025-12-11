@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Edit, Trash2, FolderTree } from "lucide-react";
+import { Plus, Search, Edit, Trash2, FolderTree, MoreVertical, Eye } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -32,6 +32,7 @@ export default function PartCategoriesPage() {
   const [search, setSearch] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<PartCategory | null>(null);
+  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
 
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ["part-categories", search],
@@ -296,7 +297,7 @@ export default function PartCategoriesPage() {
                     <TableHead>Subcategories</TableHead>
                     <TableHead>Parts</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -326,22 +327,52 @@ export default function PartCategoriesPage() {
                           {category.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
+                      <TableCell className="text-right">
+                        <div className="relative flex justify-end">
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleEdit(category)}
+                            onClick={() => setActionMenuOpen(actionMenuOpen === category.id ? null : category.id)}
+                            className="h-8 w-8 p-0 dark:hover:bg-gray-700"
                           >
-                            <Edit className="w-4 h-4" />
+                            <MoreVertical className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(category.id)}
-                          >
-                            <Trash2 className="w-4 h-4 text-red-600" />
-                          </Button>
+                          {actionMenuOpen === category.id && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setActionMenuOpen(null)}
+                              />
+                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                                <div className="py-1">
+                                  <button
+                                    onClick={() => {
+                                      handleEdit(category);
+                                      setActionMenuOpen(null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                    Edit Category
+                                  </button>
+                                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                                  <button
+                                    onClick={() => {
+                                      if (window.confirm(`Are you sure you want to delete category "${category.name}"? This action cannot be undone.`)) {
+                                        handleDelete(category.id);
+                                      }
+                                      setActionMenuOpen(null);
+                                    }}
+                                    disabled={deleteMutation.isPending}
+                                    className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete Category
+                                  </button>
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

@@ -1,12 +1,16 @@
 "use client";
 
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Car, DollarSign, Calendar, Wrench, AlertCircle, Link as LinkIcon, FileText } from "lucide-react";
+import { User, Car, DollarSign, Calendar, Wrench, AlertCircle, Link as LinkIcon, FileText, Edit2, Save, X } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import WorkflowActions from "./WorkflowActions";
+import { workordersApi } from "@/lib/api/workorders";
+import { adminApi } from "@/lib/api/admin";
+import { useToast } from "@/lib/hooks/useToast";
 
 interface OverviewTabProps {
   workOrder: any;
@@ -14,6 +18,103 @@ interface OverviewTabProps {
 }
 
 export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: OverviewTabProps) {
+  const [isEditingServiceCoordinator, setIsEditingServiceCoordinator] = useState(false);
+  const [selectedServiceCoordinator, setSelectedServiceCoordinator] = useState<string>(() => {
+    const sc = workOrder?.service_coordinator;
+    if (!sc || sc === null) return "";
+    if (typeof sc === "object" && "id" in sc) {
+      return String(sc.id);
+    }
+    if (typeof sc === "number") {
+      return String(sc);
+    }
+    return "";
+  });
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  const workOrderId = workOrder?.id;
+  
+  // Fetch service coordinators
+  const { data: serviceCoordinators } = useQuery({
+    queryKey: ["service-coordinators"],
+    queryFn: () => adminApi.users.serviceCoordinators(),
+  });
+  
+  const serviceCoordinatorsList = serviceCoordinators || [];
+  
+  // Update service coordinator mutation
+  const updateServiceCoordinatorMutation = useMutation({
+    mutationFn: async (serviceCoordinatorId: number | null) => {
+      if (!workOrderId) throw new Error("Work order ID is required");
+      return workordersApi.update(workOrderId, { 
+        service_coordinator: serviceCoordinatorId || undefined 
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
+      setIsEditingServiceCoordinator(false);
+      toast({
+        title: "Success",
+        description: "Service Coordinator assigned successfully",
+        variant: "success",
+      });
+      onStatusChange?.();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to assign Service Coordinator",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleSaveServiceCoordinator = () => {
+    const scId = selectedServiceCoordinator ? Number(selectedServiceCoordinator) : null;
+    updateServiceCoordinatorMutation.mutate(scId);
+  };
+  
+  const handleCancelEdit = () => {
+    setSelectedServiceCoordinator(() => {
+      const sc = workOrder?.service_coordinator;
+      if (!sc || sc === null) return "";
+      if (typeof sc === "object" && "id" in sc) {
+        return String(sc.id);
+      }
+      if (typeof sc === "number") {
+        return String(sc);
+      }
+      return "";
+    });
+    setIsEditingServiceCoordinator(false);
+  };
+  
+  const getServiceCoordinatorName = () => {
+    const sc = workOrder?.service_coordinator;
+    if (!sc) return "Not assigned";
+    if (typeof sc === "object" && sc !== null) {
+      // Try full_name first, then fallback to first_name + last_name
+      if (sc.full_name) return sc.full_name;
+      if (sc.first_name || sc.last_name) {
+        return `${sc.first_name || ''} ${sc.last_name || ''}`.trim() || "Not assigned";
+      }
+      return "Not assigned";
+    }
+    // If it's just an ID, try to find in the list
+    const coordinator = serviceCoordinatorsList.find((c: any) => c.id === sc);
+    if (coordinator) {
+      // Try full_name first, then fallback to first_name + last_name
+      if (coordinator.full_name) return coordinator.full_name;
+      if (coordinator.first_name || coordinator.last_name) {
+        return `${coordinator.first_name || ''} ${coordinator.last_name || ''}`.trim() || "Not assigned";
+      }
+    }
+    return "Not assigned";
+  };
+  
+  const canEditServiceCoordinator = workOrder?.status === "intake" || workOrder?.status === "draft" || workOrder?.status === "inspection";
+  
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Left Column - Work Order Info */}
@@ -279,73 +380,84 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
 
       {/* Right Column - Summary & Actions */}
       <div className="space-y-6">
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Link href={`/workorders/${workOrder.id}/jobcard`} target="_blank">
-              <Button variant="outline" className="w-full">
-                <FileText className="w-4 h-4 mr-2" />
-                Print JobCard
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Workflow Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Workflow Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <WorkflowActions
-              workOrderId={workOrder.id}
-              status={workOrder.status}
-              workOrder={workOrder}
-              onStatusChange={onStatusChange}
-            />
-          </CardContent>
-        </Card>
-
         {/* Financial Summary */}
         <Card>
           <CardHeader>
-            <CardTitle>Financial Summary</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Financial Summary</CardTitle>
+              {(workOrder as any).estimate && (
+                <Link href={`/billing/estimates/${(workOrder as any).estimate}`}>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs">
+                    <FileText className="w-3 h-3 mr-1" />
+                    View Estimate
+                  </Button>
+                </Link>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {(workOrder as any).estimated_labor_cost && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Estimated Labor</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                ${parseFloat((workOrder as any).estimated_labor_cost || "0").toFixed(2)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Estimated Parts</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                ${parseFloat((workOrder as any).estimated_parts_cost || "0").toFixed(2)}
+              </span>
+            </div>
+            <div className="border-t dark:border-gray-700 pt-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Estimated Labor</span>
-                <span className="text-sm font-medium text-gray-900">
-                  ${parseFloat((workOrder as any).estimated_labor_cost || "0").toFixed(2)}
-                </span>
-              </div>
-            )}
-            {(workOrder as any).estimated_parts_cost && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Estimated Parts</span>
-                <span className="text-sm font-medium text-gray-900">
-                  ${parseFloat((workOrder as any).estimated_parts_cost || "0").toFixed(2)}
-                </span>
-              </div>
-            )}
-            <div className="border-t pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Estimated Total</span>
-                <span className="text-lg font-bold text-gray-900">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Estimated Total</span>
+                <span className={`text-lg font-bold ${
+                  parseFloat((workOrder as any).estimated_total || "0") > 0 
+                    ? "text-gray-900 dark:text-gray-100" 
+                    : "text-gray-400"
+                }`}>
                   ${parseFloat((workOrder as any).estimated_total || workOrder.total_cost || "0").toFixed(2)}
                 </span>
               </div>
             </div>
-            {(workOrder as any).actual_total && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Actual Total</span>
-                <span className="text-lg font-bold text-gray-900">
-                  ${parseFloat((workOrder as any).actual_total).toFixed(2)}
-                </span>
-              </div>
+            {(workOrder as any).actual_total && parseFloat((workOrder as any).actual_total) > 0 && (
+              <>
+                <div className="border-t dark:border-gray-700 pt-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Actual Labor</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      ${parseFloat((workOrder as any).actual_labor_cost || "0").toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Actual Parts</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      ${parseFloat((workOrder as any).actual_parts_cost || "0").toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t dark:border-gray-700">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Actual Total</span>
+                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      ${parseFloat((workOrder as any).actual_total).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+                {parseFloat((workOrder as any).estimated_total || "0") > 0 && (
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500">Variance</span>
+                      <span className={`font-medium ${
+                        parseFloat((workOrder as any).actual_total) > parseFloat((workOrder as any).estimated_total || "0")
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-green-600 dark:text-green-400"
+                      }`}>
+                        {parseFloat((workOrder as any).actual_total) > parseFloat((workOrder as any).estimated_total || "0") ? "+" : ""}
+                        ${(parseFloat((workOrder as any).actual_total) - parseFloat((workOrder as any).estimated_total || "0")).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -382,6 +494,69 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
                 <p className="text-sm">{(workOrder as any).primary_technician_name}</p>
               </div>
             )}
+            
+            {/* Service Coordinator */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-gray-500">
+                  Service Coordinator {!workOrder?.service_coordinator && <span className="text-red-500">*</span>}
+                </p>
+                {canEditServiceCoordinator && !isEditingServiceCoordinator && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditingServiceCoordinator(true)}
+                    className="h-6 px-2 text-xs"
+                  >
+                    <Edit2 className="w-3 h-3 mr-1" />
+                    Edit
+                  </Button>
+                )}
+              </div>
+              
+              {isEditingServiceCoordinator ? (
+                <div className="space-y-2">
+                  <select
+                    value={selectedServiceCoordinator}
+                    onChange={(e) => setSelectedServiceCoordinator(e.target.value)}
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                  >
+                    <option value="">Select Service Coordinator</option>
+                    {serviceCoordinatorsList.map((coord: any) => (
+                      <option key={coord.id} value={String(coord.id)}>
+                        {coord.full_name || `${coord.first_name || ''} ${coord.last_name || ''}`.trim() || `User ${coord.id}`}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleSaveServiceCoordinator}
+                      disabled={updateServiceCoordinatorMutation.isPending}
+                      className="h-7 px-2 text-xs"
+                    >
+                      <Save className="w-3 h-3 mr-1" />
+                      Save
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelEdit}
+                      disabled={updateServiceCoordinatorMutation.isPending}
+                      className="h-7 px-2 text-xs"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className={`text-sm ${!workOrder?.service_coordinator ? "text-red-600 font-medium" : ""}`}>
+                  {getServiceCoordinatorName()}
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

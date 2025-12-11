@@ -65,7 +65,7 @@ class VehicleCreateSerializer(serializers.ModelSerializer):
             'transmission_type', 'fuel_tank_capacity', 'tire_size',
             'condition_rating', 'purchase_date', 'warranty_expiry_date',
             'warranty_type', 'warranty_coverage', 'status', 'notes', 'tags',
-            'auto_decode_vin'
+            'image', 'auto_decode_vin'
         ]
     
     def validate_vin(self, value):
@@ -146,7 +146,7 @@ class VehicleUpdateSerializer(serializers.ModelSerializer):
             'fuel_tank_capacity', 'tire_size', 'condition_rating',
             'warranty_expiry_date', 'warranty_type', 'warranty_coverage',
             'last_service_date', 'next_service_due_date', 'next_service_due_mileage',
-            'status', 'notes', 'tags'
+            'status', 'notes', 'tags', 'image'
         ]
 
 

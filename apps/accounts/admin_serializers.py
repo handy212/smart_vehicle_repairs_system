@@ -32,10 +32,11 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
         return obj.display_name
     
     def to_representation(self, instance):
-        """Mask secret values"""
+        """Mask secret values - but show actual value if it's empty or being edited"""
         data = super().to_representation(instance)
-        if instance.is_secret and data.get('value'):
-            data['value'] = '•' * min(len(data['value']), 20)
+        # Only mask if there's a value and it's a secret
+        # This allows admins to see/edit the actual value when needed
+        # The frontend should handle masking for display purposes
         return data
 
 

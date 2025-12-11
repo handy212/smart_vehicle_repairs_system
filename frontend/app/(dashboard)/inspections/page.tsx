@@ -6,11 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Plus, Search, Filter } from "lucide-react";
+import { FileText, Plus, Search, Filter, MoreVertical } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 const statusColors: Record<string, string> = {
   in_progress: "bg-yellow-100 text-yellow-800",
@@ -31,6 +33,8 @@ export default function InspectionsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [resultFilter, setResultFilter] = useState<string>("");
+  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
+  const { hasPermission } = usePermissions();
 
   const { data, isLoading } = useQuery({
     queryKey: ["inspections", "list", page, search, statusFilter, resultFilter],
@@ -69,12 +73,14 @@ export default function InspectionsPage() {
               Templates
             </Button>
           </Link>
-          <Link href="/inspections/new">
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              New Inspection
-            </Button>
-          </Link>
+          <PermissionGuard permission="create_inspections">
+            <Link href="/inspections/new">
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                New Inspection
+              </Button>
+            </Link>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -150,12 +156,14 @@ export default function InspectionsPage() {
                 Get started by creating a new inspection.
               </p>
               <div className="mt-6">
-                <Link href="/inspections/new">
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    New Inspection
-                  </Button>
-                </Link>
+                <PermissionGuard permission="create_inspections">
+                  <Link href="/inspections/new">
+                    <Button>
+                      <Plus className="w-4 h-4 mr-2" />
+                      New Inspection
+                    </Button>
+                  </Link>
+                </PermissionGuard>
               </div>
             </div>
           ) : (
@@ -171,7 +179,7 @@ export default function InspectionsPage() {
                     <TableHead>Result</TableHead>
                     <TableHead>Performed By</TableHead>
                     <TableHead>Progress</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -228,12 +236,62 @@ export default function InspectionsPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Link href={`/inspections/${inspection.id}`}>
-                          <Button variant="outline" size="sm">
-                            View
+                      <TableCell className="text-right">
+                        <div className="relative flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setActionMenuOpen(actionMenuOpen === inspection.id ? null : inspection.id)}
+                            className="h-8 w-8 p-0 dark:hover:bg-gray-700"
+                          >
+                            <MoreVertical className="w-4 h-4" />
                           </Button>
-                        </Link>
+                          {actionMenuOpen === inspection.id && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setActionMenuOpen(null)}
+                              />
+                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                                <div className="py-1">
+                                  <Link
+                                    href={`/inspections/${inspection.id}`}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                    onClick={() => setActionMenuOpen(null)}
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View Details
+                                  </Link>
+                                  {inspection.status !== 'completed' && (
+                                    <Link
+                                      href={`/inspections/${inspection.id}/perform`}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                      onClick={() => setActionMenuOpen(null)}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                      Edit Inspection
+                                    </Link>
+                                  )}
+                                  {inspection.status === 'completed' && (
+                                    <>
+                                      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                                      <button
+                                        onClick={() => {
+                                          // TODO: Implement print functionality
+                                          setActionMenuOpen(null);
+                                        }}
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                      >
+                                        <Printer className="w-4 h-4" />
+                                        Print Report
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

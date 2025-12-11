@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, FileText } from "lucide-react";
+import { Plus, Search, Eye, FileText, MoreVertical, Edit, Printer } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,6 +16,7 @@ export default function PurchaseOrdersPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [page, setPage] = useState(1);
+  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["purchase-orders", page, search, statusFilter],
@@ -135,7 +136,7 @@ export default function PurchaseOrdersPage() {
                     <TableHead>Expected Delivery</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Total</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -167,12 +168,58 @@ export default function PurchaseOrdersPage() {
                       <TableCell className="font-medium">
                         {po.total ? `$${parseFloat(po.total).toFixed(2)}` : "-"}
                       </TableCell>
-                      <TableCell>
-                        <Link href={`/inventory/purchase-orders/${po.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="w-4 h-4" />
+                      <TableCell className="text-right">
+                        <div className="relative flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setActionMenuOpen(actionMenuOpen === po.id ? null : po.id)}
+                            className="h-8 w-8 p-0 dark:hover:bg-gray-700"
+                          >
+                            <MoreVertical className="w-4 h-4" />
                           </Button>
-                        </Link>
+                          {actionMenuOpen === po.id && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setActionMenuOpen(null)}
+                              />
+                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                                <div className="py-1">
+                                  <Link
+                                    href={`/inventory/purchase-orders/${po.id}`}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                    onClick={() => setActionMenuOpen(null)}
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View Details
+                                  </Link>
+                                  {po.status === 'draft' && (
+                                    <Link
+                                      href={`/inventory/purchase-orders/${po.id}/edit`}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                      onClick={() => setActionMenuOpen(null)}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                      Edit Purchase Order
+                                    </Link>
+                                  )}
+                                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                                  <button
+                                    onClick={() => {
+                                      // TODO: Implement print functionality
+                                      setActionMenuOpen(null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                  >
+                                    <Printer className="w-4 h-4" />
+                                    Print PO
+                                  </button>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

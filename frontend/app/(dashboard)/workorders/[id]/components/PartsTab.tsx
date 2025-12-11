@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, CheckCircle2 } from "lucide-react";
+import { Plus, CheckCircle2, Package } from "lucide-react";
 import AddPartDialog from "./AddPartDialog";
 
 interface PartsTabProps {
@@ -48,9 +48,13 @@ export default function WorkOrderPartsTab({ workOrderId, parts, onRefresh }: Par
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Parts Used</CardTitle>
+            <CardTitle>Parts & Materials</CardTitle>
             <p className="text-sm text-gray-500 mt-1">
-              Total: ${totalPartsCost.toFixed(2)} ({parts.length} parts)
+              {parts.length > 0 ? (
+                <>Total Cost: ${totalPartsCost.toFixed(2)} • {parts.length} {parts.length === 1 ? 'part' : 'parts'}</>
+              ) : (
+                <>No parts added yet</>
+              )}
             </p>
           </div>
           <Button onClick={() => setShowAddDialog(true)}>
@@ -60,9 +64,19 @@ export default function WorkOrderPartsTab({ workOrderId, parts, onRefresh }: Par
         </CardHeader>
         <CardContent>
           {parts.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-8">
-              No parts added yet. Add parts as they are used.
-            </p>
+            <div className="text-center py-12">
+              <Package className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+                No parts added yet
+              </p>
+              <p className="text-sm text-gray-500 mb-4">
+                Add parts and materials as they are used in the repair work.
+              </p>
+              <Button onClick={() => setShowAddDialog(true)} variant="outline">
+                <Plus className="w-4 h-4 mr-2" />
+                Add First Part
+              </Button>
+            </div>
           ) : (
             <Table>
               <TableHeader>

@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { ArrowLeft, Edit, Download, Mail, DollarSign, Calendar, User, Printer, ExternalLink, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Edit, Download, Mail, DollarSign, Calendar, User, Printer, ExternalLink, CheckCircle2, ChevronDown, MoreVertical, Receipt } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,6 +21,7 @@ export default function InvoiceDetailPage() {
   const invoiceId = parseInt(params.id as string);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: invoice, isLoading, error } = useQuery({
@@ -208,48 +209,106 @@ export default function InvoiceDetailPage() {
       `}</style>
       <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center space-x-4">
           <Button variant="outline" onClick={() => router.back()} className="no-print">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Invoice #{invoice.invoice_number}
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-300">
+                Invoice #{invoice.invoice_number}
+              </span>
+              {invoice.work_order && invoice.work_order_number && (
+                <Link href={`/workorders/${typeof invoice.work_order === 'object' ? invoice.work_order.id : invoice.work_order}`}>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors dark:bg-blue-950/20 dark:border-blue-800 dark:text-blue-400">
+                    <span className="h-2 w-2 rounded-full bg-blue-500" />
+                    Work Order #{invoice.work_order_number}
+                  </span>
+                </Link>
+              )}
+            </div>
+            <p className="text-sm text-gray-500 mt-2">
               {invoice.customer_name || "Customer"}
             </p>
           </div>
         </div>
-        <div className="flex space-x-2 no-print">
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="w-4 h-4 mr-2" />
-            Print
-          </Button>
-          <Button variant="outline" onClick={handleDownloadPDF}>
-            <Download className="w-4 h-4 mr-2" />
-            Download PDF
-          </Button>
-          <Button variant="outline" onClick={() => setShowPaymentDialog(true)}>
-            <DollarSign className="w-4 h-4 mr-2" />
-            Record Payment
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleSendEmail}
-            disabled={sendEmailMutation.isPending}
+        <div className="relative no-print">
+          <Button
+            variant="outline"
+            onClick={() => setShowActionsMenu(!showActionsMenu)}
+            className="gap-2"
           >
-            <Mail className="w-4 h-4 mr-2" />
-            {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
+            <MoreVertical className="w-4 h-4" />
+            Actions
+            <ChevronDown className={`w-4 h-4 transition-transform ${showActionsMenu ? 'rotate-180' : ''}`} />
           </Button>
-          <Link href={`/billing/invoices/${invoiceId}/edit`}>
-            <Button>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit
-            </Button>
-          </Link>
+          
+          {showActionsMenu && (
+            <>
+              <div 
+                className="fixed inset-0 z-10" 
+                onClick={() => setShowActionsMenu(false)}
+              />
+              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      handlePrint();
+                      setShowActionsMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Print
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleDownloadPDF();
+                      setShowActionsMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download PDF
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleSendEmail();
+                      setShowActionsMenu(false);
+                    }}
+                    disabled={sendEmailMutation.isPending}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Mail className="w-4 h-4" />
+                    {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
+                  </button>
+                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                  <button
+                    onClick={() => {
+                      setShowPaymentDialog(true);
+                      setShowActionsMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <DollarSign className="w-4 h-4" />
+                    Record Payment
+                  </button>
+                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                  <Link href={`/billing/invoices/${invoiceId}/edit`}>
+                    <button
+                      onClick={() => setShowActionsMenu(false)}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -264,10 +323,6 @@ export default function InvoiceDetailPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Invoice Number</p>
-                  <p className="text-gray-900 font-mono">{invoice.invoice_number}</p>
-                </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-2">Status</p>
                   <div className="flex items-center gap-2">
@@ -395,35 +450,77 @@ export default function InvoiceDetailPage() {
           </Card>
 
           {/* Payments */}
-          {payments && payments.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment History</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {payments && payments.length > 0 ? (
                 <div className="space-y-3">
-                  {payments.map((payment) => (
+                  {payments.map((payment: any) => (
                     <div
                       key={payment.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
                     >
-                      <div>
-                        <p className="font-medium text-sm">
-                          ${parseFloat(payment.amount || "0").toFixed(2)}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {format(new Date(payment.payment_date), "MMM dd, yyyy")} • {payment.payment_method}
-                        </p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                          <p className="font-semibold text-lg text-gray-900 dark:text-gray-100">
+                            ${parseFloat(payment.amount || "0").toFixed(2)}
+                          </p>
+                          <Badge variant={payment.status === "completed" ? "success" : payment.status === "pending" ? "warning" : "danger"}>
+                            {payment.status?.charAt(0).toUpperCase() + payment.status?.slice(1) || "Unknown"}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400 mt-2">
+                          <div>
+                            <span className="font-medium">Date:</span> {format(new Date(payment.payment_date), "MMM dd, yyyy")}
+                          </div>
+                          <div>
+                            <span className="font-medium">Method:</span> {payment.payment_method?.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) || "N/A"}
+                          </div>
+                          {payment.payment_number && (
+                            <div>
+                              <span className="font-medium">Payment #:</span> {payment.payment_number}
+                            </div>
+                          )}
+                          {payment.reference_number && (
+                            <div>
+                              <span className="font-medium">Reference:</span> {payment.reference_number}
+                            </div>
+                          )}
+                        </div>
+                        {payment.notes && (
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-2 italic">
+                            {payment.notes}
+                          </p>
+                        )}
+                        {payment.refund_amount && parseFloat(payment.refund_amount) > 0 && (
+                          <div className="mt-2">
+                            <Badge variant="danger" className="text-xs">
+                              Refunded: ${parseFloat(payment.refund_amount).toFixed(2)}
+                            </Badge>
+                          </div>
+                        )}
                       </div>
-                      <Badge variant={payment.status === "completed" ? "success" : "warning"}>
-                        {payment.status}
-                      </Badge>
                     </div>
                   ))}
+                  <div className="pt-2 border-t border-gray-200 dark:border-gray-700 mt-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Total Paid:</span>
+                      <span className="font-bold text-lg text-green-600 dark:text-green-400">
+                        ${payments.reduce((sum: number, p: any) => sum + parseFloat(p.amount || "0") - parseFloat(p.refund_amount || "0"), 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <div className="text-center py-8">
+                  <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500 text-sm">No payments recorded yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Column - Summary */}

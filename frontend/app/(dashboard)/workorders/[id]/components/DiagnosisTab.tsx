@@ -63,11 +63,11 @@ export default function DiagnosisTab({ workOrderId, workOrder, onRefresh }: Diag
   if (!diagnosis) {
     return (
       <Card>
-        <CardContent className="py-8 text-center">
-          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Diagnosis Started</h3>
-          <p className="text-gray-500 mb-4">
-            Start diagnosis to document findings and create repair recommendations.
+        <CardContent className="py-12 text-center">
+          <Search className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">No Diagnosis Started</h3>
+          <p className="text-gray-500 mb-6 max-w-md mx-auto">
+            Start diagnosis to document findings, identify root causes, and create repair recommendations for the customer.
           </p>
           <Link href={`/workorders/${workOrderId}/diagnosis`}>
             <Button>
@@ -90,7 +90,11 @@ export default function DiagnosisTab({ workOrderId, workOrder, onRefresh }: Diag
             <div>
               <CardTitle>Diagnosis</CardTitle>
               <CardDescription>
-                Started: {format(new Date(diagnosis.started_at), "PPp")}
+                {diagnosis.started_at ? (
+                  <>Started: {format(new Date(diagnosis.started_at), "PPp")}</>
+                ) : (
+                  <>Not started yet</>
+                )}
                 {diagnosis.completed_at && (
                   <> • Completed: {format(new Date(diagnosis.completed_at), "PPp")}</>
                 )}
@@ -103,7 +107,7 @@ export default function DiagnosisTab({ workOrderId, workOrder, onRefresh }: Diag
                     ? "default"
                     : diagnosis.status === "on_hold"
                     ? "secondary"
-                    : "outline"
+                    : "default"
                 }
               >
                 {diagnosis.status_display || diagnosis.status}
@@ -193,7 +197,7 @@ export default function DiagnosisTab({ workOrderId, workOrder, onRefresh }: Diag
                   >
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="secondary" className="text-xs">
                           {rec.priority_display || rec.priority}
                         </Badge>
                         <span className="text-xs text-gray-500">

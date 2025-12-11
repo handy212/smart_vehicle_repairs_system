@@ -166,6 +166,7 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
     approved_by_name = serializers.CharField(source='approved_by.get_full_name', read_only=True)
     sent_by_name = serializers.CharField(source='sent_by.get_full_name', read_only=True)
     tax_breakdown = serializers.SerializerMethodField()
+    work_order_number = serializers.SerializerMethodField()
     
     is_expired = serializers.BooleanField(read_only=True)
     days_until_expiration = serializers.IntegerField(read_only=True)
@@ -178,7 +179,7 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
             'id', 'estimate_number', 'customer', 'customer_name', 
             'customer_email', 'customer_phone',
             'vehicle', 'vehicle_display', 'vehicle_vin',
-            'work_order', 'status', 'estimate_date', 'valid_until',
+            'work_order', 'work_order_number', 'status', 'estimate_date', 'valid_until',
             'title', 'description', 'notes', 'customer_notes',
             'labor_subtotal', 'parts_subtotal', 'sublet_subtotal', 'subtotal',
             'discount_amount', 'discount_percentage', 'discount_reason',
@@ -194,7 +195,15 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
         ]
     
     def get_vehicle_display(self, obj):
-        return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
+        if obj.vehicle:
+            return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
+        return None
+    
+    def get_work_order_number(self, obj):
+        """Get work order number if work order exists"""
+        if obj.work_order:
+            return obj.work_order.work_order_number
+        return None
 
     def get_tax_breakdown(self, obj):
         return {
@@ -216,12 +225,13 @@ class EstimateCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Estimate
         fields = [
-            'customer', 'vehicle', 'title', 'description',
+            'id', 'estimate_number', 'customer', 'vehicle', 'work_order', 'title', 'description',
             'notes', 'customer_notes', 'estimate_date', 'valid_until',
             'discount_percentage', 'discount_reason',
             'shop_supplies_fee', 'environmental_fee',
             'line_items'
         ]
+        read_only_fields = ['id', 'estimate_number']
     
     def validate(self, data):
         # Ensure valid_until is in the future
@@ -254,8 +264,26 @@ class EstimateCreateSerializer(serializers.ModelSerializer):
         for item_data in line_items_data:
             EstimateLineItem.objects.create(estimate=estimate, **item_data)
         
-        # Calculate totals
+        # Refresh estimate to get all line items
+        estimate.refresh_from_db()
+        
+        # Calculate totals - this will save the estimate
         estimate.calculate_totals()
+        
+        # Refresh again to ensure we have the latest calculated totals
+        estimate.refresh_from_db()
+        
+        # Sync parts to work order if estimate is linked to a work order
+        if estimate.work_order_id:
+            try:
+                estimate.sync_parts_to_work_order()
+            except Exception as e:
+                # Log error but don't fail estimate creation if sync fails
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to sync parts to work order for estimate {estimate.id}: {e}", exc_info=True)
+                # Re-raise so we can see the error in development
+                # In production, this will be caught by the transaction rollback if needed
         
         return estimate
 
@@ -268,7 +296,7 @@ class EstimateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Estimate
         fields = [
-            'customer', 'vehicle',
+            'customer', 'vehicle', 'work_order',
             'title', 'description', 'notes', 'customer_notes',
             'estimate_date', 'valid_until',
             'discount_percentage', 'discount_reason',
@@ -296,6 +324,9 @@ class EstimateUpdateSerializer(serializers.ModelSerializer):
         line_items_data = validated_data.pop('line_items', None)
         discount_percentage_updated = 'discount_percentage' in validated_data
         
+        # Track if work_order was updated
+        work_order_updated = 'work_order' in validated_data
+        
         # Update estimate fields
         instance = super().update(instance, validated_data)
         
@@ -310,6 +341,18 @@ class EstimateUpdateSerializer(serializers.ModelSerializer):
             
             # Recalculate totals
             instance.calculate_totals()
+            
+            # Refresh instance to get calculated totals
+            instance.refresh_from_db()
+            
+            # Sync parts to work order if linked
+            if instance.work_order_id:
+                try:
+                    instance.sync_parts_to_work_order()
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to sync parts to work order for estimate {instance.id}: {e}")
         elif discount_percentage_updated:
             # If only discount_percentage was updated, recalculate discount_amount
             discount_percentage = instance.discount_percentage or Decimal('0')
@@ -319,6 +362,15 @@ class EstimateUpdateSerializer(serializers.ModelSerializer):
                 # Explicitly reset discount_amount to 0 when discount_percentage is 0
                 instance.discount_amount = Decimal('0')
             instance.save()
+        
+        # Sync parts to work order if work_order was just linked (even if line items weren't updated)
+        if work_order_updated and instance.work_order_id:
+            try:
+                instance.sync_parts_to_work_order()
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync parts to work order for estimate {instance.id}: {e}")
         
         return instance
 

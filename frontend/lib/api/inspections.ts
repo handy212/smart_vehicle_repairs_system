@@ -173,6 +173,41 @@ export const inspectionsApi = {
       const response = await apiClient.post(`/inspections/templates/${id}/set_default/`);
       return response.data.template;
     },
+    addCategory: async (id: number, data: { name: string; description?: string; order?: number }): Promise<any> => {
+      const response = await apiClient.post(`/inspections/templates/${id}/add_category/`, data);
+      return response.data;
+    },
+    updateCategory: async (templateId: number, categoryId: number, data: any): Promise<any> => {
+      const response = await apiClient.patch(
+        `/inspections/templates/${templateId}/update_category/`,
+        { ...data, category_id: categoryId }
+      );
+      return response.data;
+    },
+    deleteCategory: async (templateId: number, categoryId: number): Promise<void> => {
+      await apiClient.delete(`/inspections/templates/${templateId}/delete_category/`, {
+        data: { category_id: categoryId }
+      });
+    },
+    addItem: async (templateId: number, categoryId: number, data: any): Promise<any> => {
+      const response = await apiClient.post(
+        `/inspections/templates/${templateId}/add_item/`,
+        { ...data, category_id: categoryId }
+      );
+      return response.data;
+    },
+    updateItem: async (templateId: number, itemId: number, data: any): Promise<any> => {
+      const response = await apiClient.patch(
+        `/inspections/templates/${templateId}/update_item/`,
+        { ...data, item_id: itemId }
+      );
+      return response.data;
+    },
+    deleteItem: async (templateId: number, itemId: number): Promise<void> => {
+      await apiClient.delete(`/inspections/templates/${templateId}/delete_item/`, {
+        data: { item_id: itemId }
+      });
+    },
   },
 
   // Vehicle Inspections
@@ -205,9 +240,9 @@ export const inspectionsApi = {
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/inspections/inspections/${id}/`);
   },
-  complete: async (id: number): Promise<VehicleInspection> => {
-    const response = await apiClient.post(`/inspections/inspections/${id}/complete/`);
-    return response.data;
+  complete: async (id: number, data?: { technician_signature?: string }): Promise<VehicleInspection> => {
+    const response = await apiClient.post(`/inspections/inspections/${id}/complete/`, data || {});
+    return response.data.inspection;
   },
   approve: async (id: number): Promise<VehicleInspection> => {
     const response = await apiClient.post(`/inspections/inspections/${id}/approve/`);
@@ -217,8 +252,8 @@ export const inspectionsApi = {
     const response = await apiClient.post(`/inspections/inspections/${id}/reject/`);
     return response.data;
   },
-  sendToCustomer: async (id: number): Promise<VehicleInspection> => {
-    const response = await apiClient.post(`/inspections/inspections/${id}/send_to_customer/`);
+  sendToCustomer: async (id: number, data?: { customer_signature?: string }): Promise<VehicleInspection> => {
+    const response = await apiClient.post(`/inspections/inspections/${id}/send_to_customer/`, data || {});
     return response.data;
   },
   byVehicle: async (vehicleId: number): Promise<VehicleInspection[]> => {
@@ -246,6 +281,14 @@ export const inspectionsApi = {
     },
     delete: async (id: number): Promise<void> => {
       await apiClient.delete(`/inspections/results/${id}/`);
+    },
+    addPhoto: async (resultId: number, formData: FormData): Promise<InspectionPhoto> => {
+      const response = await apiClient.post(
+        `/inspections/results/${resultId}/add_photo/`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      return response.data;
     },
   },
 };

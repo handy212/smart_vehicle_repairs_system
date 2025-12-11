@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Edit, Building2 } from "lucide-react";
+import { Plus, Search, Eye, Edit, Building2, MoreVertical, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -17,6 +17,7 @@ export default function SuppliersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [page, setPage] = useState(1);
+  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["suppliers", page, search, statusFilter, typeFilter],
@@ -121,7 +122,7 @@ export default function SuppliersPage() {
                     <TableHead>Location</TableHead>
                     <TableHead>Parts</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -174,18 +175,44 @@ export default function SuppliersPage() {
                           {supplier.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Link href={`/inventory/suppliers/${supplier.id}`}>
-                            <Button variant="ghost" size="sm">
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </Link>
-                          <Link href={`/inventory/suppliers/${supplier.id}/edit`}>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          </Link>
+                      <TableCell className="text-right">
+                        <div className="relative flex justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setActionMenuOpen(actionMenuOpen === supplier.id ? null : supplier.id)}
+                            className="h-8 w-8 p-0 dark:hover:bg-gray-700"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                          {actionMenuOpen === supplier.id && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setActionMenuOpen(null)}
+                              />
+                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                                <div className="py-1">
+                                  <Link
+                                    href={`/inventory/suppliers/${supplier.id}`}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                    onClick={() => setActionMenuOpen(null)}
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View Details
+                                  </Link>
+                                  <Link
+                                    href={`/inventory/suppliers/${supplier.id}/edit`}
+                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                    onClick={() => setActionMenuOpen(null)}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                    Edit Supplier
+                                  </Link>
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

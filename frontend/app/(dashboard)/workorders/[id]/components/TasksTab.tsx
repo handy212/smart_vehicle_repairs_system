@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, CheckCircle2, Clock, Play, Workflow } from "lucide-react";
+import { Plus, CheckCircle2, Clock, Play, Workflow, User, AlertCircle, Info, Wrench } from "lucide-react";
 import { format } from "date-fns";
 import AddTaskDialog from "./AddTaskDialog";
 
@@ -15,15 +15,28 @@ interface TasksTabProps {
   workOrderId: number;
   tasks: ServiceTask[];
   onRefresh: () => void;
+  workOrder?: {
+    status?: string;
+    service_coordinator?: number | { id: number; first_name: string; last_name: string };
+    service_coordinator_name?: string;
+  };
 }
 
-export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh }: TasksTabProps) {
+export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workOrder }: TasksTabProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const queryClient = useQueryClient();
 
-  // Separate workflow tasks from manual tasks
+  // Separate workflow tasks from manual tasks and sort them
   const { workflowTasks, manualTasks } = useMemo(() => {
-    const workflow = tasks.filter((task) => task.is_workflow_task === true);
+    const workflow = tasks
+      .filter((task) => task.is_workflow_task === true)
+      .sort((a, b) => {
+        // Sort by sequence_order if available, otherwise by creation time
+        if (a.sequence_order !== undefined && b.sequence_order !== undefined) {
+          return a.sequence_order - b.sequence_order;
+        }
+        return 0;
+      });
     const manual = tasks.filter((task) => !task.is_workflow_task);
     return { workflowTasks: workflow, manualTasks: manual };
   }, [tasks]);
@@ -64,83 +77,210 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh }: Tas
     completeTaskMutation.mutate({ taskId });
   };
 
-  const renderTaskRow = (task: ServiceTask, isWorkflow: boolean = false) => (
-    <TableRow key={task.id} className={isWorkflow ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}>
-      <TableCell>
-        <div className="flex items-start gap-2">
-          {isWorkflow && (
-            <Workflow className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-          )}
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <p className="font-medium">{task.description}</p>
-              {isWorkflow && (
-                <Badge variant="secondary" className="text-xs">
-                  Auto
-                </Badge>
+  // Get workflow phase description and icon
+  const getWorkflowTaskInfo = (task: ServiceTask) => {
+    const phase = task.workflow_phase;
+    const descriptions: Record<string, { description: string; icon: any; actionHint?: string }> = {
+      'inspection': {
+        description: 'Initial vehicle inspection to assess condition and identify issues',
+        icon: Workflow,
+        actionHint: 'Complete inspection using the Inspection tab'
+      },
+      'intake': {
+        description: 'Customer intake and work order setup',
+        icon: User,
+        actionHint: 'Assign Service Coordinator to proceed'
+      },
+      'assigned': {
+        description: 'Service Coordinator assigned. Awaiting diagnosis start.',
+        icon: User,
+      },
+      'diagnosis': {
+        description: 'Diagnostic testing to identify root cause of issues',
+        icon: Workflow,
+        actionHint: 'Work on diagnosis in the Diagnosis tab'
+      },
+      'awaiting_approval': {
+        description: 'Waiting for customer approval of estimate',
+        icon: Clock,
+        actionHint: 'Customer needs to approve the estimate'
+      },
+      'approved': {
+        description: 'Customer approval received - ready to start repairs',
+        icon: CheckCircle2,
+      },
+      'in_progress': {
+        description: 'Repair work in progress',
+        icon: Play,
+        actionHint: 'Technicians working on repairs'
+      },
+      'quality_check': {
+        description: 'Quality control inspection before completion',
+        icon: CheckCircle2,
+        actionHint: 'Perform quality check using workflow action button'
+      },
+      'completed': {
+        description: 'Work order finalized and ready for invoicing',
+        icon: CheckCircle2,
+      },
+    };
+    
+    return descriptions[phase || ''] || { description: task.description, icon: Workflow };
+  };
+
+  const renderTaskRow = (task: ServiceTask, isWorkflow: boolean = false) => {
+    const taskInfo = isWorkflow ? getWorkflowTaskInfo(task) : null;
+    const TaskIcon = taskInfo?.icon || Workflow;
+    const isCurrentPhase = isWorkflow && task.workflow_phase === workOrder?.status;
+    
+    return (
+      <TableRow 
+        key={task.id} 
+        className={`
+          ${isWorkflow ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}
+          ${isCurrentPhase ? "ring-2 ring-blue-500 dark:ring-blue-400" : ""}
+        `}
+      >
+        <TableCell>
+          <div className="flex items-start gap-2">
+            {isWorkflow && (
+              <TaskIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+            )}
+            <div className="flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-medium">{task.description}</p>
+                {isWorkflow && (
+                  <>
+                    <Badge variant="secondary" className="text-xs">
+                      Workflow
+                    </Badge>
+                    {isCurrentPhase && (
+                      <Badge variant="info" className="text-xs">
+                        Current Phase
+                      </Badge>
+                    )}
+                  </>
+                )}
+              </div>
+              {isWorkflow && taskInfo?.description && (
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  {taskInfo.description}
+                </p>
+              )}
+              {isWorkflow && taskInfo?.actionHint && task.status !== 'completed' && (
+                <div className="mt-1 flex items-start gap-1">
+                  <Info className="w-3 h-3 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-blue-600 dark:text-blue-400 italic">
+                    {taskInfo.actionHint}
+                  </p>
+                </div>
+              )}
+              {task.detailed_notes && (
+                <p className="text-xs text-gray-500 mt-1">{task.detailed_notes}</p>
               )}
             </div>
-            {task.detailed_notes && (
-              <p className="text-xs text-gray-500 mt-1">{task.detailed_notes}</p>
+          </div>
+        </TableCell>
+        <TableCell>
+          <span className="text-sm capitalize">{task.task_type?.replace("_", " ")}</span>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-1">
+            {isWorkflow && task.workflow_phase === 'assigned' && (
+              <User className="w-3 h-3 text-gray-400" />
+            )}
+            <span className="text-sm">
+              {task.assigned_to_name || "-"}
+            </span>
+          </div>
+        </TableCell>
+        <TableCell>
+          <Badge variant={getStatusVariant(task.status) as any}>
+            {task.status?.replace("_", " ")}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <div className="text-sm">
+            {(task.calculated_hours !== undefined && task.calculated_hours !== null && task.calculated_hours > 0) ? (
+              <span>{Number(task.calculated_hours).toFixed(2)}h</span>
+            ) : (task.actual_hours !== undefined && task.actual_hours !== null && task.actual_hours > 0) ? (
+              <span>{Number(task.actual_hours).toFixed(2)}h</span>
+            ) : (task.estimated_hours !== undefined && task.estimated_hours !== null && task.estimated_hours > 0) ? (
+              <span className="text-gray-500">Est: {Number(task.estimated_hours).toFixed(2)}h</span>
+            ) : task.status === 'completed' ? (
+              <span className="text-gray-400">0.00h</span>
+            ) : (
+              "-"
             )}
           </div>
-        </div>
-      </TableCell>
-      <TableCell>
-        <span className="text-sm capitalize">{task.task_type?.replace("_", " ")}</span>
-      </TableCell>
-      <TableCell>
-        {task.assigned_to_name || "-"}
-      </TableCell>
-      <TableCell>
-        <Badge variant={getStatusVariant(task.status) as any}>
-          {task.status?.replace("_", " ")}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <div className="text-sm">
-          {task.actual_hours ? (
-            <span>{task.actual_hours}h</span>
-          ) : task.estimated_hours ? (
-            <span className="text-gray-500">Est: {task.estimated_hours}h</span>
+        </TableCell>
+        <TableCell>
+          <div className="text-xs text-gray-600 dark:text-gray-400">
+            {task.created_at ? (
+              <>
+                <div>{format(new Date(task.created_at), "MMM d, yyyy")}</div>
+                <div>{format(new Date(task.created_at), "h:mm a")}</div>
+              </>
+            ) : (
+              "-"
+            )}
+          </div>
+        </TableCell>
+        <TableCell>
+          {!isWorkflow ? (
+            <div className="flex items-center space-x-2">
+              {task.status === "pending" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleStartTask(task.id)}
+                  disabled={startTaskMutation.isPending}
+                >
+                  <Play className="w-3 h-3 mr-1" />
+                  Start
+                </Button>
+              )}
+              {task.status === "in_progress" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleCompleteTask(task.id)}
+                  disabled={completeTaskMutation.isPending}
+                >
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  Complete
+                </Button>
+              )}
+              {task.status === "completed" && (
+                <span className="text-xs text-gray-500">Completed</span>
+              )}
+              {task.status === "skipped" && (
+                <span className="text-xs text-gray-500">Skipped</span>
+              )}
+            </div>
           ) : (
-            "-"
+            <div className="flex items-center space-x-2">
+              {task.status === "completed" ? (
+                <span className="text-xs text-blue-600 dark:text-blue-400 italic flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Auto-completed
+                </span>
+              ) : task.status === "in_progress" ? (
+                <span className="text-xs text-orange-600 dark:text-orange-400 italic flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {isCurrentPhase ? "Active Phase" : "Auto-managed"}
+                </span>
+              ) : (
+                <span className="text-xs text-gray-500 italic">
+                  {isCurrentPhase ? "Waiting to start" : "Auto-managed"}
+                </span>
+              )}
+            </div>
           )}
-        </div>
-      </TableCell>
-      <TableCell>
-        {!isWorkflow && (
-          <div className="flex items-center space-x-2">
-            {task.status === "pending" && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleStartTask(task.id)}
-                disabled={startTaskMutation.isPending}
-              >
-                <Play className="w-3 h-3 mr-1" />
-                Start
-              </Button>
-            )}
-            {task.status === "in_progress" && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleCompleteTask(task.id)}
-                disabled={completeTaskMutation.isPending}
-              >
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                Complete
-              </Button>
-            )}
-          </div>
-        )}
-        {isWorkflow && (
-          <span className="text-xs text-gray-500 italic">Auto-completed</span>
-        )}
-      </TableCell>
-    </TableRow>
-  );
+        </TableCell>
+      </TableRow>
+    );
+  };
 
   return (
     <>
@@ -158,10 +298,26 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh }: Tas
               </Badge>
             </CardHeader>
             <CardContent>
-              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-                <p className="text-sm text-blue-800 dark:text-blue-400">
-                  These tasks are automatically created and completed based on the work order workflow phases.
-                </p>
+              <div className="mb-4 space-y-3">
+                {/* Note text removed per request */}
+                {workflowTasks.length > 0 && (
+                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-green-500" />
+                      <span>Completed: {workflowTasks.filter(t => t.status === 'completed').length}</span>
+                    </div>
+                    <span>•</span>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-orange-500" />
+                      <span>In Progress: {workflowTasks.filter(t => t.status === 'in_progress').length}</span>
+                    </div>
+                    <span>•</span>
+                    <div className="flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3 text-gray-400" />
+                      <span>Pending: {workflowTasks.filter(t => t.status === 'pending').length}</span>
+                    </div>
+                  </div>
+                )}
               </div>
               <Table>
                 <TableHeader>
@@ -171,6 +327,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh }: Tas
                     <TableHead>Assigned To</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Hours</TableHead>
+                    <TableHead>Created</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -193,9 +350,19 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh }: Tas
           </CardHeader>
           <CardContent>
             {manualTasks.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-8">
-                No manual tasks yet. Add a task to get started.
-              </p>
+              <div className="text-center py-12">
+                <Wrench className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
+                  No manual tasks yet
+                </p>
+                <p className="text-sm text-gray-500 mb-4">
+                  Add custom tasks for specific repair work that needs to be performed.
+                </p>
+                <Button onClick={() => setShowAddDialog(true)} variant="outline">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add First Task
+                </Button>
+              </div>
             ) : (
               <Table>
                 <TableHeader>
@@ -205,6 +372,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh }: Tas
                     <TableHead>Assigned To</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Hours</TableHead>
+                    <TableHead>Created</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>

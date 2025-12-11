@@ -23,6 +23,10 @@ class Permission(models.Model):
         ('reports', 'Reports'),
         ('settings', 'Settings'),
         ('system', 'System Administration'),
+        ('documents', 'Documents'),
+        ('diagnosis', 'Diagnosis'),
+        ('inspections', 'Inspections'),
+        ('notifications', 'Notifications'),
     )
     
     code = models.CharField(_('permission code'), max_length=100, unique=True, db_index=True)

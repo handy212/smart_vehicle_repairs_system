@@ -6,20 +6,64 @@ Uses Hubtel SMSC API: https://smsc.hubtel.com/v1/messages/send
 import logging
 import requests
 from django.conf import settings
+from apps.accounts.settings_utils import get_sms_settings
 
 logger = logging.getLogger(__name__)
 
-# Hubtel configuration
-HUBTEL_CLIENT_ID = getattr(settings, 'HUBTEL_CLIENT_ID', '')
-HUBTEL_CLIENT_SECRET = getattr(settings, 'HUBTEL_CLIENT_SECRET', '')
-HUBTEL_FROM = getattr(settings, 'HUBTEL_FROM', 'Vehicle Repairs')
-HUBTEL_ENABLED = getattr(settings, 'HUBTEL_SMS_ENABLED', False)
-HUBTEL_API_URL = 'https://smsc.hubtel.com/v1/messages/send'
-
+# Hubtel configuration - Try system settings first, fallback to Django settings
+def _get_hubtel_config():
+    """Get Hubtel configuration from system settings or Django settings"""
+    sms_settings = get_sms_settings()
+    
+    # Try system settings first
+    client_id = sms_settings.get('hubtel_client_id') or getattr(settings, 'HUBTEL_CLIENT_ID', '')
+    client_secret = sms_settings.get('hubtel_client_secret') or getattr(settings, 'HUBTEL_CLIENT_SECRET', '')
+    from_id = sms_settings.get('hubtel_sender_id') or getattr(settings, 'HUBTEL_FROM', 'Vehicle Repairs')
+    api_url = sms_settings.get('hubtel_api_url') or 'https://smsc.hubtel.com/v1/messages/send'
+    
+    # Check if SMS is enabled in system settings or Django settings
+    sms_enabled = sms_settings.get('sms_enabled', 'false').lower() == 'true'
+    django_enabled = getattr(settings, 'HUBTEL_SMS_ENABLED', False)
+    enabled = sms_enabled or django_enabled
+    
+    return {
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'from_id': from_id,
+        'api_url': api_url,
+        'enabled': enabled,
+    }
 
 def is_hubtel_available():
     """Check if Hubtel SMS is configured and available"""
-    return HUBTEL_ENABLED and bool(HUBTEL_CLIENT_ID) and bool(HUBTEL_CLIENT_SECRET)
+    config = _get_hubtel_config()
+    return config['enabled'] and bool(config['client_id']) and bool(config['client_secret'])
+
+# For backward compatibility, functions that return config values dynamically
+def get_hubtel_client_id():
+    """Get Hubtel client ID from system settings or Django settings"""
+    return _get_hubtel_config()['client_id']
+
+def get_hubtel_client_secret():
+    """Get Hubtel client secret from system settings or Django settings"""
+    return _get_hubtel_config()['client_secret']
+
+def get_hubtel_from():
+    """Get Hubtel sender ID from system settings or Django settings"""
+    return _get_hubtel_config()['from_id']
+
+def get_hubtel_api_url():
+    """Get Hubtel API URL from system settings or Django settings"""
+    return _get_hubtel_config()['api_url']
+
+def is_hubtel_enabled():
+    """Check if Hubtel is enabled from system settings or Django settings"""
+    return _get_hubtel_config()['enabled']
+
+# Note: For backward compatibility, any code that directly accesses these
+# module-level constants will need to be updated to use the functions above
+# or the _get_hubtel_config() function. The send_sms() function has been
+# updated to use _get_hubtel_config() directly.
 
 
 def format_phone_number(phone_number):
@@ -131,15 +175,16 @@ def send_sms(phone_number, message, sender=None):
         message = message[:997] + "..."
     
     # Use provided sender or default
-    from_sender = sender or HUBTEL_FROM
+    config = _get_hubtel_config()
+    from_sender = sender or config['from_id']
     
     try:
         # Send SMS using Hubtel SMSC API (Quick Send - GET method)
         response = requests.get(
-            HUBTEL_API_URL,
+            config['api_url'],
             params={
-                'clientid': HUBTEL_CLIENT_ID,
-                'clientsecret': HUBTEL_CLIENT_SECRET,
+                'clientid': config['client_id'],
+                'clientsecret': config['client_secret'],
                 'from': from_sender,
                 'to': formatted_phone,
                 'content': message

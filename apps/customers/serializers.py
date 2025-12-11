@@ -70,12 +70,15 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(write_only=True)
     last_name = serializers.CharField(write_only=True)
     phone = serializers.CharField(write_only=True, required=False)
+    grant_portal_access = serializers.BooleanField(write_only=True, required=False, default=False)
+    send_welcome_email = serializers.BooleanField(write_only=True, required=False, default=False)
     
     class Meta:
         model = Customer
         fields = [
             # User fields
             'email', 'username', 'password', 'first_name', 'last_name', 'phone',
+            'grant_portal_access', 'send_welcome_email',
             # Customer fields
             'company_name', 'business_type', 'tax_id', 'customer_type',
             'service_address', 'service_city', 'service_state', 'service_zip_code',
@@ -114,6 +117,16 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         first_name = validated_data.pop('first_name')
         last_name = validated_data.pop('last_name')
         phone = validated_data.pop('phone', '')
+        grant_portal_access = validated_data.pop('grant_portal_access', False)
+        send_welcome_email = validated_data.pop('send_welcome_email', False)
+        
+        # If portal access is granted, password is required
+        if grant_portal_access and not password:
+            import secrets
+            import string
+            # Generate secure password
+            alphabet = string.ascii_letters + string.digits + string.punctuation
+            password = ''.join(secrets.choice(alphabet) for i in range(16))
         
         # Create user account
         user = User.objects.create_user(
@@ -123,7 +136,7 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
             last_name=last_name,
             phone=phone,
             role='customer',
-            is_active=True
+            is_active=grant_portal_access  # Only active if portal access is granted
         )
         
         # Set password if provided
@@ -133,7 +146,25 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         
         # Create customer profile
         customer = Customer.objects.create(user=user, **validated_data)
+        
+        # Send welcome email if requested
+        if send_welcome_email and grant_portal_access and password:
+            try:
+                self._send_welcome_email(user, password, email)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send welcome email to {email}: {str(e)}")
+        
         return customer
+    
+    def _send_welcome_email(self, user, password, email):
+        """Send welcome email to new customer"""
+        from apps.notifications_app.triggers import NotificationTriggers
+        
+        triggers = NotificationTriggers()
+        # Use user_welcome template for customers (customers are users with role='customer')
+        triggers.user_welcome(user, password, 'customer', None)
 
 
 class CustomerUpdateSerializer(serializers.ModelSerializer):

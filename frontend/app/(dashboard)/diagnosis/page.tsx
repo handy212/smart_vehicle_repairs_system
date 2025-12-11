@@ -1,112 +1,151 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { diagnosisApi } from "@/lib/api/diagnosis";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Stethoscope,
-  Plus,
   Search,
-  Filter,
-  Calendar,
   User,
-  CheckCircle,
   Clock,
-  AlertCircle,
+  ChevronRight,
 } from "lucide-react";
-import Link from "next/link";
 import { format } from "date-fns";
 
 export default function DiagnosisListPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("newest");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["diagnoses", { search: searchQuery, status: statusFilter }],
-    queryFn: () =>
-      diagnosisApi.list({
+    queryKey: ["diagnoses", { search: searchQuery, status: statusFilter, sort: sortBy }],
+    queryFn: () => {
+      let ordering = "-created_at";
+      if (sortBy === "oldest") ordering = "created_at";
+      else if (sortBy === "fee_high") ordering = "-diagnostic_fee";
+      else if (sortBy === "fee_low") ordering = "diagnostic_fee";
+
+      return diagnosisApi.list({
         search: searchQuery || undefined,
         status: statusFilter !== "all" ? statusFilter : undefined,
-        ordering: "-created_at",
-      }),
+        ordering,
+      });
+    },
   });
 
   const diagnoses = data?.results || [];
 
+  // Calculate stats
+  const stats = useMemo(() => {
+    const total = diagnoses.length;
+    const inProgress = diagnoses.filter((d) => d.status === "in_progress").length;
+    const completed = diagnoses.filter((d) => d.status === "completed").length;
+    const totalFee = diagnoses.reduce((sum, d) => sum + Number(d.diagnostic_fee || 0), 0);
+
+    return { total, inProgress, completed, totalFee };
+  }, [diagnoses]);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Stethoscope className="w-8 h-8" />
-            Diagnosis
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Manage vehicle diagnostic processes
-          </p>
-        </div>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Stethoscope className="w-6 h-6" />
+          Diagnosis
+        </h1>
+        {diagnoses.length > 0 && (
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>{stats.total} total</span>
+          </div>
+        )}
       </div>
 
+      {/* Stats Bar - Only show if there are diagnoses */}
+      {diagnoses.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card className="border-l-4 border-l-blue-500">
+            <CardContent className="p-3">
+              <p className="text-xs text-gray-500 mb-1">Total</p>
+              <p className="text-xl font-bold">{stats.total}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-yellow-500">
+            <CardContent className="p-3">
+              <p className="text-xs text-gray-500 mb-1">In Progress</p>
+              <p className="text-xl font-bold">{stats.inProgress}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-green-500">
+            <CardContent className="p-3">
+              <p className="text-xs text-gray-500 mb-1">Completed</p>
+              <p className="text-xl font-bold">{stats.completed}</p>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-purple-500">
+            <CardContent className="p-3">
+              <p className="text-xs text-gray-500 mb-1">Total Fees</p>
+              <p className="text-xl font-bold">${stats.totalFee.toFixed(2)}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search by work order, customer, vehicle..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border rounded-md"
-            >
-              <option value="all">All Status</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="on_hold">On Hold</option>
-            </select>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-64">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border rounded-md text-sm"
+        >
+          <option value="all">All Status</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="on_hold">On Hold</option>
+        </select>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="px-3 py-2 border rounded-md text-sm"
+        >
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="fee_high">Fee: High to Low</option>
+          <option value="fee_low">Fee: Low to High</option>
+        </select>
+      </div>
 
       {/* Diagnosis List */}
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       ) : diagnoses.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6 text-center py-12">
-            <Stethoscope className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-semibold mb-2">No diagnoses found</h3>
-            <p className="text-gray-500 mb-4">
-              {searchQuery
-                ? "Try adjusting your search criteria"
-                : "Get started by creating a diagnosis from a work order"}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="text-center py-16">
+          <Stethoscope className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+          <p className="text-sm text-gray-500">
+            {searchQuery || statusFilter !== "all" ? "No diagnoses found" : "No diagnoses yet"}
+          </p>
+        </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {diagnoses.map((diagnosis) => {
             const workOrder =
-              typeof diagnosis.work_order === "object"
-                ? diagnosis.work_order
-                : null;
+              typeof diagnosis.work_order === "object" ? diagnosis.work_order : null;
             const workOrderId =
               typeof diagnosis.work_order === "number"
                 ? diagnosis.work_order
@@ -115,88 +154,85 @@ export default function DiagnosisListPage() {
             return (
               <Card
                 key={diagnosis.id}
-                className="hover:shadow-md transition-shadow cursor-pointer"
+                className="hover:shadow-lg transition-all cursor-pointer group border-l-4 border-l-transparent hover:border-l-blue-500"
                 onClick={() => {
                   if (workOrderId) {
                     router.push(`/workorders/${workOrderId}/diagnosis`);
                   }
                 }}
               >
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold">
-                          {diagnosis.work_order_number ||
-                            (workOrder ? `WO-${workOrder.id}` : `Diagnosis #${diagnosis.id}`)}
-                        </h3>
-                        <Badge
-                          variant={
-                            diagnosis.status === "completed"
-                              ? "default"
-                              : diagnosis.status === "on_hold"
-                              ? "secondary"
-                              : "info"
-                          }
-                        >
-                          {diagnosis.status_display || diagnosis.status}
-                        </Badge>
-                      </div>
-                      <div className="space-y-1 text-sm text-gray-600">
-                        {diagnosis.customer_name && (
-                          <p>
-                            <strong>Customer:</strong> {diagnosis.customer_name}
-                          </p>
-                        )}
-                        {diagnosis.vehicle_info && (
-                          <p>
-                            <strong>Vehicle:</strong> {diagnosis.vehicle_info.year}{" "}
-                            {diagnosis.vehicle_info.make}{" "}
-                            {diagnosis.vehicle_info.model}
-                          </p>
-                        )}
-                        {diagnosis.technician_name && (
-                          <p>
-                            <strong>Technician:</strong>{" "}
-                            {diagnosis.technician_name}
-                          </p>
-                        )}
-                        <p className="text-xs text-gray-500 mt-2">
-                          Started:{" "}
-                          {diagnosis.started_at
-                            ? format(new Date(diagnosis.started_at), "PPp")
-                            : "N/A"}
-                        </p>
-                      </div>
-                      {diagnosis.customer_complaint && (
-                        <p className="mt-3 text-sm text-gray-700 line-clamp-2">
-                          {diagnosis.customer_complaint}
+                <CardContent className="p-4 space-y-3">
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm truncate">
+                        {diagnosis.work_order_number ||
+                          (workOrder ? `WO-${workOrder.id}` : `#${diagnosis.id}`)}
+                      </h3>
+                      {diagnosis.started_at && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {format(new Date(diagnosis.started_at), "MMM d, yyyy")}
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 ml-4">
-                      <div className="text-right text-sm">
-                        {diagnosis.diagnostic_fee && (
-                          <p className="font-semibold">
-                            ${Number(diagnosis.diagnostic_fee).toFixed(2)}
-                          </p>
-                        )}
-                        {diagnosis.diagnostic_time_hours && (
-                          <p className="text-gray-500">
+                    <Badge
+                      variant={
+                        diagnosis.status === "completed"
+                          ? "default"
+                          : diagnosis.status === "on_hold"
+                          ? "secondary"
+                          : "info"
+                      }
+                      className="shrink-0 text-xs"
+                    >
+                      {diagnosis.status_display || diagnosis.status}
+                    </Badge>
+                  </div>
+
+                  {/* Vehicle */}
+                  {diagnosis.vehicle_info && (
+                    <div className="text-sm font-medium text-gray-700 truncate">
+                      {diagnosis.vehicle_info.year} {diagnosis.vehicle_info.make}{" "}
+                      {diagnosis.vehicle_info.model}
+                    </div>
+                  )}
+
+                  {/* Complaint */}
+                  {diagnosis.customer_complaint && (
+                    <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
+                      {diagnosis.customer_complaint}
+                    </p>
+                  )}
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                      {diagnosis.technician_name && (
+                        <div className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          <span className="truncate max-w-20">
+                            {diagnosis.technician_name.split(" ")[0]}
+                          </span>
+                        </div>
+                      )}
+                      {diagnosis.diagnostic_time_hours && (
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>
                             {typeof diagnosis.diagnostic_time_hours === "string"
                               ? diagnosis.diagnostic_time_hours
                               : `${diagnosis.diagnostic_time_hours}h`}
-                          </p>
-                        )}
-                      </div>
-                      {workOrderId && (
-                        <Link
-                          href={`/workorders/${workOrderId}/diagnosis`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Button variant="outline">View</Button>
-                        </Link>
+                          </span>
+                        </div>
                       )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {diagnosis.diagnostic_fee && (
+                        <span className="text-sm font-semibold text-gray-700">
+                          ${Number(diagnosis.diagnostic_fee).toFixed(2)}
+                        </span>
+                      )}
+                      <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
                     </div>
                   </div>
                 </CardContent>
@@ -207,25 +243,27 @@ export default function DiagnosisListPage() {
       )}
 
       {/* Pagination */}
-      {data && (data.next || data.previous) && (
-        <div className="flex items-center justify-between">
+      {data && data.count > diagnoses.length && (
+        <div className="flex items-center justify-center gap-4 pt-2">
           <Button
             variant="outline"
+            size="sm"
             disabled={!data.previous}
             onClick={() => {
-              // Handle pagination
+              // Handle pagination - implement if needed
             }}
           >
             Previous
           </Button>
-          <span className="text-sm text-gray-500">
-            Showing {diagnoses.length} of {data.count} diagnoses
+          <span className="text-xs text-gray-500">
+            Showing {diagnoses.length} of {data.count}
           </span>
           <Button
             variant="outline"
+            size="sm"
             disabled={!data.next}
             onClick={() => {
-              // Handle pagination
+              // Handle pagination - implement if needed
             }}
           >
             Next
@@ -235,4 +273,3 @@ export default function DiagnosisListPage() {
     </div>
   );
 }
-

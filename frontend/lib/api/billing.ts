@@ -48,6 +48,7 @@ export interface Invoice {
   vehicle_display?: string;
   vehicle_vin?: string;
   work_order?: number | { id: number };
+  work_order_number?: string;
   invoice_date: string;
   due_date: string;
   status: string;
@@ -135,6 +136,7 @@ export interface Estimate {
   vehicle_display?: string;
   vehicle_vin?: string;
   work_order?: number | { id: number };
+  work_order_number?: string;
   status: string;
   title?: string;
   description?: string;
@@ -309,12 +311,29 @@ export const billingApi = {
 
     convertToInvoice: async (id: number): Promise<Invoice> => {
       const response = await apiClient.post(`/billing/estimates/${id}/convert_to_invoice/`);
-      return response.data;
+      // Backend returns { "message": "...", "invoice": {...} }
+      return response.data.invoice || response.data;
     },
 
     convertToWorkOrder: async (id: number): Promise<{ work_order_id: number; work_order_number: string }> => {
       const response = await apiClient.post(`/billing/estimates/${id}/convert_to_work_order/`);
       return response.data;
+    },
+
+    bulkSend: async (ids: number[]): Promise<{ message: string; sent_count: number; errors?: string[] }> => {
+      const response = await apiClient.post(`/billing/estimates/bulk_send/`, { ids });
+      return response.data;
+    },
+
+    bulkUpdateStatus: async (ids: number[], status: string): Promise<{ message: string; updated_count: number; errors?: string[] }> => {
+      const response = await apiClient.post(`/billing/estimates/bulk_update_status/`, { ids, status });
+      return response.data;
+    },
+
+    duplicate: async (id: number): Promise<Estimate> => {
+      const response = await apiClient.post(`/billing/estimates/${id}/duplicate/`);
+      // Backend returns { message: "...", estimate: {...} }
+      return response.data.estimate || response.data;
     },
 
     pending: async (): Promise<Estimate[]> => {

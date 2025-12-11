@@ -25,6 +25,18 @@ class InspectionItemSerializer(serializers.ModelSerializer):
         ]
 
 
+class InspectionItemCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating inspection items"""
+    
+    class Meta:
+        model = InspectionItem
+        fields = [
+            'id', 'name', 'description', 'item_type',
+            'measurement_unit', 'min_acceptable', 'max_acceptable',
+            'order', 'is_critical'
+        ]
+
+
 class InspectionCategorySerializer(serializers.ModelSerializer):
     """Serializer for inspection categories with items"""
     items = InspectionItemSerializer(many=True, read_only=True)
@@ -86,7 +98,12 @@ class InspectionTemplateCreateSerializer(serializers.ModelSerializer):
         ]
     
     def create(self, validated_data):
-        validated_data['created_by'] = self.context['request'].user
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            validated_data['created_by'] = request.user
+        else:
+            # Fallback - this shouldn't happen but helps with debugging
+            raise serializers.ValidationError("User authentication required to create template")
         return super().create(validated_data)
 
 
@@ -232,7 +249,7 @@ class VehicleInspectionDetailSerializer(serializers.ModelSerializer):
             'status', 'status_display', 'overall_result', 'overall_result_display',
             'performed_by', 'performed_by_name', 'approved_by', 'approved_by_name',
             'technician_signature', 'customer_signature', 'notes', 'recommendations',
-            'completed_at', 'sent_to_customer_at', 'results', 'result_counts',
+            'vehicle_damage', 'completed_at', 'sent_to_customer_at', 'results', 'result_counts',
             'completion_percentage', 'has_critical_issues', 'pass_count',
             'fail_count', 'advisory_count', 'total_items',
             'created_at', 'updated_at'
@@ -408,7 +425,8 @@ class VehicleInspectionUpdateSerializer(serializers.ModelSerializer):
         model = VehicleInspection
         fields = [
             'inspection_date', 'odometer_reading', 'status', 'overall_result',
-            'technician_signature', 'customer_signature', 'notes', 'recommendations'
+            'technician_signature', 'customer_signature', 'notes', 'recommendations',
+            'vehicle_damage'
         ]
 
 

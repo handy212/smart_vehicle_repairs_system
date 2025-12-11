@@ -14,9 +14,11 @@ class Diagnosis(models.Model):
     """
     
     STATUS_CHOICES = [
+        ('not_started', 'Not Started'),
         ('in_progress', 'In Progress'),
+        ('paused', 'Paused'),
         ('completed', 'Completed'),
-        ('on_hold', 'On Hold'),
+        ('on_hold', 'On Hold'),  # Keep for backward compatibility
     ]
     
     # One diagnosis per work order
@@ -39,14 +41,16 @@ class Diagnosis(models.Model):
     )
     
     # Timing
-    started_at = models.DateTimeField(default=timezone.now, help_text="When diagnosis began")
+    started_at = models.DateTimeField(null=True, blank=True, help_text="When diagnosis began")
+    paused_at = models.DateTimeField(null=True, blank=True, help_text="When diagnosis was paused")
+    resumed_at = models.DateTimeField(null=True, blank=True, help_text="When diagnosis was resumed")
     completed_at = models.DateTimeField(null=True, blank=True, help_text="When diagnosis finished")
     
     # Status
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='in_progress',
+        default='not_started',
         db_index=True
     )
     
@@ -113,13 +117,258 @@ class Diagnosis(models.Model):
     def __str__(self):
         return f"Diagnosis for {self.work_order.work_order_number}"
     
-    def complete(self):
-        """Mark diagnosis as completed"""
+    def start(self, user=None):
+        """Start the diagnosis"""
+        from django.db import transaction
+        # Import here to avoid circular import
+        DiagnosisTimeLog = self._meta.apps.get_model('diagnosis', 'DiagnosisTimeLog')
+        
+        if self.status == 'not_started':
+            with transaction.atomic():
+                self.status = 'in_progress'
+                self.started_at = timezone.now()
+                if user and not self.technician:
+                    self.technician = user
+                self.save(update_fields=['status', 'started_at', 'technician'])
+                
+                # Create time log entry
+                DiagnosisTimeLog.objects.create(
+                    diagnosis=self,
+                    stage='started',
+                    started_at=self.started_at,
+                    technician=user or self.technician
+                )
+                return True
+        return False
+    
+    def pause(self, user=None, reason=None):
+        """Pause the diagnosis"""
+        from django.db import transaction
+        # Import here to avoid circular import
+        DiagnosisTimeLog = self._meta.apps.get_model('diagnosis', 'DiagnosisTimeLog')
+        
+        if self.status == 'in_progress':
+            with transaction.atomic():
+                # Calculate time spent in current session
+                last_resume = self.resumed_at or self.started_at
+                if last_resume:
+                    time_spent = timezone.now() - last_resume
+                    hours_spent = Decimal(str(time_spent.total_seconds() / 3600))
+                    self.diagnostic_time_hours += hours_spent
+                
+                self.status = 'paused'
+                self.paused_at = timezone.now()
+                self.save(update_fields=['status', 'paused_at', 'diagnostic_time_hours'])
+                
+                # Update last time log entry or create new one
+                last_log = DiagnosisTimeLog.objects.filter(
+                    diagnosis=self,
+                    stage='resumed'
+                ).order_by('-started_at').first()
+                
+                if last_log and not last_log.ended_at:
+                    last_log.ended_at = self.paused_at
+                    last_log.save(update_fields=['ended_at'])
+                
+                # Create pause log entry
+                DiagnosisTimeLog.objects.create(
+                    diagnosis=self,
+                    stage='paused',
+                    started_at=self.paused_at,
+                    technician=user or self.technician,
+                    notes=reason
+                )
+                return True
+        return False
+    
+    def resume(self, user=None):
+        """Resume the diagnosis"""
+        from django.db import transaction
+        # Import here to avoid circular import
+        DiagnosisTimeLog = self._meta.apps.get_model('diagnosis', 'DiagnosisTimeLog')
+        
+        if self.status == 'paused':
+            with transaction.atomic():
+                self.status = 'in_progress'
+                self.resumed_at = timezone.now()
+                self.save(update_fields=['status', 'resumed_at'])
+                
+                # Update last pause log entry
+                last_pause_log = DiagnosisTimeLog.objects.filter(
+                    diagnosis=self,
+                    stage='paused'
+                ).order_by('-started_at').first()
+                
+                if last_pause_log and not last_pause_log.ended_at:
+                    last_pause_log.ended_at = self.resumed_at
+                    last_pause_log.save(update_fields=['ended_at'])
+                
+                # Create resume log entry
+                DiagnosisTimeLog.objects.create(
+                    diagnosis=self,
+                    stage='resumed',
+                    started_at=self.resumed_at,
+                    technician=user or self.technician
+                )
+                return True
+        return False
+    
+    def complete(self, requires_approval=None):
+        """
+        Mark diagnosis as completed and sync with WorkOrder
+        
+        Args:
+            requires_approval: Whether customer approval is required. If None, uses self.requires_approval
+        """
+        from django.db import transaction
+        
+        # Import here to avoid circular import
+        DiagnosisTimeLog = self._meta.apps.get_model('diagnosis', 'DiagnosisTimeLog')
+        
         if not self.is_completed:
-            self.is_completed = True
-            self.status = 'completed'
-            self.completed_at = timezone.now()
-            self.save(update_fields=['is_completed', 'status', 'completed_at'])
+            with transaction.atomic():
+                # Calculate final time spent if currently in progress
+                if self.status == 'in_progress':
+                    last_resume = self.resumed_at or self.started_at
+                    if last_resume:
+                        time_spent = timezone.now() - last_resume
+                        hours_spent = Decimal(str(time_spent.total_seconds() / 3600))
+                        self.diagnostic_time_hours += hours_spent
+                
+                self.is_completed = True
+                self.status = 'completed'
+                self.completed_at = timezone.now()
+                
+                # Update requires_approval if provided
+                if requires_approval is not None:
+                    self.requires_approval = requires_approval
+                
+                self.save(update_fields=['is_completed', 'status', 'completed_at', 'requires_approval', 'diagnostic_time_hours'])
+                
+                # Update last time log entry
+                last_log = DiagnosisTimeLog.objects.filter(
+                    diagnosis=self,
+                    stage__in=['started', 'resumed']
+                ).order_by('-started_at').first()
+                
+                if last_log and not last_log.ended_at:
+                    last_log.ended_at = self.completed_at
+                    last_log.save(update_fields=['ended_at'])
+                
+                # Create completion log entry
+                DiagnosisTimeLog.objects.create(
+                    diagnosis=self,
+                    stage='completed',
+                    started_at=self.completed_at,
+                    technician=self.technician
+                )
+                
+                # Sync with WorkOrder
+                work_order = self.work_order
+                if work_order:
+                    # Refresh work_order to ensure we have latest data (e.g. from Estimate sync)
+                    work_order.refresh_from_db()
+                    
+                    # Update diagnosis completion fields
+                    work_order.diagnosis_completed_at = self.completed_at
+                    
+                    # Set diagnosis_by from diagnosis technician
+                    if self.technician:
+                        work_order.diagnosis_by = self.technician
+                    
+                    # Update diagnosis_notes from root_cause or customer_complaint
+                    if self.root_cause:
+                        work_order.diagnosis_notes = self.root_cause
+                    elif self.customer_complaint and not work_order.diagnosis_notes:
+                        work_order.diagnosis_notes = self.customer_complaint
+                    
+                    # Update requires_approval flag
+                    work_order.requires_approval = self.requires_approval
+                    
+                    # COST CALCULATION LOGIC
+                    # Check if there is an existing Estimate linked to the Work Order
+                    # If an estimate exists and has a total, we use that as the source of truth
+                    # and skip overwriting with recommendation calculations
+                    
+                    estimate_used = False
+                    if hasattr(work_order, 'estimate') and work_order.estimate:
+                        try:
+                            # Accessing estimate might trigger DB lookup
+                            if work_order.estimate.total > 0:
+                                estimate_used = True
+                        except Exception:
+                            pass
+
+                    if not estimate_used:
+                        # Calculate estimated totals from recommendations only if no valid estimate
+                        total_parts_cost = Decimal('0')
+                        total_labor_cost = Decimal('0')
+                        total_labor_hours = Decimal('0')
+                        
+                        for rec in self.repair_recommendations.all():
+                            if rec.estimated_parts_cost:
+                                total_parts_cost += Decimal(str(rec.estimated_parts_cost))
+                            if rec.estimated_labor_cost:
+                                total_labor_cost += Decimal(str(rec.estimated_labor_cost))
+                            if rec.estimated_labor_hours:
+                                total_labor_hours += Decimal(str(rec.estimated_labor_hours))
+                        
+                        # Update work order estimated costs
+                        if total_parts_cost > 0:
+                            work_order.estimated_parts_cost = total_parts_cost
+                        if total_labor_cost > 0:
+                            work_order.estimated_labor_cost = total_labor_cost
+                        if total_labor_hours > 0:
+                            work_order.estimated_labor_hours = total_labor_hours
+                        
+                        # Recalculate estimated_total
+                        work_order.estimated_total = work_order.estimated_labor_cost + work_order.estimated_parts_cost
+                    
+                    # Determine next status based on approval requirement
+                    # Only update status if currently in 'diagnosis' status
+                    if work_order.status == 'diagnosis':
+                        if self.requires_approval:
+                            # Transition to awaiting_approval
+                            can_transition, error_msg = work_order.can_transition_to('awaiting_approval')
+                            if can_transition:
+                                work_order.status = 'awaiting_approval'
+                            else:
+                                # If can't transition (e.g., missing estimate), keep in diagnosis but mark completed
+                                import logging
+                                logger = logging.getLogger(__name__)
+                                logger.warning(f"Cannot transition work order {work_order.id} to awaiting_approval: {error_msg}")
+                        else:
+                            # No approval needed - can transition directly to in_progress or approved
+                            # Check prerequisites for in_progress first
+                            can_transition, error_msg = work_order.can_transition_to('in_progress')
+                            if can_transition:
+                                work_order.status = 'in_progress'
+                            else:
+                                # If can't go to in_progress (e.g., no technician assigned), 
+                                # try approved status (which bypasses approval requirement)
+                                # Since requires_approval is False, we can skip the approval check
+                                # Just ensure we have basic prerequisites
+                                if work_order.primary_technician or work_order.assigned_technicians.exists():
+                                    # Technicians assigned, can go to approved
+                                    work_order.status = 'approved'
+                                else:
+                                    # Keep in diagnosis status - technician assignment needed
+                                    import logging
+                                    logger = logging.getLogger(__name__)
+                                    logger.warning(f"Cannot transition work order {work_order.id} from diagnosis: {error_msg}")
+                    
+                    # Save work order updates
+                    work_order.save(update_fields=[
+                        'diagnosis_completed_at',
+                        'diagnosis_by',
+                        'diagnosis_notes',
+                        'requires_approval',
+                        'estimated_parts_cost',
+                        'estimated_labor_cost',
+                        'estimated_labor_hours',
+                        'estimated_total',
+                        'status'
+                    ])
     
     @property
     def diagnostic_time_formatted(self):
@@ -129,6 +378,98 @@ class Diagnosis(models.Model):
             minutes = int((self.diagnostic_time_hours - hours) * 60)
             return f"{hours}h {minutes}m"
         return "0h 0m"
+
+
+class DiagnosisTimeLog(models.Model):
+    """
+    Timesheet tracking for diagnosis stages
+    Tracks time spent in each stage: started, paused, resumed, completed
+    """
+    
+    STAGE_CHOICES = [
+        ('started', 'Started'),
+        ('paused', 'Paused'),
+        ('resumed', 'Resumed'),
+        ('completed', 'Completed'),
+    ]
+    
+    diagnosis = models.ForeignKey(
+        Diagnosis,
+        on_delete=models.CASCADE,
+        related_name='time_logs',
+        help_text="Diagnosis this time log belongs to"
+    )
+    
+    stage = models.CharField(
+        max_length=20,
+        choices=STAGE_CHOICES,
+        help_text="Stage of diagnosis"
+    )
+    
+    started_at = models.DateTimeField(
+        default=timezone.now,
+        help_text="When this stage started"
+    )
+    ended_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this stage ended (for active/resumed stages)"
+    )
+    
+    technician = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='diagnosis_time_logs',
+        help_text="Technician who performed this action"
+    )
+    
+    notes = models.TextField(
+        blank=True,
+        help_text="Optional notes (e.g., pause reason)"
+    )
+    
+    # Calculated duration (cached for performance)
+    duration_hours = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Duration in hours (calculated from started_at and ended_at)"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['started_at']
+        verbose_name = 'Diagnosis Time Log'
+        verbose_name_plural = 'Diagnosis Time Logs'
+        indexes = [
+            models.Index(fields=['diagnosis', 'stage']),
+            models.Index(fields=['technician', 'started_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_stage_display()} - {self.diagnosis.work_order.work_order_number} at {self.started_at}"
+    
+    def save(self, *args, **kwargs):
+        """Calculate duration when ended_at is set"""
+        if self.ended_at and self.started_at:
+            duration = self.ended_at - self.started_at
+            self.duration_hours = Decimal(str(duration.total_seconds() / 3600))
+        super().save(*args, **kwargs)
+    
+    @property
+    def duration_formatted(self):
+        """Format duration as hours:minutes"""
+        if self.duration_hours:
+            hours = int(self.duration_hours)
+            minutes = int((self.duration_hours - hours) * 60)
+            return f"{hours}h {minutes}m"
+        return "In progress"
 
 
 class RepairRecommendation(models.Model):
@@ -350,6 +691,13 @@ class DiagnosticCode(models.Model):
         indexes = [
             models.Index(fields=['diagnosis', 'status']),
             models.Index(fields=['code_number', 'code_type']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['diagnosis', 'code_number', 'code_type'],
+                name='unique_code_per_diagnosis',
+                violation_error_message='This diagnostic code already exists for this diagnosis.'
+            ),
         ]
     
     def __str__(self):

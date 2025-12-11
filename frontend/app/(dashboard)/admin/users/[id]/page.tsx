@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { ArrowLeft, Edit, AlertCircle, Building2, Save, X } from "lucide-react";
+import { ArrowLeft, Edit, AlertCircle, Building2, Save, X, Info, RefreshCw, Copy, Eye, EyeOff, Mail, KeyRound, UserCheck, UserX } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -34,19 +34,43 @@ const userUpdateSchema = z.object({
     "receptionist",
     "parts_manager",
     "accountant",
-    "customer",
   ]).optional(),
   branch: z.number().nullable().optional(),
   managed_branches: z.array(z.number()).optional(),
   employee_id: z.string().optional(),
   hire_date: z.string().optional(),
   hourly_rate: z.string().optional(),
-});
+})
+.refine(
+  (data) => {
+    // Managers should have managed_branches, not branch
+    if (data.role === "manager") {
+      return !data.branch || (data.managed_branches && data.managed_branches.length > 0);
+    }
+    return true;
+  },
+  {
+    message: "Managers must have at least one managed branch assigned",
+    path: ["managed_branches"],
+  }
+)
+.refine(
+  (data) => {
+    // Staff roles should have a single branch
+    if (data.role && ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant"].includes(data.role)) {
+      return !!data.branch;
+    }
+    return true;
+  },
+  {
+    message: "Staff members must be assigned to a branch",
+    path: ["branch"],
+  }
+);
 
 type UserUpdateFormData = z.infer<typeof userUpdateSchema>;
 
 const ROLE_OPTIONS = [
-  { value: "customer", label: "Customer" },
   { value: "receptionist", label: "Receptionist" },
   { value: "technician", label: "Technician" },
   { value: "parts_manager", label: "Parts Manager" },
@@ -63,6 +87,10 @@ export default function UserDetailPage() {
   const userId = parseInt(params.id as string);
   const [isEditing, setIsEditing] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordCopied, setPasswordCopied] = useState(false);
 
   const { data: user, isLoading } = useQuery({
     queryKey: ["admin", "user", userId],
@@ -163,6 +191,90 @@ export default function UserDetailPage() {
       }
     },
   });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ password, sendEmail }: { password: string; sendEmail: boolean }) =>
+      adminApi.users.resetPassword(userId, password, sendEmail),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "user", userId] });
+      toast({
+        title: "Success",
+        description: data.email_sent 
+          ? "Password reset successfully and email sent to user"
+          : "Password reset successfully",
+      });
+      setShowPasswordReset(false);
+      setNewPassword("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to reset password",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const sendResetLinkMutation = useMutation({
+    mutationFn: () => adminApi.users.sendPasswordResetLink(userId),
+    onSuccess: (data) => {
+      toast({
+        title: "Success",
+        description: data.detail || "Password reset link sent successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to send password reset link",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Generate secure password
+  const generatePassword = () => {
+    const length = 16;
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+    const symbols = "!@#$%^&*";
+    const allChars = uppercase + lowercase + numbers + symbols;
+
+    let password = "";
+    // Ensure at least one character from each type
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+
+    // Fill the rest randomly
+    for (let i = password.length; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+
+    // Shuffle the password
+    password = password.split("").sort(() => Math.random() - 0.5).join("");
+    return password;
+  };
+
+  const handleGeneratePassword = () => {
+    const password = generatePassword();
+    setNewPassword(password);
+    setPasswordCopied(false);
+  };
+
+  const handleCopyPassword = async () => {
+    if (newPassword) {
+      try {
+        await navigator.clipboard.writeText(newPassword);
+        setPasswordCopied(true);
+        setTimeout(() => setPasswordCopied(false), 2000);
+      } catch (err) {
+        console.error("Failed to copy password:", err);
+      }
+    }
+  };
 
   const onSubmit = async (data: UserUpdateFormData) => {
     setServerError(null);
@@ -274,388 +386,852 @@ export default function UserDetailPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{user.email}</p>
           </div>
         </div>
-        {!isEditing && (
-          <Button onClick={() => setIsEditing(true)} className="dark:bg-blue-600 dark:hover:bg-blue-700">
-            <Edit className="w-4 h-4 mr-2" />
-            Edit User
-          </Button>
-        )}
+        <div className="flex space-x-4">
+          {isEditing ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditing(false);
+                  reset();
+                  setServerError(null);
+                }}
+                className="dark:border-gray-700 dark:text-gray-200"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                form="user-edit-form"
+                disabled={isSubmitting || updateMutation.isPending}
+                className="dark:bg-blue-600 dark:hover:bg-blue-700"
+              >
+                {isSubmitting || updateMutation.isPending ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Saving...
+                  </span>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => setIsEditing(true)} className="dark:bg-blue-600 dark:hover:bg-blue-700">
+              <Edit className="w-4 h-4 mr-2" />
+              Edit User
+            </Button>
+          )}
+        </div>
       </div>
 
       {isEditing ? (
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              <Card className="dark:bg-gray-800 dark:border-gray-700">
-                <CardHeader>
-                  <CardTitle className="dark:text-white">User Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {serverError && (
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded flex items-start">
-                      <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
-                      <span>{serverError}</span>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        First Name <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        {...register("first_name")}
-                        className={errors.first_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
-                      />
-                      {errors.first_name && (
-                        <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.first_name.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Last Name <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        {...register("last_name")}
-                        className={errors.last_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
-                      />
-                      {errors.last_name && (
-                        <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.last_name.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
-                      <Input
-                        type="tel"
-                        {...register("phone")}
-                        className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
-                      <Select
-                        {...register("role")}
-                        className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                      >
-                        {ROLE_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          {...register("is_active")}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500"
-                        />
-                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Active</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          {...register("email_notifications")}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500"
-                        />
-                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">Email Notifications</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          {...register("sms_notifications")}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500"
-                        />
-                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">SMS Notifications</span>
-                      </label>
-                    </div>
+        <form id="user-edit-form" onSubmit={handleSubmit(onSubmit)}>
+          <div className="space-y-6">
+            <Card className="dark:bg-gray-800 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="dark:text-white text-lg">Basic Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {serverError && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-700 dark:text-red-400 px-4 py-3 rounded-r flex items-start">
+                    <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm">{serverError}</span>
                   </div>
-                </CardContent>
-              </Card>
+                )}
 
-              {/* Branch Assignment */}
-              {(isManager || isStaff) && (
-                <Card className="dark:bg-gray-800 dark:border-gray-700">
-                  <CardHeader>
-                    <CardTitle className="dark:text-white flex items-center gap-2">
-                      <Building2 className="w-5 h-5" />
-                      Branch Assignment
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {isManager ? (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Managed Branches
-                        </label>
-                        <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-3 dark:bg-gray-700">
-                          {branches.length > 0 ? (
-                            branches.map((branch) => {
-                              const isSelected = (watch("managed_branches") || []).includes(branch.id);
-                              return (
-                                <label
-                                  key={branch.id}
-                                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 p-2 rounded"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={(e) => {
-                                      const current = watch("managed_branches") || [];
-                                      if (e.target.checked) {
-                                        setValue("managed_branches", [...current, branch.id]);
-                                      } else {
-                                        setValue(
-                                          "managed_branches",
-                                          current.filter((id) => id !== branch.id)
-                                        );
-                                      }
-                                    }}
-                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500"
-                                  />
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">{branch.name}</span>
-                                </label>
-                              );
-                            })
-                          ) : (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">No active branches available</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      First Name <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      placeholder="John"
+                      {...register("first_name")}
+                      className={errors.first_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                    />
+                    {errors.first_name && (
+                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {errors.first_name.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      Last Name <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      placeholder="Doe"
+                      {...register("last_name")}
+                      className={errors.last_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                    />
+                    {errors.last_name && (
+                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {errors.last_name.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Phone</label>
+                    <Input
+                      type="tel"
+                      placeholder="(555) 123-4567"
+                      {...register("phone")}
+                      className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      Role <span className="text-red-500">*</span>
+                    </label>
+                    <Select
+                      {...register("role")}
+                      className={errors.role ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                    >
+                      {ROLE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </Select>
+                    {errors.role && (
+                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {errors.role.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_active"
+                      {...register("is_active")}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                    />
+                    <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      User is active
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="email_notifications"
+                      {...register("email_notifications")}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                    />
+                    <label htmlFor="email_notifications" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Email Notifications
+                    </label>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="sms_notifications"
+                      {...register("sms_notifications")}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                    />
+                    <label htmlFor="sms_notifications" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      SMS Notifications
+                    </label>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Branch Assignment and Employment Information - Combined */}
+            {(isManager || isStaff) && (
+              <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-blue-500">
+                <CardHeader>
+                  <CardTitle className="dark:text-white flex items-center gap-2 text-lg">
+                    <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    Branch Assignment & Employment Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Branch Assignment - Left Side */}
+                    <div className="space-y-6">
+                      {isManager ? (
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                            Managed Branches <span className="text-red-500">*</span>
+                          </label>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                            Select all branches this manager should oversee
+                          </p>
+                          <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3 dark:bg-gray-700/50 bg-gray-50">
+                            {branches.length > 0 ? (
+                              branches.map((branch) => {
+                                const isSelected = (watch("managed_branches") || []).includes(branch.id);
+                                return (
+                                  <label
+                                    key={branch.id}
+                                    className="flex items-center space-x-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 p-3 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        const current = watch("managed_branches") || [];
+                                        if (e.target.checked) {
+                                          setValue("managed_branches", [...current, branch.id]);
+                                        } else {
+                                          setValue(
+                                            "managed_branches",
+                                            current.filter((id) => id !== branch.id)
+                                          );
+                                        }
+                                      }}
+                                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-5 h-5"
+                                    />
+                                    <div className="flex-1">
+                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{branch.name}</span>
+                                      {branch.code && (
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">({branch.code})</span>
+                                      )}
+                                    </div>
+                                  </label>
+                                );
+                              })
+                            ) : (
+                              <div className="text-center py-8">
+                                <Building2 className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500 dark:text-gray-400">No active branches available</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Create a branch first before assigning users</p>
+                              </div>
+                            )}
+                          </div>
+                          {errors.managed_branches && (
+                            <p className="text-red-500 dark:text-red-400 text-xs mt-2 flex items-center gap-1">
+                              <AlertCircle className="w-4 h-4" />
+                              {errors.managed_branches.message}
+                            </p>
                           )}
                         </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Assigned Branch
-                        </label>
-                        <Select
-                          {...register("branch", { setValueAs: (v) => (v ? Number(v) : null) })}
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        >
-                          <option value="">Select a branch</option>
-                          {branches.map((branch) => (
-                            <option key={branch.id} value={branch.id}>
-                              {branch.name}
-                            </option>
-                          ))}
-                        </Select>
+                      ) : (
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                            Assigned Branch <span className="text-red-500">*</span>
+                          </label>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                            Select the primary branch for this staff member
+                          </p>
+                          <Select
+                            {...register("branch", { 
+                              setValueAs: (v) => (v ? Number(v) : null),
+                            })}
+                            className={errors.branch ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                          >
+                            <option value="">-- Select a branch --</option>
+                            {branches.map((branch) => (
+                              <option key={branch.id} value={branch.id}>
+                                {branch.name} {branch.code ? `(${branch.code})` : ""}
+                              </option>
+                            ))}
+                          </Select>
+                          {errors.branch && (
+                            <p className="text-red-500 dark:text-red-400 text-xs mt-2 flex items-center gap-1">
+                              <AlertCircle className="w-4 h-4" />
+                              {errors.branch.message}
+                            </p>
+                          )}
+                          {branches.length === 0 && (
+                            <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                              <p className="text-xs text-yellow-800 dark:text-yellow-400 flex items-center gap-2">
+                                <Info className="w-4 h-4" />
+                                No active branches available. Create a branch first before assigning users.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Employment Info (for staff) - Right Side */}
+                    {isStaff && (
+                      <div className="space-y-6">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Employee ID
+                          </label>
+                          <Input
+                            placeholder="EMP-00001"
+                            {...register("employee_id")}
+                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Hire Date
+                          </label>
+                          <Input
+                            type="date"
+                            {...register("hire_date")}
+                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Hourly Rate
+                          </label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            {...register("hourly_rate")}
+                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          />
+                        </div>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Employment Info */}
-              {isStaff && (
-                <Card className="dark:bg-gray-800 dark:border-gray-700">
-                  <CardHeader>
-                    <CardTitle className="dark:text-white">Employment Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Employee ID
-                        </label>
-                        <Input
-                          {...register("employee_id")}
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Hire Date
-                        </label>
-                        <Input
-                          type="date"
-                          {...register("hire_date")}
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Hourly Rate
-                        </label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...register("hourly_rate")}
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              <div className="flex justify-end space-x-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditing(false);
-                    reset();
-                    setServerError(null);
-                  }}
-                  className="dark:border-gray-700 dark:text-gray-200"
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting || updateMutation.isPending} className="dark:bg-blue-600 dark:hover:bg-blue-700">
-                  <Save className="w-4 h-4 mr-2" />
-                  {isSubmitting || updateMutation.isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </div>
-
-            {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <Card className="dark:bg-gray-800 dark:border-gray-700 sticky top-6">
-                <CardHeader>
-                  <CardTitle className="dark:text-white">User Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</p>
-                    <p className="text-gray-900 dark:text-white">{user.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Username</p>
-                    <p className="text-gray-900 dark:text-white">{user.username}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Created At</p>
-                    <p className="text-gray-900 dark:text-white">
-                      {format(new Date(user.created_at), "MMM dd, yyyy HH:mm")}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Updated</p>
-                    <p className="text-gray-900 dark:text-white">
-                      {format(new Date(user.updated_at), "MMM dd, yyyy HH:mm")}
-                    </p>
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            )}
+
+            {/* Password Reset Section */}
+            <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-orange-500">
+              <CardHeader>
+                <CardTitle className="dark:text-white flex items-center gap-2 text-lg">
+                  <KeyRound className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  Password Reset
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!showPasswordReset ? (
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowPasswordReset(true)}
+                      className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                    >
+                      <KeyRound className="w-4 h-4 mr-2" />
+                      Reset Password
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => sendResetLinkMutation.mutate()}
+                      disabled={sendResetLinkMutation.isPending}
+                      className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                    >
+                      {sendResetLinkMutation.isPending ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          Sending...
+                        </span>
+                      ) : (
+                        <>
+                          <Mail className="w-4 h-4 mr-2" />
+                          Send Reset Link
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        New Password <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Enter new password or generate one"
+                            className="dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                            title={showPassword ? "Hide password" : "Show password"}
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleGeneratePassword}
+                          className="dark:border-gray-600 dark:text-gray-300"
+                          title="Generate secure password"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                        </Button>
+                        {newPassword && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleCopyPassword}
+                            className="dark:border-gray-600 dark:text-gray-300"
+                            title="Copy password"
+                          >
+                            {passwordCopied ? (
+                              <span className="text-xs text-green-600 dark:text-green-400">Copied!</span>
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="send_password_email"
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      />
+                      <label htmlFor="send_password_email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Send new password to user via email
+                      </label>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setShowPasswordReset(false);
+                          setNewPassword("");
+                        }}
+                        className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          const sendEmail = (document.getElementById("send_password_email") as HTMLInputElement)?.checked || false;
+                          if (!newPassword) {
+                            toast({
+                              title: "Error",
+                              description: "Please enter or generate a password",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          resetPasswordMutation.mutate({ password: newPassword, sendEmail });
+                        }}
+                        disabled={resetPasswordMutation.isPending || !newPassword}
+                        className="dark:bg-orange-600 dark:hover:bg-orange-700 flex-1"
+                      >
+                        {resetPasswordMutation.isPending ? (
+                          <span className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Resetting...
+                          </span>
+                        ) : (
+                          <>
+                            <KeyRound className="w-4 h-4 mr-2" />
+                            Reset Password
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* User Details Sidebar */}
+            <Card className="dark:bg-gray-800 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="dark:text-white text-lg">Account Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</p>
+                  <p className="text-gray-900 dark:text-white mt-1">{user.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Username</p>
+                  <p className="text-gray-900 dark:text-white mt-1">{user.username}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Created At</p>
+                  <p className="text-gray-900 dark:text-white mt-1">
+                    {format(new Date(user.created_at), "MMM dd, yyyy HH:mm")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Updated</p>
+                  <p className="text-gray-900 dark:text-white mt-1">
+                    {format(new Date(user.updated_at), "MMM dd, yyyy HH:mm")}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </form>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
+        <div className="space-y-6">
+          {/* Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Status Card */}
+            <Card className="dark:bg-gray-800 dark:border-gray-700">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</p>
+                    {user.is_active ? (
+                      <Badge variant="default" className="mt-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        Active
+                      </Badge>
+                    ) : (
+                      <Badge variant="danger" className="mt-2">Inactive</Badge>
+                    )}
+                  </div>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${user.is_active ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"}`}>
+                    {user.is_active ? (
+                      <UserCheck className={`w-6 h-6 ${user.is_active ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`} />
+                    ) : (
+                      <UserX className="w-6 h-6 text-red-600 dark:text-red-400" />
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Role Card */}
+            <Card className="dark:bg-gray-800 dark:border-gray-700">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Role</p>
+                    <Badge variant={getRoleVariant(user.role) as any} className="mt-2 dark:bg-gray-700 dark:text-white">
+                      {getRoleLabel(user.role)}
+                    </Badge>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Branch Card */}
+            <Card className="dark:bg-gray-800 dark:border-gray-700">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Branch</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white mt-2 truncate">
+                      {user.role === "manager" && user.managed_branches_names && user.managed_branches_names.length > 0
+                        ? `${user.managed_branches_names.length} branch${user.managed_branches_names.length !== 1 ? "es" : ""}`
+                        : user.branch_name || "Not assigned"}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0 ml-2">
+                    <Building2 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Information Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Personal Information */}
+            <Card className="dark:bg-gray-800 dark:border-gray-700 lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="dark:text-white text-lg font-semibold">Personal Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Email Address</dt>
+                    <dd className="text-base text-gray-900 dark:text-white font-medium">{user.email}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Username</dt>
+                    <dd className="text-base text-gray-900 dark:text-white font-mono">{user.username}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Phone Number</dt>
+                    <dd className="text-base text-gray-900 dark:text-white">
+                      {user.phone || <span className="text-gray-400 italic">Not provided</span>}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Full Name</dt>
+                    <dd className="text-base text-gray-900 dark:text-white font-medium">
+                      {user.full_name || `${user.first_name} ${user.last_name}`.trim() || "—"}
+                    </dd>
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
+
+            {/* Account Details */}
+            <Card className="dark:bg-gray-800 dark:border-gray-700">
+              <CardHeader>
+                <CardTitle className="dark:text-white text-lg font-semibold">Account Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-4">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Member Since</dt>
+                    <dd className="text-sm text-gray-900 dark:text-white">
+                      {format(new Date(user.created_at), "MMM dd, yyyy")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Last Updated</dt>
+                    <dd className="text-sm text-gray-900 dark:text-white">
+                      {format(new Date(user.updated_at), "MMM dd, yyyy")}
+                    </dd>
+                  </div>
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Notification Preferences</dt>
+                    <dd className="space-y-2">
+                      <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Email</span>
+                        <Badge variant={user.email_notifications ? "default" : "secondary"} className={user.email_notifications ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs" : "text-xs"}>
+                          {user.email_notifications ? "On" : "Off"}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+                        <span className="text-sm text-gray-700 dark:text-gray-300">SMS</span>
+                        <Badge variant={user.sms_notifications ? "default" : "secondary"} className={user.sms_notifications ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs" : "text-xs"}>
+                          {user.sms_notifications ? "On" : "Off"}
+                        </Badge>
+                      </div>
+                    </dd>
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Branch & Employment Information */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-blue-500">
             <CardHeader>
-              <CardTitle className="dark:text-white">User Information</CardTitle>
+              <CardTitle className="dark:text-white flex items-center gap-2 text-lg font-semibold">
+                <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                Branch & Employment Information
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</p>
-                <p className="text-gray-900 dark:text-white">{user.email}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Username</p>
-                <p className="text-gray-900 dark:text-white">{user.username}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</p>
-                <p className="text-gray-900 dark:text-white">{user.phone || "N/A"}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Role</p>
-                <Badge variant={getRoleVariant(user.role) as any} className="mt-1 dark:bg-gray-700 dark:text-white">
-                  {getRoleLabel(user.role)}
-                </Badge>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</p>
-                {user.is_active ? (
-                  <Badge variant="default" className="mt-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                    Active
-                  </Badge>
-                ) : (
-                  <Badge variant="danger" className="mt-1">Inactive</Badge>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Branch Assignment */}
+                <div>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    Branch Assignment
+                  </dt>
+                  {user.role === "manager" && user.managed_branches_names && user.managed_branches_names.length > 0 ? (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+                        {user.managed_branches_names.join(", ")}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Managing {user.managed_branches_names.length} branch{user.managed_branches_names.length !== 1 ? "es" : ""}
+                      </p>
+                    </div>
+                  ) : user.branch_name ? (
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-base font-semibold text-gray-900 dark:text-white">{user.branch_name}</p>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <p className="text-sm text-gray-400 dark:text-gray-500 italic">No branch assigned</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Employment Info */}
+                {(user.employee_id || user.hire_date || user.hourly_rate) && (
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Employment Details</dt>
+                    <dl className="space-y-3">
+                      {user.employee_id && (
+                        <div>
+                          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Employee ID</dt>
+                          <dd className="text-sm font-mono text-gray-900 dark:text-white font-semibold">{user.employee_id}</dd>
+                        </div>
+                      )}
+                      {user.hire_date && (
+                        <div>
+                          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Hire Date</dt>
+                          <dd className="text-sm text-gray-900 dark:text-white">
+                            {format(new Date(user.hire_date), "MMMM dd, yyyy")}
+                          </dd>
+                        </div>
+                      )}
+                      {user.hourly_rate && (
+                        <div>
+                          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Hourly Rate</dt>
+                          <dd className="text-sm text-gray-900 dark:text-white font-semibold">
+                            ${parseFloat(user.hourly_rate).toFixed(2)}/hr
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
                 )}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
+          {/* Password Reset Section */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-orange-500">
             <CardHeader>
-              <CardTitle className="dark:text-white">Branch & Additional Information</CardTitle>
+              <CardTitle className="dark:text-white flex items-center gap-2 text-lg font-semibold">
+                <KeyRound className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                Password Management
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Branch Information */}
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                  <Building2 className="w-4 h-4" />
-                  Branch Assignment
-                </p>
-                {user.role === "manager" && user.managed_branches_names && user.managed_branches_names.length > 0 ? (
-                  <div className="mt-1">
-                    <p className="text-gray-900 dark:text-white">
-                      {user.managed_branches_names.join(", ")}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {user.managed_branches_names.length} branch{user.managed_branches_names.length !== 1 ? "es" : ""}
-                    </p>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowPasswordReset(true)}
+                  className="dark:border-gray-600 dark:text-gray-300"
+                >
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  Reset Password
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => sendResetLinkMutation.mutate()}
+                  disabled={sendResetLinkMutation.isPending}
+                  className="dark:border-gray-600 dark:text-gray-300"
+                >
+                  {sendResetLinkMutation.isPending ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      Sending...
+                    </span>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4 mr-2" />
+                      Send Reset Link
+                    </>
+                  )}
+                </Button>
+              </div>
+              {showPasswordReset && (
+                <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      New Password <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Enter new password or generate one"
+                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                          title={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleGeneratePassword}
+                        className="dark:border-gray-600 dark:text-gray-300"
+                        title="Generate secure password"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </Button>
+                      {newPassword && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleCopyPassword}
+                          className="dark:border-gray-600 dark:text-gray-300"
+                          title="Copy password"
+                        >
+                          {passwordCopied ? (
+                            <span className="text-xs text-green-600 dark:text-green-400">Copied!</span>
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                ) : user.branch_name ? (
-                  <p className="text-gray-900 dark:text-white mt-1">{user.branch_name}</p>
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400 italic mt-1">No branch assigned</p>
-                )}
-              </div>
-
-              {user.employee_id && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Employee ID</p>
-                  <p className="text-gray-900 dark:text-white">{user.employee_id}</p>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="send_password_email_view"
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                    />
+                    <label htmlFor="send_password_email_view" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Send new password to user via email
+                    </label>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowPasswordReset(false);
+                        setNewPassword("");
+                      }}
+                      className="dark:border-gray-600 dark:text-gray-300 flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        const sendEmail = (document.getElementById("send_password_email_view") as HTMLInputElement)?.checked || false;
+                        if (!newPassword) {
+                          toast({
+                            title: "Error",
+                            description: "Please enter or generate a password",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        resetPasswordMutation.mutate({ password: newPassword, sendEmail });
+                      }}
+                      disabled={resetPasswordMutation.isPending || !newPassword}
+                      className="dark:bg-orange-600 dark:hover:bg-orange-700 flex-1"
+                    >
+                      {resetPasswordMutation.isPending ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Resetting...
+                        </span>
+                      ) : (
+                        <>
+                          <KeyRound className="w-4 h-4 mr-2" />
+                          Reset Password
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               )}
-
-              {user.hire_date && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Hire Date</p>
-                  <p className="text-gray-900 dark:text-white">
-                    {format(new Date(user.hire_date), "MMM dd, yyyy")}
-                  </p>
-                </div>
-              )}
-
-              {user.hourly_rate && (
-                <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Hourly Rate</p>
-                  <p className="text-gray-900 dark:text-white">${user.hourly_rate}</p>
-                </div>
-              )}
-
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Created At</p>
-                <p className="text-gray-900 dark:text-white">
-                  {format(new Date(user.created_at), "MMM dd, yyyy HH:mm")}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Updated</p>
-                <p className="text-gray-900 dark:text-white">
-                  {format(new Date(user.updated_at), "MMM dd, yyyy HH:mm")}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Notifications</p>
-                <div className="mt-1 space-y-1">
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    Email: {user.email_notifications ? "Enabled" : "Disabled"}
-                  </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    SMS: {user.sms_notifications ? "Enabled" : "Disabled"}
-                  </p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>

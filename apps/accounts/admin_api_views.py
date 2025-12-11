@@ -4,11 +4,15 @@ REST API Views for Admin Features
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db.models import Q, Count
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
+from django.conf import settings
+import os
+from pathlib import Path
 
 from .admin_models import SystemSettings, AuditLog, SystemBackup, EmailTemplate, SMSTemplate
 from .permission_models import Role, Permission
@@ -50,12 +54,22 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
     
     def list(self, request, *args, **kwargs):
         category = request.query_params.get('category')
-        if category == 'tax':
-            SystemSettings.ensure_tax_settings()
+        # Auto-initialize settings for the category if none exist
+        if category:
+            from .settings_init import initialize_category_settings
+            settings_count = SystemSettings.objects.filter(category=category).count()
+            if settings_count == 0:
+                initialize_category_settings(category)
+            # Also ensure tax settings if tax category
+            if category == 'tax':
+                SystemSettings.ensure_tax_settings()
         return super().list(request, *args, **kwargs)
     
     def perform_create(self, serializer):
-        serializer.save(updated_by=self.request.user)
+        instance = serializer.save(updated_by=self.request.user)
+        # Clear cache for this setting
+        from .settings_utils import clear_setting_cache
+        clear_setting_cache(instance.key)
     
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
@@ -64,8 +78,15 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
     def by_category(self, request):
         """Get settings grouped by category"""
         category = request.query_params.get('category')
-        if category == 'tax':
-            SystemSettings.ensure_tax_settings()
+        # Auto-initialize settings for the category if none exist
+        if category:
+            from .settings_init import initialize_category_settings
+            settings_count = SystemSettings.objects.filter(category=category).count()
+            if settings_count == 0:
+                initialize_category_settings(category)
+            # Also ensure tax settings if tax category
+            if category == 'tax':
+                SystemSettings.ensure_tax_settings()
         queryset = self.get_queryset()
         if category:
             settings = queryset.filter(category=category, is_active=True)
@@ -74,6 +95,36 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(settings, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='public/branding')
+    def public_branding(self, request):
+        """
+        Public endpoint to get branding settings for login page and public pages.
+        Does not require authentication.
+        """
+        # Auto-initialize branding settings if none exist
+        from .settings_init import initialize_category_settings
+        settings_count = SystemSettings.objects.filter(category='branding').count()
+        if settings_count == 0:
+            initialize_category_settings('branding')
+        
+        # Only return active, non-secret branding settings
+        settings = SystemSettings.objects.filter(
+            category='branding',
+            is_active=True,
+            is_secret=False  # Never expose secret settings publicly
+        ).order_by('key')
+        
+        # Serialize only safe fields (key, value, no sensitive info)
+        data = []
+        for setting in settings:
+            data.append({
+                'key': setting.key,
+                'value': setting.value,
+                'updated_at': setting.updated_at.isoformat() if setting.updated_at else None,
+            })
+        
+        return Response(data)
     
     @action(detail=False, methods=['post'])
     def bulk_update(self, request):
@@ -85,12 +136,14 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
             setting_id = setting_data.get('id')
             if setting_id:
                 try:
+                    from .settings_utils import clear_setting_cache
                     setting = SystemSettings.objects.get(id=setting_id)
                     setting.value = setting_data.get('value', setting.value)
                     setting.description = setting_data.get('description', setting.description)
                     setting.is_active = setting_data.get('is_active', setting.is_active)
                     setting.updated_by = request.user
                     setting.save()
+                    clear_setting_cache(setting.key)
                     updated.append(setting.id)
                 except SystemSettings.DoesNotExist:
                     pass
@@ -98,6 +151,86 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         return Response({
             'message': f'{len(updated)} settings updated',
             'updated_ids': updated
+        })
+    
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def upload_file(self, request, pk=None):
+        """Upload a file for a branding setting (logo, favicon, background, etc.)"""
+        setting = self.get_object()
+        
+        # Only allow file uploads for branding settings
+        if setting.category != 'branding':
+            return Response(
+                {'error': 'File uploads are only allowed for branding settings'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if setting key is for a file path
+        file_path_keys = ['logo_path', 'logo_dark_path', 'favicon_path', 'login_background', 
+                         'customer_login_background', 'staff_login_background']
+        if setting.key not in file_path_keys:
+            return Response(
+                {'error': f'File uploads are not allowed for setting key: {setting.key}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get uploaded file
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response(
+                {'error': 'No file provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon']
+        if file_obj.content_type not in allowed_types:
+            return Response(
+                {'error': f'Invalid file type. Allowed types: JPEG, PNG, GIF, SVG, ICO'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate file size (max 10MB)
+        max_size = 10 * 1024 * 1024  # 10 MB
+        if file_obj.size > max_size:
+            return Response(
+                {'error': f'File size exceeds maximum allowed size of 10 MB'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create branding directory if it doesn't exist
+        branding_dir = Path(settings.MEDIA_ROOT) / 'branding'
+        branding_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate filename (keep original extension)
+        file_extension = Path(file_obj.name).suffix
+        # Use setting key as base filename for consistency
+        filename = f"{setting.key}{file_extension}"
+        file_path = branding_dir / filename
+        
+        # Save file
+        with open(file_path, 'wb+') as destination:
+            for chunk in file_obj.chunks():
+                destination.write(chunk)
+        
+        # Update setting value with relative path
+        relative_path = f"branding/{filename}"
+        setting.value = relative_path
+        setting.updated_by = request.user
+        setting.save()
+        
+        # Clear cache
+        from .settings_utils import clear_setting_cache
+        clear_setting_cache(setting.key)
+        
+        # Return updated setting with full URL
+        full_url = f"{settings.MEDIA_URL}{relative_path}"
+        
+        return Response({
+            'message': 'File uploaded successfully',
+            'setting': self.get_serializer(setting).data,
+            'file_path': relative_path,
+            'file_url': full_url
         })
 
 

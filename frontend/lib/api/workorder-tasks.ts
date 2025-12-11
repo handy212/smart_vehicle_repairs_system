@@ -12,6 +12,7 @@ export interface ServiceTask {
   status: string;
   estimated_hours?: number;
   actual_hours?: number;
+  calculated_hours?: number;
   started_at?: string;
   completed_at?: string;
   created_at: string;

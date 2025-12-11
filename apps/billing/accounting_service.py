@@ -731,17 +731,20 @@ class AccountingService:
             # Create Django Ledger invoice
             invoice_date = invoice.invoice_date or timezone.now().date()
             due_date = invoice.due_date or (invoice_date + timedelta(days=30))
+            # Django Ledger fields are limited to 10 characters
+            dl_invoice_number = (invoice.invoice_number or '').strip()[:10] or None
+            dl_terms = (invoice.terms or 'Due on Receipt').strip()[:10] or 'Net 30'
             dl_invoice = InvoiceModel.objects.create(
                 entity_model=entity,
                 customer=dl_customer,
                 ledger=ledger,
-                invoice_number=(invoice.invoice_number or '').strip()[:20] or None,
+                invoice_number=dl_invoice_number,
                 invoice_status=InvoiceModel.INVOICE_STATUS_APPROVED,
                 date_draft=invoice_date,
                 date_approved=invoice_date,
-                terms=invoice.terms or 'Due on Receipt',
+                terms=dl_terms,
                 date_due=due_date,
-                markdown_notes=invoice.customer_notes or '',
+                markdown_notes=(invoice.customer_notes or '')[:500] if invoice.customer_notes else '',  # Limit notes length
                 cash_account=cash_account,
                 prepaid_account=prepaid_account,
                 unearned_account=unearned_account,
@@ -784,8 +787,17 @@ class AccountingService:
         if ItemTransactionModel.objects.filter(invoice_model=dl_invoice).exists():
             return
         
-        # Work order-based invoice: add labor + installed parts
-        if invoice.work_order:
+        # Check if invoice has explicit line items (from estimate conversion or manual entry)
+        # These should take precedence over work order parts
+        invoice_line_items = getattr(invoice, 'line_items', None)
+        has_explicit_line_items = invoice_line_items is not None and invoice_line_items.exists()
+        
+        # If invoice has explicit line items, use those instead of work order parts
+        if has_explicit_line_items:
+            # Process invoice line items (this will be handled below)
+            pass
+        elif invoice.work_order:
+            # Work order-based invoice: add labor + installed parts (only if no explicit line items)
             if invoice.labor_subtotal > 0:
                 hour_uom, _ = UnitOfMeasureModel.objects.get_or_create(
                     entity=entity,
@@ -851,9 +863,8 @@ class AccountingService:
                             logger.error(f"Failed to add part item to DL invoice: {exc}")
             return
         
-        # Standalone invoice: prefer actual invoice line items if available
-        invoice_line_items = getattr(invoice, 'line_items', None)
-        if invoice_line_items is not None and invoice_line_items.exists():
+        # Process invoice line items if available (from estimate conversion or manual entry)
+        if has_explicit_line_items:
             service_uom, _ = UnitOfMeasureModel.objects.get_or_create(
                 entity=entity,
                 unit_abbr='P',

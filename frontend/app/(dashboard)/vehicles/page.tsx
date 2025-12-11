@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Car, Trash2, Download, Upload } from "lucide-react";
+import { Plus, Search, Car, Trash2, Download, Upload, X, ChevronDown, MoreVertical, Eye, Edit, History, Wrench, Calendar } from "lucide-react";
 import { ImportDialog } from "@/components/ui/import-dialog";
 import { downloadVehicleTemplate } from "@/lib/utils/import-templates";
 import { exportVehiclesForImport } from "@/lib/utils/export-templates";
@@ -23,6 +23,8 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { ColumnVisibility, ColumnConfig } from "@/components/ui/column-visibility";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 export default function VehiclesPage() {
   const [search, setSearch] = useState("");
@@ -37,8 +39,11 @@ export default function VehiclesPage() {
   );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
   const columnConfigs: ColumnConfig[] = [
     { key: "vin", label: "VIN", defaultVisible: true },
@@ -168,7 +173,7 @@ export default function VehiclesPage() {
   };
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["vehicles", page, debouncedSearch, statusFilter, startDate, endDate, advancedFilters, sortConfig],
+    queryKey: ["vehicles", page, debouncedSearch, advancedFilters, sortConfig],
     queryFn: () => {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
@@ -181,15 +186,15 @@ export default function VehiclesPage() {
       return vehiclesApi.list({
         page,
         search: debouncedSearch || undefined,
-        status: advancedFilters.status || (statusFilter !== "all" ? statusFilter : undefined),
+        status: advancedFilters.status || undefined,
         make: advancedFilters.make || undefined,
         model: advancedFilters.model || undefined,
         year__gte: yearFrom,
         year__lte: yearTo,
         engine_type: advancedFilters.engine_type || undefined,
         transmission_type: advancedFilters.transmission_type || undefined,
-        created_at__gte: advancedFilters.created_at_from || startDate || undefined,
-        created_at__lte: advancedFilters.created_at_to || endDate || undefined,
+        created_at__gte: advancedFilters.created_at_from || undefined,
+        created_at__lte: advancedFilters.created_at_to || undefined,
         owner: advancedFilters.owner ? parseInt(advancedFilters.owner) : undefined,
         ordering,
       });
@@ -327,113 +332,190 @@ export default function VehiclesPage() {
             onVisibilityChange={setVisibleColumns}
             title="Vehicle Table Columns"
           />
-          <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-            <Upload className="w-4 h-4 mr-2" />
-            Import CSV
-          </Button>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                if (data?.results) {
-                  exportVehiclesForImport(data.results);
-                }
-              }} 
-              disabled={!data?.results || data.results.length === 0}
-              title="Export in import-compatible format"
+          <div className="relative">
+            <Button
+              variant="outline"
+              onClick={() => setShowActionsMenu(!showActionsMenu)}
+              className="dark:border-gray-700 dark:text-gray-200"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Export for Import
+              Actions
+              <ChevronDown className="w-4 h-4 ml-2" />
             </Button>
+            {showActionsMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowActionsMenu(false)}
+                />
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                  <div className="py-1">
+                    <PermissionGuard permission="import_vehicles">
+                      <button
+                        onClick={() => {
+                          setShowImportDialog(true);
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Import CSV
+                      </button>
+                    </PermissionGuard>
+                    <PermissionGuard permission="export_vehicles">
+                      <button
+                        onClick={() => {
+                          handleExport();
+                          setShowActionsMenu(false);
+                        }}
+                        disabled={!data?.results || data.results.length === 0}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export CSV
+                      </button>
+                    </PermissionGuard>
+                    <PermissionGuard permission="export_vehicles">
+                      <button
+                        onClick={() => {
+                          if (data?.results) {
+                            exportVehiclesForImport(data.results);
+                          }
+                          setShowActionsMenu(false);
+                        }}
+                        disabled={!data?.results || data.results.length === 0}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export for Import
+                      </button>
+                    </PermissionGuard>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-          <Link href="/vehicles/new">
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Vehicle
-            </Button>
-          </Link>
+          <PermissionGuard permission="create_vehicles">
+            <Link href="/vehicles/new">
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Vehicle
+              </Button>
+            </Link>
+          </PermissionGuard>
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
-                <Input
-                  type="text"
-                  placeholder="Search by VIN, make, model, or license plate..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="pl-10"
-                />
-              </div>
-              <AdvancedFilters
-                filters={filterOptions}
-                quickFilters={quickFilters}
-                activeFilters={advancedFilters}
-                onFiltersChange={(filters) => {
-                  setAdvancedFilters(filters);
-                  setPage(1);
-                }}
-                onClear={() => {
-                  setAdvancedFilters({});
-                  setStatusFilter("all");
-                  setStartDate("");
-                  setEndDate("");
-                }}
-                title="Advanced Vehicle Filters"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Status
-                </label>
-                <Select
-                  id="status-filter"
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setPage(1);
-                  }}
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="active">Active</option>
-                  <option value="in_service">In Service</option>
-                  <option value="sold">Sold</option>
-                  <option value="totaled">Totaled</option>
-                  <option value="inactive">Inactive</option>
-                </Select>
-              </div>
-              <div className="md:col-span-2">
-                <DateRangePicker
-                  startDate={startDate}
-                  endDate={endDate}
-                  onStartDateChange={(date) => {
-                    setStartDate(date);
-                    setPage(1);
-                  }}
-                  onEndDateChange={(date) => {
-                    setEndDate(date);
-                    setPage(1);
-                  }}
-                  label="Created Date"
-                />
-              </div>
-            </div>
+      {/* Compact Filter Bar */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Search vehicles..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 h-9"
+            />
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Advanced Filters Button */}
+          <AdvancedFilters
+            filters={filterOptions}
+            quickFilters={quickFilters}
+            activeFilters={advancedFilters}
+            onFiltersChange={(filters) => {
+              setAdvancedFilters(filters);
+              setPage(1);
+            }}
+            onClear={() => {
+              setAdvancedFilters({});
+              setStatusFilter("all");
+              setStartDate("");
+              setEndDate("");
+            }}
+            title="Advanced Vehicle Filters"
+          />
+
+          {/* Clear Filters */}
+          {(search || Object.keys(advancedFilters).length > 0) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearch("");
+                setAdvancedFilters({});
+                setStatusFilter("all");
+                setStartDate("");
+                setEndDate("");
+                setPage(1);
+              }}
+              className="h-9"
+            >
+              <X className="w-4 h-4 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
+
+        {/* Active Filter Badges */}
+        {(search || Object.keys(advancedFilters).length > 0) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {search && (
+              <Badge variant="secondary" className="flex items-center gap-1.5">
+                <span className="text-xs">Search: {search}</span>
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setPage(1);
+                  }}
+                  className="hover:text-red-600"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
+            {Object.entries(advancedFilters).map(([key, value]) => {
+              if (!value || (typeof value === 'string' && value === '')) return null;
+              const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
+              if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
+              if (key.includes("_to")) return null;
+              
+              const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
+                ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
+                : String(value);
+              
+              const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
+
+              return (
+                <Badge key={key} variant="secondary" className="flex items-center gap-1.5">
+                  <span className="text-xs">{displayLabel}: {displayValue}</span>
+                  <button
+                    onClick={() => {
+                      const newFilters = { ...advancedFilters };
+                      if (key.includes("_from")) {
+                        delete newFilters[key];
+                        delete newFilters[key.replace("_from", "_to")];
+                      } else {
+                        delete newFilters[key];
+                      }
+                      setAdvancedFilters(newFilters);
+                      setPage(1);
+                    }}
+                    className="hover:text-red-600"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Bulk Action Toolbar */}
       <BulkActionToolbar
@@ -612,23 +694,83 @@ export default function VehiclesPage() {
                         </td>
                       )}
                       {visibleColumns.has("actions") && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex items-center space-x-2">
-                            <Link
-                              href={`/vehicles/${vehicle.id}`}
-                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                            >
-                              View
-                            </Link>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="relative flex justify-end">
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDelete(vehicle)}
-                              disabled={deleteMutation.isPending}
-                              className="text-red-600 hover:text-red-900 hover:bg-red-50"
+                              onClick={() => setActionMenuOpen(actionMenuOpen === vehicle.id ? null : vehicle.id)}
+                              className="h-8 w-8 p-0 dark:hover:bg-gray-700"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <MoreVertical className="w-4 h-4" />
                             </Button>
+                            {actionMenuOpen === vehicle.id && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-10"
+                                  onClick={() => setActionMenuOpen(null)}
+                                />
+                                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                                  <div className="py-1">
+                                    <Link
+                                      href={`/vehicles/${vehicle.id}`}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                      onClick={() => setActionMenuOpen(null)}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                      View Details
+                                    </Link>
+                                    <Link
+                                      href={`/vehicles/${vehicle.id}/edit`}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                      onClick={() => setActionMenuOpen(null)}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                      Edit Vehicle
+                                    </Link>
+                                    <Link
+                                      href={`/vehicles/${vehicle.id}/history`}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                      onClick={() => setActionMenuOpen(null)}
+                                    >
+                                      <History className="w-4 h-4" />
+                                      View Service History
+                                    </Link>
+                                    <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                                    <Link
+                                      href={`/workorders/new?vehicle=${vehicle.id}`}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                      onClick={() => setActionMenuOpen(null)}
+                                    >
+                                      <Wrench className="w-4 h-4" />
+                                      Create Work Order
+                                    </Link>
+                                    <Link
+                                      href={`/appointments/new?vehicle=${vehicle.id}`}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                      onClick={() => setActionMenuOpen(null)}
+                                    >
+                                      <Calendar className="w-4 h-4" />
+                                      Schedule Appointment
+                                    </Link>
+                                    <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm(`Are you sure you want to delete vehicle "${vehicle.make} ${vehicle.model} ${vehicle.year}" (${vehicle.vin})? This action cannot be undone.`)) {
+                                          handleDelete(vehicle);
+                                        }
+                                        setActionMenuOpen(null);
+                                      }}
+                                      disabled={deleteMutation.isPending}
+                                      className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      Delete Vehicle
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </td>
                       )}

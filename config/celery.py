@@ -34,6 +34,10 @@ app.conf.beat_schedule = {
         'task': 'apps.reporting.tasks.generate_weekly_reports',
         'schedule': crontab(hour=6, minute=0, day_of_week=1),  # Run Monday at 6 AM
     },
+    'sync-popular-diagnostic-codes': {
+        'task': 'sync_popular_diagnostic_codes',
+        'schedule': crontab(hour=3, minute=0),  # Run daily at 3 AM (Hybrid System: Periodic Sync)
+    },
 }
 
 @app.task(bind=True)

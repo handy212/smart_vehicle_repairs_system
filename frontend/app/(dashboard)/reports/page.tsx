@@ -6,7 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
+import { Download, Calendar, TrendingUp, DollarSign, Users, Car, Package, Wrench, AlertCircle, Filter } from "lucide-react";
+import { useState, useMemo } from "react";
+import { format, subDays, startOfMonth } from "date-fns";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/lib/hooks/useToast";
+import { 
   BarChart,
   Bar,
   LineChart,
@@ -21,164 +26,260 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { Download, Calendar, TrendingUp, DollarSign, Users, Car, Package, Wrench, AlertCircle } from "lucide-react";
-import { useState } from "react";
-import { format, subDays, startOfMonth } from "date-fns";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
 export default function ReportsPage() {
+  const { toast } = useToast();
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const [activeTab, setActiveTab] = useState("financial");
+  const [showFilters, setShowFilters] = useState(false);
 
   // Dashboard Overview
-  const { data: dashboardData } = useQuery({
+  const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
     queryKey: ["reporting", "dashboard"],
     queryFn: () => reportingApi.dashboard(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Financial Reports
-  const { data: revenueData } = useQuery({
+  const { data: revenueData, isLoading: revenueLoading } = useQuery({
     queryKey: ["reporting", "revenue", startDate, endDate, period],
     queryFn: () => reportingApi.revenue({ start_date: startDate, end_date: endDate, period }),
+    staleTime: 5 * 60 * 1000,
+    enabled: activeTab === "financial",
   });
 
   const { data: profitMarginData } = useQuery({
     queryKey: ["reporting", "profit-margin", startDate, endDate],
     queryFn: () => reportingApi.profitMargin({ start_date: startDate, end_date: endDate }),
+    staleTime: 5 * 60 * 1000,
+    enabled: activeTab === "financial",
   });
 
   // Operational Reports
   const { data: workOrderStats } = useQuery({
     queryKey: ["reporting", "work-orders", startDate, endDate],
     queryFn: () => reportingApi.workOrderStatistics({ start_date: startDate, end_date: endDate }),
+    staleTime: 5 * 60 * 1000,
+    enabled: activeTab === "operational",
   });
 
   const { data: technicianPerf } = useQuery({
     queryKey: ["reporting", "technicians", startDate, endDate],
     queryFn: () => reportingApi.technicianPerformance({ start_date: startDate, end_date: endDate }),
+    staleTime: 5 * 60 * 1000,
+    enabled: activeTab === "operational",
   });
 
   const { data: appointmentStats } = useQuery({
     queryKey: ["reporting", "appointments", startDate, endDate],
     queryFn: () => reportingApi.appointmentStatistics({ start_date: startDate, end_date: endDate }),
+    staleTime: 5 * 60 * 1000,
+    enabled: activeTab === "operational",
   });
 
   // Inventory Reports
   const { data: inventoryValuation } = useQuery({
     queryKey: ["reporting", "inventory", "valuation"],
     queryFn: () => reportingApi.inventoryValuation(),
+    staleTime: 10 * 60 * 1000,
+    enabled: activeTab === "inventory",
   });
 
   const { data: lowStockData } = useQuery({
     queryKey: ["reporting", "inventory", "low-stock"],
     queryFn: () => reportingApi.lowStock(),
+    staleTime: 5 * 60 * 1000,
+    enabled: activeTab === "inventory",
   });
 
   // Customer Reports
   const { data: customerStats } = useQuery({
     queryKey: ["reporting", "customers", startDate, endDate],
     queryFn: () => reportingApi.customerStatistics({ start_date: startDate, end_date: endDate }),
+    staleTime: 5 * 60 * 1000,
+    enabled: activeTab === "customers",
   });
 
   // Vehicle Reports
   const { data: vehicleStats } = useQuery({
     queryKey: ["reporting", "vehicles"],
     queryFn: () => reportingApi.vehicleStatistics(),
+    staleTime: 10 * 60 * 1000,
+    enabled: activeTab === "vehicles",
   });
 
   const { data: serviceDueData } = useQuery({
     queryKey: ["reporting", "vehicles", "service-due"],
     queryFn: () => reportingApi.serviceDue(),
+    staleTime: 5 * 60 * 1000,
+    enabled: activeTab === "vehicles",
   });
 
+  // Memoized date range calculations
+  const dateRangeOptions = useMemo(
+    () => [
+      { label: "Last 7 days", days: 7 },
+      { label: "Last 30 days", days: 30 },
+      { label: "Last 90 days", days: 90 },
+      { label: "This month", days: new Date().getDate() },
+      { label: "Last month", days: 60 },
+    ],
+    []
+  );
+
+  const handleQuickDateRange = (days: number) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    setStartDate(format(start, "yyyy-MM-dd"));
+    setEndDate(format(end, "yyyy-MM-dd"));
+    setShowFilters(false);
+  };
+
+  const handleExport = () => {
+    toast({
+      title: "Export Started",
+      description: "Preparing report for download...",
+    });
+    // TODO: Implement actual export functionality
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+      {/* Header - Mobile optimized */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            Reports & Analytics
+          </h1>
+          <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
             Comprehensive business intelligence and reporting
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="w-40"
-          />
-          <Input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="w-40"
-          />
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="sm:hidden"
+            size="sm"
+          >
+            <Filter className="w-4 h-4 mr-2" />
+            Filters
           </Button>
+          <div
+            className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-2 ${
+              showFilters ? "flex" : "hidden sm:flex"
+            }`}
+          >
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full sm:w-40 h-10 text-sm"
+            />
+            <Input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full sm:w-40 h-10 text-sm"
+            />
+            <Button variant="outline" onClick={handleExport} className="h-10">
+              <Download className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Dashboard Overview */}
+      {/* Quick Date Range Filters - Mobile friendly */}
+      <Card className="border-gray-200 dark:border-gray-800">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-wrap gap-2">
+            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 self-center mr-2">
+              Quick ranges:
+            </span>
+            {dateRangeOptions.map((option) => (
+              <Button
+                key={option.label}
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickDateRange(option.days)}
+                className="text-xs h-8"
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Dashboard Overview - Mobile responsive */}
       {dashboardData && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border-gray-200 dark:border-gray-800">
+            <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Today's Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Today's Revenue
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
                     ${dashboardData.today.revenue.toFixed(2)}
                   </p>
                 </div>
-                <DollarSign className="w-8 h-8 text-green-500" />
+                <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-green-500 flex-shrink-0 ml-2" />
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="border-gray-200 dark:border-gray-800">
+            <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">This Week</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    This Week
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
                     ${dashboardData.week.revenue.toFixed(2)}
                   </p>
                 </div>
-                <TrendingUp className="w-8 h-8 text-blue-500" />
+                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500 flex-shrink-0 ml-2" />
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="border-gray-200 dark:border-gray-800">
+            <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">This Month</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    This Month
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
                     ${dashboardData.month.revenue.toFixed(2)}
                   </p>
                 </div>
-                <Calendar className="w-8 h-8 text-purple-500" />
+                <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500 flex-shrink-0 ml-2" />
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="border-gray-200 dark:border-gray-800">
+            <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Overdue Invoices</p>
-                  <p className="text-2xl font-bold text-red-600">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Overdue Invoices
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
                     {dashboardData.alerts?.overdue_invoices?.count || 0}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     ${(dashboardData.alerts?.overdue_invoices?.total || 0).toFixed(2)}
                   </p>
                 </div>
-                <AlertCircle className="w-8 h-8 text-red-500" />
+                <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-500 flex-shrink-0 ml-2" />
               </div>
             </CardContent>
           </Card>
@@ -186,68 +287,94 @@ export default function ReportsPage() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="financial">Financial</TabsTrigger>
-          <TabsTrigger value="operational">Operational</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="customers">Customers</TabsTrigger>
-          <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto flex-wrap">
+          <TabsTrigger value="financial" className="text-xs sm:text-sm">
+            Financial
+          </TabsTrigger>
+          <TabsTrigger value="operational" className="text-xs sm:text-sm">
+            Operational
+          </TabsTrigger>
+          <TabsTrigger value="inventory" className="text-xs sm:text-sm">
+            Inventory
+          </TabsTrigger>
+          <TabsTrigger value="customers" className="text-xs sm:text-sm">
+            Customers
+          </TabsTrigger>
+          <TabsTrigger value="vehicles" className="text-xs sm:text-sm">
+            Vehicles
+          </TabsTrigger>
         </TabsList>
 
         {/* Financial Reports */}
-        <TabsContent value="financial" className="space-y-6">
+        <TabsContent value="financial" className="space-y-4 sm:space-y-6">
+          {revenueLoading && (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          )}
           {revenueData && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium">Total Invoiced</CardTitle>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Total Invoiced
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold">${revenueData.summary.total_invoiced.toFixed(2)}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                      ${revenueData.summary.total_invoiced.toFixed(2)}
+                    </p>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
+                <Card className="border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Total Paid
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                       ${revenueData.summary.total_paid.toFixed(2)}
                     </p>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
+                <Card className="border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Outstanding
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold text-red-600">
+                    <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
                       ${revenueData.summary.total_outstanding.toFixed(2)}
                     </p>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium">Payment Rate</CardTitle>
+                <Card className="border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Payment Rate
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold">
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                       {revenueData.summary.payment_rate.toFixed(1)}%
                     </p>
                   </CardContent>
                 </Card>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Revenue by Period</CardTitle>
-                    <div className="flex gap-2 mt-2">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                <Card className="border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <CardTitle className="text-base sm:text-lg">Revenue by Period</CardTitle>
+                    <div className="flex flex-wrap gap-2 mt-2 sm:mt-3">
                       <Button
                         size="sm"
                         variant={period === "daily" ? "default" : "outline"}
                         onClick={() => setPeriod("daily")}
+                        className="text-xs h-8"
                       >
                         Daily
                       </Button>
@@ -255,6 +382,7 @@ export default function ReportsPage() {
                         size="sm"
                         variant={period === "weekly" ? "default" : "outline"}
                         onClick={() => setPeriod("weekly")}
+                        className="text-xs h-8"
                       >
                         Weekly
                       </Button>
@@ -262,12 +390,13 @@ export default function ReportsPage() {
                         size="sm"
                         variant={period === "monthly" ? "default" : "outline"}
                         onClick={() => setPeriod("monthly")}
+                        className="text-xs h-8"
                       >
                         Monthly
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="px-2 sm:px-6">
                     {revenueData.revenue_by_period.length > 0 ? (
                       <ResponsiveContainer width="100%" height={300}>
                         <LineChart data={revenueData.revenue_by_period}>
@@ -275,8 +404,9 @@ export default function ReportsPage() {
                           <XAxis
                             dataKey="period"
                             tickFormatter={(value) => format(new Date(value), "MMM dd")}
+                            style={{ fontSize: "12px" }}
                           />
-                          <YAxis />
+                          <YAxis style={{ fontSize: "12px" }} />
                           <Tooltip
                             formatter={(value: number) => `$${value.toFixed(2)}`}
                             labelFormatter={(value) => format(new Date(value), "MMM dd, yyyy")}
@@ -292,18 +422,18 @@ export default function ReportsPage() {
                         </LineChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="flex items-center justify-center h-[300px] text-gray-500">
+                      <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
                         No data available
                       </div>
                     )}
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Revenue by Payment Method</CardTitle>
+                <Card className="border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <CardTitle className="text-base sm:text-lg">Revenue by Payment Method</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="px-2 sm:px-6">
                     {revenueData.revenue_by_payment_method.length > 0 ? (
                       <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
@@ -327,7 +457,7 @@ export default function ReportsPage() {
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="flex items-center justify-center h-[300px] text-gray-500">
+                      <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
                         No data available
                       </div>
                     )}
@@ -335,24 +465,30 @@ export default function ReportsPage() {
                 </Card>
               </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Revenue by Technician</CardTitle>
+              <Card className="border-gray-200 dark:border-gray-800">
+                <CardHeader className="pb-3 sm:pb-6">
+                  <CardTitle className="text-base sm:text-lg">Revenue by Technician</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-2 sm:px-6">
                   {revenueData.revenue_by_technician.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={revenueData.revenue_by_technician}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="technician" />
-                        <YAxis />
+                        <XAxis
+                          dataKey="technician"
+                          angle={-45}
+                          textAnchor="end"
+                          height={80}
+                          style={{ fontSize: "12px" }}
+                        />
+                        <YAxis style={{ fontSize: "12px" }} />
                         <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
                         <Legend />
                         <Bar dataKey="revenue" fill="#10B981" name="Revenue" />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex items-center justify-center h-[300px] text-gray-500">
+                    <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
                       No data available
                     </div>
                   )}
@@ -362,55 +498,61 @@ export default function ReportsPage() {
           )}
 
           {profitMarginData && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Profit Margin Analysis</CardTitle>
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Profit Margin Analysis</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                   <div>
-                    <p className="text-sm text-gray-600">Total Revenue</p>
-                    <p className="text-2xl font-bold">${profitMarginData.revenue.total.toFixed(2)}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Revenue</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                      ${profitMarginData.revenue.total.toFixed(2)}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Total Costs</p>
-                    <p className="text-2xl font-bold text-red-600">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Costs</p>
+                    <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
                       ${profitMarginData.costs.parts.toFixed(2)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Profit Margin</p>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Profit Margin</p>
+                    <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                       {profitMarginData.profit.profit_margin.toFixed(1)}%
                     </p>
                   </div>
                 </div>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={[
-                    { name: "Labor", value: profitMarginData.revenue.labor },
-                    { name: "Parts", value: profitMarginData.revenue.parts },
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
-                    <Bar dataKey="value" fill="#3B82F6" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="px-2 sm:px-0">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart
+                      data={[
+                        { name: "Labor", value: profitMarginData.revenue.labor },
+                        { name: "Parts", value: profitMarginData.revenue.parts },
+                      ]}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" style={{ fontSize: "12px" }} />
+                      <YAxis style={{ fontSize: "12px" }} />
+                      <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                      <Bar dataKey="value" fill="#3B82F6" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
         {/* Operational Reports */}
-        <TabsContent value="operational" className="space-y-6">
+        <TabsContent value="operational" className="space-y-4 sm:space-y-6">
           {workOrderStats && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Work Orders by Status</CardTitle>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <Card className="border-gray-200 dark:border-gray-800">
+                <CardHeader className="pb-3 sm:pb-6">
+                  <CardTitle className="text-base sm:text-lg">Work Orders by Status</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-2 sm:px-6">
                   {workOrderStats.by_status && workOrderStats.by_status.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
@@ -435,32 +577,38 @@ export default function ReportsPage() {
                       </PieChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex items-center justify-center h-[300px] text-gray-500">
+                    <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
                       No data available
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Work Order Summary</CardTitle>
+              <Card className="border-gray-200 dark:border-gray-800">
+                <CardHeader className="pb-3 sm:pb-6">
+                  <CardTitle className="text-base sm:text-lg">Work Order Summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <p className="text-sm text-gray-600">Total Work Orders</p>
-                    <p className="text-2xl font-bold">{workOrderStats.summary?.total_work_orders || 0}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      Total Work Orders
+                    </p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                      {workOrderStats.summary?.total_work_orders || 0}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Completed</p>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Completed</p>
+                    <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                       {workOrderStats.summary?.completed || 0}
                     </p>
                   </div>
                   {workOrderStats.summary?.average_completion_hours && (
                     <div>
-                      <p className="text-sm text-gray-600">Avg Completion Time</p>
-                      <p className="text-2xl font-bold">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                        Avg Completion Time
+                      </p>
+                      <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                         {workOrderStats.summary.average_completion_hours.toFixed(1)} hours
                       </p>
                     </div>
@@ -471,30 +619,38 @@ export default function ReportsPage() {
           )}
 
           {technicianPerf && technicianPerf.technicians && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Technician Performance</CardTitle>
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Technician Performance</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
+              <CardContent className="p-0 sm:p-6">
+                <div className="overflow-x-auto -mx-2 sm:mx-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Technician</TableHead>
-                        <TableHead>Work Orders</TableHead>
-                        <TableHead>Completed</TableHead>
-                        <TableHead>Revenue</TableHead>
-                        <TableHead>Avg Time (hrs)</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Technician</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Work Orders</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Completed</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Revenue</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Avg Time (hrs)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {technicianPerf.technicians.map((tech: any) => (
                         <TableRow key={tech.technician.id}>
-                          <TableCell className="font-medium">{tech.technician.name}</TableCell>
-                          <TableCell>{tech.metrics.total_work_orders || 0}</TableCell>
-                          <TableCell>{tech.metrics.completed || 0}</TableCell>
-                          <TableCell>${tech.metrics.revenue?.toFixed(2) || "0.00"}</TableCell>
-                          <TableCell>
+                          <TableCell className="font-medium text-xs sm:text-sm">
+                            {tech.technician.name}
+                          </TableCell>
+                          <TableCell className="text-xs sm:text-sm">
+                            {tech.metrics.total_work_orders || 0}
+                          </TableCell>
+                          <TableCell className="text-xs sm:text-sm">
+                            {tech.metrics.completed || 0}
+                          </TableCell>
+                          <TableCell className="text-xs sm:text-sm">
+                            ${tech.metrics.revenue?.toFixed(2) || "0.00"}
+                          </TableCell>
+                          <TableCell className="text-xs sm:text-sm">
                             {tech.metrics.average_completion_hours?.toFixed(1) || "N/A"}
                           </TableCell>
                         </TableRow>
@@ -507,40 +663,46 @@ export default function ReportsPage() {
           )}
 
           {appointmentStats && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Appointment Statistics</CardTitle>
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Appointment Statistics</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                   <div>
-                    <p className="text-sm text-gray-600">Total Appointments</p>
-                    <p className="text-2xl font-bold">{appointmentStats.summary?.total_appointments || 0}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      Total Appointments
+                    </p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                      {appointmentStats.summary?.total_appointments || 0}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">No-Show Rate</p>
-                    <p className="text-2xl font-bold text-red-600">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">No-Show Rate</p>
+                    <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
                       {appointmentStats.summary?.no_show_rate?.toFixed(1) || 0}%
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Completed</p>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Completed</p>
+                    <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                       {appointmentStats.summary?.completed || 0}
                     </p>
                   </div>
                 </div>
                 {appointmentStats.by_status && appointmentStats.by_status.length > 0 && (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={appointmentStats.by_status}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="status" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="count" fill="#3B82F6" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="px-2 sm:px-0">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={appointmentStats.by_status}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="status" style={{ fontSize: "12px" }} />
+                        <YAxis style={{ fontSize: "12px" }} />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="count" fill="#3B82F6" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -548,62 +710,81 @@ export default function ReportsPage() {
         </TabsContent>
 
         {/* Inventory Reports */}
-        <TabsContent value="inventory" className="space-y-6">
+        <TabsContent value="inventory" className="space-y-4 sm:space-y-6">
           {inventoryValuation && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Inventory Valuation</CardTitle>
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Inventory Valuation</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="mb-6">
-                  <p className="text-sm text-gray-600">Total Inventory Value</p>
-                  <p className="text-3xl font-bold">
-                    ${(inventoryValuation.summary?.total_value || inventoryValuation.total_value || 0).toFixed(2)}
+                <div className="mb-4 sm:mb-6">
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                    Total Inventory Value
+                  </p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                    $
+                    {(inventoryValuation.summary?.total_value ||
+                      inventoryValuation.total_value ||
+                      0).toFixed(2)}
                   </p>
                 </div>
                 {inventoryValuation.by_category && inventoryValuation.by_category.length > 0 && (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={inventoryValuation.by_category}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="category" />
-                      <YAxis />
-                      <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
-                      <Legend />
-                      <Bar dataKey="value" fill="#8B5CF6" name="Value" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="px-2 sm:px-0">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={inventoryValuation.by_category}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="category" style={{ fontSize: "12px" }} />
+                        <YAxis style={{ fontSize: "12px" }} />
+                        <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                        <Legend />
+                        <Bar dataKey="value" fill="#8B5CF6" name="Value" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 )}
               </CardContent>
             </Card>
           )}
 
           {lowStockData && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Low Stock Items</CardTitle>
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Low Stock Items</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0 sm:p-6">
                 {lowStockData.items && lowStockData.items.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto -mx-2 sm:mx-0">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Part Name</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Current Stock</TableHead>
-                          <TableHead>Reorder Point</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Part Name</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Category</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Current Stock</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Reorder Point</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {lowStockData.items.map((item) => (
                           <TableRow key={item.part.id}>
-                            <TableCell className="font-medium">{item.part.name}</TableCell>
-                            <TableCell>{item.part.category || "N/A"}</TableCell>
-                            <TableCell>{item.stock.current}</TableCell>
-                            <TableCell>{item.stock.reorder_point}</TableCell>
-                            <TableCell>
-                              <span className={item.is_critical ? "text-red-600 font-medium" : "text-orange-600 font-medium"}>
+                            <TableCell className="font-medium text-xs sm:text-sm">
+                              {item.part.name}
+                            </TableCell>
+                            <TableCell className="text-xs sm:text-sm">
+                              {item.part.category || "N/A"}
+                            </TableCell>
+                            <TableCell className="text-xs sm:text-sm">{item.stock.current}</TableCell>
+                            <TableCell className="text-xs sm:text-sm">
+                              {item.stock.reorder_point}
+                            </TableCell>
+                            <TableCell className="text-xs sm:text-sm">
+                              <span
+                                className={
+                                  item.is_critical
+                                    ? "text-red-600 dark:text-red-400 font-medium"
+                                    : "text-orange-600 dark:text-orange-400 font-medium"
+                                }
+                              >
                                 {item.is_critical ? "Critical" : "Low Stock"}
                               </span>
                             </TableCell>
@@ -613,7 +794,9 @@ export default function ReportsPage() {
                     </Table>
                   </div>
                 ) : (
-                  <p className="text-center py-8 text-gray-500">No low stock items</p>
+                  <p className="text-center py-8 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    No low stock items
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -621,67 +804,87 @@ export default function ReportsPage() {
         </TabsContent>
 
         {/* Customer Reports */}
-        <TabsContent value="customers" className="space-y-6">
+        <TabsContent value="customers" className="space-y-4 sm:space-y-6">
           {customerStats && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Total Customers
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold">{customerStats.total_customers || 0}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                      {customerStats.total_customers || 0}
+                    </p>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium">New Customers</CardTitle>
+                <Card className="border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      New Customers
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                       {customerStats.new_customers || 0}
                     </p>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
+                <Card className="border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Active Customers
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold">{customerStats.active_customers || 0}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                      {customerStats.active_customers || 0}
+                    </p>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium">Top Customers</CardTitle>
+                <Card className="border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-2 sm:pb-3">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Top Customers
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-2xl font-bold">{customerStats.top_customers?.length || 0}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                      {customerStats.top_customers?.length || 0}
+                    </p>
                   </CardContent>
                 </Card>
               </div>
 
               {customerStats.top_customers && customerStats.top_customers.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Top Customers by Revenue</CardTitle>
+                <Card className="border-gray-200 dark:border-gray-800">
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <CardTitle className="text-base sm:text-lg">Top Customers by Revenue</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
+                  <CardContent className="p-0 sm:p-6">
+                    <div className="overflow-x-auto -mx-2 sm:mx-0">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Customer</TableHead>
-                            <TableHead>Revenue</TableHead>
-                            <TableHead>Work Orders</TableHead>
+                            <TableHead className="text-xs sm:text-sm">Customer</TableHead>
+                            <TableHead className="text-xs sm:text-sm">Revenue</TableHead>
+                            <TableHead className="text-xs sm:text-sm">Work Orders</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {customerStats.top_customers.map((customer: any) => (
                             <TableRow key={customer.id}>
-                              <TableCell className="font-medium">{customer.name}</TableCell>
-                              <TableCell>${customer.revenue?.toFixed(2) || "0.00"}</TableCell>
-                              <TableCell>{customer.work_orders || 0}</TableCell>
+                              <TableCell className="font-medium text-xs sm:text-sm">
+                                {customer.name}
+                              </TableCell>
+                              <TableCell className="text-xs sm:text-sm">
+                                ${customer.revenue?.toFixed(2) || "0.00"}
+                              </TableCell>
+                              <TableCell className="text-xs sm:text-sm">
+                                {customer.work_orders || 0}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -695,77 +898,83 @@ export default function ReportsPage() {
         </TabsContent>
 
         {/* Vehicle Reports */}
-        <TabsContent value="vehicles" className="space-y-6">
+        <TabsContent value="vehicles" className="space-y-4 sm:space-y-6">
           {vehicleStats && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Vehicle Statistics</CardTitle>
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Vehicle Statistics</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                   <div>
-                    <p className="text-sm text-gray-600">Total Vehicles</p>
-                    <p className="text-2xl font-bold">{vehicleStats.total_vehicles || 0}</p>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Vehicles</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                      {vehicleStats.total_vehicles || 0}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Average Age</p>
-                    <p className="text-2xl font-bold">
-                      {vehicleStats.average_age ? `${vehicleStats.average_age.toFixed(1)} years` : "N/A"}
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Average Age</p>
+                    <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                      {vehicleStats.average_age
+                        ? `${vehicleStats.average_age.toFixed(1)} years`
+                        : "N/A"}
                     </p>
                   </div>
                 </div>
                 {vehicleStats.by_make && vehicleStats.by_make.length > 0 && (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={vehicleStats.by_make}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="make" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="count" fill="#06B6D4" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <div className="px-2 sm:px-0">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={vehicleStats.by_make}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="make" angle={-45} textAnchor="end" height={80} style={{ fontSize: "12px" }} />
+                        <YAxis style={{ fontSize: "12px" }} />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="count" fill="#06B6D4" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 )}
               </CardContent>
             </Card>
           )}
 
           {serviceDueData && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Service Due Report</CardTitle>
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Service Due Report</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0 sm:p-6">
                 {serviceDueData.vehicles && serviceDueData.vehicles.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto -mx-2 sm:mx-0">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Vehicle</TableHead>
-                          <TableHead>Last Service</TableHead>
-                          <TableHead>Next Service Due</TableHead>
-                          <TableHead>Mileage</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Vehicle</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Last Service</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Next Service Due</TableHead>
+                          <TableHead className="text-xs sm:text-sm">Mileage</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {serviceDueData.vehicles.map((vehicle: any) => (
                           <TableRow key={vehicle.id}>
-                            <TableCell className="font-medium">
-                              {vehicle.vehicle_info || 
-                               `${vehicle.year || ""} ${vehicle.make || ""} ${vehicle.model || ""} ${vehicle.license_plate || ""}`.trim() || 
-                               `Vehicle #${vehicle.id}`}
+                            <TableCell className="font-medium text-xs sm:text-sm min-w-[150px]">
+                              {vehicle.vehicle_info ||
+                                `${vehicle.year || ""} ${vehicle.make || ""} ${vehicle.model || ""} ${vehicle.license_plate || ""}`.trim() ||
+                                `Vehicle #${vehicle.id}`}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-xs sm:text-sm">
                               {vehicle.last_service_date
                                 ? format(new Date(vehicle.last_service_date), "MMM dd, yyyy")
                                 : "N/A"}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-xs sm:text-sm">
                               {vehicle.next_service_due
                                 ? format(new Date(vehicle.next_service_due), "MMM dd, yyyy")
                                 : "N/A"}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-xs sm:text-sm">
                               {(vehicle.mileage || vehicle.odometer_reading)?.toLocaleString() || "N/A"}
                             </TableCell>
                           </TableRow>
@@ -774,7 +983,9 @@ export default function ReportsPage() {
                     </Table>
                   </div>
                 ) : (
-                  <p className="text-center py-8 text-gray-500">No vehicles due for service</p>
+                  <p className="text-center py-8 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    No vehicles due for service
+                  </p>
                 )}
               </CardContent>
             </Card>

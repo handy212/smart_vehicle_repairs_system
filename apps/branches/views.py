@@ -6,7 +6,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from django.db.models import Q
+from django.db.models import Q, Count, Sum, Avg, F
+from django.utils import timezone
+from datetime import timedelta
 
 from .models import Branch
 from .serializers import (
@@ -15,6 +17,7 @@ from .serializers import (
     BranchCreateUpdateSerializer
 )
 from apps.accounts.models import User
+from apps.accounts.permissions import HasPermission, HasAnyPermission
 
 
 class BranchViewSet(viewsets.ModelViewSet):
@@ -23,6 +26,18 @@ class BranchViewSet(viewsets.ModelViewSet):
     """
     queryset = Branch.objects.all()
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve', 'accessible', 'staff', 'managers', 'stats']:
+            return [IsAuthenticated(), HasPermission('view_branches')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('manage_branches')]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), HasPermission('manage_branches')]
+        elif self.action in ['assign_staff', 'assign_manager', 'remove_manager']:
+            return [IsAuthenticated(), HasPermission('manage_branches')]
+        return [IsAuthenticated()]
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -52,7 +67,46 @@ class BranchViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set created_by when creating a branch"""
+        # Only admins can create branches
+        if self.request.user.role != 'admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only administrators can create branches.')
         serializer.save(created_by=self.request.user)
+    
+    def perform_update(self, serializer):
+        """Check permissions before updating"""
+        # Only admins can update branches
+        if self.request.user.role != 'admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only administrators can update branches.')
+        serializer.save()
+    
+    def perform_destroy(self, instance):
+        """Check permissions and prevent deletion of branches with data"""
+        # Only admins can delete branches
+        if self.request.user.role != 'admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only administrators can delete branches.')
+        
+        # Prevent deletion if branch has staff assigned
+        if instance.staff_count > 0:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                f'Cannot delete branch "{instance.name}" because it has {instance.staff_count} staff member(s) assigned. '
+                'Please reassign or remove staff before deleting.'
+            )
+        
+        # Prevent deletion if it's the only active branch
+        active_branches = Branch.objects.filter(is_active=True).exclude(pk=instance.pk)
+        if not active_branches.exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError(
+                'Cannot delete the last active branch. Please activate another branch first or create a new one.'
+            )
+        
+        # Soft delete by setting is_active=False instead of actually deleting
+        instance.is_active = False
+        instance.save()
     
     @action(detail=True, methods=['get'])
     def staff(self, request, pk=None):
@@ -207,3 +261,93 @@ class BranchViewSet(viewsets.ModelViewSet):
         branches = request.user.get_accessible_branches()
         serializer = BranchListSerializer(branches, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def stats(self, request, pk=None):
+        """Get statistics for a specific branch"""
+        branch = self.get_object()
+        
+        # Check if user has access to this branch
+        # Admin users have access to all branches
+        user_has_access = False
+        if request.user.role == 'admin' or request.user.is_superuser:
+            user_has_access = True
+        elif request.user.role == 'manager':
+            # Managers can access branches they manage
+            user_has_access = branch in request.user.managed_branches.all()
+        elif request.user.branch == branch:
+            # Staff can access their assigned branch
+            user_has_access = True
+        
+        if not user_has_access:
+            return Response(
+                {'detail': 'You do not have permission to view stats for this branch.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            from apps.workorders.models import WorkOrder
+            from apps.appointments.models import Appointment
+            from apps.inventory.models import Part
+            
+            # Work order stats
+            work_orders = WorkOrder.objects.filter(branch=branch)
+            total_work_orders = work_orders.count()
+            active_work_orders = work_orders.filter(status__in=['pending', 'in_progress', 'on_hold']).count()
+            completed_work_orders = work_orders.filter(status='completed').count()
+            total_revenue = work_orders.filter(status='completed').aggregate(
+                total=Sum('actual_total')
+            )['total'] or 0
+            
+            # Appointment stats
+            appointments = Appointment.objects.filter(branch=branch)
+            total_appointments = appointments.count()
+            upcoming_appointments = appointments.filter(
+                appointment_date__gte=timezone.now().date()
+            ).count()
+            
+            # Inventory stats - Parts have a branch field
+            try:
+                parts = Part.objects.filter(branch=branch)
+                total_parts = parts.count()
+                # Part model uses quantity_in_stock and minimum_stock
+                low_stock_parts = parts.filter(quantity_in_stock__lte=F('minimum_stock')).count()
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error calculating inventory stats for branch {branch.id}: {e}", exc_info=True)
+                total_parts = 0
+                low_stock_parts = 0
+            
+            stats = {
+                'branch_id': branch.id,
+                'branch_name': branch.name,
+                'work_orders': {
+                    'total': total_work_orders,
+                    'active': active_work_orders,
+                    'completed': completed_work_orders,
+                    'total_revenue': float(total_revenue),
+                },
+                'appointments': {
+                    'total': total_appointments,
+                    'upcoming': upcoming_appointments,
+                },
+                'inventory': {
+                    'total_parts': total_parts,
+                    'low_stock_parts': low_stock_parts,
+                },
+                'staff': {
+                    'total_staff': branch.staff_count,
+                    'total_managers': branch.manager_count,
+                }
+            }
+            
+            return Response(stats)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in stats endpoint for branch {branch.id}: {e}", exc_info=True)
+            return Response(
+                {'detail': f'Error calculating statistics: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

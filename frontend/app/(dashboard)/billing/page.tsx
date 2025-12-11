@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { Plus, Search, Receipt, DollarSign, Trash2, Download, CheckCircle2, AlertCircle } from "lucide-react";
+import { Plus, Search, Receipt, DollarSign, Trash2, Download, CheckCircle2, AlertCircle, X, MoreVertical, Eye, Edit, Copy, Mail, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,6 +21,8 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 export default function BillingPage() {
   const [search, setSearch] = useState("");
@@ -32,8 +34,12 @@ export default function BillingPage() {
   const [newStatus, setNewStatus] = useState<string>("sent");
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { hasPermission } = usePermissions();
 
   // Advanced filter options
   const filterOptions: FilterOption[] = [
@@ -105,7 +111,7 @@ export default function BillingPage() {
   };
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["invoices", page, search, statusFilter, startDate, endDate, advancedFilters, sortConfig],
+    queryKey: ["invoices", page, search, advancedFilters, sortConfig],
     queryFn: () => {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
@@ -113,9 +119,9 @@ export default function BillingPage() {
       return billingApi.invoices.list({
         page,
         search: search || undefined,
-        status: advancedFilters.status || statusFilter || undefined,
-        invoice_date__gte: advancedFilters.invoice_date_from || startDate || undefined,
-        invoice_date__lte: advancedFilters.invoice_date_to || endDate || undefined,
+        status: advancedFilters.status || undefined,
+        invoice_date__gte: advancedFilters.invoice_date_from || undefined,
+        invoice_date__lte: advancedFilters.invoice_date_to || undefined,
         ordering,
       });
     },
@@ -188,6 +194,24 @@ export default function BillingPage() {
     },
   });
 
+  const bulkSendMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await Promise.all(ids.map((id) => billingApi.invoices.send(id)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      bulkSelection.clearSelection();
+      toast({ title: "Success", description: `Sent ${bulkSelection.selectedCount} invoice(s) successfully` });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to send invoices",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleBulkDelete = () => {
     if (confirm(`Are you sure you want to delete ${bulkSelection.selectedCount} invoice(s)? This action cannot be undone.`)) {
       bulkDeleteMutation.mutate(bulkSelection.selectedIds);
@@ -196,6 +220,12 @@ export default function BillingPage() {
 
   const handleBulkStatusUpdate = () => {
     setShowStatusDialog(true);
+  };
+
+  const handleBulkSend = () => {
+    if (confirm(`Send ${bulkSelection.selectedCount} invoice(s) to customers?`)) {
+      bulkSendMutation.mutate(bulkSelection.selectedIds);
+    }
   };
 
   const confirmBulkStatusUpdate = () => {
@@ -294,16 +324,49 @@ export default function BillingPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Link href="/billing/invoices/new">
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              New Invoice
+          <div className="relative">
+            <Button
+              variant="outline"
+              onClick={() => setShowActionsMenu(!showActionsMenu)}
+              className="dark:border-gray-700 dark:text-gray-200"
+            >
+              Actions
+              <ChevronDown className="w-4 h-4 ml-2" />
             </Button>
-          </Link>
+            {showActionsMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowActionsMenu(false)}
+                />
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
+                  <div className="py-1">
+                    <PermissionGuard permission="export_billing">
+                      <button
+                        onClick={() => {
+                          handleExport();
+                          setShowActionsMenu(false);
+                        }}
+                        disabled={!data?.results || data.results.length === 0}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export CSV
+                      </button>
+                    </PermissionGuard>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <PermissionGuard permission="create_invoices">
+            <Link href="/billing/invoices/new">
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                New Invoice
+              </Button>
+            </Link>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -355,82 +418,117 @@ export default function BillingPage() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="text"
-                  placeholder="Search invoices..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="pl-10"
-                />
-              </div>
-              <AdvancedFilters
-                filters={filterOptions}
-                quickFilters={quickFilters}
-                activeFilters={advancedFilters}
-                onFiltersChange={(filters) => {
-                  setAdvancedFilters(filters);
-                  setPage(1);
-                }}
-                onClear={() => {
-                  setAdvancedFilters({});
-                  setStatusFilter("");
-                  setStartDate("");
-                  setEndDate("");
-                }}
-                title="Advanced Invoice Filters"
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <Select
-                  id="status-filter"
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setPage(1);
-                  }}
-                >
-                  <option value="">All Statuses</option>
-                  <option value="draft">Draft</option>
-                  <option value="sent">Sent</option>
-                  <option value="viewed">Viewed</option>
-                  <option value="partial">Partial</option>
-                  <option value="paid">Paid</option>
-                  <option value="overdue">Overdue</option>
-                </Select>
-              </div>
-              <div className="md:col-span-2">
-                <DateRangePicker
-                  startDate={startDate}
-                  endDate={endDate}
-                  onStartDateChange={(date) => {
-                    setStartDate(date);
-                    setPage(1);
-                  }}
-                  onEndDateChange={(date) => {
-                    setEndDate(date);
-                    setPage(1);
-                  }}
-                  label="Invoice Date Range"
-                />
-              </div>
-            </div>
+      {/* Compact Filter Bar */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Search invoices..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 h-9"
+            />
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Advanced Filters Button */}
+          <AdvancedFilters
+            filters={filterOptions}
+            quickFilters={quickFilters}
+            activeFilters={advancedFilters}
+            onFiltersChange={(filters) => {
+              setAdvancedFilters(filters);
+              setPage(1);
+            }}
+            onClear={() => {
+              setAdvancedFilters({});
+              setStatusFilter("");
+              setStartDate("");
+              setEndDate("");
+            }}
+            title="Advanced Invoice Filters"
+          />
+
+          {/* Clear Filters */}
+          {(search || Object.keys(advancedFilters).length > 0) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearch("");
+                setAdvancedFilters({});
+                setStatusFilter("");
+                setStartDate("");
+                setEndDate("");
+                setPage(1);
+              }}
+              className="h-9"
+            >
+              <X className="w-4 h-4 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
+
+        {/* Active Filter Badges */}
+        {(search || Object.keys(advancedFilters).length > 0) && (
+          <div className="flex flex-wrap items-center gap-2">
+            {search && (
+              <Badge variant="secondary" className="flex items-center gap-1.5">
+                <span className="text-xs">Search: {search}</span>
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setPage(1);
+                  }}
+                  className="hover:text-red-600"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
+            {Object.entries(advancedFilters).map(([key, value]) => {
+              if (!value || (typeof value === 'string' && value === '')) return null;
+              const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
+              if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
+              if (key.includes("_to")) return null;
+              
+              const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
+                ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
+                : String(value);
+              
+              const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
+
+              return (
+                <Badge key={key} variant="secondary" className="flex items-center gap-1.5">
+                  <span className="text-xs">{displayLabel}: {displayValue}</span>
+                  <button
+                    onClick={() => {
+                      const newFilters = { ...advancedFilters };
+                      if (key.includes("_from")) {
+                        delete newFilters[key];
+                        delete newFilters[key.replace("_from", "_to")];
+                      } else {
+                        delete newFilters[key];
+                      }
+                      setAdvancedFilters(newFilters);
+                      setPage(1);
+                    }}
+                    className="hover:text-red-600"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Bulk Action Toolbar */}
       <BulkActionToolbar
@@ -438,7 +536,9 @@ export default function BillingPage() {
         onClearSelection={bulkSelection.clearSelection}
         onBulkDelete={handleBulkDelete}
         onBulkStatusUpdate={handleBulkStatusUpdate}
+        onBulkSend={handleBulkSend}
         showStatusUpdate={true}
+        showBulkSend={true}
       />
 
       {/* Invoices Table */}
@@ -580,23 +680,23 @@ export default function BillingPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Link
-                            href={`/billing/invoices/${invoice.id}`}
-                            className="text-blue-600 hover:text-blue-900 text-sm font-medium"
-                          >
-                            View
-                          </Link>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(invoice)}
-                            disabled={deleteMutation.isPending}
-                            className="text-red-600 hover:text-red-900 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const button = e.currentTarget;
+                            const rect = button.getBoundingClientRect();
+                            setMenuPosition({
+                              top: rect.bottom + 4,
+                              left: rect.right - 192, // 192px = w-48 (48 * 4)
+                            });
+                            setOpenMenuId(openMenuId === invoice.id ? null : invoice.id);
+                          }}
+                          className="h-8 w-8 p-0"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -644,6 +744,96 @@ export default function BillingPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Floating dropdown menu - rendered outside table */}
+      {openMenuId && menuPosition && data?.results && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => {
+              setOpenMenuId(null);
+              setMenuPosition(null);
+            }}
+          />
+          <div
+            className="fixed z-50 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700"
+            style={{
+              top: `${menuPosition.top}px`,
+              left: `${menuPosition.left}px`,
+            }}
+          >
+            {(() => {
+              const invoice = data.results.find((i: any) => i.id === openMenuId);
+              if (!invoice) return null;
+              
+              return (
+                <div className="py-1">
+                  <Link
+                    href={`/billing/invoices/${invoice.id}`}
+                    onClick={() => {
+                      setOpenMenuId(null);
+                      setMenuPosition(null);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    View
+                  </Link>
+                  {invoice.status === 'draft' && (
+                    <Link
+                      href={`/billing/invoices/${invoice.id}/edit`}
+                      onClick={() => {
+                        setOpenMenuId(null);
+                        setMenuPosition(null);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </Link>
+                  )}
+                  {(invoice.status === 'draft' || invoice.status === 'sent') && (
+                    <button
+                      onClick={async () => {
+                        setOpenMenuId(null);
+                        setMenuPosition(null);
+                        try {
+                          await billingApi.invoices.send(invoice.id);
+                          queryClient.invalidateQueries({ queryKey: ["invoices"] });
+                          toast({ title: "Success", description: "Invoice sent successfully" });
+                        } catch (error: any) {
+                          toast({
+                            title: "Error",
+                            description: error.response?.data?.error || error.response?.data?.detail || "Failed to send invoice",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Send
+                    </button>
+                  )}
+                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                  <button
+                    onClick={() => {
+                      setOpenMenuId(null);
+                      setMenuPosition(null);
+                      handleDelete(invoice);
+                    }}
+                    disabled={deleteMutation.isPending}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+        </>
+      )}
 
       {/* Bulk Status Update Dialog */}
       <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>

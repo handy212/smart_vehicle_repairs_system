@@ -5,7 +5,7 @@ from apps.diagnosis.models import (
     DiagnosticCode, DiagnosticTest,
     DiagnosisFinding, DiagnosisPhoto,
     TestProcedureLibrary, DiagnosticCodeLibrary,
-    DiagnosisHistory
+    DiagnosisHistory, DiagnosisTimeLog
 )
 from apps.workorders.models import WorkOrder
 
@@ -74,6 +74,31 @@ class DiagnosticCodeCreateSerializer(serializers.ModelSerializer):
             'diagnosis', 'code_number', 'code_type', 'description', 'severity',
             'freeze_frame_data', 'status', 'recorded_at'
         ]
+    
+    def validate(self, attrs):
+        """Validate that the code doesn't already exist for this diagnosis"""
+        diagnosis = attrs.get('diagnosis')
+        code_number = attrs.get('code_number', '').strip().upper()
+        code_type = attrs.get('code_type')
+        
+        if diagnosis and code_number and code_type:
+            # Check if this code already exists for this diagnosis
+            existing_code = DiagnosticCode.objects.filter(
+                diagnosis=diagnosis,
+                code_number__iexact=code_number,  # Case-insensitive check
+                code_type=code_type
+            )
+            
+            # Exclude current instance if updating
+            if self.instance:
+                existing_code = existing_code.exclude(pk=self.instance.pk)
+            
+            if existing_code.exists():
+                raise serializers.ValidationError({
+                    'code_number': f'Code {code_number} ({code_type}) already exists for this diagnosis.'
+                })
+        
+        return attrs
 
 
 class DiagnosticTestSerializer(serializers.ModelSerializer):
@@ -244,6 +269,27 @@ class DiagnosisListSerializer(serializers.ModelSerializer):
         return obj.repair_recommendations.count()
 
 
+class DiagnosisTimeLogSerializer(serializers.ModelSerializer):
+    """Serializer for diagnosis time logs"""
+    stage_display = serializers.CharField(source='get_stage_display', read_only=True)
+    technician_name = serializers.SerializerMethodField()
+    duration_formatted = serializers.CharField(read_only=True)
+    
+    class Meta:
+        model = DiagnosisTimeLog
+        fields = [
+            'id', 'stage', 'stage_display',
+            'started_at', 'ended_at', 'duration_hours', 'duration_formatted',
+            'technician', 'technician_name', 'notes',
+            'created_at'
+        ]
+    
+    def get_technician_name(self, obj):
+        if obj.technician:
+            return f"{obj.technician.first_name} {obj.technician.last_name}"
+        return None
+
+
 class DiagnosisDetailSerializer(serializers.ModelSerializer):
     """Detail serializer for diagnoses with recommendations"""
     technician_name = serializers.SerializerMethodField()
@@ -255,6 +301,7 @@ class DiagnosisDetailSerializer(serializers.ModelSerializer):
     diagnostic_time_formatted = serializers.CharField(read_only=True)
     repair_recommendations = RepairRecommendationSerializer(many=True, read_only=True)
     total_estimated_cost = serializers.SerializerMethodField()
+    time_logs = DiagnosisTimeLogSerializer(many=True, read_only=True)
     # Phase 2: Structured data
     diagnostic_codes = DiagnosticCodeSerializer(many=True, read_only=True)
     diagnostic_tests = DiagnosticTestSerializer(many=True, read_only=True)
@@ -267,13 +314,15 @@ class DiagnosisDetailSerializer(serializers.ModelSerializer):
             'id', 'work_order', 'work_order_number', 'work_order_status',
             'technician', 'technician_name',
             'customer_name', 'vehicle_info',
-            'started_at', 'completed_at', 'status', 'status_display',
+            'started_at', 'paused_at', 'resumed_at', 'completed_at',
+            'status', 'status_display',
             'customer_complaint', 'initial_observations',
             'diagnostic_notes', 'diagnostic_time_hours', 'diagnostic_time_formatted',
             'diagnostic_fee', 'root_cause', 'root_cause_explanation',
             'is_completed', 'requires_approval',
             'repair_recommendations', 'total_estimated_cost',
             'diagnostic_codes', 'diagnostic_tests', 'findings', 'photos',
+            'time_logs',
             'created_at', 'updated_at'
         ]
     
@@ -328,8 +377,7 @@ class DiagnosisCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         validated_data['technician'] = validated_data.get('technician') or self.context['request'].user
-        validated_data['status'] = 'in_progress'
-        validated_data['started_at'] = timezone.now()
+        validated_data['status'] = 'not_started'  # Diagnosis starts as not_started, must be explicitly started
         return super().create(validated_data)
 
 

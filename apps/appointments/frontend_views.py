@@ -341,10 +341,43 @@ def get_available_time_slots(request):
     except ValueError:
         return JsonResponse({'error': 'Invalid date format'}, status=400)
     
-    # Define business hours (8 AM to 6 PM)
-    start_hour = 8
-    end_hour = 18
-    slot_duration = 30  # 30-minute slots
+    # Get business hours from system settings
+    from apps.accounts.settings_utils import get_business_settings
+    business_settings = get_business_settings()
+    
+    # Parse business hours based on day of week
+    from datetime import datetime
+    weekday = appointment_date.weekday()  # 0 = Monday, 6 = Sunday
+    
+    if weekday == 5:  # Saturday
+        hours_str = business_settings.get('business_hours_saturday', '09:00-15:00')
+    elif weekday == 6:  # Sunday
+        hours_str = business_settings.get('business_hours_sunday', 'Closed')
+    else:  # Weekday
+        hours_str = business_settings.get('business_hours_weekday', '08:00-18:00')
+    
+    # Parse hours string (e.g., "08:00-18:00" or "Closed")
+    if hours_str.lower() == 'closed':
+        return JsonResponse({'available_slots': []})
+    
+    try:
+        start_str, end_str = hours_str.split('-')
+        start_time = datetime.strptime(start_str.strip(), '%H:%M').time()
+        end_time = datetime.strptime(end_str.strip(), '%H:%M').time()
+        start_hour = start_time.hour
+        start_minute = start_time.minute
+        end_hour = end_time.hour
+        end_minute = end_time.minute
+    except (ValueError, AttributeError):
+        # Fallback to defaults if parsing fails
+        start_hour = 8
+        start_minute = 0
+        end_hour = 18
+        end_minute = 0
+    
+    # Get appointment buffer from settings
+    buffer_minutes = int(business_settings.get('appointment_buffer', '15'))
+    slot_duration = buffer_minutes  # Use buffer as slot duration
     
     # Get existing appointments for the date
     existing_appointments = Appointment.objects.filter(
@@ -357,9 +390,10 @@ def get_available_time_slots(request):
     
     # Generate all possible time slots
     available_slots = []
-    current_time = time(start_hour, 0)
+    current_time = time(start_hour, start_minute)
+    end_time_obj = time(end_hour, end_minute)
     
-    while current_time < time(end_hour, 0):
+    while current_time < end_time_obj:
         slot_start = datetime.combine(appointment_date, current_time)
         slot_end = slot_start + timedelta(minutes=duration)
         

@@ -115,5 +115,31 @@ export const customersApi = {
       return response.data;
     },
   },
+
+  resetPassword: async (id: number, newPassword: string, sendEmail: boolean = false): Promise<{ detail: string; email_sent: boolean }> => {
+    const response = await apiClient.post(`/customers/customers/${id}/reset_password/`, {
+      new_password: newPassword,
+      send_email: sendEmail,
+    });
+    return response.data;
+  },
+
+  sendPasswordResetLink: async (id: number): Promise<{ detail: string }> => {
+    const response = await apiClient.post(`/customers/customers/${id}/send_password_reset_link/`);
+    return response.data;
+  },
+
+  grantPortalAccess: async (id: number, password?: string, sendEmail: boolean = false): Promise<{ detail: string; email_sent: boolean; password?: string }> => {
+    const response = await apiClient.post(`/customers/customers/${id}/grant_portal_access/`, {
+      password,
+      send_email: sendEmail,
+    });
+    return response.data;
+  },
+
+  revokePortalAccess: async (id: number): Promise<{ detail: string }> => {
+    const response = await apiClient.post(`/customers/customers/${id}/revoke_portal_access/`);
+    return response.data;
+  },
 };
 

@@ -9,13 +9,14 @@ import { authApi } from "@/lib/api/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { notificationsApi } from "@/lib/api/notifications";
 import Link from "next/link";
-import { useState, useEffect, useRef, ChangeEvent } from "react";
+import { useState, useEffect, useRef, ChangeEvent, useMemo, useCallback } from "react";
 import { searchApi, SearchResult } from "@/lib/api/search";
 import { cn } from "@/lib/utils/cn";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Select } from "@/components/ui/select";
-import { branchesApi, type Branch } from "@/lib/api/admin";
+import { branchesApi, adminApi, type Branch, type SystemSetting } from "@/lib/api/admin";
 import { useBranchStore } from "@/store/branchStore";
+import { useTheme, setSystemThemeMode } from "@/lib/hooks/useTheme";
 
 interface NavbarProps {
   onMenuToggle?: () => void;
@@ -36,11 +37,120 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
   const { activeBranchId, activeBranch, setBranch } = useBranchStore();
   const previousBranchIdRef = useRef<number | null>(null);
   const hasInitializedBranchRef = useRef(false);
+  const { theme, resolvedTheme } = useTheme();
+
+  // Fetch branding settings (site_name, company_tagline, logo)
+  const { data: brandingSettings, isLoading: brandingLoading } = useQuery<SystemSetting[]>({
+    queryKey: ["settings", "branding"],
+    queryFn: () => adminApi.settings.byCategory("branding"),
+    enabled: isAuthenticated,
+    staleTime: 1 * 60 * 1000, // 1 minute (reduced for better real-time updates)
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch when component mounts
+  });
+
+  // Apply theme_mode from system settings
+  useEffect(() => {
+    if (brandingSettings && !brandingLoading) {
+      const themeModeSetting = brandingSettings.find(s => s.key === 'theme_mode');
+      if (themeModeSetting?.value) {
+        const themeMode = themeModeSetting.value.toLowerCase().trim();
+        if (['light', 'dark', 'system', 'auto'].includes(themeMode)) {
+          // Map 'auto' to 'system'
+          const themeValue = themeMode === 'auto' ? 'system' : themeMode;
+          setSystemThemeMode(themeValue as 'light' | 'dark' | 'system');
+          // Trigger theme re-initialization by dispatching a custom event
+          window.dispatchEvent(new CustomEvent('systemThemeModeChanged', { detail: themeValue }));
+        }
+      }
+    }
+  }, [brandingSettings, brandingLoading]);
+
+  // Extract branding values
+  const branding = useMemo(() => {
+    if (!brandingSettings) {
+      return {
+        siteName: "Smart Vehicle Repairs",
+        tagline: "Management System",
+        logoPath: null,
+        logoDarkPath: null,
+        logoUpdatedAt: null,
+        logoDarkUpdatedAt: null,
+      };
+    }
+
+    const getSetting = (key: string): string | null => {
+      const setting = brandingSettings.find((s) => s.key === key);
+      return setting?.value && setting.value.trim() !== "" ? setting.value : null;
+    };
+
+    const getSettingUpdatedAt = (key: string): string | null => {
+      const setting = brandingSettings.find((s) => s.key === key);
+      return setting?.updated_at || null;
+    };
+
+    return {
+      siteName: getSetting("site_name") || "Smart Vehicle Repairs",
+      tagline: getSetting("company_tagline") || "Management System",
+      logoPath: getSetting("logo_path"),
+      logoDarkPath: getSetting("logo_dark_path"),
+      logoUpdatedAt: getSettingUpdatedAt("logo_path"),
+      logoDarkUpdatedAt: getSettingUpdatedAt("logo_dark_path"),
+    };
+  }, [brandingSettings]);
+
+  // Determine which logo to use based on theme
+  const logoToUse = useMemo(() => {
+    const isDark = resolvedTheme === "dark" || theme === "dark";
+    if (isDark && branding.logoDarkPath) {
+      const result = {
+        path: branding.logoDarkPath,
+        cacheKey: branding.logoDarkUpdatedAt ? new Date(branding.logoDarkUpdatedAt).getTime() : Date.now(),
+      };
+      console.log('🌙 Using dark logo:', result);
+      return result;
+    }
+    if (branding.logoPath) {
+      const result = {
+        path: branding.logoPath,
+        cacheKey: branding.logoUpdatedAt ? new Date(branding.logoUpdatedAt).getTime() : Date.now(),
+      };
+      console.log('☀️ Using light logo:', result);
+      return result;
+    }
+    console.log('⚠️ No logo found in branding settings, using fallback icon. LogoPath:', branding.logoPath, 'LogoDarkPath:', branding.logoDarkPath);
+    return null;
+  }, [branding.logoPath, branding.logoDarkPath, branding.logoUpdatedAt, branding.logoDarkUpdatedAt, resolvedTheme, theme]);
+
+  // Get media base URL from API URL (remove /api suffix)
+  const mediaBaseUrl = useMemo(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+    // Remove /api from the end if present
+    return apiUrl.replace(/\/api\/?$/, "");
+  }, []);
+
+  const getMediaUrl = useCallback(
+    (path: string, cacheKey?: number) => {
+      if (path.startsWith("http")) {
+        return cacheKey ? `${path}${path.includes("?") ? "&" : "?"}v=${cacheKey}` : path;
+      }
+      // Construct full media URL: http://localhost:8000/media/branding/logo_path.png
+      const url = `${mediaBaseUrl}/media/${path}`;
+      return cacheKey ? `${url}${url.includes("?") ? "&" : "?"}v=${cacheKey}` : url;
+    },
+    [mediaBaseUrl]
+  );
+
+  const logoSrc = useMemo(
+    () => (logoToUse ? getMediaUrl(logoToUse.path, logoToUse.cacheKey) : null),
+    [logoToUse, getMediaUrl]
+  );
 
   const { data: unreadCountData } = useQuery({
     queryKey: ["notifications", "unread-count"],
     queryFn: () => notificationsApi.unreadCount(),
     enabled: isAuthenticated,
+    refetchOnWindowFocus: false,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
@@ -179,7 +289,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm backdrop-blur-sm bg-white/95 dark:bg-gray-900/95">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm backdrop-blur-sm bg-white/95 dark:bg-gray-900/95 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-900/80">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left: Menu Toggle + Logo/Brand */}
@@ -198,14 +308,78 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
             </button>
 
             <Link href="/dashboard" className="flex items-center space-x-2 group">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-                <Car className="w-5 h-5 text-white" />
-              </div>
+              {logoSrc ? (
+                <div className="h-8 w-8 rounded-lg overflow-hidden bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow border border-gray-200 dark:border-gray-700 relative">
+                  <img
+                    src={logoSrc}
+                    alt={branding.siteName}
+                    key={`${logoToUse?.path ?? "logo"}-${logoToUse?.cacheKey ?? "0"}`} // Force re-render when logo changes
+                    className="h-full w-full object-contain p-1"
+                    onError={(e) => {
+                      if (!logoToUse) return;
+                      // Log error for debugging
+                      console.error("Logo failed to load:", {
+                        path: logoToUse.path,
+                        fullUrl: logoSrc,
+                        attemptedUrl: (e.target as HTMLImageElement).src,
+                        error: e,
+                      });
+                      // Hide image and show fallback icon if logo fails to load
+                      const target = e.target as HTMLImageElement;
+                      if (target) {
+                        target.style.display = "none";
+                        const parent = target.parentElement;
+                        if (parent && !parent.querySelector(".fallback-icon")) {
+                          const iconWrapper = document.createElement("div");
+                          iconWrapper.className = "fallback-icon absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg";
+                          const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                          icon.setAttribute("class", "w-5 h-5 text-white");
+                          icon.setAttribute("fill", "none");
+                          icon.setAttribute("viewBox", "0 0 24 24");
+                          icon.setAttribute("stroke", "currentColor");
+                          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                          path.setAttribute("stroke-linecap", "round");
+                          path.setAttribute("stroke-linejoin", "round");
+                          path.setAttribute("stroke-width", "2");
+                          path.setAttribute("d", "M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4");
+                          icon.appendChild(path);
+                          iconWrapper.appendChild(icon);
+                          parent.appendChild(iconWrapper);
+                        }
+                      }
+                    }}
+                    onLoad={() => {
+                      if (!logoToUse) return;
+                      console.log("✅ Logo loaded successfully:", {
+                        path: logoToUse.path,
+                        fullUrl: logoSrc,
+                      });
+                      // Remove any fallback icon when logo loads successfully
+                      const img = document.querySelector(`img[alt="${branding.siteName}"]`);
+                      if (img) {
+                        const parent = img.parentElement;
+                        if (parent) {
+                          const fallback = parent.querySelector(".fallback-icon");
+                          if (fallback) {
+                            fallback.remove();
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                  <Car className="w-5 h-5 text-white" />
+                </div>
+              )}
               <div className="hidden sm:block">
                 <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  Smart Vehicle Repairs
+                  {branding.siteName}
                 </h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400 hidden lg:block">Management System</p>
+                {branding.tagline && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 hidden lg:block">{branding.tagline}</p>
+                )}
               </div>
             </Link>
           </div>
@@ -312,24 +486,23 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
             </button>
 
             {showBranchSwitcher && (
-              <div className="hidden md:flex flex-col mr-2 min-w-[180px]">
-                {/* <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  Branch
-                </span> */}
+              <div className="hidden md:flex items-center mr-2">
                 <Select
                   value={currentBranchId ? currentBranchId.toString() : ""}
                   onChange={handleBranchChange}
                   disabled={isBranchesLoading || sortedBranches.length === 0}
-                  className="w-48 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700"
+                  className="w-44 bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-700 focus:bg-white dark:focus:bg-gray-700 transition-colors text-sm"
+                  title="Switch branch"
                 >
                   {!currentBranchId && (
                     <option value="" disabled>
-                      {isBranchesLoading ? "Loading branches..." : "Select branch"}
+                      {isBranchesLoading ? "Loading..." : "Select branch"}
                     </option>
                   )}
                   {sortedBranches.map((branch) => (
                     <option key={branch.id} value={branch.id}>
                       {branch.name}
+                      {branch.is_headquarters && " (HQ)"}
                     </option>
                   ))}
                 </Select>
@@ -345,13 +518,14 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
                 className={cn(
                   "relative p-2.5 rounded-lg transition-all",
                   "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+                  unreadCount > 0 && "text-blue-600 dark:text-blue-400"
                 )}
-                title="Notifications"
+                title={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 flex items-center justify-center min-w-[20px] h-[20px] px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full ring-2 ring-white animate-pulse">
+                  <span className="absolute top-1 right-1 flex items-center justify-center min-w-[20px] h-[20px] px-1.5 text-xs font-semibold text-white bg-red-500 dark:bg-red-600 rounded-full ring-2 ring-white dark:ring-gray-900">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
@@ -387,18 +561,20 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
 
               {/* User Dropdown Menu */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50 animate-in fade-in-0 zoom-in-95">
                   <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                       {user?.first_name} {user?.last_name}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{user?.email}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 capitalize">{user?.role}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{user?.email}</p>
+                    <span className="inline-block mt-1.5 text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-medium capitalize">
+                      {user?.role}
+                    </span>
                   </div>
                   <Link
                     href="/admin/profile"
                     onClick={() => setShowUserMenu(false)}
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <User className="w-4 h-4 mr-3 text-gray-400 dark:text-gray-500" />
                     Profile Settings
@@ -406,7 +582,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
                   <Link
                     href="/admin"
                     onClick={() => setShowUserMenu(false)}
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <Settings className="w-4 h-4 mr-3 text-gray-400 dark:text-gray-500" />
                     Administration
@@ -417,7 +593,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
                       setShowUserMenu(false);
                       handleLogout();
                     }}
-                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    className="w-full flex items-center px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left"
                   >
                     <LogOut className="w-4 h-4 mr-3" />
                     Sign Out

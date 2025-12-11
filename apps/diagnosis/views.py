@@ -2,8 +2,10 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from apps.accounts.permissions import HasPermission
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+from decimal import Decimal
 
 from apps.diagnosis.models import (
     Diagnosis, RepairRecommendation,
@@ -98,7 +100,13 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
     queryset = Diagnosis.objects.all().select_related(
         'work_order', 'work_order__customer', 'work_order__vehicle',
         'technician'
-    ).prefetch_related('repair_recommendations')
+    ).prefetch_related(
+        'repair_recommendations',
+        'diagnostic_codes',
+        'diagnostic_tests',
+        'findings',
+        'photos',
+    )
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'is_completed', 'technician', 'work_order']
@@ -129,10 +137,103 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         return DiagnosisDetailSerializer
     
     @action(detail=True, methods=['post'])
-    def complete(self, request, pk=None):
-        """Mark diagnosis as completed"""
+    def start(self, request, pk=None):
+        """Start the diagnosis"""
         diagnosis = self.get_object()
-        diagnosis.complete()
+        
+        if diagnosis.start(user=request.user):
+            diagnosis.refresh_from_db()
+            serializer = self.get_serializer(diagnosis)
+            return Response({
+                'message': 'Diagnosis started',
+                'diagnosis': serializer.data
+            })
+        else:
+            return Response(
+                {'error': f'Cannot start diagnosis. Current status: {diagnosis.get_status_display()}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=True, methods=['post'])
+    def pause(self, request, pk=None):
+        """
+        Pause the diagnosis
+        
+        Request body (optional):
+        {
+            "reason": "string"  # Optional reason for pausing
+        }
+        """
+        diagnosis = self.get_object()
+        reason = request.data.get('reason', '')
+        
+        if diagnosis.pause(user=request.user, reason=reason):
+            diagnosis.refresh_from_db()
+            serializer = self.get_serializer(diagnosis)
+            return Response({
+                'message': 'Diagnosis paused',
+                'diagnosis': serializer.data
+            })
+        else:
+            return Response(
+                {'error': f'Cannot pause diagnosis. Current status: {diagnosis.get_status_display()}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=True, methods=['post'])
+    def resume(self, request, pk=None):
+        """Resume the diagnosis"""
+        diagnosis = self.get_object()
+        
+        if diagnosis.resume(user=request.user):
+            diagnosis.refresh_from_db()
+            serializer = self.get_serializer(diagnosis)
+            return Response({
+                'message': 'Diagnosis resumed',
+                'diagnosis': serializer.data
+            })
+        else:
+            return Response(
+                {'error': f'Cannot resume diagnosis. Current status: {diagnosis.get_status_display()}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        """
+        Mark diagnosis as completed and sync with WorkOrder status
+        
+        Request body (optional):
+        {
+            "requires_approval": true/false  # Override diagnosis requires_approval setting
+        }
+        """
+        diagnosis = self.get_object()
+        
+        # Check if diagnosis can be completed
+        if diagnosis.status not in ['in_progress', 'paused']:
+            return Response(
+                {'error': f'Cannot complete diagnosis. Current status: {diagnosis.get_status_display()}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get requires_approval from request if provided
+        requires_approval = None
+        if 'requires_approval' in request.data:
+            requires_approval_raw = request.data.get('requires_approval', None)
+            if requires_approval_raw is not None:
+                if isinstance(requires_approval_raw, str):
+                    requires_approval = requires_approval_raw.lower() in ('true', '1', 'yes')
+                else:
+                    requires_approval = bool(requires_approval_raw)
+        
+        # Complete diagnosis (this will auto-sync with WorkOrder)
+        diagnosis.complete(requires_approval=requires_approval)
+        
+        # Refresh diagnosis and work_order from DB to get updated status
+        diagnosis.refresh_from_db()
+        work_order = diagnosis.work_order
+        work_order.refresh_from_db()
         
         # Phase 3: Update diagnosis history
         try:
@@ -146,7 +247,13 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(diagnosis)
         return Response({
             'message': 'Diagnosis marked as completed',
-            'diagnosis': serializer.data
+            'diagnosis': serializer.data,
+            'work_order': {
+                'id': work_order.id,
+                'status': work_order.status,
+                'requires_approval': work_order.requires_approval,
+                'diagnosis_completed_at': work_order.diagnosis_completed_at.isoformat() if work_order.diagnosis_completed_at else None,
+            }
         })
     
     @action(detail=True, methods=['get'])
@@ -173,6 +280,283 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_201_CREATED
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['post'])
+    def approve_recommendations(self, request, pk=None):
+        """
+        Approve or decline recommendations
+        
+        Request body:
+        {
+            "recommendation_ids": [1, 2, 3],  # IDs of recommendations to approve/decline
+            "approved": true  # true to approve, false to decline
+        }
+        """
+        diagnosis = self.get_object()
+        recommendation_ids = request.data.get('recommendation_ids', [])
+        approved = request.data.get('approved', True)
+        
+        if not recommendation_ids:
+            return Response(
+                {"error": "recommendation_ids is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        recommendations = diagnosis.repair_recommendations.filter(id__in=recommendation_ids)
+        
+        if not recommendations.exists():
+            return Response(
+                {"error": "No recommendations found with the provided IDs"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        updated_count = recommendations.update(customer_approved=approved)
+        
+        # Return updated recommendations
+        updated_recommendations = diagnosis.repair_recommendations.filter(id__in=recommendation_ids)
+        serializer = RepairRecommendationSerializer(updated_recommendations, many=True)
+        
+        return Response({
+            'message': f'Successfully {"approved" if approved else "declined"} {updated_count} recommendation(s)',
+            'recommendations': serializer.data
+        })
+    
+    @action(detail=True, methods=['post'])
+    def convert_recommendations_to_tasks(self, request, pk=None):
+        """
+        Convert approved repair recommendations to ServiceTasks
+        
+        Request body (optional):
+        {
+            "recommendation_ids": [1, 2, 3],  # Specific recommendations to convert (if not provided, converts all approved)
+            "assign_to_technician": true  # Auto-assign to diagnosis technician
+        }
+        """
+        from apps.workorders.models import ServiceTask
+        from django.db import transaction
+        from django.db.models import Max
+        
+        diagnosis = self.get_object()
+        work_order = diagnosis.work_order
+        
+        if not work_order:
+            return Response(
+                {"error": "Diagnosis is not linked to a work order."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get recommendations to convert
+        recommendation_ids = request.data.get('recommendation_ids', [])
+        assign_to_technician = request.data.get('assign_to_technician', True)
+        
+        if recommendation_ids:
+            recommendations = diagnosis.repair_recommendations.filter(
+                id__in=recommendation_ids
+            )
+        else:
+            # Convert all approved recommendations
+            recommendations = diagnosis.repair_recommendations.filter(
+                customer_approved=True,
+                converted_to_task__isnull=True  # Not already converted
+            )
+        
+        if not recommendations.exists():
+            return Response(
+                {
+                    "error": "No approved recommendations found to convert.",
+                    "message": "Please approve recommendations first before converting to tasks."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Mapping from recommendation_type to task_type
+        TYPE_MAPPING = {
+            'repair': 'repair',
+            'replace': 'replacement',
+            'service': 'maintenance',
+            'adjust': 'adjustment',
+            'clean': 'cleaning',
+            'inspect': 'inspection',
+        }
+        
+        # Priority to sequence order mapping
+        PRIORITY_ORDER = {
+            'critical': 1,
+            'necessary': 2,
+            'recommended': 3,
+            'advisory': 4,
+        }
+        
+        created_tasks = []
+        errors = []
+        
+        try:
+            with transaction.atomic():
+                # Get max sequence order for this work order
+                max_sequence = work_order.tasks.aggregate(
+                    max_seq=Max('sequence_order')
+                )['max_seq'] or 0
+                
+                # Sort recommendations by priority and order
+                recommendations_list = list(recommendations.order_by('priority', 'order', 'id'))
+                
+                # Group by priority to ensure proper ordering
+                current_sequence = max_sequence
+                
+                for rec in recommendations_list:
+                    try:
+                        # Skip if already converted
+                        if rec.converted_to_task_id:
+                            continue
+                        
+                        # Map recommendation type to task type
+                        task_type = TYPE_MAPPING.get(rec.recommendation_type, 'other')
+                        
+                        # Increment sequence order for each task
+                        current_sequence += 1
+                        sequence_order = current_sequence
+                        
+                        # Calculate labor cost if hours and rate are available
+                        labor_cost = Decimal('0')
+                        if rec.estimated_labor_hours and rec.estimated_labor_cost:
+                            labor_cost = rec.estimated_labor_cost
+                        elif rec.estimated_labor_hours:
+                            # Try to get labor rate from work order or use default
+                            # For now, calculate from estimated_labor_cost / hours if available
+                            if rec.estimated_labor_cost and rec.estimated_labor_hours > 0:
+                                labor_rate = rec.estimated_labor_cost / rec.estimated_labor_hours
+                            else:
+                                labor_rate = Decimal('75.00')  # Default rate
+                            labor_cost = rec.estimated_labor_hours * labor_rate
+                        
+                        # Create ServiceTask
+                        task = ServiceTask.objects.create(
+                            work_order=work_order,
+                            task_type=task_type,
+                            description=rec.description[:255],  # Ensure fits max_length
+                            detailed_notes=f"Converted from diagnosis recommendation. Priority: {rec.get_priority_display()}. Recommendation Type: {rec.get_recommendation_type_display()}.",
+                            status='pending',
+                            sequence_order=sequence_order,
+                            estimated_hours=rec.estimated_labor_hours or Decimal('0'),
+                            labor_rate=rec.estimated_labor_cost / rec.estimated_labor_hours if (rec.estimated_labor_cost and rec.estimated_labor_hours and rec.estimated_labor_hours > 0) else Decimal('75.00'),
+                            labor_cost=labor_cost,
+                            assigned_to=diagnosis.technician if (assign_to_technician and diagnosis.technician) else None,
+                            is_workflow_task=True,
+                        )
+                        
+                        # Link back to recommendation
+                        rec.converted_to_task = task
+                        rec.save(update_fields=['converted_to_task'])
+                        
+                        created_tasks.append({
+                            'id': task.id,
+                            'description': task.description,
+                            'task_type': task.task_type,
+                            'recommendation_id': rec.id,
+                            'sequence_order': sequence_order,
+                        })
+                        
+                    except Exception as e:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.error(f"Error converting recommendation {rec.id} to task: {e}", exc_info=True)
+                        errors.append({
+                            'recommendation_id': rec.id,
+                            'error': str(e)
+                        })
+                
+                if not created_tasks and errors:
+                    return Response(
+                        {
+                            "error": "Failed to convert recommendations",
+                            "errors": errors
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                return Response({
+                    'message': f'Successfully converted {len(created_tasks)} recommendation(s) to tasks.',
+                    'tasks_created': created_tasks,
+                    'errors': errors if errors else None,
+                }, status=status.HTTP_201_CREATED)
+                
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error converting recommendations to tasks: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to convert recommendations: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def create_estimate(self, request, pk=None):
+        """Create a draft estimate linked to this diagnosis for the service coordinator to prepare"""
+        from apps.billing.models import Estimate
+        from apps.branches.utils import resolve_branch
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        diagnosis = self.get_object()
+        work_order = diagnosis.work_order
+        
+        # Check if estimate already exists for this work order
+        if hasattr(work_order, 'estimate') and work_order.estimate:
+            from apps.billing.serializers import EstimateDetailSerializer
+            serializer = EstimateDetailSerializer(work_order.estimate, context={'request': request})
+            return Response(
+                {
+                    "message": "An estimate already exists for this work order",
+                    "estimate": serializer.data
+                },
+                status=status.HTTP_200_OK
+            )
+        
+        try:
+            # Create empty draft estimate - service coordinator will add line items manually
+            valid_until_days = int(request.data.get('valid_until_days', 30))
+            
+            # Build description from diagnosis findings
+            description_parts = []
+            if diagnosis.root_cause:
+                description_parts.append(f"Root Cause: {diagnosis.root_cause}")
+            if diagnosis.customer_complaint:
+                description_parts.append(f"Customer Complaint: {diagnosis.customer_complaint}")
+            
+            description = request.data.get('description', '\n'.join(description_parts) or "Repair estimate based on diagnosis findings")
+            
+            estimate = Estimate.objects.create(
+                customer=work_order.customer,
+                vehicle=work_order.vehicle,
+                work_order=work_order,
+                branch=resolve_branch(request),
+                status='draft',
+                estimate_date=timezone.now().date(),
+                valid_until=(timezone.now() + timedelta(days=valid_until_days)).date(),
+                title=request.data.get('title', f"Repair Estimate - {work_order.vehicle.year} {work_order.vehicle.make} {work_order.vehicle.model}"),
+                description=description,
+                notes=request.data.get('notes', 'Estimate prepared from diagnosis findings. Add line items for parts and labor based on recommendations.'),
+                customer_notes=request.data.get('customer_notes', ''),
+                created_by=request.user,
+            )
+            
+            # Serialize and return
+            from apps.billing.serializers import EstimateDetailSerializer
+            serializer = EstimateDetailSerializer(estimate, context={'request': request})
+            
+            return Response({
+                "message": "Draft estimate created successfully. Add line items based on diagnosis findings and recommendations.",
+                "estimate": serializer.data
+            }, status=status.HTTP_201_CREATED)
+                
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error creating estimate from diagnosis: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to create estimate: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=True, methods=['get'])
     def generate_report(self, request, pk=None):
@@ -484,8 +868,9 @@ class DiagnosticCodeLibraryViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def lookup(self, request):
         """Lookup a code by number and type"""
-        code_number = request.query_params.get('code_number')
-        code_type = request.query_params.get('code_type', 'obd_ii')
+        code_number = request.query_params.get('code_number', '').strip().upper()
+        code_type = request.query_params.get('code_type', 'obd_ii').strip().lower()
+        use_external = request.query_params.get('use_external', 'false').lower() == 'true'
         
         if not code_number:
             return Response(
@@ -493,21 +878,67 @@ class DiagnosticCodeLibraryViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Try exact match first
         try:
             code = DiagnosticCodeLibrary.objects.get(
                 code_number=code_number,
                 code_type=code_type,
                 is_active=True
             )
+        except DiagnosticCodeLibrary.DoesNotExist:
+            # Try case-insensitive match
+            try:
+                code = DiagnosticCodeLibrary.objects.get(
+                    code_number__iexact=code_number,
+                    code_type__iexact=code_type,
+                    is_active=True
+                )
+            except DiagnosticCodeLibrary.DoesNotExist:
+                code = None
+        
+        if code:
             # Increment use count
             code.increment_use_count()
             serializer = self.get_serializer(code)
             return Response(serializer.data)
-        except DiagnosticCodeLibrary.DoesNotExist:
-            return Response(
-                {'error': 'Code not found in library'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+        elif use_external:
+            # Try external API as fallback (Hybrid System)
+            from apps.diagnosis.services.external_code_api import ExternalCodeAPIService, CodeSyncService
+            
+            external_result = ExternalCodeAPIService.lookup_external(code_number, code_type, use_cache=True)
+            
+            if external_result:
+                # Auto-save to local database for future fast lookups (Hybrid System)
+                # This way, popular codes get cached locally over time
+                saved_code = CodeSyncService.save_external_code_to_local(external_result, auto_create=True)
+                
+                if saved_code:
+                    # Return from local DB (now cached)
+                    saved_code.increment_use_count()
+                    serializer = self.get_serializer(saved_code)
+                    return Response(serializer.data)
+                else:
+                    # Return external data if save failed
+                    return Response({
+                        'code_number': external_result['code_number'],
+                        'code_type': external_result['code_type'],
+                        'title': external_result['title'],
+                        'description': external_result['description'],
+                        'severity': external_result['severity'],
+                        'common_causes': external_result.get('common_causes', []),
+                        'common_fixes': external_result.get('common_fixes', []),
+                        'source': 'external_api',
+                        'is_local': False
+                    })
+        
+        return Response(
+            {
+                'error': 'Code not found in library',
+                'message': f'Code {code_number} not found. Local library has {DiagnosticCodeLibrary.objects.filter(code_type=code_type).count()} {code_type} codes.',
+                'suggestion': 'Add ?use_external=true to try external APIs (if configured)'
+            },
+            status=status.HTTP_404_NOT_FOUND
+        )
     
     @action(detail=True, methods=['post'])
     def increment_use(self, request, pk=None):

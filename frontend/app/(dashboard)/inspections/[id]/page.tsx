@@ -11,6 +11,8 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
 
 const statusColors: Record<string, string> = {
   in_progress: "bg-yellow-100 text-yellow-800",
@@ -73,7 +75,11 @@ export default function InspectionDetailPage() {
     mutationFn: () => inspectionsApi.sendToCustomer(inspectionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
-      toast({ title: "Success", description: "Inspection sent to customer", variant: "success" });
+      toast({ title: "Success", description: "Inspection sent to customer. The customer can now view and sign the report.", variant: "success" });
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to send inspection to customer";
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
     },
   });
 
@@ -158,7 +164,7 @@ export default function InspectionDetailPage() {
               </Button>
             </>
           )}
-          {inspection.status === "approved" && !inspection.sent_to_customer_at && (
+          {(inspection.status === "completed" || inspection.status === "approved") && !inspection.sent_to_customer_at && (
             <Button
               variant="outline"
               onClick={() => sendToCustomerMutation.mutate()}
@@ -442,6 +448,7 @@ export default function InspectionDetailPage() {
           )}
         </CardContent>
       </Card>
+
     </div>
   );
 }

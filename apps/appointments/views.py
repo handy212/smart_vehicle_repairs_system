@@ -5,6 +5,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from apps.accounts.permissions import HasPermission, user_has_permission
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count
 from django.utils import timezone
@@ -60,6 +61,19 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     - Technician assignment
     """
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_appointments')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('create_appointments')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_appointments')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('delete_appointments')]
+        return [IsAuthenticated()]
+    
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = [
         'status', 'service_type', 'priority', 'appointment_date',
@@ -423,20 +437,55 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Get business hours from system settings
+        from apps.accounts.settings_utils import get_business_settings
+        business_settings = get_business_settings()
+        
+        # Parse business hours based on day of week
+        weekday = selected_date.weekday()  # 0 = Monday, 6 = Sunday
+        
+        if weekday == 5:  # Saturday
+            hours_str = business_settings.get('business_hours_saturday', '09:00-15:00')
+        elif weekday == 6:  # Sunday
+            hours_str = business_settings.get('business_hours_sunday', 'Closed')
+        else:  # Weekday
+            hours_str = business_settings.get('business_hours_weekday', '08:00-18:00')
+        
+        # Parse hours string (e.g., "08:00-18:00" or "Closed")
+        if hours_str.lower() == 'closed':
+            return Response({'available_slots': []})
+        
+        try:
+            from datetime import time
+            start_str, end_str = hours_str.split('-')
+            start_time = datetime.strptime(start_str.strip(), '%H:%M').time()
+            end_time = datetime.strptime(end_str.strip(), '%H:%M').time()
+        except (ValueError, AttributeError):
+            # Fallback to defaults if parsing fails
+            start_time = time(8, 0)
+            end_time = time(17, 0)
+        
         # Get booked appointments for the date
         booked = self.get_queryset().filter(
             appointment_date=selected_date,
             status__in=['pending', 'confirmed', 'in_progress']
         ).values_list('appointment_time', flat=True)
         
-        # Generate time slots (8 AM to 5 PM, hourly)
+        # Get appointment buffer for slot duration
+        buffer_minutes = int(business_settings.get('appointment_buffer', '15'))
+        
+        # Generate time slots based on business hours
         all_slots = []
-        for hour in range(8, 17):
-            slot_time = time(hour, 0)
+        current = datetime.combine(selected_date, start_time)
+        end_datetime = datetime.combine(selected_date, end_time)
+        
+        while current < end_datetime:
+            slot_time = current.time()
             all_slots.append({
                 'time': slot_time.strftime('%H:%M'),
                 'available': slot_time not in booked
             })
+            current += timedelta(minutes=buffer_minutes)
         
         return Response({
             'date': selected_date,

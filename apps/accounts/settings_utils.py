@@ -70,6 +70,16 @@ def clear_settings_cache():
         pass
 
 
+def clear_setting_cache(key):
+    """Clear cache for a specific setting key"""
+    try:
+        cache_key = f'setting_{key}'
+        cache.delete(cache_key)
+    except Exception:
+        # If cache fails, just pass
+        pass
+
+
 def get_company_info():
     """Get all company information settings"""
     keys = [
@@ -251,6 +261,39 @@ def get_security_settings():
         'two_factor_enabled': 'false',
         'allowed_file_types': 'pdf,jpg,jpeg,png,doc,docx',
         'max_file_size': '10',
+    }
+    
+    return get_settings(keys, defaults)
+
+
+def get_notification_settings():
+    """Get all notification settings"""
+    keys = [
+        'notification_email_enabled',
+        'notification_sms_enabled',
+        'notification_push_enabled',
+        'notify_appointment_created',
+        'notify_appointment_reminder',
+        'notify_workorder_status',
+        'notify_invoice_created',
+        'notify_payment_received',
+        'appointment_reminder_hours',
+        'notification_quiet_hours_start',
+        'notification_quiet_hours_end',
+    ]
+    
+    defaults = {
+        'notification_email_enabled': 'true',
+        'notification_sms_enabled': 'true',
+        'notification_push_enabled': 'true',
+        'notify_appointment_created': 'true',
+        'notify_appointment_reminder': 'true',
+        'notify_workorder_status': 'true',
+        'notify_invoice_created': 'true',
+        'notify_payment_received': 'true',
+        'appointment_reminder_hours': '24',
+        'notification_quiet_hours_start': '22:00',
+        'notification_quiet_hours_end': '08:00',
     }
     
     return get_settings(keys, defaults)

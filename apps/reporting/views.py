@@ -67,26 +67,61 @@ def dashboard_overview(request):
         parts_qs = filter_queryset_for_user_branches(Part.objects.all(), request.user, request)
         estimates_qs = filter_queryset_for_user_branches(Estimate.objects.all(), request.user, request)
         
+        # Get Payment records - filter by branch through invoice
+        # Revenue should be calculated from actual payment dates, not invoice dates
+        payments_qs = Payment.objects.filter(
+            invoice__isnull=False,
+            status='completed'
+        ).select_related('invoice')
+        
+        # Filter payments by branch (Payment -> Invoice -> Branch)
+        branch_ids = _get_branch_ids(request, use_active_branch=True)
+        if branch_ids:
+            payments_qs = payments_qs.filter(invoice__branch_id__in=branch_ids)
+        
         appointments_today = appointments_qs.filter(appointment_date=today).count()
         
-        revenue_today = invoices_qs.filter(
-            invoice_date=today,
-            status__in=['paid', 'partial']
-        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
+        # Calculate revenue based on actual payment dates (not invoice dates)
+        # Revenue = payment amount - refund amount (for net revenue)
+        # Today's revenue: payments received today (net of refunds)
+        revenue_today = payments_qs.filter(
+            payment_date__date=today
+        ).aggregate(
+            total=Sum(
+                ExpressionWrapper(
+                    F('amount') - F('refund_amount'),
+                    output_field=DecimalField(max_digits=10, decimal_places=2)
+                )
+            )
+        )['total'] or Decimal('0')
         
         active_work_orders = work_orders_qs.filter(
             status__in=['pending', 'in_progress', 'on_hold']
         ).count()
         
-        revenue_week = invoices_qs.filter(
-            invoice_date__gte=week_start,
-            status__in=['paid', 'partial']
-        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
+        # Week revenue: payments received since week start (net of refunds)
+        revenue_week = payments_qs.filter(
+            payment_date__date__gte=week_start
+        ).aggregate(
+            total=Sum(
+                ExpressionWrapper(
+                    F('amount') - F('refund_amount'),
+                    output_field=DecimalField(max_digits=10, decimal_places=2)
+                )
+            )
+        )['total'] or Decimal('0')
         
-        revenue_month = invoices_qs.filter(
-            invoice_date__gte=month_start,
-            status__in=['paid', 'partial']
-        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
+        # Month revenue: payments received since month start (net of refunds)
+        revenue_month = payments_qs.filter(
+            payment_date__date__gte=month_start
+        ).aggregate(
+            total=Sum(
+                ExpressionWrapper(
+                    F('amount') - F('refund_amount'),
+                    output_field=DecimalField(max_digits=10, decimal_places=2)
+                )
+            )
+        )['total'] or Decimal('0')
         
         overdue_invoices = invoices_qs.filter(
             status__in=['sent', 'viewed', 'partial'],
@@ -102,7 +137,7 @@ def dashboard_overview(request):
         ).count()
         
         pending_estimates = estimates_qs.filter(
-            status__in=['draft', 'awaiting_approval', 'sent']
+            status__in=['draft', 'sent', 'viewed']
         ).count()
         
         recent_work_orders = work_orders_qs.select_related(
@@ -265,7 +300,22 @@ def revenue_report(request):
         ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
         total_outstanding = total_invoiced - total_paid
         
-        # Revenue by period
+        # Revenue by period - Use Payment records for accurate revenue by payment date
+        # This matches the dashboard overview calculation
+        branch_ids = _get_branch_ids(request)
+        payments_qs = Payment.objects.filter(
+            invoice__isnull=False,
+            status='completed'
+        ).select_related('invoice')
+        
+        if branch_ids:
+            payments_qs = payments_qs.filter(invoice__branch_id__in=branch_ids)
+        
+        payments_in_range = payments_qs.filter(
+            payment_date__date__gte=start_date,
+            payment_date__date__lte=end_date
+        )
+        
         if period == 'daily':
             trunc_func = TruncDate
         elif period == 'weekly':
@@ -273,24 +323,26 @@ def revenue_report(request):
         else:
             trunc_func = TruncMonth
         
-        revenue_by_period = invoices.filter(
-            status__in=['paid', 'partial']
-        ).annotate(
-            period=trunc_func('invoice_date')
+        revenue_by_period = payments_in_range.annotate(
+            period=trunc_func('payment_date')
         ).values('period').annotate(
-            revenue=Sum('amount_paid'),
-            invoice_count=Count('id')
+            revenue=Sum(
+                ExpressionWrapper(
+                    F('amount') - F('refund_amount'),
+                    output_field=DecimalField(max_digits=10, decimal_places=2)
+                )
+            ),
+            invoice_count=Count('invoice_id', distinct=True)
         ).order_by('period')
         
-        # Revenue by payment method
-        branch_ids = _get_branch_ids(request)
-        revenue_by_method = Payment.objects.filter(
-            invoice__branch_id__in=branch_ids,
-            payment_date__gte=start_date,
-            payment_date__lte=end_date,
-            status='completed'
-        ).values('payment_method').annotate(
-            total=Sum('amount'),
+        # Revenue by payment method - use same payments queryset
+        revenue_by_method = payments_in_range.values('payment_method').annotate(
+            total=Sum(
+                ExpressionWrapper(
+                    F('amount') - F('refund_amount'),
+                    output_field=DecimalField(max_digits=10, decimal_places=2)
+                )
+            ),
             count=Count('id')
         ).order_by('-total')
         
@@ -494,10 +546,34 @@ def work_order_statistics(request):
         request
     )
     
-    # Status breakdown
-    by_status = work_orders.values('status').annotate(
+    # Status breakdown - Order by workflow progression, then by count
+    STATUS_ORDER = {
+        'draft': 1,
+        'inspection': 2,
+        'intake': 3,
+        'assigned': 4,
+        'diagnosis': 5,
+        'awaiting_approval': 6,
+        'approved': 7,
+        'in_progress': 8,
+        'additional_work_found': 9,
+        'paused': 10,
+        'quality_check': 11,
+        'completed': 12,
+        'invoiced': 13,
+        'closed': 14,
+    }
+    
+    by_status_raw = work_orders.values('status').annotate(
         count=Count('id')
-    ).order_by('-count')
+    )
+    
+    # Convert to list and sort by status order, then by count
+    by_status_list = list(by_status_raw)
+    by_status = sorted(
+        by_status_list,
+        key=lambda x: (STATUS_ORDER.get(x['status'], 99), -x['count'])
+    )
     
     # Priority breakdown
     by_priority = work_orders.values('priority').annotate(
@@ -529,15 +605,26 @@ def work_order_statistics(request):
         count=Count('id')
     ).order_by('-count')[:10]
     
+    total_work_orders = work_orders.count()
+    
     return Response({
         'period': {
             'start_date': start_date.isoformat(),
             'end_date': end_date.isoformat()
         },
         'summary': {
-            'total_work_orders': work_orders.count(),
+            'total_work_orders': total_work_orders,
             'completed': completed.count(),
-            'average_completion_hours': float(avg_completion_time) if avg_completion_time else None
+            'average_completion_hours': float(avg_completion_time) if avg_completion_time else None,
+            'active_count': work_orders.filter(
+                status__in=['approved', 'in_progress', 'assigned']
+            ).count(),
+            'pending_count': work_orders.filter(
+                status__in=['draft', 'inspection', 'intake', 'diagnosis', 'awaiting_approval']
+            ).count(),
+            'attention_count': work_orders.filter(
+                status__in=['paused', 'quality_check', 'additional_work_found']
+            ).count(),
         },
         'by_status': list(by_status),
         'by_priority': list(by_priority),

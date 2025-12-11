@@ -27,6 +27,8 @@ export interface WorkOrder {
   diagnosis_by?: number;
   primary_technician?: number | { id: number; first_name: string; last_name: string };
   primary_technician_name?: string;
+  service_coordinator?: number | { id: number; first_name: string; last_name: string };
+  service_coordinator_name?: string;
   estimated_labor_cost?: string;
   estimated_parts_cost?: string;
   estimated_total?: string;
@@ -96,7 +98,8 @@ export const workordersApi = {
 
   update: async (id: number, data: Partial<WorkOrder>): Promise<WorkOrder> => {
     try {
-      const response = await apiClient.put(`/workorders/work-orders/${id}/`, data);
+      // Use PATCH for partial updates (only send the fields that are being updated)
+      const response = await apiClient.patch(`/workorders/work-orders/${id}/`, data);
       return response.data;
     } catch (error: any) {
       console.error("Work order update error:", error);
@@ -121,8 +124,8 @@ export const workordersApi = {
   },
 
   // Workflow Actions
-  startIntake: async (id: number): Promise<WorkOrder> => {
-    const response = await apiClient.post(`/workorders/work-orders/${id}/start_intake/`);
+  startIntake: async (id: number, data?: { service_coordinator?: number }): Promise<WorkOrder> => {
+    const response = await apiClient.post(`/workorders/work-orders/${id}/start_intake/`, data || {});
     return response.data;
   },
 
@@ -203,13 +206,13 @@ export const workordersApi = {
     return response.data;
   },
 
-  markInvoiced: async (id: number): Promise<WorkOrder> => {
-    const response = await apiClient.post(`/workorders/work-orders/${id}/mark_invoiced/`);
+  markInvoiced: async (id: number, data?: { odometer_out?: number }): Promise<WorkOrder> => {
+    const response = await apiClient.post(`/workorders/work-orders/${id}/mark_invoiced/`, data || {});
     return response.data;
   },
 
-  close: async (id: number): Promise<WorkOrder> => {
-    const response = await apiClient.post(`/workorders/work-orders/${id}/close/`);
+  close: async (id: number, data?: { payment_received?: boolean; closing_notes?: string }): Promise<WorkOrder> => {
+    const response = await apiClient.post(`/workorders/work-orders/${id}/close/`, data || {});
     return response.data;
   },
 

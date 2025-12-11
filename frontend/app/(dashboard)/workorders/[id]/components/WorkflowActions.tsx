@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import React from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
@@ -29,6 +30,7 @@ import {
   Wrench,
   Eye,
   AlertTriangle,
+  User,
 } from "lucide-react";
 
 interface WorkflowActionsProps {
@@ -36,9 +38,11 @@ interface WorkflowActionsProps {
   status: string;
   workOrder?: any; // Work order data to get vehicle info
   onStatusChange?: () => void;
+  onStartRepairs?: () => void;
+  inline?: boolean; // If true, render just the primary button inline (for progress indicator)
 }
 
-export default function WorkflowActions({ workOrderId, status, workOrder, onStatusChange }: WorkflowActionsProps) {
+export default function WorkflowActions({ workOrderId, status, workOrder, onStatusChange, onStartRepairs, inline = false }: WorkflowActionsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -47,10 +51,13 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
   const [showQualityCheckDialog, setShowQualityCheckDialog] = useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showPauseDialog, setShowPauseDialog] = useState(false);
+  const [showMarkInvoicedDialog, setShowMarkInvoicedDialog] = useState(false);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showAdditionalWorkDialog, setShowAdditionalWorkDialog] = useState(false);
   const [showRequestApprovalDialog, setShowRequestApprovalDialog] = useState(false);
   const [showInspectionDialog, setShowInspectionDialog] = useState(false);
   const [showStartDiagnosisDialog, setShowStartDiagnosisDialog] = useState(false);
+  const [showAssignServiceCoordinatorDialog, setShowAssignServiceCoordinatorDialog] = useState(false);
 
   // Fetch work order data if not provided
   const { data: workOrderData } = useQuery({
@@ -60,6 +67,17 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
   });
 
   const currentWorkOrder = workOrder || workOrderData;
+  
+  // Fetch diagnosis to check completion status
+  const { data: diagnosisData } = useQuery({
+    queryKey: ["diagnosis", "workorder", workOrderId],
+    queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
+    enabled: !!workOrderId && !isNaN(workOrderId) && status === "diagnosis",
+    retry: false, // Don't retry if diagnosis doesn't exist yet
+  });
+
+  // Check if diagnosis is completed
+  const isDiagnosisCompleted = diagnosisData?.status === "completed" || diagnosisData?.is_completed === true;
   
   // Fetch inspections for this work order
   const { data: inspectionsData } = useQuery({
@@ -74,9 +92,10 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
     enabled: !!workOrderId && !isNaN(workOrderId),
   });
 
-  // Check if there's a completed inspection
-  const hasCompletedInspection = inspectionsData?.results?.some(
-    (inspection: any) => inspection.status === "completed" || inspection.status === "approved"
+  // Check if there's an approved inspection (fully done)
+  // Inspection must be "approved" status (not just "completed") to proceed to intake
+  const hasApprovedInspection = inspectionsData?.results?.some(
+    (inspection: any) => inspection.status === "approved"
   ) || false;
 
   const refreshWorkOrder = () => {
@@ -224,18 +243,44 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
     },
   });
 
+  // Assign Service Coordinator mutation (after intake)
+  const assignServiceCoordinatorMutation = useMutation({
+    mutationFn: ({ serviceCoordinatorId, initialObservations }: { serviceCoordinatorId: number; initialObservations?: string }) => {
+      // Store initial observations in localStorage for later use when starting diagnosis
+      if (initialObservations && initialObservations.trim()) {
+        localStorage.setItem(`initial_observations_${workOrderId}`, initialObservations.trim());
+      }
+      return workordersApi.startIntake(workOrderId, { service_coordinator: serviceCoordinatorId });
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Success", 
+        description: "Service Coordinator assigned. Work order moved to 'Assigned' status." 
+      });
+      setShowAssignServiceCoordinatorDialog(false);
+      refreshWorkOrder();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to assign Service Coordinator",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Start Intake (Phase 1: Customer Intake) - with validation
   const startIntakeMutation = useMutation({
     mutationFn: () => workordersApi.startIntake(workOrderId),
     onSuccess: () => {
-      toast({ title: "Success", description: "Work order moved to intake." });
-      refreshWorkOrder();
+      // After intake, show Service Coordinator assignment dialog
+      setShowAssignServiceCoordinatorDialog(true);
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to start intake";
       
       // Check if error is about missing inspection
-      if (errorMessage.includes("inspection") || !hasCompletedInspection) {
+      if (errorMessage.includes("inspection") || !hasApprovedInspection) {
         toast({
           title: "Inspection Required",
           description: "Please complete the initial inspection before starting intake.",
@@ -253,7 +298,25 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
 
   // Start Diagnosis (Phase 1: Diagnosis) - Using new diagnosis system
   const startDiagnosisMutation = useMutation({
-    mutationFn: async (data?: { primary_technician?: number; initial_notes?: string; priority?: string }) => {
+    mutationFn: async (data?: { primary_technician?: number; priority?: string }) => {
+      // Validate Service Coordinator is assigned before starting diagnosis
+      if (!currentWorkOrder?.service_coordinator) {
+        throw new Error('A Service Coordinator must be assigned before diagnosis can be carried out. Please assign a Service Coordinator during intake.');
+      }
+      
+      // Retrieve initial observations from localStorage if stored during Service Coordinator assignment
+      let initialObservations: string | undefined;
+      try {
+        const stored = localStorage.getItem(`initial_observations_${workOrderId}`);
+        if (stored) {
+          initialObservations = stored;
+          // Clear from localStorage after retrieving
+          localStorage.removeItem(`initial_observations_${workOrderId}`);
+        }
+      } catch (error) {
+        console.error("Failed to retrieve initial observations from storage:", error);
+      }
+      
       // Check if diagnosis already exists for this work order
       let diagnosis = await diagnosisApi.getByWorkOrder(workOrderId);
       
@@ -264,7 +327,7 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
           work_order: workOrderId,
           technician: data?.primary_technician || undefined,
           customer_complaint: customerComplaint,
-          initial_observations: data?.initial_notes || undefined,
+          initial_observations: initialObservations,
         });
       }
       
@@ -352,15 +415,33 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
   // Request Approval (Phase 2: Customer Approval - Manual Request)
   const requestApprovalMutation = useMutation({
     mutationFn: () => workordersApi.requestApproval(workOrderId),
-    onSuccess: () => {
-      toast({ title: "Success", description: "Approval requested from customer." });
+    onSuccess: (data: any) => {
+      const estimateNumber = data?.estimate_number || data?.estimate?.estimate_number;
+      const message = estimateNumber 
+        ? `Estimate #${estimateNumber} submitted for customer approval. Customer will be notified.`
+        : "Work order moved to 'Awaiting Approval' status. Customer will be notified.";
+      
+      toast({ 
+        title: "Approval requested successfully", 
+        description: message
+      });
       setShowRequestApprovalDialog(false);
       refreshWorkOrder();
     },
     onError: (error: any) => {
+      const errorMessage = error.response?.data?.error || error.response?.data?.detail || error.message || "Failed to request approval";
+      
+      // Provide helpful error messages for common validation failures
+      let description = errorMessage;
+      if (errorMessage.includes("diagnosis notes")) {
+        description = "Please ensure diagnosis notes are filled in before requesting approval.";
+      } else if (errorMessage.includes("estimated total") || errorMessage.includes("greater than 0")) {
+        description = "Please ensure the estimated total cost is greater than $0. This is calculated from repair recommendations in the diagnosis.";
+      }
+      
       toast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to request approval",
+        title: "Failed to request approval",
+        description: description,
         variant: "destructive",
       });
     },
@@ -386,14 +467,50 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
   // Start Work (Phase 3: Repair Execution Begins)
   const startWorkMutation = useMutation({
     mutationFn: () => workordersApi.startWork(workOrderId),
-    onSuccess: () => {
-      toast({ title: "Success", description: "Work started." });
+    onSuccess: (data: any) => {
+      const tasksCreated = data?.tasks_created || 0;
+      const partsLinked = data?.parts_linked || 0;
+      
+      let description = "Repairs started. Switched to Tasks view.";
+      if (tasksCreated > 0) {
+        description += ` Created ${tasksCreated} task(s) from approved recommendations.`;
+        if (partsLinked > 0) {
+          description += ` Linked ${partsLinked} part(s) to tasks.`;
+        }
+      }
+      
+      toast({ 
+        title: "Success", 
+        description: description 
+      });
       refreshWorkOrder();
+      onStartRepairs?.();
     },
     onError: (error: any) => {
+      console.error("Start work error:", error);
+      console.error("Error response:", error.response);
+      console.error("Error response data:", error.response?.data);
+      
+      // Extract error message from various possible locations
+      let errorMessage = "Failed to start repairs";
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        errorMessage = data.error || data.detail || data.message || JSON.stringify(data);
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // If it's still empty or just an object, try to stringify
+      if (!errorMessage || errorMessage === "{}" || errorMessage === "[object Object]") {
+        errorMessage = error.response?.data 
+          ? JSON.stringify(error.response.data)
+          : "An unexpected error occurred. Please check the console for details.";
+      }
+      
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to start work",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -487,8 +604,22 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
   // Quality Check (Phase 4: Quality Control Performed)
   const qualityCheckMutation = useMutation({
     mutationFn: (data: any) => workordersApi.qualityCheck(workOrderId, data),
-    onSuccess: () => {
-      toast({ title: "Success", description: "Quality check completed." });
+    onSuccess: (response, variables) => {
+      // Check if QC passed or failed based on the data sent
+      const passed = variables?.passed ?? false;
+      if (passed) {
+        toast({ 
+          title: "Success", 
+          description: "Quality check passed! Work order marked as completed.",
+          variant: "success",
+        });
+      } else {
+        toast({ 
+          title: "Quality Check Failed", 
+          description: "Quality check failed. Work order returned to 'In Progress' status. Technicians have been notified to fix the issues.",
+          variant: "warning",
+        });
+      }
       setShowQualityCheckDialog(false);
       refreshWorkOrder();
     },
@@ -520,15 +651,18 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
 
   // Mark Invoiced (Phase 4: Invoicing Complete)
   const markInvoicedMutation = useMutation({
-    mutationFn: () => workordersApi.markInvoiced(workOrderId),
+    mutationFn: (data: { odometer_out?: number }) => workordersApi.markInvoiced(workOrderId, data),
     onSuccess: () => {
       toast({ title: "Success", description: "Work order marked as invoiced." });
+      setShowMarkInvoicedDialog(false);
       refreshWorkOrder();
     },
     onError: (error: any) => {
+      const errorMessage = error.response?.data?.error || error.message || "Failed to mark as invoiced";
+      console.error("Mark invoiced error:", error.response?.data || error);
       toast({
         title: "Error",
-        description: error.response?.data?.error || "Failed to mark as invoiced",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -536,9 +670,15 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
 
   // Close (Phase 5: Vehicle Handover Complete)
   const closeMutation = useMutation({
-    mutationFn: () => workordersApi.close(workOrderId),
+    mutationFn: (data?: { payment_received?: boolean; closing_notes?: string }) => 
+      workordersApi.close(workOrderId, data),
     onSuccess: () => {
-      toast({ title: "Success", description: "Work order closed." });
+      toast({ 
+        title: "Success", 
+        description: "Work order closed successfully. Vehicle has been handed over to customer.",
+        variant: "success",
+      });
+      setShowCloseDialog(false);
       refreshWorkOrder();
     },
     onError: (error: any) => {
@@ -593,10 +733,10 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
             label: "Start Intake",
             icon: Play,
             onClick: () => startIntakeMutation.mutate(),
-            disabled: startIntakeMutation.isPending || !hasCompletedInspection,
-            description: hasCompletedInspection 
+            disabled: startIntakeMutation.isPending || !hasApprovedInspection,
+            description: hasApprovedInspection 
               ? "Begin customer intake process" 
-              : "Complete inspection first before starting intake",
+              : "Inspection must be completed and approved before starting intake",
           }
         );
         break;
@@ -606,40 +746,95 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
           label: "Start Intake",
           icon: Play,
           onClick: () => startIntakeMutation.mutate(),
-          disabled: startIntakeMutation.isPending || !hasCompletedInspection,
-          description: hasCompletedInspection 
+          disabled: startIntakeMutation.isPending || !hasApprovedInspection,
+          description: hasApprovedInspection 
             ? "Move to intake after initial inspection" 
-            : "Complete inspection first before starting intake",
+            : "Inspection must be completed and approved before starting intake",
         });
         break;
 
       case "intake":
         actions.push({
+          label: "Assign Service Coordinator",
+          icon: User,
+          onClick: () => setShowAssignServiceCoordinatorDialog(true),
+          description: "Assign a Service Coordinator to proceed with diagnosis",
+        });
+        break;
+
+      case "assigned":
+        // Only Service Coordinator or managers/admins can trigger diagnosis
+        const isServiceCoordinator = currentWorkOrder?.service_coordinator && (
+          typeof currentWorkOrder.service_coordinator === 'object' 
+            ? currentWorkOrder.service_coordinator.id === (currentWorkOrder as any).current_user_id
+            : currentWorkOrder.service_coordinator === (currentWorkOrder as any).current_user_id
+        );
+        actions.push({
           label: "Start Diagnosis",
           icon: ClipboardCheck,
           onClick: () => setShowStartDiagnosisDialog(true),
           disabled: startDiagnosisMutation.isPending,
-          description: "Begin diagnostic testing",
+          description: "Service Coordinator: Trigger diagnosis and assign technician",
         });
         break;
 
       case "diagnosis":
-        actions.push(
-          {
-            label: "Open Diagnosis",
-            icon: Eye,
-            onClick: () => router.push(`/workorders/${workOrderId}/diagnosis`),
-            variant: "default",
-            description: "View and manage diagnosis details",
-          },
-          {
-            label: "Request Approval",
-            icon: Send,
-            onClick: () => setShowRequestApprovalDialog(true),
-            disabled: requestApprovalMutation.isPending,
-            description: "Request customer approval for existing estimate",
+        // If diagnosis is completed, prioritize next stage actions
+        if (isDiagnosisCompleted) {
+          // Diagnosis is complete - show next stage action as primary
+          // Check if we should show "Request Approval" or other next step
+          const requiresApproval = diagnosisData?.requires_approval ?? currentWorkOrder?.requires_approval ?? true;
+          
+          if (requiresApproval) {
+            // Primary action: Request Approval (next stage)
+            actions.push(
+              {
+                label: "Request Approval",
+                icon: Send,
+                onClick: () => setShowRequestApprovalDialog(true),
+                disabled: requestApprovalMutation.isPending,
+                variant: "default",
+                description: "Request customer approval to proceed with repairs",
+              },
+              {
+                label: "View Diagnosis",
+                icon: Eye,
+                onClick: () => router.push(`/workorders/${workOrderId}/diagnosis`),
+                variant: "outline",
+                description: "View completed diagnosis details",
+              }
+            );
+          } else {
+            // No approval needed - show actions for next stage
+            actions.push(
+              {
+                label: "View Diagnosis",
+                icon: Eye,
+                onClick: () => router.push(`/workorders/${workOrderId}/diagnosis`),
+                variant: "default",
+                description: "View completed diagnosis details",
+              }
+            );
           }
-        );
+        } else {
+          // Diagnosis not completed yet
+          actions.push(
+            {
+              label: "Open Diagnosis",
+              icon: Eye,
+              onClick: () => router.push(`/workorders/${workOrderId}/diagnosis`),
+              variant: "default",
+              description: "View and manage diagnosis details",
+            },
+            {
+              label: "Request Approval",
+              icon: Send,
+              onClick: () => setShowRequestApprovalDialog(true),
+              disabled: requestApprovalMutation.isPending,
+              description: "Request customer approval for existing estimate",
+            }
+          );
+        }
         break;
 
       // Phase 2: Quotation & Customer Approval
@@ -655,7 +850,7 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
 
       case "approved":
         actions.push({
-          label: "Start Work",
+          label: "Start Repairs",
           icon: Play,
           onClick: () => startWorkMutation.mutate(),
           disabled: startWorkMutation.isPending,
@@ -760,7 +955,7 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
         actions.push({
           label: "Mark as Invoiced",
           icon: DollarSign,
-          onClick: () => markInvoicedMutation.mutate(),
+          onClick: () => setShowMarkInvoicedDialog(true),
           disabled: markInvoicedMutation.isPending,
           variant: "outline",
           description: "Mark invoice as generated",
@@ -770,11 +965,11 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
       // Phase 5: Vehicle Handover & Post-Service
       case "invoiced":
         actions.push({
-          label: "Close",
+          label: "Close Work Order",
           icon: Lock,
-          onClick: () => closeMutation.mutate(),
+          onClick: () => setShowCloseDialog(true),
           disabled: closeMutation.isPending,
-          description: "Close work order after customer pickup",
+          description: "Close work order after customer pickup and payment",
         });
         break;
 
@@ -796,30 +991,69 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
   const availableActions = getAvailableActions();
 
   if (availableActions.length === 0) {
-    return null;
+    return (
+      <div className="text-center py-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          No actions available at this stage.
+        </p>
+      </div>
+    );
   }
 
-  return (
-    <>
-      <div className="flex flex-wrap gap-2">
-        {availableActions.map((action, index) => {
-          const Icon = action.icon;
-          return (
-            <Button
-              key={index}
-              variant={action.variant || "default"}
-              onClick={action.onClick}
-              disabled={action.disabled}
-              title={action.description}
-              className="dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
-            >
-              <Icon className="w-4 h-4 mr-2" />
-              {action.label}
-            </Button>
-          );
-        })}
-      </div>
+  // Determine if current workflow step is completed
+  // "Other Actions" should only show when we're in a waiting/stable state,
+  // not when actively working through a primary workflow step
+  const isCurrentStepCompleted = (() => {
+    // These statuses indicate we're at a stable/waiting state where primary workflow step is done
+    // and secondary actions are safe to show
+    const completedStates = [
+      'awaiting_approval',  // Waiting for customer approval - diagnosis step is done
+      'approved',           // Approved and ready - can show other actions
+      'paused',             // Work paused - can show other actions
+      'completed',          // Work completed - can show other actions
+      'invoiced',           // Invoiced - can show other actions
+      'closed',             // Closed - can show other actions
+    ];
+    
+    // For "in_progress", "diagnosis", and "inspection" - these are active workflow steps
+    // Only show other actions if there are truly secondary actions (like in_progress has pause, etc.)
+    // For now, we'll hide for active workflow steps: draft, inspection, intake, diagnosis
+    const activeWorkflowSteps = ['draft', 'inspection', 'intake', 'diagnosis'];
+    
+    if (activeWorkflowSteps.includes(status)) {
+      return false; // Don't show other actions during active workflow steps
+    }
+    
+    // For "in_progress" and "additional_work_found", we allow secondary actions since they're part of active work management
+    if (status === 'in_progress' || status === 'additional_work_found') {
+      return true; // Allow secondary actions for work management
+    }
+    
+    return completedStates.includes(status);
+  })();
 
+  // Primary action is the first one
+  const primaryAction = availableActions[0];
+  const secondaryActions = availableActions.slice(1);
+  const PrimaryIcon = primaryAction.icon;
+
+  // Render primary button (inline or full card)
+  const primaryButton = (
+    <Button
+      variant={primaryAction.variant || "default"}
+      onClick={primaryAction.onClick}
+      disabled={primaryAction.disabled}
+      className={inline ? "dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700" : "w-full h-12 text-base font-medium dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"}
+      size={inline ? "default" : "lg"}
+    >
+      <PrimaryIcon className={inline ? "w-4 h-4 mr-2" : "w-5 h-5 mr-2"} />
+      {primaryAction.label}
+    </Button>
+  );
+
+  // Render dialogs (always needed, whether inline or not)
+  const renderDialogs = () => (
+    <>
       {/* Complete Diagnosis Dialog */}
       <Dialog open={showCompleteDiagnosisDialog} onOpenChange={setShowCompleteDiagnosisDialog}>
         <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
@@ -846,12 +1080,29 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
               Request approval for the current estimate. Ensure diagnosis notes and estimated costs are set.
             </DialogDescription>
           </DialogHeader>
-          <div className="px-6 pb-6">
+          <div className="px-6 pb-6 space-y-3">
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
               <p className="text-sm text-blue-800 dark:text-blue-400">
                 <AlertCircle className="w-4 h-4 inline mr-1" />
                 This requires diagnosis notes and an estimated total greater than $0. The work order will move to "Awaiting Approval" status and notify the customer.
               </p>
+            </div>
+            {/* Show prerequisites status */}
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Diagnosis Notes:</span>
+                <span className={`font-medium ${currentWorkOrder?.diagnosis_notes ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {currentWorkOrder?.diagnosis_notes ? '✓ Set' : '✗ Missing'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 dark:text-gray-400">Estimated Total:</span>
+                <span className={`font-medium ${parseFloat(currentWorkOrder?.estimated_total || '0') > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {parseFloat(currentWorkOrder?.estimated_total || '0') > 0 
+                    ? `✓ $${parseFloat(currentWorkOrder?.estimated_total || '0').toFixed(2)}` 
+                    : '✗ $0.00'}
+                </span>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -861,7 +1112,11 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
             <Button 
               type="button" 
               onClick={() => requestApprovalMutation.mutate()} 
-              disabled={requestApprovalMutation.isPending}
+              disabled={
+                requestApprovalMutation.isPending || 
+                !currentWorkOrder?.diagnosis_notes || 
+                parseFloat(currentWorkOrder?.estimated_total || '0') <= 0
+              }
             >
               {requestApprovalMutation.isPending ? "Requesting..." : "Request Approval"}
             </Button>
@@ -919,6 +1174,7 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
             onSubmit={(data) => qualityCheckMutation.mutate(data)}
             onCancel={() => setShowQualityCheckDialog(false)}
             isSubmitting={qualityCheckMutation.isPending}
+            workOrderId={workOrderId}
           />
         </DialogContent>
       </Dialog>
@@ -936,6 +1192,42 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
             onSubmit={(data) => completeMutation.mutate(data)}
             onCancel={() => setShowCompleteDialog(false)}
             isSubmitting={completeMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark Invoiced Dialog */}
+      <Dialog open={showMarkInvoicedDialog} onOpenChange={setShowMarkInvoicedDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Mark Work Order as Invoiced</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Confirm that the invoice has been generated and sent to the customer
+            </DialogDescription>
+          </DialogHeader>
+          <MarkInvoicedForm
+            workOrder={currentWorkOrder}
+            onSubmit={(data) => markInvoicedMutation.mutate(data)}
+            onCancel={() => setShowMarkInvoicedDialog(false)}
+            isSubmitting={markInvoicedMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Close Work Order Dialog */}
+      <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Close Work Order</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Confirm customer pickup and close this work order
+            </DialogDescription>
+          </DialogHeader>
+          <CloseWorkOrderForm
+            workOrder={currentWorkOrder}
+            onSubmit={(data) => closeMutation.mutate(data)}
+            onCancel={() => setShowCloseDialog(false)}
+            isSubmitting={closeMutation.isPending}
           />
         </DialogContent>
       </Dialog>
@@ -975,13 +1267,297 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
         </DialogContent>
       </Dialog>
 
+      {/* Assign Service Coordinator Dialog */}
+      <Dialog open={showAssignServiceCoordinatorDialog} onOpenChange={setShowAssignServiceCoordinatorDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Assign Service Coordinator</DialogTitle>
+          </DialogHeader>
+          <AssignServiceCoordinatorForm
+            workOrder={currentWorkOrder}
+            onSubmit={(data) => assignServiceCoordinatorMutation.mutate(data)}
+            onCancel={() => setShowAssignServiceCoordinatorDialog(false)}
+            isSubmitting={assignServiceCoordinatorMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Start Diagnosis Dialog */}
+      <Dialog open={showStartDiagnosisDialog} onOpenChange={setShowStartDiagnosisDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Start Diagnosis</DialogTitle>
+      
+          </DialogHeader>
+          <StartDiagnosisForm
+            workOrder={currentWorkOrder}
+            onSubmit={(data) => startDiagnosisMutation.mutate(data)}
+            onCancel={() => setShowStartDiagnosisDialog(false)}
+            isSubmitting={startDiagnosisMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+
+  // Inline mode - for in_progress status, show secondary actions too
+  if (inline) {
+    // For active work statuses, show secondary actions even in inline mode
+    const showSecondaryInInline = status === 'in_progress' || status === 'additional_work_found';
+    
+    return (
+      <>
+        <div className="flex flex-col gap-2">
+          {primaryButton}
+          {showSecondaryInInline && secondaryActions.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {secondaryActions.map((action, index) => {
+                const Icon = action.icon;
+                return (
+                  <Button
+                    key={index}
+                    variant={action.variant || "outline"}
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    title={action.description}
+                    size="sm"
+                    className="dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <Icon className="w-4 h-4 mr-1" />
+                    {action.label}
+                  </Button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {renderDialogs()}
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/* Primary Action - Large, Prominent */}
+      <div className="space-y-3">
+        {primaryButton}
+        {primaryAction.description && (
+          <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
+            {primaryAction.description}
+          </p>
+        )}
+
+        {/* Secondary Actions - Always show if there are any, but label differently based on status */}
+        {secondaryActions.length > 0 && (
+          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+              {status === 'in_progress' || status === 'additional_work_found' ? 'Work Management Actions' : 'Other Actions'}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {secondaryActions.map((action, index) => {
+                const Icon = action.icon;
+                return (
+                  <Button
+                    key={index}
+                    variant={action.variant || "outline"}
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    title={action.description}
+                    size="sm"
+                    className="dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <Icon className="w-4 h-4 mr-1" />
+                    {action.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Complete Diagnosis Dialog */}
+      <Dialog open={showCompleteDiagnosisDialog} onOpenChange={setShowCompleteDiagnosisDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Complete Diagnosis</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Finish diagnosis and create estimate for customer approval
+            </DialogDescription>
+          </DialogHeader>
+          <CompleteDiagnosisForm
+            onSubmit={(data) => completeDiagnosisMutation.mutate(data)}
+            onCancel={() => setShowCompleteDiagnosisDialog(false)}
+            isSubmitting={completeDiagnosisMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Additional Work Found Dialog */}
+      <Dialog open={showAdditionalWorkDialog} onOpenChange={setShowAdditionalWorkDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2 text-orange-600 dark:text-orange-400">
+              <AlertTriangle className="w-5 h-5" />
+              <span>Additional Work Found</span>
+            </DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              New problems discovered during repair - customer approval required
+            </DialogDescription>
+          </DialogHeader>
+          <AdditionalWorkForm
+            onSubmit={(notes) => additionalWorkFoundMutation.mutate(notes)}
+            onCancel={() => setShowAdditionalWorkDialog(false)}
+            isSubmitting={additionalWorkFoundMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve Dialog */}
+      <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Approve Work Order</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Record customer approval details
+            </DialogDescription>
+          </DialogHeader>
+          <ApproveForm
+            onSubmit={(data) => approveMutation.mutate(data)}
+            onCancel={() => setShowApproveDialog(false)}
+            isSubmitting={approveMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Quality Check Dialog */}
+      <Dialog open={showQualityCheckDialog} onOpenChange={setShowQualityCheckDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Perform Quality Check</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Complete quality control inspection
+            </DialogDescription>
+          </DialogHeader>
+          <QualityCheckForm
+            onSubmit={(data) => qualityCheckMutation.mutate(data)}
+            onCancel={() => setShowQualityCheckDialog(false)}
+            isSubmitting={qualityCheckMutation.isPending}
+            workOrderId={workOrderId}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Complete Dialog */}
+      <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Complete Work Order</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Mark work order as completed
+            </DialogDescription>
+          </DialogHeader>
+          <CompleteForm
+            onSubmit={(data) => completeMutation.mutate(data)}
+            onCancel={() => setShowCompleteDialog(false)}
+            isSubmitting={completeMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark Invoiced Dialog */}
+      <Dialog open={showMarkInvoicedDialog} onOpenChange={setShowMarkInvoicedDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Mark Work Order as Invoiced</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Confirm that the invoice has been generated and sent to the customer
+            </DialogDescription>
+          </DialogHeader>
+          <MarkInvoicedForm
+            workOrder={currentWorkOrder}
+            onSubmit={(data) => markInvoicedMutation.mutate(data)}
+            onCancel={() => setShowMarkInvoicedDialog(false)}
+            isSubmitting={markInvoicedMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Close Work Order Dialog */}
+      <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Close Work Order</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Confirm customer pickup and close this work order
+            </DialogDescription>
+          </DialogHeader>
+          <CloseWorkOrderForm
+            workOrder={currentWorkOrder}
+            onSubmit={(data) => closeMutation.mutate(data)}
+            onCancel={() => setShowCloseDialog(false)}
+            isSubmitting={closeMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Pause Dialog */}
+      <Dialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Pause Work Order</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Temporarily pause work on this order
+            </DialogDescription>
+          </DialogHeader>
+          <PauseForm
+            onSubmit={(reason) => pauseMutation.mutate(reason)}
+            onCancel={() => setShowPauseDialog(false)}
+            isSubmitting={pauseMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Inspection Dialog */}
+      <Dialog open={showInspectionDialog} onOpenChange={setShowInspectionDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Create Initial Inspection</DialogTitle>
+            <DialogDescription className="dark:text-gray-400">
+              Create a new inspection for this work order
+            </DialogDescription>
+          </DialogHeader>
+          <CreateInspectionForm
+            workOrder={currentWorkOrder}
+            onSubmit={(data) => createInspectionMutation.mutate(data)}
+            onCancel={() => setShowInspectionDialog(false)}
+            isSubmitting={createInspectionMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Service Coordinator Dialog */}
+      <Dialog open={showAssignServiceCoordinatorDialog} onOpenChange={setShowAssignServiceCoordinatorDialog}>
+        <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="dark:text-gray-100">Assign Service Coordinator</DialogTitle>
+          </DialogHeader>
+          <AssignServiceCoordinatorForm
+            workOrder={currentWorkOrder}
+            onSubmit={(data) => assignServiceCoordinatorMutation.mutate(data)}
+            onCancel={() => setShowAssignServiceCoordinatorDialog(false)}
+            isSubmitting={assignServiceCoordinatorMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Start Diagnosis Dialog */}
       <Dialog open={showStartDiagnosisDialog} onOpenChange={setShowStartDiagnosisDialog}>
         <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
           <DialogHeader>
             <DialogTitle className="dark:text-gray-100">Start Diagnosis</DialogTitle>
             <DialogDescription className="dark:text-gray-400">
-              Begin diagnostic testing for this vehicle
+              Begin diagnostic testing for this vehicle. You can assign a technician for the diagnosis process.
             </DialogDescription>
           </DialogHeader>
           <StartDiagnosisForm
@@ -1260,56 +1836,233 @@ function QualityCheckForm({
   onSubmit,
   onCancel,
   isSubmitting,
+  workOrderId,
 }: {
   onSubmit: (data: any) => void;
   onCancel: () => void;
   isSubmitting: boolean;
+  workOrderId?: number;
 }) {
   const [passed, setPassed] = useState(true);
   const [notes, setNotes] = useState("");
+  const [checklist, setChecklist] = useState({
+    allTasksCompleted: false,
+    allPartsInstalled: false,
+    vehicleClean: false,
+    noDamage: false,
+    testDrivePassed: false,
+    customerSatisfied: false,
+  });
+
+  // Fetch work order data to verify tasks and parts
+  const { data: workOrder } = useQuery({
+    queryKey: ["workorder", workOrderId],
+    queryFn: () => workordersApi.get(workOrderId!),
+    enabled: !!workOrderId,
+  });
+
+  // Auto-check items based on actual data
+  React.useEffect(() => {
+    if (workOrder) {
+      // Check if all tasks are completed
+      const tasks = (workOrder as any).tasks || [];
+      const allTasksDone = tasks.length > 0 && tasks.every((t: any) => 
+        t.status === 'completed' || t.status === 'skipped'
+      );
+      
+      // Check if all parts are installed
+      const parts = (workOrder as any).parts || [];
+      const allPartsInstalled = parts.length === 0 || parts.every((p: any) => 
+        p.status === 'installed' || p.status === 'returned'
+      );
+
+      setChecklist(prev => ({
+        ...prev,
+        allTasksCompleted: allTasksDone,
+        allPartsInstalled: allPartsInstalled,
+      }));
+    }
+  }, [workOrder]);
+
+  const handleChecklistChange = (key: keyof typeof checklist) => {
+    setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const allChecksPassed = Object.values(checklist).every(v => v === true);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    onSubmit({ passed, notes });
+    
+    // Auto-set passed based on checklist if not manually overridden
+    const finalPassed = allChecksPassed && passed;
+    
+    onSubmit({ 
+      passed: finalPassed, 
+      notes,
+      checklist: checklist,
+    });
   };
 
   return (
     <>
       <form onSubmit={handleSubmit} className="px-6 pb-6">
-        <div className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="passed"
-              checked={passed}
-              onChange={(e) => setPassed(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
-            />
-            <Label htmlFor="passed" className="cursor-pointer dark:text-gray-300">
-              Quality Check Passed
+        <div className="space-y-6">
+          {/* Quality Check Checklist */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold dark:text-gray-300">
+              Quality Check Checklist
             </Label>
+            <div className="space-y-2 border rounded-lg p-4 dark:border-gray-700">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="allTasksCompleted"
+                  checked={checklist.allTasksCompleted}
+                  onChange={() => handleChecklistChange('allTasksCompleted')}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <Label htmlFor="allTasksCompleted" className="cursor-pointer dark:text-gray-300 text-sm">
+                  All tasks completed
+                  {(workOrder as any)?.tasks && (
+                    <span className="text-gray-500 dark:text-gray-400 ml-1">
+                      ({(workOrder as any).tasks.filter((t: any) => t.status === 'completed').length}/{(workOrder as any).tasks.length})
+                    </span>
+                  )}
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="allPartsInstalled"
+                  checked={checklist.allPartsInstalled}
+                  onChange={() => handleChecklistChange('allPartsInstalled')}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <Label htmlFor="allPartsInstalled" className="cursor-pointer dark:text-gray-300 text-sm">
+                  All parts installed or returned
+                  {(workOrder as any)?.parts && (
+                    <span className="text-gray-500 dark:text-gray-400 ml-1">
+                      ({(workOrder as any).parts.filter((p: any) => p.status === 'installed' || p.status === 'returned').length}/{(workOrder as any).parts.length})
+                    </span>
+                  )}
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="vehicleClean"
+                  checked={checklist.vehicleClean}
+                  onChange={() => handleChecklistChange('vehicleClean')}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <Label htmlFor="vehicleClean" className="cursor-pointer dark:text-gray-300 text-sm">
+                  Vehicle cleaned and presentable
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="noDamage"
+                  checked={checklist.noDamage}
+                  onChange={() => handleChecklistChange('noDamage')}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <Label htmlFor="noDamage" className="cursor-pointer dark:text-gray-300 text-sm">
+                  No new damage or scratches
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="testDrivePassed"
+                  checked={checklist.testDrivePassed}
+                  onChange={() => handleChecklistChange('testDrivePassed')}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <Label htmlFor="testDrivePassed" className="cursor-pointer dark:text-gray-300 text-sm">
+                  Test drive passed (if applicable)
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="customerSatisfied"
+                  checked={checklist.customerSatisfied}
+                  onChange={() => handleChecklistChange('customerSatisfied')}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                />
+                <Label htmlFor="customerSatisfied" className="cursor-pointer dark:text-gray-300 text-sm">
+                  Customer satisfaction confirmed
+                </Label>
+              </div>
+            </div>
+            
+            {/* {!allChecksPassed && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3">
+                <p className="text-sm text-yellow-800 dark:text-yellow-400">
+                  <AlertCircle className="w-4 h-4 inline mr-1" />
+                  Not all checklist items are completed. Review and complete all items before passing.
+                </p>
+              </div>
+            )} */}
           </div>
+
+          {/* Overall Result */}
+          <div className="space-y-2">
+            <Label className="text-base font-semibold dark:text-gray-300">
+              Overall Quality Check Result
+            </Label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="passed"
+                checked={passed}
+                onChange={(e) => setPassed(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+              />
+              <Label htmlFor="passed" className="cursor-pointer dark:text-gray-300">
+                Quality Check Passed
+              </Label>
+            </div>
+            {passed && !allChecksPassed && (
+              <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                Warning: Some checklist items are not completed, but you're marking this as passed.
+              </p>
+            )}
+          </div>
+
+          {/* Notes */}
           <div>
             <Label htmlFor="notes" className="block mb-2 dark:text-gray-300">
-              Notes
+              Quality Check Notes <span className="text-gray-500">(Optional)</span>
             </Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={4}
-              placeholder="Add any notes about the quality check..."
+              placeholder="Add any notes, observations, or issues found during quality check..."
               className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             />
           </div>
         </div>
       </form>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? "Submitting..." : "Submit Quality Check"}
+        <Button 
+          type="button" 
+          onClick={handleSubmit} 
+          disabled={isSubmitting}
+          variant={passed ? "default" : "destructive"}
+        >
+          {isSubmitting ? "Submitting..." : passed ? "Pass Quality Check" : "Fail Quality Check"}
         </Button>
       </DialogFooter>
     </>
@@ -1379,6 +2132,170 @@ function CompleteForm({
   );
 }
 
+function MarkInvoicedForm({
+  onSubmit,
+  onCancel,
+  isSubmitting,
+  workOrder,
+}: {
+  onSubmit: (data: any) => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
+  workOrder?: any;
+}) {
+  const [odometerOut, setOdometerOut] = useState("");
+  const odometerIn = workOrder?.odometer_in || 0;
+  const existingOdometerOut = workOrder?.odometer_out;
+
+  // Initialize with existing odometer_out if available
+  React.useEffect(() => {
+    if (existingOdometerOut) {
+      setOdometerOut(existingOdometerOut.toString());
+    } else if (odometerIn) {
+      // Pre-fill with odometer_in if odometer_out not set
+      setOdometerOut(odometerIn.toString());
+    }
+  }, [existingOdometerOut, odometerIn]);
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    if (!odometerOut) {
+      return; // Validation will prevent submission
+    }
+    
+    onSubmit({
+      odometer_out: parseInt(odometerOut),
+    });
+  };
+
+  return (
+    <>
+      <form onSubmit={handleSubmit} className="px-6 pb-6">
+        <div className="space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
+            <p className="text-sm text-blue-800 dark:text-blue-400">
+              <AlertCircle className="w-4 h-4 inline mr-1" />
+              Odometer reading is required before marking as invoiced.
+            </p>
+          </div>
+          
+          <div>
+            <Label htmlFor="mark_invoiced_odometer_out" className="block mb-2 dark:text-gray-300">
+              Odometer Out (miles) <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="mark_invoiced_odometer_out"
+              type="number"
+              value={odometerOut}
+              onChange={(e) => setOdometerOut(e.target.value)}
+              placeholder={odometerIn ? `Odometer In: ${odometerIn}` : "Enter odometer reading"}
+              min={odometerIn || 0}
+              required
+              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            />
+            {odometerIn && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Odometer In: {odometerIn.toLocaleString()} miles
+              </p>
+            )}
+          </div>
+        </div>
+      </form>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+          Cancel
+        </Button>
+        <Button 
+          type="button" 
+          onClick={handleSubmit} 
+          disabled={isSubmitting || !odometerOut}
+        >
+          {isSubmitting ? "Marking..." : "Mark as Invoiced"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function CloseWorkOrderForm({
+  onSubmit,
+  onCancel,
+  isSubmitting,
+  workOrder,
+}: {
+  onSubmit: (data: any) => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
+  workOrder?: any;
+}) {
+  const [paymentReceived, setPaymentReceived] = useState(true);
+  const [closingNotes, setClosingNotes] = useState("");
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    onSubmit({
+      payment_received: paymentReceived,
+      closing_notes: closingNotes,
+    });
+  };
+
+  return (
+    <>
+      <form onSubmit={handleSubmit} className="px-6 pb-6">
+        <div className="space-y-4">
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded p-3">
+            <p className="text-sm text-green-800 dark:text-green-400">
+              <CheckCircle className="w-4 h-4 inline mr-1" />
+              This will mark the work order as closed. Make sure the vehicle has been handed over to the customer.
+            </p>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="payment_received"
+              checked={paymentReceived}
+              onChange={(e) => setPaymentReceived(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+            />
+            <Label htmlFor="payment_received" className="cursor-pointer dark:text-gray-300">
+              Payment received
+            </Label>
+          </div>
+          
+          <div>
+            <Label htmlFor="closing_notes" className="block mb-2 dark:text-gray-300">
+              Closing Notes <span className="text-gray-500">(Optional)</span>
+            </Label>
+            <Textarea
+              id="closing_notes"
+              value={closingNotes}
+              onChange={(e) => setClosingNotes(e.target.value)}
+              rows={4}
+              placeholder="Add any notes about the handover, customer feedback, or final observations..."
+              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            />
+          </div>
+        </div>
+      </form>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+          Cancel
+        </Button>
+        <Button 
+          type="button" 
+          onClick={handleSubmit} 
+          disabled={isSubmitting}
+          variant="default"
+        >
+          {isSubmitting ? "Closing..." : "Close Work Order"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
 function PauseForm({
   onSubmit,
   onCancel,
@@ -1433,7 +2350,7 @@ function StartDiagnosisForm({
   isSubmitting,
 }: {
   workOrder?: any;
-  onSubmit: (data: { primary_technician?: number; initial_notes?: string; priority?: string }) => void;
+  onSubmit: (data: { primary_technician?: number; priority?: string }) => void;
   onCancel: () => void;
   isSubmitting: boolean;
 }) {
@@ -1448,7 +2365,6 @@ function StartDiagnosisForm({
     }
     return "";
   });
-  const [initialNotes, setInitialNotes] = useState("");
   const [priority, setPriority] = useState(workOrder?.priority || "normal");
 
   // Fetch technicians
@@ -1458,17 +2374,15 @@ function StartDiagnosisForm({
   });
 
   const techniciansList = technicians || [];
+  const hasServiceCoordinator = !!workOrder?.service_coordinator;
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
-    const data: { primary_technician?: number; initial_notes?: string; priority?: string } = {};
+    const data: { primary_technician?: number; priority?: string } = {};
     
     if (primaryTechnician && primaryTechnician !== "") {
       data.primary_technician = Number(primaryTechnician);
-    }
-    if (initialNotes && initialNotes.trim()) {
-      data.initial_notes = initialNotes.trim();
     }
     if (priority && priority !== workOrder?.priority) {
       data.priority = priority;
@@ -1481,9 +2395,16 @@ function StartDiagnosisForm({
     <>
       <form onSubmit={handleSubmit} className="px-6 pb-6">
         <div className="space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
+            <p className="text-sm text-blue-800 dark:text-blue-400">
+              <CheckCircle className="w-4 h-4 inline mr-1" />
+              <strong>Assign to Mechanic/Technician:</strong>
+            </p>
+          </div>
+          
           <div>
             <Label htmlFor="primary_technician" className="block mb-2 dark:text-gray-300">
-              Primary Technician (Optional)
+              Assign to:
             </Label>
             <select
               id="primary_technician"
@@ -1491,7 +2412,7 @@ function StartDiagnosisForm({
               onChange={(e) => setPrimaryTechnician(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             >
-              <option value="">Select technician</option>
+              <option value="">Select Mechanic/Technician</option>
               {techniciansList.map((tech: any) => (
                 <option key={tech.id} value={String(tech.id)}>
                   {tech.first_name} {tech.last_name}
@@ -1517,26 +2438,6 @@ function StartDiagnosisForm({
             </select>
           </div>
 
-          <div>
-            <Label htmlFor="initial_notes" className="block mb-2 dark:text-gray-300">
-              Initial Observations (Optional)
-            </Label>
-            <Textarea
-              id="initial_notes"
-              value={initialNotes}
-              onChange={(e) => setInitialNotes(e.target.value)}
-              placeholder="Quick notes or initial observations before detailed testing..."
-              rows={3}
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-            />
-          </div>
-
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
-            <p className="text-sm text-blue-800 dark:text-blue-400">
-              <AlertCircle className="w-4 h-4 inline mr-1" />
-              Diagnosis will begin and you'll be redirected to the diagnosis page where you can add diagnostic codes, tests, findings, and recommendations.
-            </p>
-          </div>
         </div>
       </form>
       <DialogFooter>
@@ -1549,6 +2450,99 @@ function StartDiagnosisForm({
           disabled={isSubmitting}
         >
           {isSubmitting ? "Starting..." : "Start Diagnosis"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+function AssignServiceCoordinatorForm({
+  workOrder,
+  onSubmit,
+  onCancel,
+  isSubmitting,
+}: {
+  workOrder?: any;
+  onSubmit: (data: { serviceCoordinatorId: number; initialObservations?: string }) => void;
+  onCancel: () => void;
+  isSubmitting: boolean;
+}) {
+  const [serviceCoordinatorId, setServiceCoordinatorId] = useState<string>("");
+  const [initialObservations, setInitialObservations] = useState<string>("");
+
+  // Fetch service coordinators
+  const { data: serviceCoordinators } = useQuery({
+    queryKey: ["service-coordinators"],
+    queryFn: () => adminApi.users.serviceCoordinators(),
+  });
+
+  const serviceCoordinatorsList = serviceCoordinators || [];
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!serviceCoordinatorId) {
+      return;
+    }
+    onSubmit({ 
+      serviceCoordinatorId: Number(serviceCoordinatorId),
+      initialObservations: initialObservations.trim() || undefined
+    });
+  };
+
+  return (
+    <>
+      <form onSubmit={handleSubmit} className="px-6 pb-6">
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="service_coordinator" className="block mb-2 dark:text-gray-300">
+              Service Coordinator <span className="text-red-500">*</span>
+            </Label>
+            <select
+              id="service_coordinator"
+              value={serviceCoordinatorId}
+              onChange={(e) => setServiceCoordinatorId(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            >
+              <option value="">Select Service Coordinator</option>
+              {serviceCoordinatorsList.map((coord: any) => (
+                <option key={coord.id} value={String(coord.id)}>
+                  {coord.full_name || `${coord.first_name || ''} ${coord.last_name || ''}`.trim() || `User ${coord.id}`}
+                </option>
+              ))}
+            </select>
+            {serviceCoordinatorsList.length === 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                No service coordinators available. Please ensure there are users with the Service Coordinator role.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="initial_observations" className="block mb-2 dark:text-gray-300">
+              Initial Observations (Optional)
+            </Label>
+            <Textarea
+              id="initial_observations"
+              value={initialObservations}
+              onChange={(e) => setInitialObservations(e.target.value)}
+              placeholder="Quick notes or initial observations before detailed testing..."
+              rows={3}
+              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+            />
+          </div>
+        </div>
+      </form>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button 
+          type="button" 
+          onClick={handleSubmit} 
+          disabled={isSubmitting || !serviceCoordinatorId || serviceCoordinatorsList.length === 0}
+        >
+          {isSubmitting ? "Assigning..." : "Assign & Continue"}
         </Button>
       </DialogFooter>
     </>
