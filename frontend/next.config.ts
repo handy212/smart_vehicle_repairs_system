@@ -23,6 +23,9 @@ const getApiHost = () => {
 const apiConfig = getApiHost();
 
 const nextConfig: NextConfig = {
+  // Enable standalone output for Docker
+  output: 'standalone',
+  
   turbopack: {
     root: path.resolve(__dirname),
   },
