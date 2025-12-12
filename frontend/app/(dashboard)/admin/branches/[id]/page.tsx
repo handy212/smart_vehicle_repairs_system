@@ -376,7 +376,7 @@ export default function BranchDetailPage() {
                     <p className="mt-1 text-gray-900 dark:text-gray-100">
                       {stats.inventory.total_parts} parts
                       {stats.inventory.low_stock_parts > 0 && (
-                        <Badge variant="destructive" className="ml-2">
+                        <Badge variant="danger" className="ml-2">
                           {stats.inventory.low_stock_parts} low stock
                         </Badge>
                       )}

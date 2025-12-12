@@ -13,6 +13,7 @@ export interface Customer {
     email: string;
     phone?: string;
     address?: string;
+    is_active?: boolean;
   };
   company_name?: string;
   customer_type: string;

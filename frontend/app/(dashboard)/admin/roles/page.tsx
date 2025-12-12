@@ -346,7 +346,7 @@ export default function RolesPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{role.priority}</Badge>
+                        <Badge variant="secondary">{role.priority}</Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -354,7 +354,7 @@ export default function RolesPage() {
                             {role.is_active ? "Active" : "Inactive"}
                           </Badge>
                           {role.is_system && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="secondary" className="text-xs">
                               System
                             </Badge>
                           )}
@@ -468,7 +468,7 @@ export default function RolesPage() {
                     <div className="flex justify-between items-start gap-4">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline">{log.action}</Badge>
+                          <Badge variant="secondary">{log.action}</Badge>
                           <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {log.object_repr}
                           </span>
