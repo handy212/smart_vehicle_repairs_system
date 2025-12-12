@@ -78,21 +78,14 @@ echo -e "${YELLOW}[4/10] Verifying installations...${NC}"
 python3 --version
 node --version
 npm --version
-# PostgreSQL - check via psql client or service status
-if command -v psql &> /dev/null; then
-    psql --version
-elif systemctl list-unit-files | grep -q postgresql; then
-    echo "PostgreSQL installed (service: $(systemctl status postgresql --no-pager -l | head -1 | awk '{print $2}'))"
-else
-    echo -e "${YELLOW}Warning: Could not verify PostgreSQL installation${NC}"
-fi
+postgresql --version
 redis-server --version
 nginx -v
 
 # Create application user
 echo -e "${YELLOW}[5/10] Creating application user...${NC}"
 if ! id "svr" &>/dev/null; then
-    useradd --system --home-dir /var/www/svr --create-home svr
+    useradd --system --group --home-dir /var/www/svr --create-home svr
     echo -e "${GREEN}User 'svr' created${NC}"
 else
     echo -e "${GREEN}User 'svr' already exists${NC}"
@@ -126,7 +119,7 @@ ufw --force enable
 
 # Install Gunicorn globally (for systemd service)
 echo -e "${YELLOW}[10/10] Installing Gunicorn...${NC}"
-pip3 install --break-system-packages gunicorn || echo "Gunicorn will be installed in virtual environment"
+pip3 install gunicorn
 
 echo ""
 echo -e "${GREEN}=========================================="
