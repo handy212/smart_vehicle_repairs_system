@@ -78,7 +78,7 @@ echo -e "${YELLOW}[4/10] Verifying installations...${NC}"
 python3 --version
 node --version
 npm --version
-postgres --version
+psql --version
 redis-server --version
 nginx -v
 
