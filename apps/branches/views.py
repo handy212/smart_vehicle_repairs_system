@@ -88,13 +88,12 @@ class BranchViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Only administrators can delete branches.')
         
-        # Prevent deletion if branch has staff assigned
+        # If branch has staff assigned, reassign them to no branch
         if instance.staff_count > 0:
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError(
-                f'Cannot delete branch "{instance.name}" because it has {instance.staff_count} staff member(s) assigned. '
-                'Please reassign or remove staff before deleting.'
-            )
+            # Reassign all staff to no branch before deletion
+            for user in User.objects.filter(branch=instance):
+                user.branch = None
+                user.save()
         
         # Prevent deletion if it's the only active branch
         active_branches = Branch.objects.filter(is_active=True).exclude(pk=instance.pk)
