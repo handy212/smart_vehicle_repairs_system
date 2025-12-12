@@ -78,14 +78,14 @@ echo -e "${YELLOW}[4/10] Verifying installations...${NC}"
 python3 --version
 node --version
 npm --version
-postgresql --version
+postgres --version
 redis-server --version
 nginx -v
 
 # Create application user
 echo -e "${YELLOW}[5/10] Creating application user...${NC}"
 if ! id "svr" &>/dev/null; then
-    useradd --system --group --home-dir /var/www/svr --create-home svr
+    useradd --system --home-dir /var/www/svr --create-home svr
     echo -e "${GREEN}User 'svr' created${NC}"
 else
     echo -e "${GREEN}User 'svr' already exists${NC}"
@@ -119,7 +119,7 @@ ufw --force enable
 
 # Install Gunicorn globally (for systemd service)
 echo -e "${YELLOW}[10/10] Installing Gunicorn...${NC}"
-pip3 install gunicorn
+pip3 install --break-system-packages gunicorn || echo "Gunicorn will be installed in virtual environment"
 
 echo ""
 echo -e "${GREEN}=========================================="

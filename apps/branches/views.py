@@ -7,8 +7,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count, Sum, Avg, F
-import json
-import time
 from django.utils import timezone
 from datetime import timedelta
 
@@ -92,27 +90,6 @@ class BranchViewSet(viewsets.ModelViewSet):
         
         # Prevent deletion if branch has staff assigned
         if instance.staff_count > 0:
-            #region agent log
-            try:
-                payload = {
-                    "sessionId": "debug-session",
-                    "runId": "run1",
-                    "hypothesisId": "H1",
-                    "location": "apps/branches/views.py:perform_destroy:staff_check",
-                    "message": "Branch delete blocked: staff assigned",
-                    "data": {
-                        "branch_id": instance.id,
-                        "staff_count": instance.staff_count,
-                        "user_id": getattr(self.request.user, "id", None),
-                        "user_role": getattr(self.request.user, "role", None),
-                    },
-                    "timestamp": int(time.time() * 1000),
-                }
-                with open("/home/dev/smart_vehicle_repairs_system/.cursor/debug.log", "a") as f:
-                    f.write(json.dumps(payload) + "\n")
-            except Exception:
-                pass
-            #endregion
             from rest_framework.exceptions import ValidationError
             raise ValidationError(
                 f'Cannot delete branch "{instance.name}" because it has {instance.staff_count} staff member(s) assigned. '
@@ -122,26 +99,6 @@ class BranchViewSet(viewsets.ModelViewSet):
         # Prevent deletion if it's the only active branch
         active_branches = Branch.objects.filter(is_active=True).exclude(pk=instance.pk)
         if not active_branches.exists():
-            #region agent log
-            try:
-                payload = {
-                    "sessionId": "debug-session",
-                    "runId": "run1",
-                    "hypothesisId": "H2",
-                    "location": "apps/branches/views.py:perform_destroy:last_active_check",
-                    "message": "Branch delete blocked: last active branch",
-                    "data": {
-                        "branch_id": instance.id,
-                        "user_id": getattr(self.request.user, "id", None),
-                        "user_role": getattr(self.request.user, "role", None),
-                    },
-                    "timestamp": int(time.time() * 1000),
-                }
-                with open("/home/dev/smart_vehicle_repairs_system/.cursor/debug.log", "a") as f:
-                    f.write(json.dumps(payload) + "\n")
-            except Exception:
-                pass
-            #endregion
             from rest_framework.exceptions import ValidationError
             raise ValidationError(
                 'Cannot delete the last active branch. Please activate another branch first or create a new one.'
@@ -150,28 +107,6 @@ class BranchViewSet(viewsets.ModelViewSet):
         # Soft delete by setting is_active=False instead of actually deleting
         instance.is_active = False
         instance.save()
-
-        #region agent log
-        try:
-            payload = {
-                "sessionId": "debug-session",
-                "runId": "run1",
-                "hypothesisId": "H3",
-                "location": "apps/branches/views.py:perform_destroy:success",
-                "message": "Branch soft-deactivated",
-                "data": {
-                    "branch_id": instance.id,
-                    "is_active": instance.is_active,
-                    "user_id": getattr(self.request.user, "id", None),
-                    "user_role": getattr(self.request.user, "role", None),
-                },
-                "timestamp": int(time.time() * 1000),
-            }
-            with open("/home/dev/smart_vehicle_repairs_system/.cursor/debug.log", "a") as f:
-                f.write(json.dumps(payload) + "\n")
-        except Exception:
-            pass
-        #endregion
     
     @action(detail=True, methods=['get'])
     def staff(self, request, pk=None):
