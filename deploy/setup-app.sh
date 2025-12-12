@@ -25,6 +25,13 @@ echo ""
 
 cd $APP_DIR
 
+# Copy application files if they don't exist
+if [ ! -f "manage.py" ]; then
+    echo -e "${YELLOW}Copying application files from project directory...${NC}"
+    cp -r /opt/smart_vehicle_repairs_system/* .
+    cp -r /opt/smart_vehicle_repairs_system/.* . 2>/dev/null || true
+fi
+
 # Check if .env exists
 if [ ! -f ".env" ]; then
     echo -e "${YELLOW}Creating .env file from template...${NC}"
@@ -63,6 +70,13 @@ fi
 
 # Setup Python environment
 echo -e "${YELLOW}[1/6] Setting up Python virtual environment...${NC}"
+
+# Copy requirements.txt if it doesn't exist
+if [ ! -f "requirements.txt" ]; then
+    echo -e "${YELLOW}Copying requirements.txt from project directory...${NC}"
+    cp /opt/smart_vehicle_repairs_system/requirements.txt .
+fi
+
 sudo -u svr python3 -m venv venv
 sudo -u svr venv/bin/pip install --upgrade pip
 sudo -u svr venv/bin/pip install -r requirements.txt
