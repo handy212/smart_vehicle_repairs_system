@@ -85,7 +85,7 @@ export default function VehicleDetailPage() {
   if (error || !vehicle) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => router.back()}>
+        <Buttonvariant="secondary" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
@@ -116,7 +116,7 @@ export default function VehicleDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={() => router.back()}>
+          <Buttonvariant="secondary" onClick={() => router.back()}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -366,7 +366,7 @@ export default function VehicleDetailPage() {
                 {vehicleWorkOrders.length > 10 && (
                   <div className="mt-4 text-center">
                     <Link href={`/vehicles/${vehicleId}/history`}>
-                      <Button variant="outline" size="sm">
+                      <Buttonvariant="secondary" size="sm">
                         View All {vehicleWorkOrders.length} Work Orders
                       </Button>
                     </Link>
@@ -435,13 +435,13 @@ export default function VehicleDetailPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               <Link href={`/appointments/new?vehicle=${vehicleId}`} className="block">
-                <Button variant="outline" className="w-full justify-start">
+                <Buttonvariant="secondary" className="w-full justify-start">
                   <Calendar className="w-4 h-4 mr-2" />
                   Schedule Service
                 </Button>
               </Link>
               <Link href={`/workorders/new?vehicle=${vehicleId}`} className="block">
-                <Button variant="outline" className="w-full justify-start">
+                <Buttonvariant="secondary" className="w-full justify-start">
                   <FileText className="w-4 h-4 mr-2" />
                   Create Work Order
                 </Button>

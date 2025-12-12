@@ -416,7 +416,7 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
 
           <DialogFooter>
             <Button
-              variant="outline"
+             variant="secondary"
               onClick={() => {
                 setTempMark(null);
                 setEditingMark(null);

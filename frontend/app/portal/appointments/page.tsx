@@ -94,7 +94,7 @@ export default function MyAppointmentsPage() {
         </div>
         {/* <div className="flex items-center space-x-2">
           <Link href="/portal/appointments/calendar">
-            <Button variant="outline">
+            <Buttonvariant="secondary">
               <Calendar className="w-4 h-4 mr-2" />
               Calendar View
             </Button>
@@ -162,7 +162,7 @@ export default function MyAppointmentsPage() {
                     <div className="flex items-center space-x-3">
                       <Badge variant={getStatusVariant(apt.status)}>{apt.status}</Badge>
                       <Link href={`/portal/appointments/${apt.id}`}>
-                        <Button variant="outline" size="sm">
+                        <Buttonvariant="secondary" size="sm">
                           View Details
                         </Button>
                       </Link>
@@ -207,7 +207,7 @@ export default function MyAppointmentsPage() {
                     <div className="flex items-center space-x-3">
                       <Badge variant={getStatusVariant(apt.status)}>{apt.status}</Badge>
                       <Link href={`/portal/appointments/${apt.id}`}>
-                        <Button variant="outline" size="sm">
+                        <Buttonvariant="secondary" size="sm">
                           View Details
                         </Button>
                       </Link>

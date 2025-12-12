@@ -231,7 +231,7 @@ export default function PurchaseOrdersPage() {
               <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No purchase orders found.</p>
               <Link href="/inventory/purchase-orders/new">
-                <Button className="mt-4" variant="outline">
+                <Button className="mt-4"variant="secondary">
                   <Plus className="w-4 h-4 mr-2" />
                   Create First Purchase Order
                 </Button>
@@ -247,7 +247,7 @@ export default function PurchaseOrdersPage() {
               </div>
               <div className="flex space-x-2">
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!data.previous}
@@ -255,7 +255,7 @@ export default function PurchaseOrdersPage() {
                   Previous
                 </Button>
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!data.next}

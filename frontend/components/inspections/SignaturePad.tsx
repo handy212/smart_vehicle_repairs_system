@@ -60,7 +60,7 @@ export function SignaturePad({
           {!disabled && (
             <Button
               type="button"
-              variant="outline"
+             variant="secondary"
               size="sm"
               onClick={handleClear}
               disabled={!sigPadRef.current || sigPadRef.current.isEmpty()}

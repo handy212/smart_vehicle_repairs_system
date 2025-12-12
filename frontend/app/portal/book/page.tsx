@@ -270,7 +270,7 @@ export default function BookAppointmentPage() {
               <div className="flex items-center justify-end space-x-4">
                 <Button
                   type="button"
-                  variant="outline"
+                 variant="secondary"
                   onClick={() => router.back()}
                   disabled={isSubmitting}
                 >

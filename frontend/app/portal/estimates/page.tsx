@@ -204,7 +204,7 @@ export default function MyEstimatesPage() {
                     <Badge variant={getStatusVariant(estimate.status)}>{estimate.status}</Badge>
                     <div className="flex items-center space-x-2 mt-2">
                       <Link href={`/portal/estimates/${estimate.id}`}>
-                        <Button variant="outline" size="sm">
+                        <Buttonvariant="secondary" size="sm">
                           View Details
                         </Button>
                       </Link>

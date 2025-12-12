@@ -42,7 +42,7 @@ export default function WorkOrderNotesTab({ workOrderId, notes, onRefresh }: Not
               <p className="text-sm text-gray-500 mb-4">
                 Add notes to track important information, customer communications, and internal updates.
               </p>
-              <Button onClick={() => setShowAddDialog(true)} variant="outline">
+              <Button onClick={() => setShowAddDialog(true)}variant="secondary">
                 <Plus className="w-4 h-4 mr-2" />
                 Add First Note
               </Button>

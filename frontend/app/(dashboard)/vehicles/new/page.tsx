@@ -175,7 +175,7 @@ export default function NewVehiclePage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href={customerId ? `/customers/${customerId}` : "/vehicles"}>
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -444,7 +444,7 @@ export default function NewVehiclePage() {
                   {isSubmitting ? "Creating..." : "Create Vehicle"}
                 </Button>
                 <Link href={customerId ? `/customers/${customerId}` : "/vehicles"}>
-                  <Button type="button" variant="outline" className="w-full">
+                  <Button type="button"variant="secondary" className="w-full">
                     Cancel
                   </Button>
                 </Link>

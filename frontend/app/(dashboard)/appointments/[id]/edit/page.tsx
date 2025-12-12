@@ -133,7 +133,7 @@ export default function EditAppointmentPage() {
     return (
       <div className="space-y-4">
         <Link href="/appointments">
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -151,7 +151,7 @@ export default function EditAppointmentPage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href={`/appointments/${appointmentId}`}>
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -335,7 +335,7 @@ export default function EditAppointmentPage() {
                   {isSubmitting ? "Saving..." : "Save Changes"}
                 </Button>
                 <Link href={`/appointments/${appointmentId}`}>
-                  <Button type="button" variant="outline" className="w-full">
+                  <Button type="button"variant="secondary" className="w-full">
                     Cancel
                   </Button>
                 </Link>

@@ -311,7 +311,7 @@ export default function WorkOrdersPage() {
         <div className="flex items-center space-x-2">
           <div className="relative">
             <Button
-              variant="outline"
+             variant="secondary"
               onClick={() => setShowActionsMenu(!showActionsMenu)}
               className="dark:border-gray-700 dark:text-gray-200"
             >
@@ -345,7 +345,7 @@ export default function WorkOrdersPage() {
             )}
           </div>
           <Link href="/workorders/kanban">
-            <Button variant="outline">
+            <Buttonvariant="secondary">
               <LayoutGrid className="w-4 h-4 mr-2" />
               Kanban View
             </Button>
@@ -672,7 +672,7 @@ export default function WorkOrdersPage() {
               <Wrench className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
               <p className="text-gray-500 dark:text-gray-400">No work orders found.</p>
               <Link href="/workorders/new">
-                <Button className="mt-4" variant="outline">
+                <Button className="mt-4"variant="secondary">
                   <Plus className="w-4 h-4 mr-2" />
                   Create First Work Order
                 </Button>
@@ -688,7 +688,7 @@ export default function WorkOrdersPage() {
               </div>
               <div className="flex space-x-2">
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!data.previous}
@@ -696,7 +696,7 @@ export default function WorkOrdersPage() {
                   Previous
                 </Button>
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!data.next}
@@ -732,7 +732,7 @@ export default function WorkOrdersPage() {
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+             variant="secondary"
               onClick={() => setShowStatusDialog(false)}
             >
               Cancel

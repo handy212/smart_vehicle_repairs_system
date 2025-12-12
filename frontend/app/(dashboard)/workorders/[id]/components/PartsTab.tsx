@@ -72,7 +72,7 @@ export default function WorkOrderPartsTab({ workOrderId, parts, onRefresh }: Par
               <p className="text-sm text-gray-500 mb-4">
                 Add parts and materials as they are used in the repair work.
               </p>
-              <Button onClick={() => setShowAddDialog(true)} variant="outline">
+              <Button onClick={() => setShowAddDialog(true)}variant="secondary">
                 <Plus className="w-4 h-4 mr-2" />
                 Add First Part
               </Button>
@@ -116,7 +116,7 @@ export default function WorkOrderPartsTab({ workOrderId, parts, onRefresh }: Par
                       {part.status !== "installed" && (
                         <Button
                           size="sm"
-                          variant="outline"
+                         variant="secondary"
                           onClick={() => markInstalledMutation.mutate(part.id)}
                           disabled={markInstalledMutation.isPending}
                         >

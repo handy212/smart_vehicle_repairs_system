@@ -113,7 +113,7 @@ export default function AppointmentDetailPage() {
   if (error || !appointment) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => router.back()}>
+        <Buttonvariant="secondary" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
@@ -161,7 +161,7 @@ export default function AppointmentDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={() => router.back()}>
+          <Buttonvariant="secondary" onClick={() => router.back()}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -333,7 +333,7 @@ export default function AppointmentDetailPage() {
               {appointment.status !== "completed" && appointment.status !== "cancelled" && (
                 <Button
                   className="w-full"
-                  variant="outline"
+                 variant="secondary"
                   onClick={() => setShowCancelDialog(true)}
                   disabled={cancelMutation.isPending}
                 >
@@ -342,7 +342,7 @@ export default function AppointmentDetailPage() {
                 </Button>
               )}
               <Link href={`/workorders/new?appointment=${appointmentId}`} className="block">
-                <Button variant="outline" className="w-full">
+                <Buttonvariant="secondary" className="w-full">
                   <FileText className="w-4 h-4 mr-2" />
                   Create Work Order
                 </Button>
@@ -397,7 +397,7 @@ export default function AppointmentDetailPage() {
           </div>
           <DialogFooter>
             <Button
-              variant="outline"
+             variant="secondary"
               onClick={() => {
                 setShowCancelDialog(false);
                 setCancelReason("");

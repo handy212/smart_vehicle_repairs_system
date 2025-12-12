@@ -173,7 +173,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
               <p className="text-sm text-gray-500 mb-4">
                 Document work progress with before, during, and after photos.
               </p>
-              <Button onClick={() => setIsUploadDialogOpen(true)} variant="outline">
+              <Button onClick={() => setIsUploadDialogOpen(true)}variant="secondary">
                 <Plus className="w-4 h-4 mr-2" />
                 Upload First Photo
               </Button>
@@ -436,7 +436,7 @@ function UploadPhotoDialog({
         <DialogFooter>
           <Button
             type="button"
-            variant="outline"
+           variant="secondary"
             onClick={() => onOpenChange(false)}
             disabled={isUploading}
           >

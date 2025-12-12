@@ -158,7 +158,7 @@ export default function InventoryPage() {
         <div className="flex items-center space-x-2">
           <div className="relative">
             <Button
-              variant="outline"
+             variant="secondary"
               onClick={() => setShowActionsMenu(!showActionsMenu)}
               className="dark:border-gray-700 dark:text-gray-200"
             >
@@ -407,7 +407,7 @@ export default function InventoryPage() {
               <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No parts found.</p>
               <Link href="/inventory/new">
-                <Button className="mt-4" variant="outline">
+                <Button className="mt-4"variant="secondary">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Your First Part
                 </Button>
@@ -423,7 +423,7 @@ export default function InventoryPage() {
               </div>
               <div className="flex space-x-2">
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!data.previous}
@@ -431,7 +431,7 @@ export default function InventoryPage() {
                   Previous
                 </Button>
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!data.next}

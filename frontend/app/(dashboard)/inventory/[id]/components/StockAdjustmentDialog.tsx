@@ -200,7 +200,7 @@ export default function StockAdjustmentDialog({
           </div>
         </form>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button"variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting || !!(quantity && newStockLevel < 0)}>

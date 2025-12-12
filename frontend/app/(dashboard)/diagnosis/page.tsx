@@ -246,7 +246,7 @@ export default function DiagnosisListPage() {
       {data && data.count > diagnoses.length && (
         <div className="flex items-center justify-center gap-4 pt-2">
           <Button
-            variant="outline"
+           variant="secondary"
             size="sm"
             disabled={!data.previous}
             onClick={() => {
@@ -259,7 +259,7 @@ export default function DiagnosisListPage() {
             Showing {diagnoses.length} of {data.count}
           </span>
           <Button
-            variant="outline"
+           variant="secondary"
             size="sm"
             disabled={!data.next}
             onClick={() => {

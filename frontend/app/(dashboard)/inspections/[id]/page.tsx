@@ -96,7 +96,7 @@ export default function InspectionDetailPage() {
       <div className="text-center py-12">
         <p className="text-gray-500">Inspection not found</p>
         <Link href="/inspections">
-          <Button variant="outline" className="mt-4">
+          <Buttonvariant="secondary" className="mt-4">
             Back to Inspections
           </Button>
         </Link>
@@ -122,7 +122,7 @@ export default function InspectionDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/inspections">
-            <Button variant="outline" size="icon">
+            <Buttonvariant="secondary" size="icon">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
@@ -148,7 +148,7 @@ export default function InspectionDetailPage() {
           {inspection.status === "completed" && (
             <>
               <Button
-                variant="outline"
+               variant="secondary"
                 onClick={() => rejectMutation.mutate()}
                 disabled={rejectMutation.isPending}
               >
@@ -166,7 +166,7 @@ export default function InspectionDetailPage() {
           )}
           {(inspection.status === "completed" || inspection.status === "approved") && !inspection.sent_to_customer_at && (
             <Button
-              variant="outline"
+             variant="secondary"
               onClick={() => sendToCustomerMutation.mutate()}
               disabled={sendToCustomerMutation.isPending}
             >

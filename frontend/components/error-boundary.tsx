@@ -89,7 +89,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   Try Again
                 </Button>
                 <Link href="/portal">
-                  <Button variant="outline">
+                  <Buttonvariant="secondary">
                     <Home className="w-4 h-4 mr-2" />
                     Go Home
                   </Button>

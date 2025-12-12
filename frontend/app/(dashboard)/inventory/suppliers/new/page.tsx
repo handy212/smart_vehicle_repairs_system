@@ -111,7 +111,7 @@ export default function NewSupplierPage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href="/inventory/suppliers">
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -393,7 +393,7 @@ export default function NewSupplierPage() {
 
         <div className="flex justify-end space-x-4 mt-6">
           <Link href="/inventory/suppliers">
-            <Button type="button" variant="outline">
+            <Button type="button"variant="secondary">
               Cancel
             </Button>
           </Link>

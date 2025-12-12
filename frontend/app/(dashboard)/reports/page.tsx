@@ -162,7 +162,7 @@ export default function ReportsPage() {
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <Button
-            variant="outline"
+           variant="secondary"
             onClick={() => setShowFilters(!showFilters)}
             className="sm:hidden"
             size="sm"
@@ -187,7 +187,7 @@ export default function ReportsPage() {
               onChange={(e) => setEndDate(e.target.value)}
               className="w-full sm:w-40 h-10 text-sm"
             />
-            <Button variant="outline" onClick={handleExport} className="h-10">
+            <Buttonvariant="secondary" onClick={handleExport} className="h-10">
               <Download className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Export</span>
             </Button>
@@ -205,7 +205,7 @@ export default function ReportsPage() {
             {dateRangeOptions.map((option) => (
               <Button
                 key={option.label}
-                variant="outline"
+               variant="secondary"
                 size="sm"
                 onClick={() => handleQuickDateRange(option.days)}
                 className="text-xs h-8"

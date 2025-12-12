@@ -31,7 +31,7 @@ export default function SupplierDetailPage() {
       <div className="text-center py-12">
         <p className="text-gray-500">Supplier not found.</p>
         <Link href="/inventory/suppliers">
-          <Button className="mt-4" variant="outline">
+          <Button className="mt-4"variant="secondary">
             Back to Suppliers
           </Button>
         </Link>
@@ -44,7 +44,7 @@ export default function SupplierDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/inventory/suppliers">
-            <Button variant="outline">
+            <Buttonvariant="secondary">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>

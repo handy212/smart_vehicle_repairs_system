@@ -540,7 +540,7 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
                       Save
                     </Button>
                     <Button
-                      variant="outline"
+                     variant="secondary"
                       size="sm"
                       onClick={handleCancelEdit}
                       disabled={updateServiceCoordinatorMutation.isPending}

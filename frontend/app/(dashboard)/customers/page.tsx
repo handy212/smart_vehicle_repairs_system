@@ -310,7 +310,7 @@ export default function CustomersPage() {
           />
           <div className="relative">
             <Button
-              variant="outline"
+             variant="secondary"
               onClick={() => setShowActionsMenu(!showActionsMenu)}
               className="dark:border-gray-700 dark:text-gray-200"
             >
@@ -733,7 +733,7 @@ export default function CustomersPage() {
             <div className="text-center py-12">
               <p className="text-gray-500 dark:text-gray-400">No customers found.</p>
               <Link href="/customers/new">
-                <Button className="mt-4" variant="outline">
+                <Button className="mt-4"variant="secondary">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Your First Customer
                 </Button>
@@ -749,7 +749,7 @@ export default function CustomersPage() {
               </div>
               <div className="flex space-x-2">
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!data.previous}
@@ -757,7 +757,7 @@ export default function CustomersPage() {
                   Previous
                 </Button>
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!data.next}
@@ -806,7 +806,7 @@ export default function CustomersPage() {
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+             variant="secondary"
               onClick={() => setShowStatusDialog(false)}
             >
               Cancel

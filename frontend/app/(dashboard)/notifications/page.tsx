@@ -297,7 +297,7 @@ export default function NotificationsPage() {
         <div className="flex items-center space-x-2">
           {unreadCount > 0 && (
             <Button
-              variant="outline"
+             variant="secondary"
               onClick={() => {
                 if (confirm("Mark all notifications as read?")) {
                   markAllAsReadMutation.mutate();
@@ -311,7 +311,7 @@ export default function NotificationsPage() {
           )}
           {filter === "all" && notificationsData && notificationsData.count > 0 && (
             <Button
-              variant="outline"
+             variant="secondary"
               onClick={() => {
                 const readCount = notifications.filter(n => n.is_read || n.read_at).length;
                 if (readCount > 0 && confirm(`Delete ${readCount} read notification${readCount !== 1 ? "s" : ""}?`)) {
@@ -325,7 +325,7 @@ export default function NotificationsPage() {
             </Button>
           )}
           <Link href="/notifications/preferences">
-            <Button variant="outline">
+            <Buttonvariant="secondary">
               <Settings className="w-4 h-4 mr-2" />
               Preferences
             </Button>

@@ -255,7 +255,7 @@ export default function PaymentHistoryPage() {
                       <TableCell>
                         {payment.invoice && (
                           <Link href={`/portal/invoices/${payment.invoice}`}>
-                            <Button variant="outline" size="sm">
+                            <Buttonvariant="secondary" size="sm">
                               View Invoice
                             </Button>
                           </Link>

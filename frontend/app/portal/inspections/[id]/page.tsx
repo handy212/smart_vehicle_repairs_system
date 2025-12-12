@@ -113,7 +113,7 @@ export default function InspectionDetailPage() {
           </h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Inspection Details</p>
         </div>
-        <Button variant="outline" onClick={handleDownload}>
+        <Buttonvariant="secondary" onClick={handleDownload}>
           <Download className="w-4 h-4 mr-2" />
           Download PDF
         </Button>

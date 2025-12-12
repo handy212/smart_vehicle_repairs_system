@@ -628,7 +628,7 @@ export default function EditEstimatePage() {
                     <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-sm font-medium mb-2">No line items</p>
                     <p className="text-xs text-muted-foreground mb-4">Add your first line item to get started</p>
-                    <Button type="button" onClick={addLineItem} variant="outline" size="sm">
+                    <Button type="button" onClick={addLineItem}variant="secondary" size="sm">
                       <Plus className="mr-2 h-4 w-4" />
                       Add First Item
                     </Button>
@@ -877,7 +877,7 @@ export default function EditEstimatePage() {
                     )}
                   </Button>
                   <Link href={`/billing/estimates/${estimateId}`}>
-                    <Button type="button" variant="outline" className="w-full">
+                    <Button type="button"variant="secondary" className="w-full">
                       Cancel
                     </Button>
                   </Link>

@@ -113,7 +113,7 @@ export default function DiagnosisTab({ workOrderId, workOrder, onRefresh }: Diag
                 {diagnosis.status_display || diagnosis.status}
               </Badge>
               <Link href={`/workorders/${workOrderId}/diagnosis`}>
-                <Button variant="outline" size="sm">
+                <Buttonvariant="secondary" size="sm">
                   {diagnosis.is_completed ? (
                     <>
                       <Edit className="w-4 h-4 mr-2" />

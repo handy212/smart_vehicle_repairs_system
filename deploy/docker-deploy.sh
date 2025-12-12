@@ -24,17 +24,9 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Check for docker compose (plugin) or docker-compose (standalone)
-if ! docker compose version &> /dev/null && ! command -v docker-compose &> /dev/null; then
+if ! command -v docker-compose &> /dev/null; then
     echo -e "${RED}Docker Compose is not installed!${NC}"
     exit 1
-fi
-
-# Use docker compose plugin if available, otherwise docker-compose
-if docker compose version &> /dev/null; then
-    DOCKER_COMPOSE="docker compose"
-else
-    DOCKER_COMPOSE="docker-compose"
 fi
 
 # Check if .env.production exists
@@ -54,11 +46,11 @@ fi
 
 # Build images
 echo -e "${YELLOW}Building Docker images...${NC}"
-$DOCKER_COMPOSE build
+docker-compose build
 
 # Start services
 echo -e "${YELLOW}Starting services...${NC}"
-$DOCKER_COMPOSE up -d
+docker-compose up -d
 
 # Wait for database to be ready
 echo -e "${YELLOW}Waiting for database...${NC}"
@@ -66,19 +58,19 @@ sleep 10
 
 # Run migrations
 echo -e "${YELLOW}Running migrations...${NC}"
-$DOCKER_COMPOSE exec -T backend python manage.py migrate
+docker-compose exec -T backend python manage.py migrate
 
 # Initialize permissions
 echo -e "${YELLOW}Initializing permissions...${NC}"
-$DOCKER_COMPOSE exec -T backend python manage.py init_permissions || echo "Already initialized"
+docker-compose exec -T backend python manage.py init_permissions || echo "Already initialized"
 
 # Initialize settings
 echo -e "${YELLOW}Initializing settings...${NC}"
-$DOCKER_COMPOSE exec -T backend python manage.py init_settings || echo "Already initialized"
+docker-compose exec -T backend python manage.py init_settings || echo "Already initialized"
 
 # Collect static files
 echo -e "${YELLOW}Collecting static files...${NC}"
-$DOCKER_COMPOSE exec -T backend python manage.py collectstatic --noinput
+docker-compose exec -T backend python manage.py collectstatic --noinput
 
 echo ""
 echo -e "${GREEN}=========================================="
@@ -86,15 +78,15 @@ echo "Deployment Complete!"
 echo "==========================================${NC}"
 echo ""
 echo "Services running:"
-$DOCKER_COMPOSE ps
+docker-compose ps
 echo ""
 echo "Next steps:"
-echo "1. Create superuser: $DOCKER_COMPOSE exec backend python manage.py createsuperuser"
+echo "1. Create superuser: docker-compose exec backend python manage.py createsuperuser"
 echo "2. Setup SSL certificates"
 echo "3. Update Nginx domains in deploy/nginx/default.conf"
 echo "4. Test: curl http://localhost:8000/api/health/"
 echo ""
-echo "View logs: $DOCKER_COMPOSE logs -f"
-echo "Restart: $DOCKER_COMPOSE restart"
+echo "View logs: docker-compose logs -f"
+echo "Restart: docker-compose restart"
 echo ""
 

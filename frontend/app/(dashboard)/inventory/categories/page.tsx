@@ -252,7 +252,7 @@ export default function PartCategoriesPage() {
             <DialogFooter>
               <Button
                 type="button"
-                variant="outline"
+               variant="secondary"
                 onClick={handleCloseDialog}
               >
                 Cancel

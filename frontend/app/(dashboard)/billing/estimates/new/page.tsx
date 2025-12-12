@@ -286,7 +286,7 @@ export default function NewEstimatePage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href="/billing/estimates">
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -464,7 +464,7 @@ export default function NewEstimatePage() {
                   <CardTitle>Line Items</CardTitle>
                   <CardDescription>Add items to the estimate</CardDescription>
                 </div>
-                <Button type="button" onClick={addLineItem} variant="outline" size="sm">
+                <Button type="button" onClick={addLineItem}variant="secondary" size="sm">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Item
                 </Button>
@@ -477,7 +477,7 @@ export default function NewEstimatePage() {
                       {lineItems.length > 1 && (
                         <Button
                           type="button"
-                          variant="outline"
+                         variant="secondary"
                           size="sm"
                           onClick={() => removeLineItem(index)}
                         >
@@ -802,7 +802,7 @@ export default function NewEstimatePage() {
                   {isSubmitting ? "Creating..." : "Create Estimate"}
                 </Button>
                 <Link href="/billing/estimates">
-                  <Button type="button" variant="outline" className="w-full">
+                  <Button type="button"variant="secondary" className="w-full">
                     Cancel
                   </Button>
                 </Link>

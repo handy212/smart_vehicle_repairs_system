@@ -137,7 +137,7 @@ export default function UsersManagementPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin">
-            <Button variant="outline" className="dark:border-gray-700 dark:text-gray-200">
+            <Buttonvariant="secondary" className="dark:border-gray-700 dark:text-gray-200">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -396,7 +396,7 @@ export default function UsersManagementPage() {
               </div>
               <div className="flex items-center space-x-2">
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!usersData.previous || isLoading}
@@ -408,7 +408,7 @@ export default function UsersManagementPage() {
                   Page {page}
                 </span>
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!usersData.next || isLoading}

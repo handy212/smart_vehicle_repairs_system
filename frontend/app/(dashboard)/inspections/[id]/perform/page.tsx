@@ -365,7 +365,7 @@ export default function PerformInspectionPage() {
       <div className="flex justify-between items-center">
         <div className="flex gap-3 items-center">
           <Link href={`/inspections/${inspectionId}`}>
-            <Button variant="outline" size="icon">
+            <Buttonvariant="secondary" size="icon">
               <ArrowLeft />
             </Button>
           </Link>
@@ -385,7 +385,7 @@ export default function PerformInspectionPage() {
         </div>
 
         <div className="flex gap-2">
-          <Button onClick={save} variant="outline">
+          <Button onClick={save}variant="secondary">
             <Save className="mr-2" /> Save
           </Button>
 
@@ -693,7 +693,7 @@ export default function PerformInspectionPage() {
 
           <DialogFooter>
             <Button
-              variant="outline"
+             variant="secondary"
               onClick={() => {
                 setShowCompleteDialog(false);
                 setTechnicianSignature(null);

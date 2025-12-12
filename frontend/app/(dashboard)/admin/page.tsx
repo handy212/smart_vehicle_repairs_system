@@ -116,7 +116,7 @@ export default function AdminDashboardPage() {
               Configure system-wide settings and preferences
             </p>
             <Link href="/admin/settings">
-              <Button className="w-full" variant="outline">
+              <Button className="w-full"variant="secondary">
                 <Settings className="w-4 h-4 mr-2" />
                 System Settings
               </Button>
@@ -133,7 +133,7 @@ export default function AdminDashboardPage() {
               View system activity and audit trail
             </p>
             <Link href="/admin/audit-log">
-              <Button className="w-full" variant="outline">
+              <Button className="w-full"variant="secondary">
                 <FileText className="w-4 h-4 mr-2" />
                 View Audit Log
               </Button>

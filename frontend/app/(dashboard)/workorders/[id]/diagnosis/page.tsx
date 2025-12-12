@@ -1640,7 +1640,7 @@ function RecommendationsTab({
                               </Button>
                               <Button
                                 size="sm"
-                                variant="outline"
+                               variant="secondary"
                                 className="h-7 text-xs"
                                 onClick={() => {
                                   setEditingRecommendation(rec);
@@ -1727,7 +1727,7 @@ function RecommendationsTab({
                           <div className="flex gap-2 pt-2">
                             <Button
                               size="sm"
-                              variant="outline"
+                             variant="secondary"
                               className="h-7 text-xs"
                               onClick={() => {
                                 setEditingRecommendation(rec);

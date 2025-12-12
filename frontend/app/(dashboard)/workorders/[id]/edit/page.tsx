@@ -266,7 +266,7 @@ export default function EditWorkOrderPage() {
     return (
       <div className="space-y-4">
         <Link href="/workorders">
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -284,7 +284,7 @@ export default function EditWorkOrderPage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href={`/workorders/${workOrderId}`}>
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -565,7 +565,7 @@ export default function EditWorkOrderPage() {
                   {isSubmitting ? "Saving..." : "Save Changes"}
                 </Button>
                 <Link href={`/workorders/${workOrderId}`}>
-                  <Button type="button" variant="outline" className="w-full">
+                  <Button type="button"variant="secondary" className="w-full">
                     Cancel
                   </Button>
                 </Link>

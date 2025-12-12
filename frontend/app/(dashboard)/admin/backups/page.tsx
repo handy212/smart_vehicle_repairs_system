@@ -260,7 +260,7 @@ export default function BackupsPage() {
                           {backup.status === "completed" && (
                             <>
                               <Button
-                                variant="outline"
+                               variant="secondary"
                                 size="sm"
                                 onClick={() => downloadMutation.mutate(backup.id)}
                                 disabled={downloadMutation.isPending}
@@ -269,7 +269,7 @@ export default function BackupsPage() {
                                 Download
                               </Button>
                               <Button
-                                variant="outline"
+                               variant="secondary"
                                 size="sm"
                                 onClick={() => handleRestore(backup)}
                                 disabled={restoreMutation.isPending}
@@ -280,7 +280,7 @@ export default function BackupsPage() {
                             </>
                           )}
                           <Button
-                            variant="outline"
+                           variant="secondary"
                             size="sm"
                             onClick={() => handleDelete(backup)}
                             disabled={deleteMutation.isPending}
@@ -368,7 +368,7 @@ function CreateBackupDialog({
           </div>
         </form>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose} disabled={isCreating}>
+          <Button type="button"variant="secondary" onClick={onClose} disabled={isCreating}>
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={isCreating}>

@@ -126,7 +126,7 @@ export default function SearchPage() {
               <span className="text-gray-600">Quick filters:</span>
               <Button
                 type="button"
-                variant="outline"
+               variant="secondary"
                 size="sm"
                 onClick={() => {
                   const newQuery = "customer:";
@@ -139,7 +139,7 @@ export default function SearchPage() {
               </Button>
               <Button
                 type="button"
-                variant="outline"
+               variant="secondary"
                 size="sm"
                 onClick={() => {
                   const newQuery = "vehicle:";
@@ -152,7 +152,7 @@ export default function SearchPage() {
               </Button>
               <Button
                 type="button"
-                variant="outline"
+               variant="secondary"
                 size="sm"
                 onClick={() => {
                   const newQuery = "workorder:";
@@ -165,7 +165,7 @@ export default function SearchPage() {
               </Button>
               <Button
                 type="button"
-                variant="outline"
+               variant="secondary"
                 size="sm"
                 onClick={() => {
                   const newQuery = "appointment:";

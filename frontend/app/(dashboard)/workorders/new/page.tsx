@@ -371,7 +371,7 @@ export default function NewWorkOrderPage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href="/workorders">
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -507,7 +507,7 @@ export default function NewWorkOrderPage() {
           
           <DialogFooter>
             <Button 
-              variant="outline" 
+             variant="secondary" 
               onClick={() => {
                 setShowRepeatVisitDialog(false);
                 setIsWarrantyRework(false);
@@ -787,7 +787,7 @@ export default function NewWorkOrderPage() {
                   {isSubmitting ? "Creating..." : "Create JobCard"}
                 </Button>
                 <Link href="/workorders">
-                  <Button type="button" variant="outline" className="w-full">
+                  <Button type="button"variant="secondary" className="w-full">
                     Cancel
                   </Button>
                 </Link>

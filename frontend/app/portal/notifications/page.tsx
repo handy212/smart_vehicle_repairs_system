@@ -148,7 +148,7 @@ export default function NotificationsPage() {
           <div className="flex items-center space-x-4">
             <Badge variant="warning">{unreadCount} unread</Badge>
             <Button
-              variant="outline"
+             variant="secondary"
               onClick={() => markAllAsReadMutation.mutate()}
               disabled={markAllAsReadMutation.isPending}
             >
@@ -312,7 +312,7 @@ export default function NotificationsPage() {
                           )}
                           {link && (
                             <Link href={link}>
-                              <Button variant="outline" size="sm">
+                              <Buttonvariant="secondary" size="sm">
                                 View <ArrowRight className="w-4 h-4 ml-1" />
                               </Button>
                             </Link>

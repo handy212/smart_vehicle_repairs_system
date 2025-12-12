@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Plus, Search, Filter, MoreVertical, Eye } from "lucide-react";
+import { FileText, Plus, Search, Filter, MoreVertical, Eye, Edit, Printer } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -68,7 +68,7 @@ export default function InspectionsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link href="/inspections/templates">
-            <Button variant="outline">
+            <Buttonvariant="secondary">
               <FileText className="w-4 h-4 mr-2" />
               Templates
             </Button>
@@ -127,7 +127,7 @@ export default function InspectionsPage() {
             </div>
             <div>
               <Button
-                variant="outline"
+               variant="secondary"
                 onClick={() => {
                   setSearch("");
                   setStatusFilter("");
@@ -307,7 +307,7 @@ export default function InspectionsPage() {
               </div>
               <div className="flex gap-2">
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!data.previous}
@@ -315,7 +315,7 @@ export default function InspectionsPage() {
                   Previous
                 </Button>
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!data.next}

@@ -186,7 +186,7 @@ export default function EditPartPage() {
     return (
       <div className="space-y-4">
         <Link href="/inventory">
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -204,7 +204,7 @@ export default function EditPartPage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href={`/inventory/${partId}`}>
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -551,7 +551,7 @@ export default function EditPartPage() {
                   {isSubmitting ? "Saving..." : "Save Changes"}
                 </Button>
                 <Link href={`/inventory/${partId}`}>
-                  <Button type="button" variant="outline" className="w-full">
+                  <Button type="button"variant="secondary" className="w-full">
                     Cancel
                   </Button>
                 </Link>

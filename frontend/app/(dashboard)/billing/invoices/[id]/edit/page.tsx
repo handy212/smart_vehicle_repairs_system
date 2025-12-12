@@ -346,7 +346,7 @@ export default function EditInvoicePage() {
     return (
       <div className="space-y-4">
         <Link href="/billing">
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -366,7 +366,7 @@ export default function EditInvoicePage() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href={`/billing/invoices/${invoiceId}`}>
-          <Button variant="outline" size="sm">
+          <Buttonvariant="secondary" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
@@ -519,7 +519,7 @@ export default function EditInvoicePage() {
                 {lineItems.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>No line items found</p>
-                    <Button type="button" onClick={addLineItem} variant="outline" size="sm" className="mt-2">
+                    <Button type="button" onClick={addLineItem}variant="secondary" size="sm" className="mt-2">
                       Add First Item
                     </Button>
                   </div>
@@ -718,7 +718,7 @@ export default function EditInvoicePage() {
                     {isSubmitting ? "Saving..." : "Save Changes"}
                   </Button>
                   <Link href={`/billing/invoices/${invoiceId}`}>
-                    <Button type="button" variant="outline" className="w-full">
+                    <Button type="button"variant="secondary" className="w-full">
                       Cancel
                     </Button>
                   </Link>

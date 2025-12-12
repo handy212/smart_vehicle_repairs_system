@@ -13,6 +13,7 @@ export interface WorkOrder {
   priority: string;
   total_cost?: string;
   created_at: string;
+  created_by?: number | { id: number; first_name: string; last_name: string } | string;
   completed_at?: string;
   started_at?: string;
   estimated_completion?: string;

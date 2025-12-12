@@ -1106,7 +1106,7 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setShowRequestApprovalDialog(false)}>
+            <Button type="button"variant="secondary" onClick={() => setShowRequestApprovalDialog(false)}>
               Cancel
             </Button>
             <Button 
@@ -1701,7 +1701,7 @@ function CompleteDiagnosisForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button"variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="submit" onClick={handleSubmit} disabled={isSubmitting}>
@@ -1755,7 +1755,7 @@ function AdditionalWorkForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button"variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="submit" onClick={handleSubmit} disabled={isSubmitting || !notes.trim()}>
@@ -1821,7 +1821,7 @@ function ApproveForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button"variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
@@ -2053,7 +2053,7 @@ function QualityCheckForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+        <Button type="button"variant="secondary" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button 
@@ -2121,7 +2121,7 @@ function CompleteForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button"variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
@@ -2203,7 +2203,7 @@ function MarkInvoicedForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+        <Button type="button"variant="secondary" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button 
@@ -2280,7 +2280,7 @@ function CloseWorkOrderForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+        <Button type="button"variant="secondary" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button 
@@ -2332,10 +2332,10 @@ function PauseForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button"variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="button" onClick={handleSubmit} disabled={isSubmitting} variant="outline">
+        <Button type="button" onClick={handleSubmit} disabled={isSubmitting}variant="secondary">
           {isSubmitting ? "Pausing..." : "Pause"}
         </Button>
       </DialogFooter>
@@ -2441,7 +2441,7 @@ function StartDiagnosisForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button"variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button 
@@ -2534,7 +2534,7 @@ function AssignServiceCoordinatorForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button"variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button 
@@ -2685,7 +2685,7 @@ function CreateInspectionForm({
         </div>
       </form>
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button"variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button 

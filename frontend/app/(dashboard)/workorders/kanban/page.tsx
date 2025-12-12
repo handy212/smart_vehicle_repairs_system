@@ -319,7 +319,7 @@ export default function WorkOrderKanbanPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/workorders">
-            <Button variant="outline">
+            <Buttonvariant="secondary">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to List
             </Button>
@@ -360,7 +360,7 @@ export default function WorkOrderKanbanPage() {
             </div>
             <div className="flex items-end">
               <Button
-                variant="outline"
+               variant="secondary"
                 onClick={() => {
                   setTechnicianFilter("");
                   setPriorityFilter("");

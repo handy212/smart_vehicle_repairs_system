@@ -84,7 +84,7 @@ export default function AuditLogPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin">
-            <Button variant="outline">
+            <Buttonvariant="secondary">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -256,7 +256,7 @@ export default function AuditLogPage() {
               </div>
               <div className="flex items-center space-x-2">
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!logsData.previous || isLoading}
@@ -265,7 +265,7 @@ export default function AuditLogPage() {
                 </Button>
                 <span className="text-sm text-gray-700">Page {page}</span>
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!logsData.next || isLoading}

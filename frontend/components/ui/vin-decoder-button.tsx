@@ -87,7 +87,7 @@ export function VINDecoderButton({ vin, onDecode, disabled }: VINDecoderButtonPr
   return (
     <Button
       type="button"
-      variant="outline"
+     variant="secondary"
       onClick={handleDecode}
       disabled={disabled || isDecoding || !isValidVin}
       className="flex items-center space-x-2"

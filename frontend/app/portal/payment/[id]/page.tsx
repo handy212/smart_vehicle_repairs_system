@@ -371,7 +371,7 @@ export default function PaymentPage() {
 
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   onClick={() => router.push("/portal/invoices")}
                   className="w-full"
                 >

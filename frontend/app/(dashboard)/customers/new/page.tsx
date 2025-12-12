@@ -191,7 +191,7 @@ export default function NewCustomerPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/customers">
-            <Button variant="outline" className="dark:border-gray-700 dark:text-gray-200">
+            <Buttonvariant="secondary" className="dark:border-gray-700 dark:text-gray-200">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -202,7 +202,7 @@ export default function NewCustomerPage() {
         </div>
         <div className="flex space-x-4">
           <Link href="/customers">
-            <Button variant="outline" className="dark:border-gray-700 dark:text-gray-200">
+            <Buttonvariant="secondary" className="dark:border-gray-700 dark:text-gray-200">
               Cancel
             </Button>
           </Link>
@@ -467,7 +467,7 @@ export default function NewCustomerPage() {
                       </div>
                       <Button
                         type="button"
-                        variant="outline"
+                       variant="secondary"
                         onClick={generatePassword}
                         className="dark:border-gray-600 dark:text-gray-300"
                         title="Generate secure password"
@@ -477,7 +477,7 @@ export default function NewCustomerPage() {
                       {passwordValue && (
                         <Button
                           type="button"
-                          variant="outline"
+                         variant="secondary"
                           onClick={handleCopyPassword}
                           className="dark:border-gray-600 dark:text-gray-300"
                           title="Copy password"

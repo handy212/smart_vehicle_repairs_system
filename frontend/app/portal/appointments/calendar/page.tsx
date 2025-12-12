@@ -140,7 +140,7 @@ export default function AppointmentCalendarPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/portal/appointments">
-            <Button variant="outline" size="sm">
+            <Buttonvariant="secondary" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>

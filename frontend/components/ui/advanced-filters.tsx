@@ -86,7 +86,7 @@ export function AdvancedFilters({
   return (
     <>
       <Button
-        variant="outline"
+       variant="secondary"
         onClick={() => setIsOpen(true)}
         className="relative"
       >
@@ -128,7 +128,7 @@ export function AdvancedFilters({
                     {quickFilters.map((quickFilter) => (
                       <Button
                         key={quickFilter.value}
-                        variant="outline"
+                       variant="secondary"
                         size="sm"
                         onClick={() => handleQuickFilter(quickFilter)}
                         className="text-xs h-8"
@@ -266,10 +266,10 @@ export function AdvancedFilters({
           <DialogFooter className="border-t pt-4 mt-4">
             <div className="flex justify-between w-full">
               <div className="flex gap-2">
-                <Button variant="outline" onClick={handleReset} type="button">
+                <Buttonvariant="secondary" onClick={handleReset} type="button">
                   Reset
                 </Button>
-                <Button variant="outline" onClick={handleClear} type="button">
+                <Buttonvariant="secondary" onClick={handleClear} type="button">
                   Clear All
                 </Button>
               </div>

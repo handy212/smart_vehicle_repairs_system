@@ -114,7 +114,7 @@ export default function NewTemplatePage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href="/inspections/templates">
-          <Button variant="outline" size="icon">
+          <Buttonvariant="secondary" size="icon">
             <ArrowLeft className="w-4 h-4" />
           </Button>
         </Link>
@@ -256,7 +256,7 @@ export default function NewTemplatePage() {
 
             <div className="flex justify-end space-x-2 pt-4 border-t">
               <Link href="/inspections/templates">
-                <Button type="button" variant="outline">
+                <Button type="button"variant="secondary">
                   Cancel
                 </Button>
               </Link>

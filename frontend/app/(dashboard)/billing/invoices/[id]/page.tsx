@@ -147,7 +147,7 @@ export default function InvoiceDetailPage() {
   if (error || !invoice) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => router.back()}>
+        <Buttonvariant="secondary" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
@@ -211,7 +211,7 @@ export default function InvoiceDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={() => router.back()} className="no-print">
+          <Buttonvariant="secondary" onClick={() => router.back()} className="no-print">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -236,7 +236,7 @@ export default function InvoiceDetailPage() {
         </div>
         <div className="relative no-print">
           <Button
-            variant="outline"
+           variant="secondary"
             onClick={() => setShowActionsMenu(!showActionsMenu)}
             className="gap-2"
           >

@@ -201,7 +201,7 @@ export default function ChangePasswordPage() {
               <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <Button
                   type="button"
-                  variant="outline"
+                 variant="secondary"
                   onClick={() => router.back()}
                   disabled={isSubmitting || changePasswordMutation.isPending}
                 >

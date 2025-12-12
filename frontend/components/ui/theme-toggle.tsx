@@ -9,7 +9,7 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <Button variant="outline" size="sm" className="w-9 h-9 p-0" disabled>
+      <Buttonvariant="secondary" size="sm" className="w-9 h-9 p-0" disabled>
         <Sun className="h-4 w-4" />
       </Button>
     );
@@ -56,7 +56,7 @@ export function ThemeToggle() {
   return (
     <Button
       type="button"
-      variant="outline"
+     variant="secondary"
       size="sm"
       className="w-9 h-9 p-0"
       onClick={(e) => {

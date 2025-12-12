@@ -47,7 +47,7 @@ export function BulkActionToolbar({
         <div className="flex items-center gap-2">
           {showBulkSend && onBulkSend && (
             <Button
-              variant="outline"
+             variant="secondary"
               size="sm"
               onClick={onBulkSend}
               className="h-8"
@@ -58,7 +58,7 @@ export function BulkActionToolbar({
           )}
           {showStatusUpdate && onBulkStatusUpdate && (
             <Button
-              variant="outline"
+             variant="secondary"
               size="sm"
               onClick={onBulkStatusUpdate}
               className="h-8"
@@ -69,7 +69,7 @@ export function BulkActionToolbar({
           )}
           {onBulkDelete && (
             <Button
-              variant="outline"
+             variant="secondary"
               size="sm"
               onClick={onBulkDelete}
               className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"

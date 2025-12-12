@@ -297,7 +297,7 @@ export default function EditCustomerPage() {
     return (
       <div className="space-y-4 dark:bg-gray-900 min-h-screen p-6">
         <Link href="/customers">
-          <Button variant="outline" className="dark:border-gray-700 dark:text-gray-200">
+          <Buttonvariant="secondary" className="dark:border-gray-700 dark:text-gray-200">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -316,7 +316,7 @@ export default function EditCustomerPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href={`/customers/${customerId}`}>
-            <Button variant="outline" className="dark:border-gray-700 dark:text-gray-200">
+            <Buttonvariant="secondary" className="dark:border-gray-700 dark:text-gray-200">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -330,7 +330,7 @@ export default function EditCustomerPage() {
         </div>
         <div className="flex space-x-4">
           <Link href={`/customers/${customerId}`}>
-            <Button variant="outline" className="dark:border-gray-700 dark:text-gray-200">
+            <Buttonvariant="secondary" className="dark:border-gray-700 dark:text-gray-200">
               Cancel
             </Button>
           </Link>
@@ -580,7 +580,7 @@ export default function EditCustomerPage() {
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
                       type="button"
-                      variant="outline"
+                     variant="secondary"
                       onClick={() => {
                         const sendEmail = window.confirm("Send welcome email with login details?");
                         grantPortalAccessMutation.mutate({ sendEmail });
@@ -606,7 +606,7 @@ export default function EditCustomerPage() {
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Button
                         type="button"
-                        variant="outline"
+                       variant="secondary"
                         onClick={() => setShowPasswordReset(true)}
                         className="dark:border-gray-600 dark:text-gray-300 flex-1"
                       >
@@ -615,7 +615,7 @@ export default function EditCustomerPage() {
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
+                       variant="secondary"
                         onClick={() => sendResetLinkMutation.mutate()}
                         disabled={sendResetLinkMutation.isPending}
                         className="dark:border-gray-600 dark:text-gray-300 flex-1"
@@ -634,7 +634,7 @@ export default function EditCustomerPage() {
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
+                       variant="secondary"
                         onClick={() => {
                           if (window.confirm("Are you sure you want to revoke portal access? The customer will not be able to log in.")) {
                             revokePortalAccessMutation.mutate();
@@ -684,7 +684,7 @@ export default function EditCustomerPage() {
                             </div>
                             <Button
                               type="button"
-                              variant="outline"
+                             variant="secondary"
                               onClick={generatePassword}
                               className="dark:border-gray-600 dark:text-gray-300"
                               title="Generate secure password"
@@ -694,7 +694,7 @@ export default function EditCustomerPage() {
                             {newPassword && (
                               <Button
                                 type="button"
-                                variant="outline"
+                               variant="secondary"
                                 onClick={handleCopyPassword}
                                 className="dark:border-gray-600 dark:text-gray-300"
                                 title="Copy password"
@@ -721,7 +721,7 @@ export default function EditCustomerPage() {
                         <div className="flex gap-3">
                           <Button
                             type="button"
-                            variant="outline"
+                           variant="secondary"
                             onClick={() => {
                               setShowPasswordReset(false);
                               setNewPassword("");

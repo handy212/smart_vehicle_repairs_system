@@ -159,7 +159,7 @@ export default function AddNoteDialog({ workOrderId, open, onClose, onSuccess }:
           </div>
         </form>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button"variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>

@@ -338,7 +338,7 @@ export default function EstimatesPage() {
         <div className="flex items-center space-x-2">
           <div className="relative">
             <Button
-              variant="outline"
+             variant="secondary"
               onClick={() => setShowActionsMenu(!showActionsMenu)}
               className="dark:border-gray-700 dark:text-gray-200"
             >
@@ -700,7 +700,7 @@ export default function EstimatesPage() {
               <p className="text-gray-500">No estimates found.</p>
               <PermissionGuard permission="create_estimates">
                 <Link href="/billing/estimates/new">
-                  <Button className="mt-4" variant="outline">
+                  <Button className="mt-4"variant="secondary">
                     <Plus className="w-4 h-4 mr-2" />
                     Create First Estimate
                   </Button>
@@ -832,7 +832,7 @@ export default function EstimatesPage() {
               </div>
               <div className="flex space-x-2">
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!data.previous}
@@ -840,7 +840,7 @@ export default function EstimatesPage() {
                   Previous
                 </Button>
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!data.next}

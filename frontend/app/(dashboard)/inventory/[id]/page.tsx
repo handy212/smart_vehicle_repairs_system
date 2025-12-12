@@ -34,7 +34,7 @@ export default function PartDetailPage() {
   if (error || !part) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => router.back()}>
+        <Buttonvariant="secondary" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
@@ -60,7 +60,7 @@ export default function PartDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={() => router.back()}>
+          <Buttonvariant="secondary" onClick={() => router.back()}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -70,7 +70,7 @@ export default function PartDetailPage() {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={() => setShowAdjustDialog(true)}>
+          <Buttonvariant="secondary" onClick={() => setShowAdjustDialog(true)}>
             Adjust Stock
           </Button>
           <Link href={`/inventory/${partId}/edit`}>
@@ -297,11 +297,11 @@ export default function PartDetailPage() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button className="w-full" variant="outline" onClick={() => setShowAdjustDialog(true)}>
+              <Button className="w-full"variant="secondary" onClick={() => setShowAdjustDialog(true)}>
                 Adjust Stock
               </Button>
               <Link href={`/inventory/${partId}/edit`} className="block">
-                <Button className="w-full" variant="outline">
+                <Button className="w-full"variant="secondary">
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Part
                 </Button>

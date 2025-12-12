@@ -213,7 +213,7 @@ export default function MyInvoicesPage() {
                         </Link>
                       )}
                       <Link href={`/portal/invoices/${invoice.id}`}>
-                        <Button variant="outline" size="sm">
+                        <Buttonvariant="secondary" size="sm">
                           <Download className="w-4 h-4 mr-1" />
                           View
                         </Button>

@@ -187,7 +187,7 @@ export function ImportDialog({
                 </div>
               </div>
               <Button
-                variant="outline"
+               variant="secondary"
                 size="sm"
                 onClick={handleDownloadTemplate}
                 type="button"
@@ -211,7 +211,7 @@ export function ImportDialog({
                 className="hidden"
               />
               <Button
-                variant="outline"
+               variant="secondary"
                 onClick={() => fileInputRef.current?.click()}
                 type="button"
                 className="flex-1"
@@ -229,7 +229,7 @@ export function ImportDialog({
                   <div className="mt-2">
                     <Button
                       type="button"
-                      variant="outline"
+                     variant="secondary"
                       size="sm"
                       onClick={() => setShowPreview(!showPreview)}
                       className="w-full"
@@ -335,7 +335,7 @@ export function ImportDialog({
         </div>
 
         <DialogFooter className="border-t pt-4 mt-4">
-          <Button variant="outline" onClick={handleClose} type="button" disabled={isImporting}>
+          <Buttonvariant="secondary" onClick={handleClose} type="button" disabled={isImporting}>
             {result ? "Close" : "Cancel"}
           </Button>
           {!result && (

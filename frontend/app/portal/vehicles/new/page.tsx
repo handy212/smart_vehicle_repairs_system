@@ -149,7 +149,7 @@ export default function AddVehiclePage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href="/portal/vehicles">
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -308,7 +308,7 @@ export default function AddVehiclePage() {
             {/* Submit Buttons */}
             <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <Link href="/portal/vehicles">
-                <Button type="button" variant="outline" disabled={isSubmitting}>
+                <Button type="button"variant="secondary" disabled={isSubmitting}>
                   Cancel
                 </Button>
               </Link>

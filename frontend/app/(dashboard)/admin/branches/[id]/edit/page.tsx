@@ -354,7 +354,7 @@ export default function BranchEditPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 mt-6">
-            <Button type="button" variant="outline" onClick={() => router.back()}>
+            <Button type="button"variant="secondary" onClick={() => router.back()}>
               <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>

@@ -274,7 +274,7 @@ export default function RecordPaymentDialog({
           </div>
         </form>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button"variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button 

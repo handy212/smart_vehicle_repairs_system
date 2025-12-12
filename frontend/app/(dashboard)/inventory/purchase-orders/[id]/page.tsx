@@ -120,7 +120,7 @@ export default function PurchaseOrderDetailPage() {
       <div className="text-center py-12">
         <p className="text-gray-500">Purchase order not found.</p>
         <Link href="/inventory/purchase-orders">
-          <Button className="mt-4" variant="outline">
+          <Button className="mt-4"variant="secondary">
             Back to Purchase Orders
           </Button>
         </Link>
@@ -138,7 +138,7 @@ export default function PurchaseOrderDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/inventory/purchase-orders">
-            <Button variant="outline">
+            <Buttonvariant="secondary">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -154,7 +154,7 @@ export default function PurchaseOrderDetailPage() {
           {purchaseOrder.status === "draft" && (
             <>
               <Link href={`/inventory/purchase-orders/${id}/edit`}>
-                <Button variant="outline">
+                <Buttonvariant="secondary">
                   <Edit className="w-4 h-4 mr-2" />
                   Edit
                 </Button>

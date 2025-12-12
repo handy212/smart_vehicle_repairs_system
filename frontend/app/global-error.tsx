@@ -53,7 +53,7 @@ export default function GlobalError({
                   onClick={() => {
                     window.location.href = "/login";
                   }}
-                  variant="outline"
+                 variant="secondary"
                   className="w-full"
                 >
                   Go to Login

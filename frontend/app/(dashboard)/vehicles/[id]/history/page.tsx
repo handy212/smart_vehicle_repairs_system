@@ -47,7 +47,7 @@ export default function VehicleHistoryPage() {
       <div className="text-center py-12">
         <p className="text-gray-500 dark:text-gray-400">Vehicle not found.</p>
         <Link href="/vehicles">
-          <Button className="mt-4" variant="outline">
+          <Button className="mt-4"variant="secondary">
             Back to Vehicles
           </Button>
         </Link>
@@ -126,7 +126,7 @@ export default function VehicleHistoryPage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href={`/vehicles/${id}`}>
-          <Button variant="outline">
+          <Buttonvariant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Vehicle
           </Button>

@@ -207,7 +207,7 @@ export default function EmailTemplatesPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin/settings">
-            <Button variant="outline" size="sm">
+            <Buttonvariant="secondary" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -269,7 +269,7 @@ export default function EmailTemplatesPage() {
 
             {(search || typeFilter) && (
               <Button
-                variant="outline"
+               variant="secondary"
                 onClick={() => {
                   setSearch("");
                   setTypeFilter("");
@@ -351,7 +351,7 @@ export default function EmailTemplatesPage() {
                   </span>
                   <div className="flex items-center gap-2">
                     <Button
-                      variant="outline"
+                     variant="secondary"
                       size="sm"
                       onClick={() => handlePreview(template)}
                       className="h-8 px-3"
@@ -598,7 +598,7 @@ export default function EmailTemplatesPage() {
             <DialogFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
               <div className="flex items-center justify-between w-full">
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   onClick={() => {
                     setCreatingTemplate(false);
                     setEditForm({});
@@ -790,7 +790,7 @@ export default function EmailTemplatesPage() {
             
             <DialogFooter className="border-t border-gray-200 dark:border-gray-800 px-6 py-4 bg-gray-50 dark:bg-gray-900/50">
               <Button 
-                variant="outline" 
+               variant="secondary" 
                 onClick={() => setEditingTemplate(null)}
                 className="h-10"
               >
@@ -939,7 +939,7 @@ export default function EmailTemplatesPage() {
             
             <DialogFooter className="border-t border-gray-200 dark:border-gray-800 px-6 py-4 bg-gray-50 dark:bg-gray-900/50">
               <Button 
-                variant="outline" 
+               variant="secondary" 
                 onClick={() => setPreviewTemplate(null)}
                 className="h-10"
               >

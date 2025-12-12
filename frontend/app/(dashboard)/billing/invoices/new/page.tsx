@@ -263,7 +263,7 @@ export default function NewInvoicePage() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/billing">
-          <Button variant="outline" size="sm">
+          <Buttonvariant="secondary" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
@@ -578,7 +578,7 @@ export default function NewInvoicePage() {
                     {isSubmitting ? "Creating..." : "Create Invoice"}
                   </Button>
                   <Link href="/billing">
-                    <Button type="button" variant="outline" className="w-full">
+                    <Button type="button"variant="secondary" className="w-full">
                       Cancel
                     </Button>
                   </Link>

@@ -256,7 +256,7 @@ export default function SystemSettingsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin">
-            <Button variant="outline">
+            <Buttonvariant="secondary">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -540,7 +540,7 @@ export default function SystemSettingsPage() {
                                   />
                                   <Button
                                     type="button"
-                                    variant="outline"
+                                   variant="secondary"
                                     size="sm"
                                     onClick={() => {
                                       const input = document.createElement('input');
@@ -750,7 +750,7 @@ export default function SystemSettingsPage() {
                             ) : (
                               <>
                                 <Button
-                                  variant="outline"
+                                 variant="secondary"
                                   size="sm"
                                   onClick={() => {
                                     // Focus the input to enable editing

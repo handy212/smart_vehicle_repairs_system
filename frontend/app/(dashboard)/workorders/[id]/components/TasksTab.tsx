@@ -232,7 +232,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
               {task.status === "pending" && (
                 <Button
                   size="sm"
-                  variant="outline"
+                 variant="secondary"
                   onClick={() => handleStartTask(task.id)}
                   disabled={startTaskMutation.isPending}
                 >
@@ -243,7 +243,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
               {task.status === "in_progress" && (
                 <Button
                   size="sm"
-                  variant="outline"
+                 variant="secondary"
                   onClick={() => handleCompleteTask(task.id)}
                   disabled={completeTaskMutation.isPending}
                 >
@@ -358,7 +358,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
                 <p className="text-sm text-gray-500 mb-4">
                   Add custom tasks for specific repair work that needs to be performed.
                 </p>
-                <Button onClick={() => setShowAddDialog(true)} variant="outline">
+                <Button onClick={() => setShowAddDialog(true)}variant="secondary">
                   <Plus className="w-4 h-4 mr-2" />
                   Add First Task
                 </Button>

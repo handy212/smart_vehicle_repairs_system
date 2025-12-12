@@ -66,7 +66,7 @@ export function ColumnVisibility({
   return (
     <>
       <Button
-        variant="outline"
+       variant="secondary"
         size="sm"
         onClick={() => {
           setLocalVisibleColumns(visibleColumns);
@@ -148,11 +148,11 @@ export function ColumnVisibility({
 
           <DialogFooter>
             <div className="flex justify-between w-full">
-              <Button variant="outline" onClick={handleReset} type="button">
+              <Buttonvariant="secondary" onClick={handleReset} type="button">
                 Reset to Default
               </Button>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsOpen(false)} type="button">
+                <Buttonvariant="secondary" onClick={() => setIsOpen(false)} type="button">
                   Cancel
                 </Button>
                 <Button onClick={handleApply} type="button">

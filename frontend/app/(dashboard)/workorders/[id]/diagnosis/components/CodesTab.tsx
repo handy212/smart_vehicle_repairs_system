@@ -459,7 +459,7 @@ function CodeDialog({
                   </div>
                   <Button
                     type="button"
-                    variant="outline"
+                   variant="secondary"
                     onClick={handleLookupCode}
                     disabled={!formData.code_number || isSearchingLibrary}
                     title="Lookup code in library (210+ codes available)"
@@ -590,7 +590,7 @@ function CodeDialog({
           </div>
 
           <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button"variant="secondary" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading || isDuplicate}>

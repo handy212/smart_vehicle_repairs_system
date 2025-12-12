@@ -286,7 +286,7 @@ export default function RolesPage() {
               <p className="text-gray-500 dark:text-gray-400">No roles found.</p>
               {search && (
                 <Button
-                  variant="outline"
+                 variant="secondary"
                   className="mt-4"
                   onClick={() => setSearch("")}
                 >
@@ -668,7 +668,7 @@ function RoleDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button"variant="secondary" onClick={onClose}>
               Cancel
             </Button>
             <Button
@@ -845,7 +845,7 @@ function PermissionsDialog({
             </Select>
             <Button
               type="button"
-              variant="outline"
+             variant="secondary"
               size="sm"
               onClick={toggleAll}
             >
@@ -961,7 +961,7 @@ function PermissionsDialog({
               {selectedCount} of {totalCount} permissions selected
             </div>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button"variant="secondary" onClick={onClose}>
                 Cancel
               </Button>
               <Button

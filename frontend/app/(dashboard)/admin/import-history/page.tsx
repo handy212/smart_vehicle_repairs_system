@@ -96,11 +96,11 @@ export default function ImportHistoryPage() {
           <p className="mt-1 text-sm text-gray-500">View and track all CSV import operations</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" onClick={() => refetch()}>
+          <Button variant="secondary" onClick={() => refetch()}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
-          <Button variant="outline" onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
+          <Button variant="secondary" onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
             <Download className="w-4 h-4 mr-2" />
             Export CSV
           </Button>
@@ -138,7 +138,7 @@ export default function ImportHistoryPage() {
             </div>
             <div className="flex items-end">
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={() => {
                   setModelFilter("");
                   setStartDate("");
@@ -237,14 +237,14 @@ export default function ImportHistoryPage() {
                   </p>
                   <div className="flex items-center space-x-2">
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={!data.previous}
                     >
                       Previous
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       onClick={() => setPage((p) => p + 1)}
                       disabled={!data.next}
                     >

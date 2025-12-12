@@ -266,7 +266,7 @@ export default function CustomerDetailPage() {
   if (error || !customer) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => router.back()}>
+        <Button variant="secondary" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
@@ -316,7 +316,7 @@ export default function CustomerDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={() => router.back()} className="dark:border-gray-700 dark:text-gray-200">
+          <Button variant="secondary" onClick={() => router.back()} className="dark:border-gray-700 dark:text-gray-200">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -501,7 +501,7 @@ export default function CustomerDetailPage() {
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="secondary"
                         onClick={() => {
                           const sendEmail = window.confirm("Send welcome email with login details?");
                           grantPortalAccessMutation.mutate({ sendEmail });
@@ -527,7 +527,7 @@ export default function CustomerDetailPage() {
                       <div className="flex flex-col sm:flex-row gap-3">
                         <Button
                           type="button"
-                          variant="outline"
+                          variant="secondary"
                           onClick={() => setShowPasswordReset(true)}
                           className="dark:border-gray-600 dark:text-gray-300 flex-1"
                         >
@@ -536,7 +536,7 @@ export default function CustomerDetailPage() {
                         </Button>
                         <Button
                           type="button"
-                          variant="outline"
+                          variant="secondary"
                           onClick={() => sendResetLinkMutation.mutate()}
                           disabled={sendResetLinkMutation.isPending}
                           className="dark:border-gray-600 dark:text-gray-300 flex-1"
@@ -555,7 +555,7 @@ export default function CustomerDetailPage() {
                         </Button>
                         <Button
                           type="button"
-                          variant="outline"
+                          variant="secondary"
                           onClick={() => {
                             if (window.confirm("Are you sure you want to revoke portal access? The customer will not be able to log in.")) {
                               revokePortalAccessMutation.mutate();
@@ -605,7 +605,7 @@ export default function CustomerDetailPage() {
                               </div>
                               <Button
                                 type="button"
-                                variant="outline"
+                                variant="secondary"
                                 onClick={generatePassword}
                                 className="dark:border-gray-600 dark:text-gray-300"
                                 title="Generate secure password"
@@ -615,7 +615,7 @@ export default function CustomerDetailPage() {
                               {newPassword && (
                                 <Button
                                   type="button"
-                                  variant="outline"
+                                  variant="secondary"
                                   onClick={handleCopyPassword}
                                   className="dark:border-gray-600 dark:text-gray-300"
                                   title="Copy password"
@@ -642,7 +642,7 @@ export default function CustomerDetailPage() {
                           <div className="flex gap-3">
                             <Button
                               type="button"
-                              variant="outline"
+                              variant="secondary"
                               onClick={() => {
                                 setShowPasswordReset(false);
                                 setNewPassword("");
@@ -729,19 +729,19 @@ export default function CustomerDetailPage() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <Link href={`/vehicles/new?customer=${customerId}`} className="block">
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="secondary" className="w-full justify-start">
                       <Package className="w-4 h-4 mr-2" />
                       Add Vehicle
                     </Button>
                   </Link>
                   <Link href={`/appointments/new?customer=${customerId}`} className="block">
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="secondary" className="w-full justify-start">
                       <Calendar className="w-4 h-4 mr-2" />
                       Schedule Appointment
                     </Button>
                   </Link>
                   <Link href={`/workorders/new?customer=${customerId}`} className="block">
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="secondary" className="w-full justify-start">
                       <DollarSign className="w-4 h-4 mr-2" />
                       Create Work Order
                     </Button>
@@ -1292,7 +1292,7 @@ export default function CustomerDetailPage() {
             </div>
           </form>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsNoteDialogOpen(false)}>
+            <Button type="button" variant="secondary" onClick={() => setIsNoteDialogOpen(false)}>
               Cancel
             </Button>
             <Button
