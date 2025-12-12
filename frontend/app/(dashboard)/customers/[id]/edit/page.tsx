@@ -297,7 +297,7 @@ export default function EditCustomerPage() {
     return (
       <div className="space-y-4 dark:bg-gray-900 min-h-screen p-6">
         <Link href="/customers">
-          <Buttonvariant="secondary" className="dark:border-gray-700 dark:text-gray-200">
+          <Button variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -316,7 +316,7 @@ export default function EditCustomerPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href={`/customers/${customerId}`}>
-            <Buttonvariant="secondary" className="dark:border-gray-700 dark:text-gray-200">
+            <Button variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -330,7 +330,7 @@ export default function EditCustomerPage() {
         </div>
         <div className="flex space-x-4">
           <Link href={`/customers/${customerId}`}>
-            <Buttonvariant="secondary" className="dark:border-gray-700 dark:text-gray-200">
+            <Button variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
               Cancel
             </Button>
           </Link>

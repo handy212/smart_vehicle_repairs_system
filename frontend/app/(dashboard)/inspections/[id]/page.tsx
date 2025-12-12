@@ -96,7 +96,7 @@ export default function InspectionDetailPage() {
       <div className="text-center py-12">
         <p className="text-gray-500">Inspection not found</p>
         <Link href="/inspections">
-          <Buttonvariant="secondary" className="mt-4">
+          <Button variant="secondary" className="mt-4">
             Back to Inspections
           </Button>
         </Link>
@@ -122,7 +122,7 @@ export default function InspectionDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/inspections">
-            <Buttonvariant="secondary" size="icon">
+            <Button variant="secondary" size="icon">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>

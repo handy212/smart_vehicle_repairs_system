@@ -148,11 +148,11 @@ export function ColumnVisibility({
 
           <DialogFooter>
             <div className="flex justify-between w-full">
-              <Buttonvariant="secondary" onClick={handleReset} type="button">
+              <Button variant="secondary" onClick={handleReset} type="button">
                 Reset to Default
               </Button>
               <div className="flex gap-2">
-                <Buttonvariant="secondary" onClick={() => setIsOpen(false)} type="button">
+                <Button variant="secondary" onClick={() => setIsOpen(false)} type="button">
                   Cancel
                 </Button>
                 <Button onClick={handleApply} type="button">

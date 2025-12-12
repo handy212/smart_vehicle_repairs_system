@@ -266,7 +266,7 @@ export default function EditWorkOrderPage() {
     return (
       <div className="space-y-4">
         <Link href="/workorders">
-          <Buttonvariant="secondary">
+          <Button variant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -284,7 +284,7 @@ export default function EditWorkOrderPage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href={`/workorders/${workOrderId}`}>
-          <Buttonvariant="secondary">
+          <Button variant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>

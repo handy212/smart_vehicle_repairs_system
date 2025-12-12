@@ -333,7 +333,7 @@ export default function PortalHomePage() {
                 <span>Upcoming Appointments</span>
               </CardTitle>
               <Link href="/portal/appointments">
-                <Buttonvariant="secondary" size="sm">
+                <Button variant="secondary" size="sm">
                   View All
                 </Button>
               </Link>
@@ -361,7 +361,7 @@ export default function PortalHomePage() {
                 <span>Action Required</span>
               </CardTitle>
               <Link href="/portal/invoices">
-                <Buttonvariant="secondary" size="sm">
+                <Button variant="secondary" size="sm">
                   View Invoices
                 </Button>
               </Link>

@@ -256,7 +256,7 @@ export default function SystemSettingsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin">
-            <Buttonvariant="secondary">
+            <Button variant="secondary">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>

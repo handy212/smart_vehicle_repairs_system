@@ -319,7 +319,7 @@ export default function WorkOrderKanbanPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/workorders">
-            <Buttonvariant="secondary">
+            <Button variant="secondary">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to List
             </Button>

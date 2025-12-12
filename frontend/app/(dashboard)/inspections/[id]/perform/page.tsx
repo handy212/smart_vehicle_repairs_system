@@ -365,7 +365,7 @@ export default function PerformInspectionPage() {
       <div className="flex justify-between items-center">
         <div className="flex gap-3 items-center">
           <Link href={`/inspections/${inspectionId}`}>
-            <Buttonvariant="secondary" size="icon">
+            <Button variant="secondary" size="icon">
               <ArrowLeft />
             </Button>
           </Link>

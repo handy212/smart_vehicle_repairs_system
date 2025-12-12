@@ -9,7 +9,7 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <Buttonvariant="secondary" size="sm" className="w-9 h-9 p-0" disabled>
+      <Button variant="secondary" size="sm" className="w-9 h-9 p-0" disabled>
         <Sun className="h-4 w-4" />
       </Button>
     );

@@ -220,7 +220,7 @@ export default function ProfileSettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Link href="/portal/settings/password">
-                <Buttonvariant="secondary" className="w-full justify-start">
+                <Button variant="secondary" className="w-full justify-start">
                   <Lock className="w-4 h-4 mr-2" />
                   Change Password
                 </Button>

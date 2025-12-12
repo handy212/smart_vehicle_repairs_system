@@ -165,7 +165,7 @@ export default function EditTemplatePage() {
       <div className="text-center py-12">
         <p className="text-red-500">Invalid template ID</p>
         <Link href="/inspections/templates">
-          <Buttonvariant="secondary" className="mt-4">
+          <Button variant="secondary" className="mt-4">
             Back to Templates
           </Button>
         </Link>
@@ -186,7 +186,7 @@ export default function EditTemplatePage() {
       <div className="text-center py-12">
         <p className="text-gray-500">Template not found</p>
         <Link href="/inspections/templates">
-          <Buttonvariant="secondary" className="mt-4">
+          <Button variant="secondary" className="mt-4">
             Back to Templates
           </Button>
         </Link>
@@ -198,7 +198,7 @@ export default function EditTemplatePage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href={`/inspections/templates/${templateId}`}>
-          <Buttonvariant="secondary" size="icon">
+          <Button variant="secondary" size="icon">
             <ArrowLeft className="w-4 h-4" />
           </Button>
         </Link>

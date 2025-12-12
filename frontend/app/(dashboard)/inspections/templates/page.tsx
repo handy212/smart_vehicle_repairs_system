@@ -34,7 +34,7 @@ export default function InspectionTemplatesPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/inspections">
-            <Buttonvariant="secondary" size="icon">
+            <Button variant="secondary" size="icon">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>

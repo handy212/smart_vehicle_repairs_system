@@ -346,7 +346,7 @@ export default function EditInvoicePage() {
     return (
       <div className="space-y-4">
         <Link href="/billing">
-          <Buttonvariant="secondary">
+          <Button variant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -366,7 +366,7 @@ export default function EditInvoicePage() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href={`/billing/invoices/${invoiceId}`}>
-          <Buttonvariant="secondary" size="sm">
+          <Button variant="secondary" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>

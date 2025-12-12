@@ -114,7 +114,7 @@ export default function NewTemplatePage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href="/inspections/templates">
-          <Buttonvariant="secondary" size="icon">
+          <Button variant="secondary" size="icon">
             <ArrowLeft className="w-4 h-4" />
           </Button>
         </Link>

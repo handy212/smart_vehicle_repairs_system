@@ -131,7 +131,7 @@ export default function EstimateDetailPage() {
               Decline
             </Button>
           )}
-          <Buttonvariant="secondary" onClick={handleDownload}>
+          <Button variant="secondary" onClick={handleDownload}>
             <Download className="w-4 h-4 mr-2" />
             Download PDF
           </Button>

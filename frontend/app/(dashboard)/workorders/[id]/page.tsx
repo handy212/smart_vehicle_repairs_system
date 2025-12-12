@@ -206,7 +206,7 @@ export default function WorkOrderDetailPage() {
   if (error || !workOrder) {
     return (
       <div className="space-y-4">
-        <Buttonvariant="secondary" onClick={() => router.back()}>
+        <Button variant="secondary" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
@@ -248,7 +248,7 @@ export default function WorkOrderDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Buttonvariant="secondary" onClick={() => router.back()}>
+          <Button variant="secondary" onClick={() => router.back()}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>

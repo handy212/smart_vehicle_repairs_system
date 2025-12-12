@@ -128,7 +128,7 @@ export default function AppointmentDetailPage() {
         <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
         <p className="text-gray-600 dark:text-gray-400">Appointment not found</p>
         <Link href="/portal/appointments">
-          <Buttonvariant="secondary" className="mt-4">
+          <Button variant="secondary" className="mt-4">
             Back to Appointments
           </Button>
         </Link>
@@ -163,7 +163,7 @@ export default function AppointmentDetailPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/portal/appointments">
-            <Buttonvariant="secondary" size="sm">
+            <Button variant="secondary" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
@@ -288,7 +288,7 @@ export default function AppointmentDetailPage() {
                   )}
                 </div>
                 <Link href={`/portal/vehicles/${appointment.vehicle}`}>
-                  <Buttonvariant="secondary" size="sm">
+                  <Button variant="secondary" size="sm">
                     View Vehicle
                   </Button>
                 </Link>
@@ -421,7 +421,7 @@ export default function AppointmentDetailPage() {
             </div>
           </div>
           <DialogFooter>
-            <Buttonvariant="secondary" onClick={() => setShowCancelDialog(false)}>
+            <Button variant="secondary" onClick={() => setShowCancelDialog(false)}>
               Keep Appointment
             </Button>
             <Button
@@ -468,7 +468,7 @@ export default function AppointmentDetailPage() {
             </div>
           </div>
           <DialogFooter>
-            <Buttonvariant="secondary" onClick={() => setShowRescheduleDialog(false)}>
+            <Button variant="secondary" onClick={() => setShowRescheduleDialog(false)}>
               Cancel
             </Button>
             <Button

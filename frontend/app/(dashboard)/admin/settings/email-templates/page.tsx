@@ -207,7 +207,7 @@ export default function EmailTemplatesPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin/settings">
-            <Buttonvariant="secondary" size="sm">
+            <Button variant="secondary" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>

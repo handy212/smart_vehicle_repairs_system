@@ -335,7 +335,7 @@ export function ImportDialog({
         </div>
 
         <DialogFooter className="border-t pt-4 mt-4">
-          <Buttonvariant="secondary" onClick={handleClose} type="button" disabled={isImporting}>
+          <Button variant="secondary" onClick={handleClose} type="button" disabled={isImporting}>
             {result ? "Close" : "Cancel"}
           </Button>
           {!result && (

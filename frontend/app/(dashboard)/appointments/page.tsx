@@ -356,7 +356,7 @@ export default function AppointmentsPage() {
             )}
           </div>
           <Link href="/appointments/calendar">
-            <Buttonvariant="secondary">
+            <Button variant="secondary">
               <CalendarDays className="w-4 h-4 mr-2" />
               Calendar View
             </Button>

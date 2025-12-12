@@ -345,7 +345,7 @@ export default function WorkOrdersPage() {
             )}
           </div>
           <Link href="/workorders/kanban">
-            <Buttonvariant="secondary">
+            <Button variant="secondary">
               <LayoutGrid className="w-4 h-4 mr-2" />
               Kanban View
             </Button>

@@ -315,7 +315,7 @@ export default function NewUserPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/admin/users">
-            <Buttonvariant="secondary" className="dark:border-gray-700 dark:text-gray-200">
+            <Button variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>

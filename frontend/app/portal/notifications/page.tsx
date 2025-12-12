@@ -312,7 +312,7 @@ export default function NotificationsPage() {
                           )}
                           {link && (
                             <Link href={link}>
-                              <Buttonvariant="secondary" size="sm">
+                              <Button variant="secondary" size="sm">
                                 View <ArrowRight className="w-4 h-4 ml-1" />
                               </Button>
                             </Link>

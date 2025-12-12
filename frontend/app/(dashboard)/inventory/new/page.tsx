@@ -144,7 +144,7 @@ export default function NewPartPage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href="/inventory">
-          <Buttonvariant="secondary">
+          <Button variant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>

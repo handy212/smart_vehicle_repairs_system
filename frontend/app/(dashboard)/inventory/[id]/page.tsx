@@ -34,7 +34,7 @@ export default function PartDetailPage() {
   if (error || !part) {
     return (
       <div className="space-y-4">
-        <Buttonvariant="secondary" onClick={() => router.back()}>
+        <Button variant="secondary" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
@@ -60,7 +60,7 @@ export default function PartDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Buttonvariant="secondary" onClick={() => router.back()}>
+          <Button variant="secondary" onClick={() => router.back()}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
@@ -70,7 +70,7 @@ export default function PartDetailPage() {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <Buttonvariant="secondary" onClick={() => setShowAdjustDialog(true)}>
+          <Button variant="secondary" onClick={() => setShowAdjustDialog(true)}>
             Adjust Stock
           </Button>
           <Link href={`/inventory/${partId}/edit`}>

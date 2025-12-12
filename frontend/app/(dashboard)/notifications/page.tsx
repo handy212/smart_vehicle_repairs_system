@@ -325,7 +325,7 @@ export default function NotificationsPage() {
             </Button>
           )}
           <Link href="/notifications/preferences">
-            <Buttonvariant="secondary">
+            <Button variant="secondary">
               <Settings className="w-4 h-4 mr-2" />
               Preferences
             </Button>

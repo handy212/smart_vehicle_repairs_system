@@ -266,10 +266,10 @@ export function AdvancedFilters({
           <DialogFooter className="border-t pt-4 mt-4">
             <div className="flex justify-between w-full">
               <div className="flex gap-2">
-                <Buttonvariant="secondary" onClick={handleReset} type="button">
+                <Button variant="secondary" onClick={handleReset} type="button">
                   Reset
                 </Button>
-                <Buttonvariant="secondary" onClick={handleClear} type="button">
+                <Button variant="secondary" onClick={handleClear} type="button">
                   Clear All
                 </Button>
               </div>

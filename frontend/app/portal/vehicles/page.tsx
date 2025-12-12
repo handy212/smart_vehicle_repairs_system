@@ -88,7 +88,7 @@ export default function MyVehiclesPage() {
                 </Button>
               </Link>
               <Link href="/portal/book">
-                <Buttonvariant="secondary">
+                <Button variant="secondary">
                   Book Appointment
                 </Button>
               </Link>

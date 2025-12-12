@@ -68,7 +68,7 @@ export default function InspectionsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Link href="/inspections/templates">
-            <Buttonvariant="secondary">
+            <Button variant="secondary">
               <FileText className="w-4 h-4 mr-2" />
               Templates
             </Button>
