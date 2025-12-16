@@ -64,9 +64,15 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action == 'list' or self.action == 'retrieve':
+        if self.action in ['list', 'retrieve']:
+            # Allow customers to view their own appointments
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated()]
             return [IsAuthenticated(), HasPermission('view_appointments')]
         elif self.action == 'create':
+            # Allow customers to book appointments
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated()]
             return [IsAuthenticated(), HasPermission('create_appointments')]
         elif self.action in ['update', 'partial_update']:
             return [IsAuthenticated(), HasPermission('edit_appointments')]
@@ -139,6 +145,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Create appointment with branch assignment and created_by tracking"""
+        from apps.subscriptions.services import SubscriptionUsageService
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        
         request = self.request
         branch_id = request.data.get('branch') or request.data.get('branch_id')
         branch = resolve_branch(request, branch_id=branch_id)
@@ -156,7 +165,32 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import ValidationError
             raise ValidationError({'branch': 'A valid branch assignment is required. Please contact support.'})
         
-        serializer.save(branch=branch, created_by=request.user)
+        appointment = serializer.save(branch=branch, created_by=request.user)
+        
+        # Check for free inspection if service type is inspection
+        service_type = request.data.get('service_type', '').lower()
+        customer = appointment.customer
+        
+        if 'inspection' in service_type:
+            try:
+                has_allowance, subscription, remaining = SubscriptionUsageService.check_allowance(
+                    customer, 'free_inspections', 1
+                )
+                if has_allowance and subscription:
+                    SubscriptionUsageService.consume_allowance(
+                        subscription=subscription,
+                        usage_type='free_inspections',
+                        quantity_used=1,
+                        reference_type='appointment',
+                        reference_id=appointment.id,
+                        description=f'Free inspection appointment {appointment.appointment_number}',
+                        created_by=request.user
+                    )
+            except DjangoValidationError as e:
+                # Log but don't block appointment creation
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Subscription allowance check failed: {e}")
     
     @action(detail=True, methods=['post'])
     def confirm(self, request, pk=None):

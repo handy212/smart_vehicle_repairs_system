@@ -134,6 +134,11 @@ class Command(BaseCommand):
                 
                 # ==================== BILLING & PAYMENTS ====================
                 'view_billing': ('billing', 'View Billing', 'View billing and invoice information'),
+                'view_subscriptions': ('subscriptions', 'View Subscriptions', 'View customer subscriptions'),
+                'manage_subscriptions': ('subscriptions', 'Manage Subscriptions', 'Create, edit, and manage subscription packages'),
+                'create_subscriptions': ('subscriptions', 'Create Subscriptions', 'Create new subscriptions for customers'),
+                'cancel_subscriptions': ('subscriptions', 'Cancel Subscriptions', 'Cancel customer subscriptions'),
+                'record_usage': ('subscriptions', 'Record Usage', 'Record subscription usage/consumption'),
                 'create_invoices': ('billing', 'Create Invoices', 'Create customer invoices'),
                 'edit_invoices': ('billing', 'Edit Invoices', 'Edit invoice details'),
                 'delete_invoices': ('billing', 'Delete Invoices', 'Delete or void invoices'),

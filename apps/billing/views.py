@@ -132,7 +132,10 @@ class EstimateViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action == 'list' or self.action == 'retrieve':
+        # Allow customers to view their own estimates without billing permission
+        if self.action in ['list', 'retrieve']:
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated()]
             return [IsAuthenticated(), HasPermission('view_billing')]
         elif self.action == 'create':
             return [IsAuthenticated(), HasPermission('create_estimates')]
@@ -153,6 +156,12 @@ class EstimateViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter estimates by active branch from session"""
         queryset = super().get_queryset()
+        user = self.request.user
+
+        # Customers only see their own estimates
+        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            return queryset.filter(customer=user.customer_profile)
+        
         # Check if user wants to see all branches (for admins) or just active branch
         show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
         queryset = filter_queryset_for_user_branches(
@@ -734,7 +743,10 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action == 'list' or self.action == 'retrieve':
+        # Allow customers to view their own invoices without billing permission
+        if self.action in ['list', 'retrieve']:
+            if getattr(self.request.user, 'role', None) == 'customer':
+                return [IsAuthenticated()]
             return [IsAuthenticated(), HasPermission('view_billing')]
         elif self.action == 'create':
             return [IsAuthenticated(), HasPermission('create_invoices')]
@@ -756,6 +768,12 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter invoices by active branch from session"""
         queryset = super().get_queryset()
+        user = self.request.user
+
+        # Customers only see their own invoices
+        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            return queryset.filter(customer=user.customer_profile)
+
         # Check if user wants to see all branches (for admins) or just active branch
         show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
         queryset = filter_queryset_for_user_branches(

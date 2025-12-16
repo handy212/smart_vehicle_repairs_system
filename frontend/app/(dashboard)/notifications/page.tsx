@@ -47,17 +47,24 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [activeTab, setActiveTab] = useState<"notifications" | "activity">("notifications");
 
+  const hasAccessToken =
+    typeof window !== "undefined" && !!localStorage.getItem("access_token");
+
   const { data: notificationsData, isLoading } = useQuery({
     queryKey: ["notifications", filter],
     queryFn: () =>
       notificationsApi.list({
-        status: filter === "unread" ? "unread" : undefined,
+        // Backend `status` is a delivery lifecycle (pending/sent/delivered/failed/read).
+        // "Unread" is represented by `is_read=false`.
+        is_read: filter === "unread" ? false : undefined,
       }),
+    enabled: hasAccessToken,
   });
 
   const { data: unreadCountData } = useQuery({
     queryKey: ["notifications", "unread-count"],
     queryFn: () => notificationsApi.unreadCount(),
+    enabled: hasAccessToken,
     refetchInterval: 30000, // Refetch every 30 seconds for real-time updates
   });
 

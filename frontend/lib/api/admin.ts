@@ -359,6 +359,30 @@ export const adminApi = {
       const response = await apiClient.get("/accounts/admin/settings/public/branding/");
       return response.data;
     },
+    publicFirebase: async (): Promise<{
+      enabled: boolean;
+      apiKey: string;
+      projectId: string;
+      messagingSenderId: string;
+      appId: string;
+    }> => {
+      // Public endpoint that doesn't require authentication
+      const response = await apiClient.get("/accounts/admin/settings/public/firebase/");
+      return response.data;
+    },
+    publicIntegrations: async (): Promise<{
+      google_analytics_id?: string;
+      facebook_pixel_id?: string;
+      recaptcha_site_key?: string;
+      firebase_api_key?: string;
+      firebase_project_id?: string;
+      firebase_messaging_sender_id?: string;
+      firebase_app_id?: string;
+    }> => {
+      // Public endpoint that doesn't require authentication
+      const response = await apiClient.get("/accounts/admin/settings/public/integrations/");
+      return response.data;
+    },
 
     bulkUpdate: async (settings: Array<{ id: number; value?: string; description?: string; is_active?: boolean }>): Promise<{ message: string; updated_ids: number[] }> => {
       const response = await apiClient.post("/accounts/admin/settings/bulk_update/", {

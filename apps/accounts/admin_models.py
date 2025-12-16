@@ -2,6 +2,7 @@
 Admin and Settings Models for Smart Vehicle Repairs System
 """
 from django.db import models
+from django.db.utils import DatabaseError
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
@@ -66,7 +67,8 @@ class SystemSettings(models.Model):
         try:
             setting = cls.objects.get(key=key, is_active=True)
             return setting.value
-        except cls.DoesNotExist:
+        except (cls.DoesNotExist, DatabaseError):
+            # DatabaseError covers cases like missing table during initial migrate
             return default
     
     @classmethod

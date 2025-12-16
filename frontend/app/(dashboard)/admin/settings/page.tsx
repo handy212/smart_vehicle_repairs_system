@@ -40,6 +40,8 @@ export default function SystemSettingsPage() {
   const initialCategory = searchParams?.get("category") || "company";
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [showSecret, setShowSecret] = useState<Record<number, boolean>>({});
+  const [showIntegrationAdvanced, setShowIntegrationAdvanced] = useState(false);
+  const [showIntegrationKeys, setShowIntegrationKeys] = useState(false);
   const [rowEdits, setRowEdits] = useState<
     Record<number, Partial<Pick<SystemSetting, "value">>>
   >({});
@@ -243,6 +245,180 @@ export default function SystemSettingsPage() {
 
   const settings = settingsData?.results || [];
 
+  const recaptchaSettings =
+    selectedCategory === "integration"
+      ? settings.filter((s) => s.key.startsWith("recaptcha_"))
+      : [];
+
+  const firebaseSettings =
+    selectedCategory === "integration"
+      ? settings.filter((s) => s.key.startsWith("firebase_"))
+      : [];
+
+  const analyticsSettings =
+    selectedCategory === "integration"
+      ? settings.filter((s) =>
+          /(google_analytics|facebook_pixel|google_tag_manager|gtm|pixel)/i.test(s.key)
+        )
+      : [];
+
+  const analyticsSettingIds = new Set(analyticsSettings.map((s) => s.id));
+
+  const tableSettings =
+    selectedCategory === "integration"
+      ? settings.filter(
+          (s) =>
+            !s.key.startsWith("recaptcha_") &&
+            !s.key.startsWith("firebase_") &&
+            !analyticsSettingIds.has(s.id)
+        )
+      : settings;
+
+  const discardRowEdits = (id: number) => {
+    setRowEdits((prev) => {
+      const { [id]: _, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const humanizeKey = (key: string, prefix = "") => {
+    const cleaned = prefix && key.startsWith(prefix) ? key.slice(prefix.length) : key;
+    return cleaned.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  const isTruthy = (val: unknown) => {
+    if (typeof val === "boolean") return val;
+    const str = String(val ?? "").toLowerCase().trim();
+    return str === "true" || str === "1" || str === "yes" || str === "on";
+  };
+
+  const renderIntegrationField = (
+    setting: SystemSetting,
+    opts?: { prefix?: string; showKey?: boolean }
+  ) => {
+    const prefix = opts?.prefix ?? "";
+    const showKey = opts?.showKey ?? false;
+    const pendingChanges = !!rowEdits[setting.id];
+    const label = setting.display_name || humanizeKey(setting.key, prefix);
+    const value = getRowValue(setting);
+    const isEnabledToggle = setting.key.match(/(enabled)$/i);
+
+    return (
+      <div key={setting.id} className="py-4 first:pt-0 last:pb-0">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="font-medium text-gray-900 dark:text-gray-100">{label}</div>
+            {setting.description ? (
+              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {setting.description}
+              </div>
+            ) : null}
+            {showKey ? (
+              <div className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-2">
+                {setting.key}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-xs text-gray-500 dark:text-gray-400">Active</span>
+            <Checkbox
+              checked={setting.is_active}
+              onCheckedChange={(checked) => handleActiveToggle(setting, Boolean(checked))}
+              disabled={updateMutation.isPending}
+            />
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-start">
+          <div className="space-y-1">
+            {isEnabledToggle ? (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={isTruthy(value)}
+                  onCheckedChange={(checked) =>
+                    handleRowChange(setting, { value: checked ? "true" : "false" })
+                  }
+                />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {isTruthy(value) ? "Enabled" : "Disabled"}
+                </span>
+              </div>
+            ) : (
+              <div className="relative">
+                <Input
+                  data-setting-id={setting.id}
+                  type={setting.is_secret && !showSecret[setting.id] ? "password" : "text"}
+                  value={value}
+                  onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                  placeholder={setting.is_secret ? "Enter secret value" : "Enter value"}
+                  className={setting.is_secret ? "pr-9" : ""}
+                />
+                {setting.is_secret && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1/2 right-1 -translate-y-1/2 h-7 w-7"
+                    onClick={() => toggleSecretVisibility(setting.id)}
+                  >
+                    {showSecret[setting.id] ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {rowEdits[setting.id]?.value !== undefined &&
+              (() => {
+                const error = validateSetting(setting, rowEdits[setting.id]!.value || "");
+                return error ? (
+                  <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                ) : null;
+              })()}
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            {pendingChanges ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => discardRowEdits(setting.id)}
+                  disabled={updateMutation.isPending}
+                >
+                  Discard
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={
+                    updateMutation.isPending ||
+                    (() => {
+                      const error =
+                        rowEdits[setting.id]?.value !== undefined
+                          ? validateSetting(setting, rowEdits[setting.id]!.value || "")
+                          : null;
+                      return !!error;
+                    })()
+                  }
+                  onClick={() => handleSaveRow(setting.id)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Save className="w-4 h-4 mr-1" />
+                  Save
+                </Button>
+              </>
+            ) : (
+              <span className="text-xs text-gray-400 dark:text-gray-500">Saved</span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -326,21 +502,6 @@ export default function SystemSettingsPage() {
         </Card>
       )}
 
-      {/* Info Banner for Email Settings */}
-      {selectedCategory === "email" && (
-        <Card className="mb-4 border-orange-200 bg-orange-50 dark:bg-orange-950 dark:border-orange-800">
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3">
-              <Info className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-orange-800 dark:text-orange-200">
-                <strong>Email Configuration:</strong> Changes to email settings may require restarting the application server to take effect. 
-                Test your email configuration after making changes. Use the "Test Email" feature if available.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Settings List */}
       <Card>
         <CardHeader>
@@ -352,8 +513,146 @@ export default function SystemSettingsPage() {
         </CardHeader>
         <CardContent>
           {settings.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
+            <div className="space-y-6">
+              {selectedCategory === "integration" ? (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Configure third‑party services used by the app.
+                                </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                                    <Button
+                      variant="secondary"
+                                    size="sm"
+                      onClick={() => setShowIntegrationKeys((v) => !v)}
+                    >
+                      {showIntegrationKeys ? "Hide keys" : "Show keys"}
+                                  </Button>
+                    {tableSettings.length > 0 ? (
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                        onClick={() => setShowIntegrationAdvanced((v) => !v)}
+                      >
+                        {showIntegrationAdvanced
+                          ? "Hide advanced"
+                          : `Advanced (${tableSettings.length})`}
+                                  </Button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
+              {selectedCategory === "integration" &&
+              (recaptchaSettings.length > 0 || firebaseSettings.length > 0) ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {recaptchaSettings.length > 0 ? (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base dark:text-gray-100">
+                          Google reCAPTCHA
+                        </CardTitle>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Reduce spam and abuse on public forms (login, portal, booking).
+                        </p>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="divide-y divide-gray-200 dark:divide-gray-800">
+                          {recaptchaSettings.map((s) =>
+                            renderIntegrationField(s, {
+                              prefix: "recaptcha_",
+                              showKey: showIntegrationKeys,
+                            })
+                              )}
+                            </div>
+                      </CardContent>
+                    </Card>
+                  ) : null}
+
+                  {firebaseSettings.length > 0 ? (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base dark:text-gray-100">
+                          Firebase Cloud Messaging (FCM)
+                        </CardTitle>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Push notification integration for mobile/web clients.
+                        </p>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="divide-y divide-gray-200 dark:divide-gray-800">
+                          {firebaseSettings.map((s) =>
+                            renderIntegrationField(s, {
+                              prefix: "firebase_",
+                              showKey: showIntegrationKeys,
+                            })
+                          )}
+                          </div>
+                      </CardContent>
+                        </Card>
+                  ) : null}
+
+                  {analyticsSettings.length > 0 ? (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base dark:text-gray-100">
+                          Analytics & Pixels
+                        </CardTitle>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Track visits and conversions (Google Analytics, Facebook Pixel).
+                        </p>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="divide-y divide-gray-200 dark:divide-gray-800">
+                          {analyticsSettings.map((s) =>
+                            renderIntegrationField(s, { showKey: showIntegrationKeys })
+                          )}
+                  </div>
+                      </CardContent>
+                    </Card>
+                  ) : null}
+                </div>
+              ) : null}
+              
+              {/* Other settings in table format */}
+              {selectedCategory === "integration" &&
+              tableSettings.length > 0 &&
+              !showIntegrationAdvanced ? (
+                <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-950">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Advanced integration settings
+                                </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Less common options and provider configuration are hidden to keep this page
+                        tidy.
+                                </div>
+                              </div>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                      onClick={() => setShowIntegrationAdvanced(true)}
+                    >
+                      Show advanced ({tableSettings.length})
+                                  </Button>
+                  </div>
+                </div>
+              ) : null}
+              
+              {(selectedCategory !== "integration" || showIntegrationAdvanced) &&
+                tableSettings.length > 0 && (
+                <div className="overflow-x-auto">
+                  {selectedCategory === "integration" ? (
+                    <div className="mb-3">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Other integration settings
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        Less commonly used options and provider configuration.
+                      </div>
+                    </div>
+                  ) : null}
+                  <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-64">Setting</TableHead>
@@ -363,7 +662,7 @@ export default function SystemSettingsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {settings.map((setting) => {
+                  {tableSettings.map((setting) => {
                     const pendingChanges = !!rowEdits[setting.id];
                     return (
                       <TableRow key={setting.id} className="align-top">
@@ -782,6 +1081,8 @@ export default function SystemSettingsPage() {
                   })}
                 </TableBody>
               </Table>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-12">

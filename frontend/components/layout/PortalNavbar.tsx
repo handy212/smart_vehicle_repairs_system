@@ -25,9 +25,13 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, user }: PortalNavbar
   const [searchQuery, setSearchQuery] = useState("");
   const userMenuRef = useRef<HTMLDivElement>(null);
 
+  const hasAccessToken =
+    typeof window !== "undefined" && !!localStorage.getItem("access_token");
+
   const { data: unreadCountData } = useQuery({
     queryKey: ["portal", "notifications", "unread-count"],
     queryFn: () => notificationsApi.unreadCount(),
+    enabled: !!user && hasAccessToken,
     refetchInterval: 30000,
   });
 

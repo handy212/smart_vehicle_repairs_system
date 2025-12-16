@@ -2,11 +2,12 @@
 URL Configuration for Smart Vehicle Repairs System
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from django.views.generic import TemplateView, RedirectView
+from django.views.static import serve as static_serve
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from .views import (
     api_root, HomePageView, test_fcm_view, firebase_messaging_sw, 
@@ -89,6 +90,7 @@ urlpatterns = [
     path('api/reporting/', include(('apps.reporting.urls', 'api_reporting'))),
     path('api/notifications/', include(('apps.notifications_app.urls', 'api_notifications'))),
     path('api/documents/', include(('apps.documents.urls', 'api_documents'))),
+    path('api/subscriptions/', include(('apps.subscriptions.urls', 'api_subscriptions'))),
     
     # Frontend app routes (namespaced)
     path('branches/', include('apps.branches.frontend_urls', namespace='branches')),
@@ -135,7 +137,15 @@ urlpatterns = [
     path('ledger/', include('django_ledger.urls', namespace='django_ledger')),
 ]
 
-# Serve media files in development
+# Serve static/media files
+# - Static in production is handled by WhiteNoise or a reverse proxy.
+# - Media in production should be served by a reverse proxy; but when running behind
+#   Nginx Proxy Manager with /media proxied to Django, enable SERVE_MEDIA=True to serve it here.
+if getattr(settings, 'SERVE_MEDIA', False):
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', static_serve, {'document_root': settings.MEDIA_ROOT}),
+    ]
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

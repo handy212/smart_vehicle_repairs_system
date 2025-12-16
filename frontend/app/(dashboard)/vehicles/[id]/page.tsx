@@ -8,8 +8,8 @@ import { appointmentsApi } from "@/lib/api/appointments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ArrowLeft, Edit, Car, Calendar, Gauge, Fuel, FileText, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
+import { ArrowLeft, Edit, Car, Calendar, Gauge, Fuel, FileText, AlertCircle, X } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import Image from "next/image";
@@ -98,6 +98,8 @@ export default function VehicleDetailPage() {
     );
   }
 
+  const vinData = (vehicle as any)?.vin_decoded_data || null;
+
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "active":
@@ -137,6 +139,7 @@ export default function VehicleDetailPage() {
             </Button>
           </Link>
         </PermissionGuard>
+        
       </div>
 
       {/* Status Badge */}
@@ -150,8 +153,16 @@ export default function VehicleDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Column - Vehicle Info */}
         <div className="lg:col-span-3 space-y-6">
+          {/* Vehicle Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Vehicle Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* Left Column - Vehicle Image */}
           {vehicle.image && (
-            <>
+                  <div className="flex-shrink-0">
               <div
                 className="w-40 cursor-pointer"
                 onClick={() => setShowImageModal(true)}
@@ -159,9 +170,9 @@ export default function VehicleDetailPage() {
                 tabIndex={0}
                 onKeyDown={(e) => e.key === "Enter" && setShowImageModal(true)}
               >
-                <div className="relative aspect-[4/3] rounded-lg overflow-hidden border border-gray-300">
+                      <div className="relative aspect-[4/3] rounded-lg overflow-hidden border border-gray-300 dark:border-gray-700">
                   <Image
-                    src={vehicle.image}
+                    src={vehicle.image!}
                     alt={`${vehicle.make} ${vehicle.model} ${vehicle.year}`}
                     fill
                     className="object-cover"
@@ -172,64 +183,104 @@ export default function VehicleDetailPage() {
                     }
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Click to view full size</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">Click to enlarge</p>
               </div>
-
-              <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
-                <DialogContent className="max-w-4xl">
-                  <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">
-                    <Image
-                      src={vehicle.image}
-                      alt={`${vehicle.make} ${vehicle.model} ${vehicle.year}`}
-                      fill
-                      className="object-contain"
-                      sizes="100vw"
-                      unoptimized={
-                        vehicle.image?.startsWith("http://localhost") ||
-                        vehicle.image?.startsWith("https://localhost")
-                      }
-                    />
                   </div>
-                </DialogContent>
-              </Dialog>
-            </>
           )}
 
-          {/* Vehicle Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Vehicle Details</CardTitle>
-            </CardHeader>
-            <CardContent>
+                {/* Right Column - Vehicle Information */}
+                <div className="flex-1">
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Make</p>
-                  <p className="text-gray-900 dark:text-gray-100">{vehicle.make || "-"}</p>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase">Make</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{vehicle.make || "-"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Model</p>
-                  <p className="text-gray-900 dark:text-gray-100">{vehicle.model || "-"}</p>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase">Model</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{vehicle.model || "-"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Year</p>
-                  <p className="text-gray-900 dark:text-gray-100">{vehicle.year || "-"}</p>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase">Year</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{vehicle.year || "-"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">VIN</p>
-                  <p className="text-gray-900 dark:text-gray-100 font-mono text-sm">{vehicle.vin || "-"}</p>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase">License Plate</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{vehicle.license_plate || "-"}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">License Plate</p>
-                  <p className="text-gray-900 dark:text-gray-100">{vehicle.license_plate || "-"}</p>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase">VIN</p>
+                      <div className="bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded border border-gray-200 dark:border-gray-700">
+                        <p className="text-sm font-mono text-gray-900 dark:text-gray-100">{vehicle.vin || "-"}</p>
+                      </div>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Color</p>
-                  <p className="text-gray-900 dark:text-gray-100">{(vehicle as any).exterior_color || "-"}</p>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase">Color</p>
+                      <div className="flex items-center gap-2">
+                        {(vehicle as any).exterior_color && (
+                          <>
+                            <div 
+                              className="w-6 h-6 rounded border border-gray-300 dark:border-gray-600"
+                              style={{ backgroundColor: (vehicle as any).exterior_color }}
+                            />
+                            <p className="text-sm font-mono text-gray-900 dark:text-gray-100">{(vehicle as any).exterior_color}</p>
+                          </>
+                        )}
+                        {!(vehicle as any).exterior_color && (
+                          <p className="text-sm text-gray-900 dark:text-gray-100">-</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
+          {/* Other Information (VIN decoded) */}
+          {vinData && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Other Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div><span className="text-gray-500">Series:</span> {vinData.series || "-"}</div>
+                  <div><span className="text-gray-500">Trim:</span> {vinData.trim || "-"}</div>
+                  <div><span className="text-gray-500">GVWR:</span> {vinData.gvwr || "-"}</div>
+                  <div><span className="text-gray-500">Drive Type:</span> {vinData.drive_type || "-"}</div>
+                  <div><span className="text-gray-500">Cylinders:</span> {vinData.engine_cylinders ?? "-"}</div>
+                  <div><span className="text-gray-500">Engine Displacement (L):</span> {vinData.engine_displacement_l || vinData.DisplacementL || "-"}</div>
+                  <div><span className="text-gray-500">Primary Fuel Type:</span> {vinData.fuel_type_primary || "-"}</div>
+                  <div><span className="text-gray-500">Secondary Fuel Type:</span> {vinData.fuel_type_secondary || "-"}</div>
+                  <div><span className="text-gray-500">Electrification Level:</span> {vinData.electrification_level || "-"}</div>
+                  <div><span className="text-gray-500">Engine Model:</span> {vinData.engine_model || "-"}</div>
+                  <div><span className="text-gray-500">Engine HP:</span> {vinData.engine_hp ?? "-"}</div>
+                  <div><span className="text-gray-500">Engine Manufacturer:</span> {vinData.engine_manufacturer || "-"}</div>
+                  <div><span className="text-gray-500">Transmission Speed:</span> {vinData.transmission_speeds || "-"}</div>
+                  <div><span className="text-gray-500">Transmission Style:</span> {vinData.transmission_style || "-"}</div>
+                </div>
+
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Airbags</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                    <div><span className="text-gray-500">Front:</span> {vinData.airbag_front || "-"}</div>
+                    <div><span className="text-gray-500">Knee:</span> {vinData.airbag_knee || "-"}</div>
+                    <div><span className="text-gray-500">Side:</span> {vinData.airbag_side || "-"}</div>
+                    <div><span className="text-gray-500">Curtain:</span> {vinData.airbag_curtain || "-"}</div>
+                    <div><span className="text-gray-500">Seat Cushion:</span> {vinData.airbag_seat_cushion || "-"}</div>
+                  </div>
+                  {vinData.other_restraint_info && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      Other Restraint Info: {vinData.other_restraint_info}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Specifications and Service History - Side by Side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Specifications */}
           <Card>
             <CardHeader>
@@ -261,9 +312,6 @@ export default function VehicleDetailPage() {
               <CardTitle>Service History</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                View complete service history, work orders, and appointments for this vehicle.
-              </p>
               <Link href={`/vehicles/${vehicleId}/history`}>
                 <Button>
                   <FileText className="w-4 h-4 mr-2" />
@@ -272,6 +320,7 @@ export default function VehicleDetailPage() {
               </Link>
             </CardContent>
           </Card>
+          </div>
 
           {/* Recent Service History with Repeat Visit Highlights */}
           {vehicleWorkOrders.length > 0 && (
@@ -378,71 +427,70 @@ export default function VehicleDetailPage() {
         </div>
 
         {/* Right Column - Quick Info */}
-        <div className="space-y-6">
+        <div className="space-y-3">
           {/* Owner Information */}
           <Card>
-            <CardHeader>
-              <CardTitle>Owner</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Owner</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Customer</p>
+            <CardContent className="pt-0">
               {vehicle.owner ? (
                 <Link
                   href={`/customers/${typeof vehicle.owner === 'object' && vehicle.owner !== null ? vehicle.owner.id : vehicle.owner}`}
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
                 >
                   {vehicle.owner_name || "View Customer"}
                 </Link>
               ) : (
-                <p className="text-gray-900 dark:text-gray-100">-</p>
+                <p className="text-sm text-gray-900 dark:text-gray-100">-</p>
               )}
             </CardContent>
           </Card>
 
           {/* Quick Stats */}
           <Card>
-            <CardHeader>
-              <CardTitle>Quick Stats</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Quick Stats</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="pt-0 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Total Services</span>
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">{totalServices}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Total Services</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{totalServices}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Appointments</span>
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">{vehicleAppointments.length}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Appointments</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{vehicleAppointments.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Last Service</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                <span className="text-xs text-gray-500 dark:text-gray-400">Last Service</span>
+                <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                   {lastServiceDate
                     ? format(new Date(lastServiceDate), "MMM dd, yyyy")
                     : "-"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Total Spent</span>
-                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">${totalSpent.toFixed(2)}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Total Spent</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">${totalSpent.toFixed(2)}</span>
               </div>
             </CardContent>
           </Card>
 
           {/* Quick Actions */}
           <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+            <CardHeader className="pb-2">
+              {/* <CardTitle className="text-base">Quick Actions</CardTitle> */}
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="pt-0 space-y-1.5">
               <Link href={`/appointments/new?vehicle=${vehicleId}`} className="block">
-                <Button variant="secondary" className="w-full justify-start">
-                  <Calendar className="w-4 h-4 mr-2" />
+                <Button variant="secondary" size="sm" className="w-full justify-start text-xs h-8">
+                  <Calendar className="w-3 h-3 mr-1.5" />
                   Schedule Service
                 </Button>
               </Link>
               <Link href={`/workorders/new?vehicle=${vehicleId}`} className="block">
-                <Button variant="secondary" className="w-full justify-start">
-                  <FileText className="w-4 h-4 mr-2" />
+                <Button variant="secondary" size="sm" className="w-full justify-start text-xs h-8">
+                  <FileText className="w-3 h-3 mr-1.5" />
                   Create Work Order
                 </Button>
               </Link>
@@ -450,6 +498,28 @@ export default function VehicleDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Image Dialog - Root level for proper modal rendering */}
+      {vehicle.image && (
+        <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
+          <DialogContent className="!max-w-[60vw] !w-[60vw] !h-[60vh] !p-0 !mx-0 max-h-[60vh]">
+            <div className="relative w-full h-full min-h-0 rounded-lg overflow-hidden bg-black flex items-center justify-center">
+              <Image
+                src={vehicle.image!}
+                alt={`${vehicle.make} ${vehicle.model} ${vehicle.year}`}
+                fill
+                className="object-contain"
+                sizes="60vw"
+                priority
+                unoptimized={
+                  vehicle.image?.startsWith("http://localhost") ||
+                  vehicle.image?.startsWith("https://localhost")
+                }
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

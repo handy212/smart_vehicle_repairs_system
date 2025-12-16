@@ -199,6 +199,16 @@ class Vehicle(models.Model):
     )
     
     # Additional Information
+    vin_decoded_data = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Raw VIN-decoded data (NHTSA VPIC / internal decoder output)"
+    )
+    vin_decoded_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When VIN was last decoded and stored"
+    )
     notes = models.TextField(
         blank=True,
         help_text="Internal notes about this vehicle"

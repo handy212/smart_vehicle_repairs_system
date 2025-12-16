@@ -114,15 +114,16 @@ def api_root(request):
 
 class HomePageView(TemplateView):
     """
-    Homepage view - simple landing page
+    Homepage view.
+
+    In production we primarily serve the UI from the Next.js frontend, but the
+    Django root route can still be hit (e.g. when proxying /api, /static, /media
+    to Django). We avoid a hard dependency on a 'home.html' template here.
     """
-    template_name = 'home.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['app_name'] = 'Smart Vehicle Repairs'
-        context['version'] = '1.0.0'
-        return context
+
+    def get(self, request, *args, **kwargs):
+        # Keep it simple and always return the API root payload location.
+        return redirect('api-root')
 
 
 @login_required

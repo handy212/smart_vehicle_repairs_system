@@ -6,6 +6,8 @@ export interface Vehicle {
   make: string;
   model: string;
   year: number;
+  vin_decoded_data?: any;
+  vin_decoded_at?: string | null;
   license_plate?: string;
   exterior_color?: string;
   current_mileage?: number;
@@ -107,9 +109,46 @@ export const vehiclesApi = {
     summary?: string;
     has_errors?: boolean;
     error_message?: string;
+    // Expanded "Other Information"
+    series?: string;
+    drive_type?: string;
+    gvwr?: string;
+    transmission_speeds?: string;
+    transmission_style?: string;
+    engine_cylinders?: number | null;
+    engine_hp?: number | null;
+    engine_model?: string;
+    engine_manufacturer?: string;
+    engine_displacement_l?: string;
+    fuel_type_primary?: string;
+    fuel_type_secondary?: string;
+    electrification_level?: string;
+    airbag_front?: string;
+    airbag_knee?: string;
+    airbag_side?: string;
+    airbag_curtain?: string;
+    airbag_seat_cushion?: string;
+    other_restraint_info?: string;
+    full_data?: any;
     error?: string;
   }> => {
-    const response = await apiClient.post("/vehicles/vehicles/decode_vin/", { vin });
+    // VIN decode can involve an external API (NHTSA). Allow a bit more time before aborting.
+    const response = await apiClient.post("/vehicles/vehicles/decode_vin/", { vin }, { timeout: 20000 });
+    return response.data;
+  },
+
+  checkLicensePlate: async (licensePlate: string, vehicleId?: number): Promise<{
+    success: boolean;
+    exists?: boolean;
+    vehicle_id?: number;
+    vehicle?: Vehicle;
+    message?: string;
+    error?: string;
+  }> => {
+    const response = await apiClient.post("/vehicles/vehicles/check_license_plate/", { 
+      license_plate: licensePlate,
+      vehicle_id: vehicleId 
+    });
     return response.data;
   },
 };

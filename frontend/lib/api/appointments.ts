@@ -61,7 +61,12 @@ export const appointmentsApi = {
   },
 
   create: async (data: Partial<Appointment>): Promise<Appointment> => {
-    const response = await apiClient.post("/appointments/appointments/", data);
+    // Back-compat: UI uses `notes`, API expects `customer_concerns`.
+    const payload: any = { ...data };
+    if (payload.notes && (payload.customer_concerns === undefined || payload.customer_concerns === null || payload.customer_concerns === "")) {
+      payload.customer_concerns = payload.notes;
+    }
+    const response = await apiClient.post("/appointments/appointments/", payload);
     return response.data;
   },
 

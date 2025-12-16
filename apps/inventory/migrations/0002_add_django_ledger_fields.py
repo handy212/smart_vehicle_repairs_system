@@ -7,9 +7,9 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('django_ledger', '0030_alter_accountmodel_role'),
         ('branches', '0002_branch_ledger_entity'),
         ('inventory', '0001_initial'),
+        ('django_ledger', '__first__'),
     ]
 
     operations = [

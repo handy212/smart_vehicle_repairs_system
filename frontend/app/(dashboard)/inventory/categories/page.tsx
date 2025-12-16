@@ -6,32 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Edit, Trash2, FolderTree, MoreVertical, Eye } from "lucide-react";
+import { Plus, Search, Edit, Trash2, FolderTree, MoreVertical } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-
-const categorySchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string().optional(),
-  parent: z.number().optional().nullable(),
-  is_active: z.boolean(),
-});
-
-type CategoryFormData = z.infer<typeof categorySchema>;
 
 export default function PartCategoriesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<PartCategory | null>(null);
   const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
 
   const { data: categories = [], isLoading } = useQuery({
@@ -39,62 +23,7 @@ export default function PartCategoriesPage() {
     queryFn: () => inventoryApi.listCategories({ search: search || undefined }),
   });
 
-  const { data: rootCategories = [] } = useQuery({
-    queryKey: ["root-categories"],
-    queryFn: () => inventoryApi.rootCategories(),
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data: CategoryFormData) => {
-      const apiData = {
-        ...data,
-        parent: data.parent || undefined, // Convert null/empty to undefined
-      };
-      return inventoryApi.createCategory(apiData as any);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["part-categories"] });
-      queryClient.invalidateQueries({ queryKey: ["root-categories"] });
-      setIsCreateDialogOpen(false);
-      toast({
-        title: "Success",
-        description: "Category created successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to create category",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: CategoryFormData }) => {
-      const apiData = {
-        ...data,
-        parent: data.parent || undefined, // Convert null/empty to undefined
-      };
-      return inventoryApi.updateCategory(id, apiData as any);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["part-categories"] });
-      queryClient.invalidateQueries({ queryKey: ["root-categories"] });
-      setEditingCategory(null);
-      toast({
-        title: "Success",
-        description: "Category updated successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.response?.data?.detail || "Failed to update category",
-        variant: "destructive",
-      });
-    },
-  });
+  // NOTE: Category creation is handled on /inventory/categories/new (to match Suppliers UX).
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => inventoryApi.deleteCategory(id),
@@ -115,49 +44,13 @@ export default function PartCategoriesPage() {
     },
   });
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<CategoryFormData>({
-    resolver: zodResolver(categorySchema),
-    defaultValues: {
-      is_active: true,
-    },
-  });
-
-  const onSubmit = (data: CategoryFormData) => {
-    if (editingCategory) {
-      updateMutation.mutate({ id: editingCategory.id, data });
-    } else {
-      createMutation.mutate(data);
-    }
-    reset();
-  };
-
-  const handleEdit = (category: PartCategory) => {
-    setEditingCategory(category);
-    reset({
-      name: category.name,
-      description: category.description || "",
-      parent: category.parent || null,
-      is_active: category.is_active,
-    });
-    setIsCreateDialogOpen(true);
-  };
-
   const handleDelete = (id: number) => {
     if (confirm("Are you sure you want to delete this category?")) {
       deleteMutation.mutate(id);
     }
   };
 
-  const handleCloseDialog = () => {
-    setIsCreateDialogOpen(false);
-    setEditingCategory(null);
-    reset();
-  };
+  // Dialog removed in favor of a dedicated New Category page.
 
   if (isLoading) {
     return (
@@ -176,93 +69,14 @@ export default function PartCategoriesPage() {
             Organize parts into categories and subcategories
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={handleCloseDialog}>
-          <div>
-            <Button onClick={() => {
-              setEditingCategory(null);
-              setIsCreateDialogOpen(true);
-            }}>
+        <div className="flex gap-2">
+          <Link href="/inventory/categories/new">
+            <Button>
               <Plus className="w-4 h-4 mr-2" />
               New Category
             </Button>
-          </div>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingCategory ? "Edit Category" : "Create Category"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Name *
-                  </label>
-                  <Input
-                    {...register("name")}
-                    placeholder="Category name"
-                    className="w-full"
-                  />
-                  {errors.name && (
-                    <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <Textarea
-                    {...register("description")}
-                    placeholder="Category description"
-                    rows={3}
-                    className="w-full"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Parent Category
-                  </label>
-                  <select
-                    {...register("parent", { valueAsNumber: true })}
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">None (Root Category)</option>
-                    {rootCategories
-                      .filter((cat) => !editingCategory || cat.id !== editingCategory.id)
-                      .map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.full_path || cat.name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    {...register("is_active")}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <label className="ml-2 text-sm text-gray-700 cursor-pointer">Active</label>
-                </div>
+          </Link>
               </div>
-            </form>
-            <DialogFooter>
-              <Button
-                type="button"
-               variant="secondary"
-                onClick={handleCloseDialog}
-              >
-                Cancel
-              </Button>
-              <Button type="button" onClick={handleSubmit(onSubmit)} disabled={createMutation.isPending || updateMutation.isPending}>
-                {editingCategory ? "Update" : "Create"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
 
       {/* Search */}
@@ -345,16 +159,14 @@ export default function PartCategoriesPage() {
                               />
                               <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
                                 <div className="py-1">
-                                  <button
-                                    onClick={() => {
-                                      handleEdit(category);
-                                      setActionMenuOpen(null);
-                                    }}
+                                  <Link
+                                    href={`/inventory/categories/${category.id}/edit`}
                                     className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                    onClick={() => setActionMenuOpen(null)}
                                   >
                                     <Edit className="w-4 h-4" />
                                     Edit Category
-                                  </button>
+                                  </Link>
                                   <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
                                   <button
                                     onClick={() => {

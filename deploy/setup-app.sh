@@ -77,7 +77,11 @@ if [ ! -f "requirements.txt" ]; then
     cp /opt/smart_vehicle_repairs_system/requirements.txt .
 fi
 
+<<<<<<< HEAD
 sudo -u svr python3 -m venv venv
+=======
+sudo -u svr python3.11 -m venv venv
+>>>>>>> c087973 (update 5)
 sudo -u svr venv/bin/pip install --upgrade pip
 sudo -u svr venv/bin/pip install -r requirements.txt
 

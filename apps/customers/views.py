@@ -509,6 +509,84 @@ class CustomerViewSet(viewsets.ModelViewSet):
         # Use user_welcome template for now (customers are users with role='customer')
         if hasattr(triggers, 'user_welcome'):
             triggers.user_welcome(user, password, 'customer', None)
+    
+    @action(detail=False, methods=['post'])
+    def check_email(self, request):
+        """
+        Check if an email address already exists in the system
+        
+        POST /api/customers/customers/check_email/
+        Body: { "email": "user@example.com", "customer_id": null }  # customer_id optional for edit
+        
+        Returns:
+        {
+            "success": true,
+            "exists": false,
+            "message": "Email is available"
+        }
+        
+        If email exists:
+        {
+            "success": true,
+            "exists": true,
+            "user_id": 123,
+            "customer_id": 456,
+            "customer": {...customer details...},
+            "message": "A user with this email already exists in the system"
+        }
+        """
+        from apps.accounts.models import User
+        
+        email = request.data.get('email', '').strip().lower()
+        customer_id = request.data.get('customer_id')  # For edit page - exclude current customer
+        
+        if not email:
+            return Response(
+                {'success': False, 'error': 'Email is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if email already exists in database
+        query = User.objects.filter(email__iexact=email)
+        if customer_id:
+            # Exclude the current customer's user
+            try:
+                customer = Customer.objects.get(id=customer_id)
+                query = query.exclude(id=customer.user.id)
+            except Customer.DoesNotExist:
+                pass
+        
+        existing_user = query.first()
+        if existing_user:
+            # Get customer if exists
+            customer = None
+            if hasattr(existing_user, 'customer_profile'):
+                customer = existing_user.customer_profile
+                customer_data = CustomerDetailSerializer(customer).data
+            else:
+                customer_data = None
+            
+            return Response({
+                'success': True,
+                'exists': True,
+                'user_id': existing_user.id,
+                'customer_id': customer.id if customer else None,
+                'customer': customer_data,
+                'user': {
+                    'id': existing_user.id,
+                    'email': existing_user.email,
+                    'first_name': existing_user.first_name,
+                    'last_name': existing_user.last_name,
+                    'role': existing_user.role,
+                },
+                'message': 'A user with this email already exists in the system'
+            })
+        
+        return Response({
+            'success': True,
+            'exists': False,
+            'message': 'Email is available'
+        })
 
 
 class CustomerNoteViewSet(viewsets.ModelViewSet):

@@ -18,6 +18,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { AxiosError } from "axios";
 
+const toHHMM = (d: Date) => {
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+};
+
 const appointmentSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
   vehicle: z.number().min(1, "Vehicle is required"),
@@ -26,7 +32,7 @@ const appointmentSchema = z.object({
   service_type: z.enum(["inspection", "repair", "maintenance", "diagnostic"]),
   priority: z.enum(["low", "normal", "high", "urgent"]),
   estimated_duration: z.number().optional(),
-  notes: z.string().optional(),
+  customer_concerns: z.string().optional(),
 });
 
 type AppointmentFormData = z.infer<typeof appointmentSchema>;
@@ -75,6 +81,11 @@ export default function NewAppointmentPage() {
   });
 
   const customer = watch("customer");
+  const appointmentDate = watch("appointment_date");
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const minTimeForSelectedDate =
+    appointmentDate && appointmentDate === todayStr ? toHHMM(new Date()) : undefined;
 
   // Update selected customer when form value changes
   if (customer && customer !== selectedCustomer) {
@@ -99,6 +110,7 @@ export default function NewAppointmentPage() {
       
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
+        const handledFields = new Set<string>();
         
         // Handle field-level errors
         Object.keys(errorData).forEach((field) => {
@@ -110,6 +122,7 @@ export default function NewAppointmentPage() {
               type: "server", 
               message: fieldError 
             });
+            handledFields.add(field);
           }
         });
         
@@ -124,7 +137,14 @@ export default function NewAppointmentPage() {
         } else if (errorData.detail) {
           setServerError(errorData.detail);
         } else {
-          setServerError("An error occurred while creating the appointment. Please check the form and try again.");
+          // If backend returned errors for fields we don't render, surface them.
+          const keys = Object.keys(errorData || {});
+          const unhandled = keys.filter((k) => !handledFields.has(k));
+          setServerError(
+            unhandled.length
+              ? `Validation error: ${JSON.stringify(errorData)}`
+              : "An error occurred while creating the appointment. Please check the form and try again."
+          );
         }
       } else {
         setServerError("An unexpected error occurred. Please try again.");
@@ -183,11 +203,18 @@ export default function NewAppointmentPage() {
                     }}
                   >
                     <option value="">Select a customer</option>
-                    {customersData?.results?.map((customer) => (
+                    {customersData?.results?.map((customer) => {
+                      const displayName = customer.full_name || 
+                        customer.company_name || 
+                        (customer.user?.first_name && customer.user?.last_name 
+                          ? `${customer.user.first_name} ${customer.user.last_name}` 
+                          : customer.user?.email || customer.customer_number);
+                      return (
                       <option key={customer.id} value={customer.id}>
-                        {customer.user?.first_name} {customer.user?.last_name} - {customer.customer_number}
+                          {displayName}
                       </option>
-                    ))}
+                      );
+                    })}
                   </Select>
                   {errors.customer && (
                     <p className="mt-1 text-sm text-red-600">{errors.customer.message}</p>
@@ -256,6 +283,7 @@ export default function NewAppointmentPage() {
                       type="time"
                       {...register("appointment_time")}
                       className={errors.appointment_time ? "border-red-500" : ""}
+                    min={minTimeForSelectedDate}
                     />
                     {errors.appointment_time && (
                       <p className="mt-1 text-sm text-red-600">{errors.appointment_time.message}</p>
@@ -307,12 +335,12 @@ export default function NewAppointmentPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="customer_concerns" className="block text-sm font-medium text-gray-700 mb-1">
                     Notes
                   </label>
                   <Textarea
-                    id="notes"
-                    {...register("notes")}
+                    id="customer_concerns"
+                    {...register("customer_concerns")}
                     rows={4}
                     placeholder="Additional notes or customer concerns..."
                   />

@@ -350,10 +350,7 @@ export default function PaymentPage() {
                       <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                       <div className="text-sm text-blue-800 dark:text-blue-300">
                         <p className="font-medium mb-1">Secure Payment</p>
-                        <p className="text-xs">
-                          You will be redirected to Paystack's secure payment page to complete your
-                          payment.
-                        </p>
+                        
                       </div>
                     </div>
                   </div>

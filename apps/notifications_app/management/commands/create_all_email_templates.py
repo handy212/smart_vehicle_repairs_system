@@ -580,6 +580,122 @@ Best regards,
 <p>Best regards,<br>{company_name} System</p>
 </body></html>''',
             },
+            'user_welcome': {
+                'name': 'Default User Welcome Email',
+                'subject': 'Welcome to {company_name}',
+                'body': '''Dear {user_name},
+
+Welcome to {company_name}!
+
+Your account has been created successfully.
+
+ACCOUNT DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Email: {email}
+Username: {username}
+Password: {password}
+Role: {role}
+Branch: {branch_info}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please log in at: {login_url}
+
+For security reasons, please change your password after your first login.
+
+If you have any questions, please don't hesitate to contact us.
+
+Best regards,
+{company_name} Team''',
+                'html_body': '''<html><body>
+<p>Dear {user_name},</p>
+<p>Welcome to {company_name}!</p>
+<p>Your account has been created successfully.</p>
+<h3>ACCOUNT DETAILS:</h3>
+<hr>
+<p><strong>Email:</strong> {email}</p>
+<p><strong>Username:</strong> {username}</p>
+<p><strong>Password:</strong> {password}</p>
+<p><strong>Role:</strong> {role}</p>
+<p><strong>Branch:</strong> {branch_info}</p>
+<hr>
+<p>Please log in at: <a href="{login_url}">{login_url}</a></p>
+<p>For security reasons, please change your password after your first login.</p>
+<p>If you have any questions, please don't hesitate to contact us.</p>
+<p>Best regards,<br>{company_name} Team</p>
+</body></html>''',
+            },
+            'password_reset': {
+                'name': 'Default Password Reset Email',
+                'subject': 'Password Reset - {company_name}',
+                'body': '''Dear {user_name},
+
+Your password has been reset.
+
+ACCOUNT DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Email: {email}
+Username: {username}
+New Password: {new_password}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please log in at: {login_url}
+
+For security reasons, please change your password after logging in.
+
+If you did not request this password reset, please contact us immediately.
+
+Best regards,
+{company_name} Team''',
+                'html_body': '''<html><body>
+<p>Dear {user_name},</p>
+<p>Your password has been reset.</p>
+<h3>ACCOUNT DETAILS:</h3>
+<hr>
+<p><strong>Email:</strong> {email}</p>
+<p><strong>Username:</strong> {username}</p>
+<p><strong>New Password:</strong> {new_password}</p>
+<hr>
+<p>Please log in at: <a href="{login_url}">{login_url}</a></p>
+<p>For security reasons, please change your password after logging in.</p>
+<p>If you did not request this password reset, please contact us immediately.</p>
+<p>Best regards,<br>{company_name} Team</p>
+</body></html>''',
+            },
+            'password_reset_link': {
+                'name': 'Default Password Reset Link Email',
+                'subject': 'Password Reset Request - {company_name}',
+                'body': '''Dear {user_name},
+
+You have requested to reset your password.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Click the link below to reset your password:
+{reset_link}
+
+This link will expire in 24 hours.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+If you did not request this password reset, please ignore this email or contact us if you have concerns.
+
+Best regards,
+{company_name} Team''',
+                'html_body': '''<html><body>
+<p>Dear {user_name},</p>
+<p>You have requested to reset your password.</p>
+<hr>
+<p>Click the link below to reset your password:</p>
+<p><a href="{reset_link}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a></p>
+<p>Or copy and paste this link: {reset_link}</p>
+<p><em>This link will expire in 24 hours.</em></p>
+<hr>
+<p>If you did not request this password reset, please ignore this email or contact us if you have concerns.</p>
+<p>Best regards,<br>{company_name} Team</p>
+</body></html>''',
+            },
         }
 
         created_count = 0
@@ -632,6 +748,15 @@ Best regards,
                         'days_until_expiration': 'Days until expiration',
                         'description': 'Estimate description',
                         'vehicle_display': 'Vehicle display (year, make, model)',
+                        'user_name': 'User full name',
+                        'email': 'User email address',
+                        'username': 'Username',
+                        'password': 'User password',
+                        'new_password': 'New password',
+                        'role': 'User role',
+                        'branch_info': 'Branch information',
+                        'login_url': 'Login page URL',
+                        'reset_link': 'Password reset link URL',
                     },
                     'created_by': created_by_user,
                 }

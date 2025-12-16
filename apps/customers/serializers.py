@@ -65,11 +65,11 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating customer with user account"""
     # User fields
     email = serializers.EmailField(write_only=True)
-    username = serializers.CharField(write_only=True, required=False)
-    password = serializers.CharField(write_only=True, required=False)
+    username = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
     first_name = serializers.CharField(write_only=True)
     last_name = serializers.CharField(write_only=True)
-    phone = serializers.CharField(write_only=True, required=False)
+    phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
     grant_portal_access = serializers.BooleanField(write_only=True, required=False, default=False)
     send_welcome_email = serializers.BooleanField(write_only=True, required=False, default=False)
     
@@ -81,6 +81,7 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
             'grant_portal_access', 'send_welcome_email',
             # Customer fields
             'company_name', 'business_type', 'tax_id', 'customer_type',
+            'status',
             'service_address', 'service_city', 'service_state', 'service_zip_code',
             'billing_address', 'billing_city', 'billing_state', 'billing_zip_code',
             'payment_terms', 'credit_limit', 'preferred_contact_method',
@@ -119,6 +120,12 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         phone = validated_data.pop('phone', '')
         grant_portal_access = validated_data.pop('grant_portal_access', False)
         send_welcome_email = validated_data.pop('send_welcome_email', False)
+
+        # Normalize empty strings coming from clients
+        if username == '':
+            username = email.split('@')[0]
+        if password == '':
+            password = None
         
         # If portal access is granted, password is required
         if grant_portal_access and not password:

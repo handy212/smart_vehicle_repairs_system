@@ -4,15 +4,62 @@ Handles payment processing via Paystack for Ghana
 Using pypaystack2 library
 """
 import logging
+import os
+import re
 from decimal import Decimal
 from django.conf import settings
-from pypaystack2 import PaystackClient
 
 logger = logging.getLogger(__name__)
+
+# In this codebase, `.env` is read once at Django startup (see `config/settings/base.py`).
+# The dev autoreloader does NOT watch `.env`, so updated env values (like PAYSTACK_SECRET_KEY)
+# won't take effect until a full restart. To make development smoother (and avoid confusing
+# "Invalid key" errors when `.env` was updated), we optionally re-read `.env` at runtime.
+def _get_paystack_secret_key() -> str:
+    key = str(getattr(settings, "PAYSTACK_SECRET_KEY", "") or "").strip()
+
+    # Treat obvious placeholder keys as "missing"
+    if key and not key.lower().startswith("your-paystack"):
+        return key
+
+    # Dev fallback: read `.env` directly (django-environ won't overwrite existing os.environ by default)
+    try:
+        base_dir = getattr(settings, "BASE_DIR", None)
+        if base_dir:
+            env_path = os.path.join(str(base_dir), ".env")
+            if os.path.exists(env_path):
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#") or "=" not in line:
+                            continue
+                        k, v = line.split("=", 1)
+                        if k.strip() == "PAYSTACK_SECRET_KEY":
+                            v = v.strip().strip('"').strip("'")
+                            if v:
+                                return v
+    except Exception:
+        pass
+
+    return key
+
+# Try to import PaystackClient - handle different versions
+try:
+    from pypaystack2 import PaystackClient
+except ImportError:
+    try:
+        from pypaystack2.paystack import PaystackClient
+    except ImportError:
+        PaystackClient = None
+        logger.warning("PaystackClient could not be imported. Paystack functionality will be disabled.")
 
 
 def get_paystack_client():
     """Get configured Paystack client"""
+    if PaystackClient is None:
+        logger.error("PaystackClient is not available")
+        return None
+    
     if not settings.PAYSTACK_SECRET_KEY:
         logger.error("Paystack secret key not configured")
         return None
@@ -45,14 +92,42 @@ def initialize_payment(email, amount, reference, callback_url=None, metadata=Non
             'reference': 'xxx'
         }
     """
-    paystack_client = get_paystack_client()
-    if not paystack_client:
-        return False, "Paystack not configured"
+    # Get secret key with validation
+    secret_key = _get_paystack_secret_key()
+    
+    # Debug logging (avoid printing the full key)
+    logger.debug(f"PAYSTACK_SECRET_KEY present: {bool(secret_key)}")
+    if secret_key:
+        logger.debug(f"PAYSTACK_SECRET_KEY length: {len(secret_key)}")
+        logger.debug(f"PAYSTACK_SECRET_KEY prefix: {secret_key[:10]}...")
+
+    if not secret_key:
+        logger.error("PAYSTACK_SECRET_KEY not found in settings")
+        return False, "Paystack secret key not configured. Please set PAYSTACK_SECRET_KEY in your .env file."
+    # `_get_paystack_secret_key()` already strips whitespace
+    
+    # Validate key format (Paystack keys start with sk_live_ or sk_test_)
+    if not (secret_key.startswith('sk_live_') or secret_key.startswith('sk_test_')):
+        logger.warning(f"Paystack secret key format may be invalid (should start with sk_live_ or sk_test_). Got: {secret_key[:15]}...")
+        # Continue anyway - let Paystack API validate it
     
     try:
+        # Validate email
+        if not email or not email.strip():
+            return False, "Email is required for Paystack payment initialization"
+        
+        email = email.strip()
+        
+        # Validate amount
+        if amount <= 0:
+            return False, "Payment amount must be greater than zero"
+        
         # Convert amount to kobo (smallest currency unit)
         # 1 GHS = 100 kobo
         amount_kobo = int(Decimal(str(amount)) * 100)
+        
+        if amount_kobo <= 0:
+            return False, "Payment amount is too small (must be at least 1 kobo = 0.01 GHS)"
         
         # Prepare request parameters
         params = {
@@ -67,12 +142,74 @@ def initialize_payment(email, amount, reference, callback_url=None, metadata=Non
         if metadata:
             params['metadata'] = metadata
         
-        response = paystack_client.transaction.initialize(**params)
+        # Use direct HTTP requests to Paystack API (more reliable than library)
+        import requests
+        headers = {
+            'Authorization': f'Bearer {secret_key}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Log request details (without exposing full key)
+        logger.info(f"Initializing Paystack payment: email={email}, amount={amount_kobo} kobo, reference={reference}")
+        logger.debug(f"Using Paystack key: {secret_key[:15]}... (length: {len(secret_key)})")
+        logger.debug(f"Request params: {params}")
+        
+        try:
+            response = requests.post(
+                'https://api.paystack.co/transaction/initialize',
+                json=params,
+                headers=headers,
+                timeout=30
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Network error connecting to Paystack: {e}")
+            return False, f"Network error: Unable to connect to Paystack API"
+        
+        # Log response for debugging
+        logger.debug(f"Paystack response status: {response.status_code}")
+        logger.debug(f"Paystack response headers: {dict(response.headers)}")
+        
+        # Check HTTP status
+        if response.status_code != 200:
+            try:
+                error_data = response.json() if response.content else {}
+                error_msg = error_data.get('message', f'HTTP {response.status_code}')
+                
+                # Log full error response for debugging
+                logger.error(f"Paystack API error ({response.status_code}): Full response: {error_data}")
+                
+                # Check if it's actually an authorization error vs other error
+                # Sometimes Paystack returns "Invalid key" for other issues too
+                if response.status_code == 401:
+                    # This is definitely an auth issue
+                    error_msg = (
+                        "Paystack authentication failed. The secret key may be invalid, expired, or revoked. "
+                        "Please verify your PAYSTACK_SECRET_KEY in the Paystack dashboard."
+                    )
+                elif 'Invalid key' in error_msg or 'Invalid API key' in error_msg or 'Invalid authorization' in error_msg:
+                    # Could be auth issue or could be something else
+                    error_msg = (
+                        f"Paystack returned 'Invalid key' error. This could mean: "
+                        "1) Key is invalid/expired, 2) Key doesn't have transaction permissions, "
+                        "3) There's an issue with the request format. "
+                        f"Full error: {error_data}"
+                    )
+            except Exception as e:
+                error_msg = f'HTTP {response.status_code}: {response.text[:500]}'
+                logger.error(f"Error parsing Paystack response: {e}, Raw response: {response.text[:500]}")
+            logger.error(f"Paystack API error ({response.status_code}): {error_msg}")
+            return False, f"Payment initialization failed: {error_msg}"
+        
+        try:
+            response_data = response.json()
+        except Exception as e:
+            logger.error(f"Failed to parse Paystack response as JSON: {e}, Response text: {response.text[:500]}")
+            return False, f"Payment initialization failed: Invalid response from Paystack API"
         
         # Check response status 
-        if response.get('status'):
+        if response_data.get('status'):
             # Get payment details from response data
-            data = response.get('data', {})
+            data = response_data.get('data', {})
             logger.info(f"Paystack payment initialized: {reference} for GHS {amount}")
             return True, {
                 'authorization_url': data.get('authorization_url'),
@@ -80,7 +217,25 @@ def initialize_payment(email, amount, reference, callback_url=None, metadata=Non
                 'reference': data.get('reference'),
             }
         else:
-            error_msg = response.message or 'Unknown error'
+            error_msg = response_data.get('message', '')
+            # Log the full error response for debugging
+            logger.error(f"Paystack API returned error: {response_data}")
+            
+            # Provide more helpful error messages
+            if 'Invalid key' in error_msg or 'Invalid API key' in error_msg or 'Invalid authorization' in error_msg:
+                # The key format is correct, so the issue is likely:
+                # 1. Key is expired/revoked in Paystack dashboard
+                # 2. Key is for wrong environment (test vs live)
+                # 3. Key belongs to different Paystack account
+                error_msg = (
+                    "Invalid Paystack secret key. The key format is correct but Paystack rejected it. "
+                    "Please verify: 1) Key is active in your Paystack dashboard, "
+                    "2) You're using the correct key (test vs live), "
+                    "3) Key hasn't been revoked or regenerated."
+                )
+            elif not error_msg:
+                error_msg = f"Unknown error from Paystack: {response_data}"
+            
             logger.error(f"Failed to initialize Paystack payment: {error_msg}")
             return False, f"Payment initialization failed: {error_msg}"
             
@@ -109,12 +264,34 @@ def verify_payment(reference):
             'customer': {...}
         }
     """
-    paystack_client = get_paystack_client()
-    if not paystack_client:
-        return False, "Paystack not configured"
+    # Get secret key with validation
+    secret_key = _get_paystack_secret_key()
+    if not secret_key:
+        logger.error("PAYSTACK_SECRET_KEY not configured in settings")
+        return False, "Paystack secret key not configured. Please set PAYSTACK_SECRET_KEY in your settings."
     
     try:
-        response = paystack_client.transaction.verify(reference=reference)
+        # Use direct HTTP requests to Paystack API (more reliable than library)
+        import requests
+        headers = {
+            'Authorization': f'Bearer {secret_key}',
+            'Content-Type': 'application/json'
+        }
+        
+        response = requests.get(
+            f'https://api.paystack.co/transaction/verify/{reference}',
+            headers=headers,
+            timeout=30
+        )
+        
+        # Check HTTP status
+        if response.status_code != 200:
+            error_data = response.json() if response.content else {}
+            error_msg = error_data.get('message', f'HTTP {response.status_code}')
+            logger.error(f"Paystack API error: {error_msg}")
+            return False, f"Verification failed: {error_msg}"
+        
+        response = response.json()
         
         # Check response status
         if response.get('status'):
@@ -137,7 +314,7 @@ def verify_payment(reference):
                 logger.warning(f"Paystack payment not successful: {reference} - Status: {status}")
                 return False, f"Payment status: {status}"
         else:
-            error_msg = response.message or 'Unknown error'
+            error_msg = response.get('message') or str(response) or 'Unknown error'
             logger.error(f"Failed to verify Paystack payment: {error_msg}")
             return False, f"Verification failed: {error_msg}"
             

@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from django.db.models import Count, Q
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -16,6 +17,17 @@ from .serializers import (
 from .services import NotificationService
 
 
+class LargePageSizePagination(PageNumberPagination):
+    """
+    Pagination class with large page size for templates.
+    This allows loading all templates in one request while still supporting
+    pagination if the number of templates grows significantly.
+    """
+    page_size = 200
+    page_size_query_param = 'page_size'
+    max_page_size = 500
+
+
 class NotificationTemplateViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing notification templates
@@ -27,6 +39,7 @@ class NotificationTemplateViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'subject', 'body']
     ordering_fields = ['created_at', 'name', 'template_type']
     ordering = ['-created_at']
+    pagination_class = LargePageSizePagination  # Large page size to load all templates in one request
     
     def get_serializer_class(self):
         if self.action == 'list':

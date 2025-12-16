@@ -139,6 +139,41 @@ export default function NewCustomerPage() {
   const onSubmit = async (data: CustomerFormData) => {
     setServerError(null);
     try {
+      // Check if email already exists
+      if (data.email && data.email.trim()) {
+        try {
+          const emailCheck = await customersApi.checkEmail(data.email.trim().toLowerCase());
+          if (emailCheck.success && emailCheck.exists) {
+            const user = emailCheck.user as any;
+            const customer = emailCheck.customer as any;
+            const displayName = customer 
+              ? (customer.company_name || `${customer.user?.first_name} ${customer.user?.last_name}` || customer.customer_number)
+              : (user ? `${user.first_name} ${user.last_name}` : (user?.email || 'User'));
+            
+            toast({
+              title: "Email Already Exists",
+              description: `A user with email "${data.email}" already exists in the system.`,
+              variant: "warning",
+            });
+            
+            if (emailCheck.customer_id && typeof window !== 'undefined' && confirm(`A user with email "${data.email}" already exists.\n\n${displayName}\n\nWould you like to view the existing customer instead?`)) {
+              router.push(`/customers/${emailCheck.customer_id}`);
+              return;
+            }
+            
+            // Set error on email field
+            setError("email", {
+              type: "manual",
+              message: "A user with this email already exists in the system",
+            });
+            return;
+          }
+        } catch (emailError) {
+          // If email check fails, continue with form submission
+          console.warn("Email existence check failed:", emailError);
+        }
+      }
+      
       await createMutation.mutateAsync(data);
     } catch (error) {
       console.error("Error creating customer:", error);

@@ -141,7 +141,7 @@ export default function WorkOrderPrintPage() {
           </div>
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">VEHICLE INFORMATION</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">Vehicle Info</h2>
           {vehicleInfo && (
             <div className="text-sm space-y-1">
               <p className="font-semibold">{vehicleInfo}</p>

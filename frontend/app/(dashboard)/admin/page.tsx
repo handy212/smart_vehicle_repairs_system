@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { adminApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, UserX, Shield, Settings, FileText, Database } from "lucide-react";
+import { Users, UserCheck, UserX, Shield, Settings, FileText, Database, CreditCard, Package } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -138,6 +138,31 @@ export default function AdminDashboardPage() {
                 View Audit Log
               </Button>
             </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Subscription Management</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Manage subscription packages and customer subscriptions
+            </p>
+            <div className="space-y-2">
+              <Link href="/subscriptions/packages">
+                <Button className="w-full" variant="secondary">
+                  <Package className="w-4 h-4 mr-2" />
+                  Manage Packages
+                </Button>
+              </Link>
+              <Link href="/subscriptions">
+                <Button className="w-full" variant="outline">
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  View Subscriptions
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>

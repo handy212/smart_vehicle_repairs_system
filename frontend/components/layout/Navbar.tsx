@@ -146,10 +146,13 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
     [logoToUse, getMediaUrl]
   );
 
+  const hasAccessToken =
+    typeof window !== "undefined" && !!localStorage.getItem("access_token");
+
   const { data: unreadCountData } = useQuery({
     queryKey: ["notifications", "unread-count"],
     queryFn: () => notificationsApi.unreadCount(),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && hasAccessToken,
     refetchOnWindowFocus: false,
     refetchInterval: 30000, // Refetch every 30 seconds
   });

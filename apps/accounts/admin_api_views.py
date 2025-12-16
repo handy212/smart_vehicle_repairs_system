@@ -126,6 +126,71 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         
         return Response(data)
     
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='public/firebase')
+    def public_firebase(self, request):
+        """
+        Public endpoint to get Firebase configuration for frontend.
+        Does not require authentication.
+        Returns only public Firebase config (not secret keys).
+        """
+        # Auto-initialize integration settings if none exist
+        from .settings_init import initialize_category_settings
+        settings_count = SystemSettings.objects.filter(category='integration').count()
+        if settings_count == 0:
+            initialize_category_settings('integration')
+        
+        # Get Firebase settings
+        firebase_enabled = SystemSettings.get_setting('firebase_enabled', 'false')
+        firebase_api_key = SystemSettings.get_setting('firebase_api_key', '')
+        firebase_project_id = SystemSettings.get_setting('firebase_project_id', '')
+        firebase_messaging_sender_id = SystemSettings.get_setting('firebase_messaging_sender_id', '')
+        firebase_app_id = SystemSettings.get_setting('firebase_app_id', '')
+        
+        # Only return config if Firebase is enabled
+        if firebase_enabled.lower() == 'true' and firebase_api_key and firebase_project_id:
+            return Response({
+                'enabled': True,
+                'apiKey': firebase_api_key,
+                'projectId': firebase_project_id,
+                'messagingSenderId': firebase_messaging_sender_id,
+                'appId': firebase_app_id,
+            })
+        
+        return Response({
+            'enabled': False,
+            'apiKey': '',
+            'projectId': '',
+            'messagingSenderId': '',
+            'appId': '',
+        })
+    
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny], url_path='public/integrations')
+    def public_integrations(self, request):
+        """
+        Public endpoint to get integration settings (Google Analytics, Facebook Pixel, etc.)
+        Does not require authentication.
+        Returns only non-secret integration settings.
+        """
+        # Auto-initialize integration settings if none exist
+        from .settings_init import initialize_category_settings
+        settings_count = SystemSettings.objects.filter(category='integration').count()
+        if settings_count == 0:
+            initialize_category_settings('integration')
+        
+        # Only return active, non-secret integration settings
+        settings = SystemSettings.objects.filter(
+            category='integration',
+            is_active=True,
+            is_secret=False  # Never expose secret settings publicly
+        ).order_by('key')
+        
+        # Convert to key-value object
+        data = {}
+        for setting in settings:
+            data[setting.key] = setting.value
+        
+        return Response(data)
+    
     @action(detail=False, methods=['post'])
     def bulk_update(self, request):
         """Bulk update multiple settings"""

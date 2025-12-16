@@ -1,0 +1,273 @@
+#!/bin/bash
+
+###############################################################################
+# Development Server Startup Script
+# Starts Django backend and Next.js frontend in development mode
+# Usage: bash scripts/dev-server.sh
+###############################################################################
+
+set -e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+BACKEND_DIR="$PROJECT_DIR"
+FRONTEND_DIR="$PROJECT_DIR/frontend"
+
+# Ports (different from production to avoid conflicts)
+DJANGO_PORT=8001
+NEXTJS_PORT=3001
+
+# Virtualenv settings
+# Use a dedicated dev venv so we don't conflict with the production venv under /var/www/svr
+VENV_DIR="$BACKEND_DIR/venv-dev"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}  Development Server${NC}"
+echo -e "${BLUE}========================================${NC}"
+echo ""
+
+# Check if .env.development exists
+if [ ! -f "$PROJECT_DIR/.env.development" ]; then
+    echo -e "${YELLOW}Creating .env.development from template...${NC}"
+    cat > "$PROJECT_DIR/.env.development" << 'EOF'
+# Development Environment
+DJANGO_ENVIRONMENT=development
+DEBUG=True
+SECRET_KEY=dev-secret-key-change-in-production-$(date +%s)
+
+# Allowed hosts for development
+ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+
+# Database - using system PostgreSQL with production credentials
+# Note: Password is URL-encoded (special characters: -Adeline17.@@ becomes -Adeline17.%40%40)
+# For development, using separate database 'aap_dev' to avoid conflicts with production
+DATABASE_URL=postgresql://aap:-Adeline17.%40%40@localhost:5432/aap_dev
+
+# Redis - using system Redis
+REDIS_URL=redis://localhost:6379/1
+
+# Frontend API URL (matches development backend port)
+NEXT_PUBLIC_API_URL=http://localhost:8001/api
+
+# CORS - allow localhost for development
+CORS_ALLOWED_ORIGINS=http://localhost:3001,http://127.0.0.1:3001
+EOF
+    echo -e "${GREEN}✓ Created .env.development${NC}"
+    echo ""
+fi
+
+# IMPORTANT: Do NOT overwrite an existing .env (it may contain real secrets like PAYSTACK keys).
+# Only create .env from .env.development if .env does not exist.
+if [ ! -f "$PROJECT_DIR/.env" ]; then
+    echo -e "${YELLOW}Creating .env from .env.development for development...${NC}"
+    cp "$PROJECT_DIR/.env.development" "$PROJECT_DIR/.env"
+    echo -e "${GREEN}✓ .env created for development${NC}"
+    echo ""
+else
+    echo -e "${GREEN}✓ Using existing .env (not overwriting)${NC}"
+    echo -e "${YELLOW}If Paystack keys or other env vars changed, restart this script to reload them.${NC}"
+    echo ""
+fi
+
+# Create / ensure dev virtual environment exists (matching repo requirements)
+if [ ! -d "$VENV_DIR" ]; then
+    echo -e "${YELLOW}Creating Python virtual environment at: $VENV_DIR${NC}"
+    cd "$BACKEND_DIR"
+    $PYTHON_BIN -m venv "$VENV_DIR" || {
+        echo -e "${RED}Failed to create virtual environment.${NC}"
+        echo -e "${YELLOW}If you see 'No module named venv', install: sudo apt-get install python3-venv${NC}"
+        exit 1
+    }
+    source "$VENV_DIR/bin/activate"
+    pip install --upgrade pip
+    echo -e "${YELLOW}Installing Python dependencies from requirements.txt...${NC}"
+    pip install -r requirements.txt || {
+        echo -e "${RED}Failed to install requirements.txt.${NC}"
+        echo -e "${YELLOW}This project is pinned to Django 4.2.x and expects Python 3.11 for some wheels (e.g. contourpy==1.3.3).${NC}"
+        echo -e "${YELLOW}Try: PYTHON_BIN=python3.11 bash scripts/dev-server.sh${NC}"
+        exit 1
+    }
+    echo -e "${GREEN}✓ Virtual environment created and dependencies installed${NC}"
+    echo ""
+fi
+
+if [ ! -f "$VENV_DIR/bin/activate" ]; then
+    echo -e "${RED}Dev virtual environment is missing activate script: $VENV_DIR/bin/activate${NC}"
+    exit 1
+fi
+
+# Ensure dependencies are installed (in case a previous run was interrupted mid-install)
+source "$VENV_DIR/bin/activate"
+if ! python -c "import django" >/dev/null 2>&1; then
+    echo -e "${YELLOW}Dev venv exists but dependencies are missing. Installing requirements.txt...${NC}"
+    pip install --upgrade pip
+    pip install -r requirements.txt || {
+        echo -e "${RED}Failed to install requirements.txt into $VENV_DIR${NC}"
+        echo -e "${YELLOW}Try: rm -rf $VENV_DIR && PYTHON_BIN=python3.11 bash scripts/dev-server.sh${NC}"
+        exit 1
+    }
+    echo -e "${GREEN}✓ Dependencies installed${NC}"
+    echo ""
+fi
+
+# Check if node_modules exists in frontend
+if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
+    echo -e "${YELLOW}Installing frontend dependencies...${NC}"
+    cd "$FRONTEND_DIR"
+    npm install
+    echo -e "${GREEN}✓ Frontend dependencies installed${NC}"
+    echo ""
+fi
+
+# Detect docker-compose command (v1: docker-compose, v2: docker compose)
+DOCKER_COMPOSE_CMD=""
+USE_DOCKER=false
+
+if command -v docker &> /dev/null; then
+    if command -v docker-compose &> /dev/null; then
+        DOCKER_COMPOSE_CMD="docker-compose"
+        USE_DOCKER=true
+    elif docker compose version &> /dev/null 2>&1; then
+        DOCKER_COMPOSE_CMD="docker compose"
+        USE_DOCKER=true
+    fi
+fi
+
+# Start Docker services (PostgreSQL and Redis) if docker-compose exists
+if [ "$USE_DOCKER" = true ] && [ ! -z "$DOCKER_COMPOSE_CMD" ] && [ -f "$PROJECT_DIR/docker-compose.dev.yml" ]; then
+    echo -e "${BLUE}Starting Docker services (PostgreSQL & Redis)...${NC}"
+    cd "$PROJECT_DIR"
+    $DOCKER_COMPOSE_CMD -f docker-compose.dev.yml up -d 2>&1
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓ Docker services started${NC}"
+        echo ""
+        
+        # Wait for PostgreSQL to be ready
+        echo -e "${YELLOW}Waiting for PostgreSQL to be ready...${NC}"
+        timeout=30
+        counter=0
+        while ! docker exec smart_vehicle_postgres_dev pg_isready -U postgres > /dev/null 2>&1; do
+            sleep 1
+            counter=$((counter + 1))
+            if [ $counter -ge $timeout ]; then
+                echo -e "${RED}✗ PostgreSQL failed to start${NC}"
+                echo -e "${YELLOW}Continuing anyway...${NC}"
+                break
+            fi
+        done
+        if [ $counter -lt $timeout ]; then
+            echo -e "${GREEN}✓ PostgreSQL is ready${NC}"
+        fi
+        echo ""
+    else
+        echo -e "${YELLOW}Warning: Failed to start Docker services${NC}"
+        echo -e "${YELLOW}Make sure PostgreSQL and Redis are running, or install Docker Compose${NC}"
+        echo ""
+    fi
+else
+    echo -e "${YELLOW}Docker Compose not found. Skipping Docker services.${NC}"
+    echo -e "${YELLOW}Assuming PostgreSQL and Redis are already running...${NC}"
+    echo ""
+fi
+
+# Activate virtual environment and run migrations
+echo -e "${BLUE}Setting up database...${NC}"
+cd "$BACKEND_DIR"
+source "$VENV_DIR/bin/activate"
+
+# Use development settings explicitly
+export DJANGO_SETTINGS_MODULE=config.settings.development
+
+# Ensure frontend dev env points to the dev backend (avoid accidental calls to :8000)
+FRONTEND_ENV_FILE="$FRONTEND_DIR/.env.local"
+echo -e "${YELLOW}Configuring frontend env: $FRONTEND_ENV_FILE${NC}"
+cat > "$FRONTEND_ENV_FILE" << EOF
+NEXT_PUBLIC_API_URL=http://localhost:$DJANGO_PORT/api
+EOF
+echo -e "${GREEN}✓ Frontend API URL set to http://localhost:$DJANGO_PORT/api${NC}"
+echo ""
+
+# Check if development database exists
+echo -e "${YELLOW}Checking database connection...${NC}"
+if python manage.py dbshell --command="\q" > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ Database connection successful${NC}"
+else
+    echo -e "${YELLOW}Database connection failed. Attempting to create database...${NC}"
+    echo -e "${YELLOW}If this fails, create the database manually:${NC}"
+    echo -e "${YELLOW}  sudo -u postgres psql -c \"CREATE DATABASE aap_dev OWNER aap;\"${NC}"
+    echo -e "${YELLOW}  sudo -u postgres psql -c \"GRANT ALL PRIVILEGES ON DATABASE aap_dev TO aap;\"${NC}"
+    echo ""
+fi
+
+# Run migrations
+echo -e "${YELLOW}Running database migrations...${NC}"
+python manage.py migrate
+
+echo -e "${GREEN}✓ Database ready${NC}"
+echo ""
+
+# Create superuser if it doesn't exist (optional)
+echo -e "${BLUE}Backend:${NC} http://localhost:$DJANGO_PORT"
+echo -e "${BLUE}Frontend:${NC} http://localhost:$NEXTJS_PORT"
+echo -e "${BLUE}Admin:${NC} http://localhost:$DJANGO_PORT/admin"
+echo ""
+echo -e "${YELLOW}Starting servers...${NC}"
+echo -e "${YELLOW}(Press Ctrl+C to stop all servers)${NC}"
+echo ""
+
+# Function to cleanup on exit
+cleanup() {
+    echo ""
+    echo -e "${YELLOW}Shutting down servers...${NC}"
+    kill $DJANGO_PID $NEXTJS_PID 2>/dev/null || true
+    wait $DJANGO_PID $NEXTJS_PID 2>/dev/null || true
+    echo -e "${GREEN}✓ Servers stopped${NC}"
+    exit 0
+}
+
+trap cleanup SIGINT SIGTERM
+
+# Start Django development server
+echo -e "${GREEN}Starting Django backend on port $DJANGO_PORT...${NC}"
+cd "$BACKEND_DIR"
+export DJANGO_SETTINGS_MODULE=config.settings.development
+source "$VENV_DIR/bin/activate"
+python manage.py runserver $DJANGO_PORT > /tmp/django-dev.log 2>&1 &
+DJANGO_PID=$!
+
+# Wait a moment for Django to start
+sleep 3
+
+# Start Next.js development server
+echo -e "${GREEN}Starting Next.js frontend on port $NEXTJS_PORT...${NC}"
+cd "$FRONTEND_DIR"
+NEXT_PUBLIC_API_URL=http://localhost:$DJANGO_PORT/api PORT=$NEXTJS_PORT npm run dev > /tmp/nextjs-dev.log 2>&1 &
+NEXTJS_PID=$!
+
+echo ""
+echo -e "${BLUE}========================================${NC}"
+echo -e "${GREEN}Development servers are running!${NC}"
+echo -e "${BLUE}========================================${NC}"
+echo ""
+echo -e "Backend API:  ${GREEN}http://localhost:$DJANGO_PORT${NC}"
+echo -e "Frontend:     ${GREEN}http://localhost:$NEXTJS_PORT${NC}"
+echo -e "Django Admin: ${GREEN}http://localhost:$DJANGO_PORT/admin${NC}"
+echo ""
+echo -e "${YELLOW}Logs:${NC}"
+echo -e "  Django: tail -f /tmp/django-dev.log"
+echo -e "  Next.js: tail -f /tmp/nextjs-dev.log"
+echo ""
+echo -e "${YELLOW}Press Ctrl+C to stop all servers${NC}"
+echo ""
+
+# Wait for both processes
+wait $DJANGO_PID $NEXTJS_PID
+

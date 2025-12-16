@@ -110,7 +110,7 @@ export default function VehicleDetailPage() {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Car className="w-5 h-5" />
-            <span>Vehicle Information</span>
+            <span>Vehicle Info</span>
           </CardTitle>
         </CardHeader>
         <CardContent>

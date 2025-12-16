@@ -3,7 +3,9 @@ VIN Decoder Integration using NHTSA API
 Decodes Vehicle Identification Numbers to retrieve vehicle specifications
 """
 import logging
-from vin_decoder_nhtsa.decoder import Vin
+from typing import Any
+
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +15,7 @@ class VehicleVINDecoder:
     Wrapper for NHTSA VIN Decoder with enhanced error handling and data mapping
     """
     
-    def decode_vin(self, vin):
+    def decode_vin(self, vin: str, timeout_seconds: float = 5.0):
         """
         Decode VIN and return structured vehicle data
         
@@ -37,20 +39,78 @@ class VehicleVINDecoder:
             return False, "VIN cannot contain letters I, O, or Q"
         
         try:
-            # Decode VIN using NHTSA API
-            result = Vin(vin)
-            
-            if not result:
-                return False, "No data returned from NHTSA"
-            
-            # Extract and structure the data
-            vehicle_data = self._extract_vehicle_data(result)
-            
+            # Decode VIN using NHTSA VPIC API (with an explicit timeout).
+            # NOTE: Some environments have restricted outbound HTTPS; without a timeout
+            # this can hang until the client aborts.
+            result = self._fetch_nhtsa_vpic(vin, timeout_seconds=timeout_seconds)
+            vehicle_data = self._extract_vehicle_data_from_dict(result)
             return True, vehicle_data
             
+        except requests.Timeout:
+            logger.warning("VIN decode timed out for %s (timeout=%ss)", vin, timeout_seconds)
+            return False, f"NHTSA VIN decode timed out after {timeout_seconds}s. VPIC may be slow or blocked from this server."
+        except requests.HTTPError as e:
+            resp = getattr(e, "response", None)
+            if resp is not None and resp.status_code == 503:
+                return False, "NHTSA VPIC returned 503 Service Unavailable. Try again later."
+            return False, f"NHTSA VIN decode failed (HTTP error). {str(e)}"
+        except requests.RequestException as e:
+            logger.error("VIN decode request error for %s: %s", vin, str(e))
+            return False, f"NHTSA VIN decode failed (network error). {str(e)}"
         except Exception as e:
             logger.error(f"VIN decode error for {vin}: {str(e)}")
             return False, f"Decode failed: {str(e)}"
+
+    def _fetch_nhtsa_vpic(self, vin: str, timeout_seconds: float) -> dict[str, Any]:
+        """
+        Fetch VIN decode results from NHTSA VPIC.
+        """
+        headers = {
+            # VPIC sometimes behaves better with an explicit UA.
+            "User-Agent": "SmartVehicleRepairs/1.0 (+https://workshop.aapgh.com)",
+            "Accept": "application/json",
+        }
+
+        def fetch(url: str) -> dict[str, Any]:
+            resp = requests.get(url, timeout=timeout_seconds, headers=headers)
+            # If VPIC is down/unavailable, it may return 503.
+            if resp.status_code == 503:
+                raise requests.HTTPError("VPIC returned 503 Service Unavailable", response=resp)
+            resp.raise_for_status()
+            payload = resp.json()
+            results = payload.get("Results") or []
+            if not results or not isinstance(results, list):
+                raise ValueError("No Results returned from NHTSA VPIC")
+            first = results[0]
+            if not isinstance(first, dict):
+                raise ValueError("Unexpected Results format from NHTSA VPIC")
+            return first
+
+        # Prefer the extended endpoint, but fall back to the simpler endpoint if needed.
+        extended_url = f"https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvaluesextended/{vin}?format=json"
+        basic_url = f"https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvalues/{vin}?format=json"
+        try:
+            return fetch(extended_url)
+        except requests.HTTPError as e:
+            # If VPIC is returning 503, retry once using the basic endpoint.
+            resp = getattr(e, "response", None)
+            if resp is not None and resp.status_code == 503:
+                return fetch(basic_url)
+            raise
+
+    def _extract_vehicle_data_from_dict(self, d: dict[str, Any]) -> dict[str, Any]:
+        """
+        Map NHTSA VPIC response dict keys to our internal fields.
+        """
+        class DictWrapper:
+            def __init__(self, data: dict[str, Any]):
+                self._data = data
+
+            def __getattr__(self, item: str) -> Any:
+                # Preserve previous attribute style access used by _get_value
+                return self._data.get(item, "")
+
+        return self._extract_vehicle_data(DictWrapper(d))
     
     def _extract_vehicle_data(self, vin_obj):
         """
@@ -76,8 +136,13 @@ class VehicleVINDecoder:
         data['doors'] = self._get_int_value(vin_obj, 'Doors')
         
         # Engine information
+        # Raw fuel/electrification values (from NHTSA)
+        data['fuel_type_primary'] = self._get_value(vin_obj, 'FuelTypePrimary')
+        data['fuel_type_secondary'] = self._get_value(vin_obj, 'FuelTypeSecondary')
+        data['electrification_level'] = self._get_value(vin_obj, 'ElectrificationLevel')
+
         data['engine_type'] = self._map_fuel_type(
-            self._get_value(vin_obj, 'FuelTypePrimary')
+            data.get('fuel_type_primary', '')
         )
         data['engine_size'] = self._format_engine_size(
             self._get_value(vin_obj, 'DisplacementL'),
@@ -86,10 +151,14 @@ class VehicleVINDecoder:
         data['engine_cylinders'] = self._get_int_value(vin_obj, 'EngineCylinders')
         data['engine_hp'] = self._get_int_value(vin_obj, 'EngineHP')
         data['engine_kw'] = self._get_int_value(vin_obj, 'EngineKW')
+        data['engine_model'] = self._get_value(vin_obj, 'EngineModel')
+        data['engine_manufacturer'] = self._get_value(vin_obj, 'EngineManufacturer')
+        data['engine_displacement_l'] = self._get_value(vin_obj, 'DisplacementL')
         
         # Transmission
+        data['transmission_style'] = self._get_value(vin_obj, 'TransmissionStyle')
         data['transmission_type'] = self._map_transmission_type(
-            self._get_value(vin_obj, 'TransmissionStyle')
+            data.get('transmission_style', '')
         )
         data['transmission_speeds'] = self._get_value(vin_obj, 'TransmissionSpeeds')
         
@@ -107,7 +176,11 @@ class VehicleVINDecoder:
         
         # Safety features
         data['airbag_front'] = self._get_value(vin_obj, 'AirBagLocFront')
+        data['airbag_knee'] = self._get_value(vin_obj, 'AirBagLocKnee')
         data['airbag_side'] = self._get_value(vin_obj, 'AirBagLocSide')
+        data['airbag_curtain'] = self._get_value(vin_obj, 'AirBagLocCurtain')
+        data['airbag_seat_cushion'] = self._get_value(vin_obj, 'AirBagLocSeatCushion')
+        data['other_restraint_info'] = self._get_value(vin_obj, 'OtherRestraintSystemInfo')
         data['abs'] = self._get_value(vin_obj, 'ABS')
         data['esc'] = self._get_value(vin_obj, 'ESC')  # Electronic Stability Control
         data['tpms'] = self._get_value(vin_obj, 'TPMS')  # Tire Pressure Monitoring

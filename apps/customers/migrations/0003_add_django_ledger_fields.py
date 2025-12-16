@@ -7,8 +7,8 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('django_ledger', '0030_alter_accountmodel_role'),
         ('customers', '0002_customernote_note_alter_customernote_content_and_more'),
+        ('django_ledger', '__first__'),
     ]
 
     operations = [

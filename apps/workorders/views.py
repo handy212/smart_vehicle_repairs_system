@@ -91,6 +91,9 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         return WorkOrderDetailSerializer
 
     def perform_create(self, serializer):
+        from apps.subscriptions.services import SubscriptionUsageService
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        
         request = self.request
         branch_id = request.data.get('branch') or request.data.get('branch_id')
         branch = resolve_branch(request, branch_id=branch_id)
@@ -98,7 +101,54 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         if branch is None:
             raise ValidationError({'branch': 'A valid branch assignment is required.'})
 
-        serializer.save(branch=branch)
+        work_order = serializer.save(branch=branch)
+        
+        # Check for subscription usage if service type indicates it
+        service_type = request.data.get('service_type', '').lower()
+        customer = work_order.customer
+        
+        # Check for towing service
+        if 'towing' in service_type or request.data.get('is_towing', False):
+            try:
+                has_allowance, subscription, remaining = SubscriptionUsageService.check_allowance(
+                    customer, 'towing_services', 1
+                )
+                if has_allowance and subscription:
+                    SubscriptionUsageService.consume_allowance(
+                        subscription=subscription,
+                        usage_type='towing_services',
+                        quantity_used=1,
+                        reference_type='workorder',
+                        reference_id=work_order.id,
+                        description=f'Towing service for work order {work_order.work_order_number}',
+                        created_by=request.user
+                    )
+            except DjangoValidationError as e:
+                # Log but don't block work order creation - subscription is optional
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Subscription allowance check failed: {e}")
+        
+        # Check for call-out service
+        if 'call' in service_type or request.data.get('is_call_out', False):
+            try:
+                has_allowance, subscription, remaining = SubscriptionUsageService.check_allowance(
+                    customer, 'call_out_charges', 1
+                )
+                if has_allowance and subscription:
+                    SubscriptionUsageService.consume_allowance(
+                        subscription=subscription,
+                        usage_type='call_out_charges',
+                        quantity_used=1,
+                        reference_type='workorder',
+                        reference_id=work_order.id,
+                        description=f'Call-out service for work order {work_order.work_order_number}',
+                        created_by=request.user
+                    )
+            except DjangoValidationError as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Subscription allowance check failed: {e}")
     
     def update(self, request, *args, **kwargs):
         """Override update to add better error logging"""

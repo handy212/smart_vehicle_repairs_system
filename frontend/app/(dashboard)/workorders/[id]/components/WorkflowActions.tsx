@@ -885,13 +885,19 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
             variant: "outline",
             description: "Request quality control inspection",
           },
-          {
-            label: "Complete",
-            icon: CheckCircle,
-            onClick: () => setShowCompleteDialog(true),
-            disabled: completeMutation.isPending,
-            description: "Mark work as completed",
-          }
+          // Only allow direct "Complete" when QC is not required. If QC is required,
+          // the correct next step is to request/perform QC (which transitions to completed).
+          ...(!currentWorkOrder?.quality_check_required
+            ? [
+                {
+                  label: "Complete",
+                  icon: CheckCircle,
+                  onClick: () => setShowCompleteDialog(true),
+                  disabled: completeMutation.isPending,
+                  description: "Mark work as completed",
+                },
+              ]
+            : [])
         );
         break;
 

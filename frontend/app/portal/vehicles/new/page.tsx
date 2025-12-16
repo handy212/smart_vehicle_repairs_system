@@ -38,6 +38,7 @@ export default function AddVehiclePage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [vinOtherInfo, setVinOtherInfo] = useState<any | null>(null);
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -71,11 +72,13 @@ export default function AddVehiclePage() {
     engine_type?: string;
     engine_size?: string;
     transmission_type?: string;
+    vin_other_information?: any;
   }) => {
     if (decodedData.year) setValue("year", decodedData.year);
     if (decodedData.make) setValue("make", decodedData.make);
     if (decodedData.model) setValue("model", decodedData.model);
     if (decodedData.engine_type) setValue("engine_type", decodedData.engine_type as any);
+    if (decodedData.vin_other_information) setVinOtherInfo(decodedData.vin_other_information);
   };
 
   const createMutation = useMutation({
@@ -162,7 +165,7 @@ export default function AddVehiclePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Vehicle Information</CardTitle>
+          <CardTitle>Vehicle Info</CardTitle>
           <CardDescription>
             Enter your vehicle details. You can use the VIN decoder to automatically fill in some information.
           </CardDescription>
@@ -207,6 +210,52 @@ export default function AddVehiclePage() {
                 The VIN is usually found on the driver's side dashboard or door frame
               </p>
             </div>
+
+            {/* Other Information (from VIN) */}
+            {vinOtherInfo && (
+              <Card className="bg-gray-50 dark:bg-gray-900/20">
+                <CardHeader>
+                  <CardTitle className="text-base">Other Information (from VIN)</CardTitle>
+                  <CardDescription>
+                    Manufacturer-submitted details from NHTSA (Part 565). This is informational.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div><span className="text-gray-500">Series:</span> {vinOtherInfo.series || "-"}</div>
+                    <div><span className="text-gray-500">Trim:</span> {vinOtherInfo.trim || "-"}</div>
+                    <div><span className="text-gray-500">GVWR:</span> {vinOtherInfo.gvwr || "-"}</div>
+                    <div><span className="text-gray-500">Drive Type:</span> {vinOtherInfo.drive_type || "-"}</div>
+                    <div><span className="text-gray-500">Cylinders:</span> {vinOtherInfo.cylinders ?? "-"}</div>
+                    <div><span className="text-gray-500">Engine Displacement (L):</span> {vinOtherInfo.engine_displacement_l || "-"}</div>
+                    <div><span className="text-gray-500">Engine Model:</span> {vinOtherInfo.engine_model || "-"}</div>
+                    <div><span className="text-gray-500">Engine HP:</span> {vinOtherInfo.engine_hp ?? "-"}</div>
+                    <div><span className="text-gray-500">Engine Manufacturer:</span> {vinOtherInfo.engine_manufacturer || "-"}</div>
+                    <div><span className="text-gray-500">Primary Fuel Type:</span> {vinOtherInfo.primary_fuel_type || "-"}</div>
+                    <div><span className="text-gray-500">Secondary Fuel Type:</span> {vinOtherInfo.secondary_fuel_type || "-"}</div>
+                    <div><span className="text-gray-500">Electrification Level:</span> {vinOtherInfo.electrification_level || "-"}</div>
+                    <div><span className="text-gray-500">Transmission Speed:</span> {vinOtherInfo.transmission_speed || "-"}</div>
+                    <div><span className="text-gray-500">Transmission Style:</span> {vinOtherInfo.transmission_style || "-"}</div>
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Airbags</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <div><span className="text-gray-500">Front:</span> {vinOtherInfo.airbags?.front || "-"}</div>
+                      <div><span className="text-gray-500">Knee:</span> {vinOtherInfo.airbags?.knee || "-"}</div>
+                      <div><span className="text-gray-500">Side:</span> {vinOtherInfo.airbags?.side || "-"}</div>
+                      <div><span className="text-gray-500">Curtain:</span> {vinOtherInfo.airbags?.curtain || "-"}</div>
+                      <div><span className="text-gray-500">Seat Cushion:</span> {vinOtherInfo.airbags?.seat_cushion || "-"}</div>
+                    </div>
+                    {vinOtherInfo.airbags?.other_restraint_info && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        Other Restraint Info: {vinOtherInfo.airbags.other_restraint_info}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Year, Make, Model */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

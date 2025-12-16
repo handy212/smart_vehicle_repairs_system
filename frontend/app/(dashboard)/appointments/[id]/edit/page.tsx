@@ -187,11 +187,18 @@ export default function EditAppointmentPage() {
                     }}
                   >
                     <option value="">Select a customer</option>
-                    {customersData?.results?.map((customer) => (
+                    {customersData?.results?.map((customer) => {
+                      const displayName = customer.full_name || 
+                        customer.company_name || 
+                        (customer.user?.first_name && customer.user?.last_name 
+                          ? `${customer.user.first_name} ${customer.user.last_name}` 
+                          : customer.user?.email || customer.customer_number);
+                      return (
                       <option key={customer.id} value={customer.id}>
-                        {customer.user?.first_name} {customer.user?.last_name} - {customer.customer_number}
+                          {displayName}
                       </option>
-                    ))}
+                      );
+                    })}
                   </Select>
                   {errors.customer && (
                     <p className="mt-1 text-sm text-red-600">{errors.customer.message}</p>

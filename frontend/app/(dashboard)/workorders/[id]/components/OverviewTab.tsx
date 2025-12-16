@@ -214,7 +214,7 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
                     {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null && (
                       <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
                         <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                          Vehicle Information
+                          Vehicle Info
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex items-start">

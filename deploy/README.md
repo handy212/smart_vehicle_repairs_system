@@ -1,126 +1,71 @@
-# Deployment Automation Scripts
+# Deployment Scripts
 
-This directory contains automated scripts to help deploy the Smart Vehicle Repairs System to production.
+## Automated Deployment Script
 
-## Quick Start
+The `deploy.sh` script syncs changes from the source directory (`/opt/smart_vehicle_repairs_system`) to the production directory (`/var/www/svr`) automatically.
 
-### Option 1: Complete Automated Setup
+### Quick Usage
+
 ```bash
-sudo bash deploy/setup-complete.sh
-```
-This runs all setup steps interactively.
+# Sync files only (no rebuild/restart)
+sudo bash deploy/deploy.sh
 
-### Option 2: Step-by-Step Setup
+# Sync + rebuild frontend + restart Next.js
+sudo bash deploy/deploy.sh --rebuild-frontend --restart
 
-1. **Install dependencies:**
-   ```bash
-   sudo bash deploy/install.sh
-   ```
+# Sync + rebuild backend + restart Django
+sudo bash deploy/deploy.sh --rebuild-backend --restart
 
-2. **Setup database:**
-   ```bash
-   sudo bash deploy/setup-database.sh
-   ```
-
-3. **Setup application:**
-   ```bash
-   sudo bash deploy/setup-app.sh
-   ```
-
-4. **Setup services:**
-   ```bash
-   sudo bash deploy/setup-services.sh
-   ```
-
-## Prerequisites
-
-- Ubuntu 20.04/22.04 LTS (or similar Debian-based Linux)
-- Root/sudo access
-- Internet connection
-
-## What the Scripts Do
-
-### `install.sh`
-- Updates system packages
-- Installs Python, Node.js, PostgreSQL, Redis, Nginx
-- Creates application user
-- Configures firewall
-
-### `setup-database.sh`
-- Creates PostgreSQL database
-- Creates database user
-- Sets up permissions
-
-### `setup-app.sh`
-- Creates Python virtual environment
-- Installs Python dependencies
-- Runs database migrations
-- Initializes permissions and settings
-- Collects static files
-- Sets up frontend (npm install)
-
-### `setup-services.sh`
-- Creates systemd service files for:
-  - Gunicorn (Django)
-  - Celery worker
-  - Celery beat
-  - Next.js (frontend)
-- Enables services to start on boot
-
-## Manual Steps After Running Scripts
-
-1. **Create superuser:**
-   ```bash
-   sudo -u svr /var/www/svr/venv/bin/python manage.py createsuperuser
-   ```
-
-2. **Edit .env file:**
-   ```bash
-   sudo nano /var/www/svr/.env
-   ```
-   Update all environment variables with your production values.
-
-3. **Configure Nginx:**
-   - Copy Nginx config from `DEPLOYMENT_GUIDE.md`
-   - Or use: `sudo bash deploy/setup-nginx.sh` (if available)
-
-4. **Setup SSL:**
-   ```bash
-   sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com -d api.yourdomain.com
-   ```
-
-5. **Start services:**
-   ```bash
-   sudo systemctl start svr svr-celery svr-celerybeat svr-nextjs
-   ```
-
-## Verification
-
-Check service status:
-```bash
-sudo systemctl status svr
-sudo systemctl status svr-celery
-sudo systemctl status svr-celerybeat
-sudo systemctl status svr-nextjs
+# Full deployment (sync + rebuild everything + restart all services)
+sudo bash deploy/deploy.sh --all
 ```
 
-View logs:
+### Options
+
+- `--rebuild-frontend` - Rebuild Next.js frontend (runs `npm run build`)
+- `--rebuild-backend` - Rebuild Django backend (runs migrations, collectstatic)
+- `--restart` - Restart all services (Django, Next.js, Celery, Celery Beat)
+- `--all` - Equivalent to `--rebuild-frontend --rebuild-backend --restart`
+
+### What It Does
+
+1. **Syncs files** using `rsync` from `/opt/smart_vehicle_repairs_system` to `/var/www/svr`
+   - Excludes: `.git`, `node_modules`, `.next`, `.venv`, `logs`, `media`, `.env`, etc.
+   - Preserves production `.env` file (backs it up and restores)
+   - Sets correct file ownership (`svr:svr`)
+
+2. **Rebuilds frontend** (if `--rebuild-frontend` is used)
+   - Installs dependencies if needed
+   - Builds Next.js application
+   - Fixes `.next` directory permissions
+
+3. **Rebuilds backend** (if `--rebuild-backend` is used)
+   - Installs/updates Python dependencies
+   - Runs database migrations
+   - Collects static files
+
+4. **Restarts services** (if `--restart` is used)
+   - Restarts Django (svr.service)
+   - Restarts Next.js (svr-nextjs.service)
+   - Restarts Celery (svr-celery.service)
+   - Restarts Celery Beat (svr-celerybeat.service)
+
+### Typical Workflow
+
 ```bash
-sudo journalctl -u svr -f
-sudo journalctl -u svr-celery -f
+# After making changes to source code in /opt/smart_vehicle_repairs_system
+
+# Option 1: Quick sync (files only, no restart)
+sudo bash deploy/deploy.sh
+
+# Option 2: Full deployment (recommended after code changes)
+sudo bash deploy/deploy.sh --all
 ```
 
-## Troubleshooting
+### Safety Features
 
-If a script fails:
-1. Check the error message
-2. Fix the issue manually
-3. Re-run the script (they're idempotent - safe to run multiple times)
-
-## Notes
-
-- Scripts are idempotent (safe to run multiple times)
-- Scripts will prompt for required information
-- All sensitive data should be stored in `.env` file
-- Make sure to backup your `.env` file securely
-
+- Backs up production `.env` file before syncing
+- Preserves production-specific files (logs, media, .env)
+- Validates source and target directories
+- Checks service status after deployment
+- Uses efficient `rsync` for file synchronization

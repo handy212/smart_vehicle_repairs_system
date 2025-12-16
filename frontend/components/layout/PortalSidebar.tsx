@@ -11,6 +11,7 @@ import {
   CreditCard,
   ChevronLeft,
   ChevronRight,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ const navigationGroups: NavigationGroup[] = [
       { name: "My Invoices", href: "/portal/invoices", icon: FileText },
       { name: "My Estimates", href: "/portal/estimates", icon: FileText },
       { name: "Payment History", href: "/portal/payments", icon: CreditCard },
+      { name: "My Subscriptions", href: "/portal/subscriptions", icon: Package },
     ],
   },
 ];

@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Stethoscope,
   Keyboard,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ const navigationGroups = [
     items: [
       { name: "Inventory", href: "/inventory", icon: Package, permission: "view_inventory" },
       { name: "Billing", href: "/billing", icon: Receipt, permission: "view_billing" },
+      { name: "Subscriptions", href: "/subscriptions", icon: CreditCard, permission: "view_subscriptions" },
     ],
   },
   {

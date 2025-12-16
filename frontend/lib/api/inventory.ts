@@ -90,6 +90,8 @@ export interface Part {
   category?: number | { id: number; name: string; full_path?: string };
   category_name?: string;
   category_path?: string;
+  branch?: number | { id: number; name: string };
+  branch_name?: string;
   manufacturer?: string;
   manufacturer_part_number?: string;
   suppliers?: number[] | Supplier[];
@@ -118,6 +120,7 @@ export interface Part {
   compatible_years?: string;
   warranty_months?: number;
   warranty_notes?: string;
+  image?: string;
   is_active: boolean;
   is_taxable?: boolean;
   is_core?: boolean;
@@ -163,13 +166,17 @@ export const inventoryApi = {
     return response.data;
   },
 
-  create: async (data: Partial<Part>): Promise<Part> => {
-    const response = await apiClient.post("/inventory/parts/", data);
+  create: async (data: Partial<Part> | FormData): Promise<Part> => {
+    const response = await apiClient.post("/inventory/parts/", data, {
+      headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined,
+    });
     return response.data;
   },
 
-  update: async (id: number, data: Partial<Part>): Promise<Part> => {
-    const response = await apiClient.put(`/inventory/parts/${id}/`, data);
+  update: async (id: number, data: Partial<Part> | FormData): Promise<Part> => {
+    const response = await apiClient.put(`/inventory/parts/${id}/`, data, {
+      headers: data instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined,
+    });
     return response.data;
   },
 

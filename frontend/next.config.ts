@@ -23,9 +23,10 @@ const getApiHost = () => {
 const apiConfig = getApiHost();
 
 const nextConfig: NextConfig = {
-  // Enable standalone output for Docker
-  output: 'standalone',
-  
+  // Ensure Next doesn't infer the workspace root from a different lockfile when deployed
+  // alongside the Django project (which may have its own package-lock.json).
+  outputFileTracingRoot: path.resolve(__dirname),
+
   turbopack: {
     root: path.resolve(__dirname),
   },

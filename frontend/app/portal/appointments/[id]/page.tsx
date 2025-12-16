@@ -269,10 +269,10 @@ export default function AppointmentDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Vehicle Information */}
+          {/* Vehicle Info */}
           <Card>
             <CardHeader>
-              <CardTitle>Vehicle Information</CardTitle>
+              <CardTitle>Vehicle Info</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-start space-x-4">

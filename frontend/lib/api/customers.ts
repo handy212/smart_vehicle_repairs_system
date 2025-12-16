@@ -142,5 +142,28 @@ export const customersApi = {
     const response = await apiClient.post(`/customers/customers/${id}/revoke_portal_access/`);
     return response.data;
   },
+
+  checkEmail: async (email: string, customerId?: number): Promise<{
+    success: boolean;
+    exists?: boolean;
+    user_id?: number;
+    customer_id?: number;
+    customer?: Customer;
+    user?: {
+      id: number;
+      email: string;
+      first_name: string;
+      last_name: string;
+      role: string;
+    };
+    message?: string;
+    error?: string;
+  }> => {
+    const response = await apiClient.post("/customers/customers/check_email/", { 
+      email: email,
+      customer_id: customerId 
+    });
+    return response.data;
+  },
 };
 

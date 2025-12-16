@@ -1,3 +1,5 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
 # Python
 *.py[cod]
 *$py.class
@@ -9,42 +11,46 @@ dist/
 downloads/
 eggs/
 .eggs/
-/lib/
+lib/
 lib64/
 parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
-
-# Virtual Environment
+MANIFEST
+.venv/
 venv/
 ENV/
 env/
-.venv
+*.sqlite3
+*.db
+db.sqlite3
 
 # Django
 *.log
 local_settings.py
-db.sqlite3
-db.sqlite3-journal
-/staticfiles
-/static/**
-!/static/css/
-!/static/css/**
-!/static/manifest.json
-!/static/icons/
-!/static/icons/**
+/static/
+/staticfiles/
+/media/
+*.pot
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
 
-# Environment variables
-.env
-.env.local
-.env.production
-.env.*.local
-*.env
+# Node
+node_modules/
+.npm
+.next
+.turbo
+out/
+dist/
 
 # IDE
 .vscode/
@@ -52,43 +58,41 @@ db.sqlite3-journal
 *.swp
 *.swo
 *~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Celery
-celerybeat-schedule
-celerybeat.pid
+# Docker
+.dockerignore
 
-# Coverage
-htmlcov/
+# Testing
 .coverage
-.coverage.*
-coverage.xml
-*.cover
-
-# Documentation - exclude docs folder and all .md files except README files
-docs/
-*.md
-!README*.md
-!**/README*.md
-
-# pytest
 .pytest_cache/
+htmlcov/
 
-# Deployment
-backups/
-*.sql.gz
-*.tar.gz
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
 
-# Docker volumes (if not using named volumes)
-postgres_data/
-redis_data/
-
-# Node (if using frontend tools)
-node_modules/
-npm-debug.log
-yarn-error.log
-firebase/
-*firebase*.json
+# Project specific
+Attached_image.png
+.cursor/

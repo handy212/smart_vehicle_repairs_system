@@ -119,6 +119,15 @@ def initialize_default_settings():
         'integration': [
             {'key': 'google_analytics_id', 'value': '', 'description': 'Google Analytics ID', 'is_secret': True},
             {'key': 'facebook_pixel_id', 'value': '', 'description': 'Facebook Pixel ID', 'is_secret': True},
+            {'key': 'recaptcha_enabled', 'value': 'false', 'description': 'Enable Google reCAPTCHA on login pages'},
+            {'key': 'recaptcha_site_key', 'value': '', 'description': 'Google reCAPTCHA Site Key (public)', 'is_secret': False},
+            {'key': 'recaptcha_secret_key', 'value': '', 'description': 'Google reCAPTCHA Secret Key', 'is_secret': True},
+            {'key': 'firebase_enabled', 'value': 'false', 'description': 'Enable Firebase Cloud Messaging (FCM) for push notifications'},
+            {'key': 'firebase_api_key', 'value': '', 'description': 'Firebase API Key (Web API Key)', 'is_secret': True},
+            {'key': 'firebase_project_id', 'value': '', 'description': 'Firebase Project ID', 'is_secret': False},
+            {'key': 'firebase_messaging_sender_id', 'value': '', 'description': 'Firebase Messaging Sender ID', 'is_secret': False},
+            {'key': 'firebase_app_id', 'value': '', 'description': 'Firebase App ID', 'is_secret': False},
+            {'key': 'firebase_credentials_path', 'value': '', 'description': 'Path to Firebase service account JSON file (server-side)', 'is_secret': True},
         ],
         # Maintenance
         'maintenance': [
@@ -254,6 +263,15 @@ def initialize_category_settings(category):
         'integration': [
             {'key': 'google_analytics_id', 'value': '', 'description': 'Google Analytics ID', 'is_secret': True},
             {'key': 'facebook_pixel_id', 'value': '', 'description': 'Facebook Pixel ID', 'is_secret': True},
+            {'key': 'recaptcha_enabled', 'value': 'false', 'description': 'Enable Google reCAPTCHA on login pages'},
+            {'key': 'recaptcha_site_key', 'value': '', 'description': 'Google reCAPTCHA Site Key (public)', 'is_secret': False},
+            {'key': 'recaptcha_secret_key', 'value': '', 'description': 'Google reCAPTCHA Secret Key', 'is_secret': True},
+            {'key': 'firebase_enabled', 'value': 'false', 'description': 'Enable Firebase Cloud Messaging (FCM) for push notifications'},
+            {'key': 'firebase_api_key', 'value': '', 'description': 'Firebase API Key (Web API Key)', 'is_secret': True},
+            {'key': 'firebase_project_id', 'value': '', 'description': 'Firebase Project ID', 'is_secret': False},
+            {'key': 'firebase_messaging_sender_id', 'value': '', 'description': 'Firebase Messaging Sender ID', 'is_secret': False},
+            {'key': 'firebase_app_id', 'value': '', 'description': 'Firebase App ID', 'is_secret': False},
+            {'key': 'firebase_credentials_path', 'value': '', 'description': 'Path to Firebase service account JSON file (server-side)', 'is_secret': True},
         ],
         'maintenance': [
             {'key': 'maintenance_mode', 'value': 'false', 'description': 'Enable maintenance mode'},

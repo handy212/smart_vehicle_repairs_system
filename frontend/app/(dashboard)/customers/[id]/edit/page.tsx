@@ -238,6 +238,44 @@ export default function EditCustomerPage() {
   const onSubmit = async (data: CustomerFormData) => {
     setServerError(null);
     try {
+      // Check if email already exists (and it's not the current customer's email)
+      if (data.email && data.email.trim() && customer?.user?.email?.toLowerCase() !== data.email.trim().toLowerCase()) {
+        try {
+          const emailCheck = await customersApi.checkEmail(data.email.trim().toLowerCase(), customerId);
+          if (emailCheck.success && emailCheck.exists) {
+            // Only warn if it's a different user
+            if (emailCheck.user_id && emailCheck.user_id !== customer?.user?.id) {
+              const user = emailCheck.user as any;
+              const customerData = emailCheck.customer as any;
+              const displayName = customerData 
+                ? (customerData.company_name || `${customerData.user?.first_name} ${customerData.user?.last_name}` || customerData.customer_number)
+                : (user ? `${user.first_name} ${user.last_name}` : (user?.email || 'User'));
+              
+              toast({
+                title: "Email Already Exists",
+                description: `A user with email "${data.email}" already exists in the system.`,
+                variant: "warning",
+              });
+              
+              if (emailCheck.customer_id && typeof window !== 'undefined' && confirm(`A user with email "${data.email}" already exists.\n\n${displayName}\n\nWould you like to view the existing customer instead?`)) {
+                router.push(`/customers/${emailCheck.customer_id}`);
+                return;
+              }
+              
+              // Set error on email field
+              setError("email", {
+                type: "manual",
+                message: "A user with this email already exists in the system",
+              });
+              return;
+            }
+          }
+        } catch (emailError) {
+          // If email check fails, continue with form submission
+          console.warn("Email existence check failed:", emailError);
+        }
+      }
+      
       await updateMutation.mutateAsync(data);
     } catch (error) {
       console.error("Error updating customer:", error);

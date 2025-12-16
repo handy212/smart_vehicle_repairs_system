@@ -24,19 +24,31 @@ def initialize_firebase():
     if _firebase_app is not None:
         return _firebase_app
     
-    # Check if Firebase is enabled
-    if not settings.FIREBASE_ENABLED:
+    # Check if Firebase is enabled (from settings or database)
+    from apps.accounts.settings_utils import get_setting
+    firebase_enabled = get_setting('firebase_enabled', 'false').lower() == 'true'
+    firebase_enabled_env = getattr(settings, 'FIREBASE_ENABLED', False)
+    
+    if not firebase_enabled and not firebase_enabled_env:
         logger.info("Firebase is disabled in settings")
         return None
     
-    # Check for credentials path
-    if not settings.FIREBASE_CREDENTIALS_PATH:
+    # Get credentials path from database settings or environment
+    firebase_credentials_path = get_setting('firebase_credentials_path', '')
+    if not firebase_credentials_path:
+        firebase_credentials_path = getattr(settings, 'FIREBASE_CREDENTIALS_PATH', '')
+    
+    if not firebase_credentials_path:
         logger.warning("FIREBASE_CREDENTIALS_PATH not configured in settings")
         return None
     
     try:
+        # Ensure path is absolute
+        if not firebase_credentials_path.startswith('/'):
+            firebase_credentials_path = str(settings.BASE_DIR / firebase_credentials_path)
+        
         # Initialize Firebase with service account
-        cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_PATH)
+        cred = credentials.Certificate(firebase_credentials_path)
         _firebase_app = firebase_admin.initialize_app(cred)
         logger.info("Firebase Admin SDK initialized successfully")
         return _firebase_app

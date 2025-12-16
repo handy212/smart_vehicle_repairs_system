@@ -20,7 +20,7 @@ import {
   ChevronDown,
   Filter,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -472,6 +472,38 @@ function BranchDialog({
         },
   });
 
+  // Reset form when branch changes (for editing different branches)
+  useEffect(() => {
+    if (branch) {
+      reset({
+        name: branch.name || "",
+        code: branch.code || "",
+        description: branch.description || "",
+        phone: branch.phone || "",
+        email: branch.email || "",
+        fax: branch.fax || "",
+        address: branch.address || "",
+        city: branch.city || "",
+        state: branch.state || "",
+        zip_code: branch.zip_code || "",
+        country: branch.country || "Ghana",
+        is_active: branch.is_active ?? true,
+        is_headquarters: branch.is_headquarters ?? false,
+        opening_time: branch.opening_time || "",
+        closing_time: branch.closing_time || "",
+        timezone: branch.timezone || "Africa/accra",
+      });
+    } else {
+      // Reset to default values for new branch
+      reset({
+        country: "Ghana",
+        is_active: true,
+        is_headquarters: false,
+        timezone: "Africa/accra",
+      });
+    }
+  }, [branch, reset]);
+
   const createMutation = useMutation({
     mutationFn: (data: BranchFormData) => branchesApi.create(data),
     onSuccess: () => {
@@ -510,10 +542,28 @@ function BranchDialog({
   });
 
   const onSubmit = async (data: BranchFormData) => {
+    // Clean up empty strings - convert to null/undefined for optional fields
+    const cleanedData: any = { ...data };
+    
+    // Convert empty strings to null for optional fields
+    if (cleanedData.description === "") delete cleanedData.description;
+    if (cleanedData.email === "") delete cleanedData.email;
+    if (cleanedData.fax === "") delete cleanedData.fax;
+    if (cleanedData.opening_time === "" || cleanedData.opening_time === null) delete cleanedData.opening_time;
+    if (cleanedData.closing_time === "" || cleanedData.closing_time === null) delete cleanedData.closing_time;
+    if (cleanedData.timezone === "") cleanedData.timezone = "America/New_York";
+    
+    // Ensure code is uppercase
+    if (cleanedData.code) {
+      cleanedData.code = cleanedData.code.toUpperCase().trim();
+    }
+    
     if (branch) {
-      await updateMutation.mutateAsync(data);
+      // Don't send code field on update since it's disabled/read-only
+      delete cleanedData.code;
+      await updateMutation.mutateAsync(cleanedData);
     } else {
-      await createMutation.mutateAsync(data);
+      await createMutation.mutateAsync(cleanedData);
     }
   };
 

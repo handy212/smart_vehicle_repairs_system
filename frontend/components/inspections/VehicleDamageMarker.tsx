@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { X, MapPin, Trash2, Edit2 } from "lucide-react";
+import { X, MapPin, Trash2, Edit2, Loader2 } from "lucide-react";
 
 export interface DamageMark {
   id: string;
@@ -50,6 +50,8 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
   const [editingMark, setEditingMark] = useState<DamageMark | null>(null);
   const [tempMark, setTempMark] = useState<{ x: number; y: number } | null>(null);
   const [newMarkData, setNewMarkData] = useState<Partial<DamageMark>>({ type: "scratch", severity: "minor", description: "" });
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -157,27 +159,42 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
           className="relative w-full h-[600px] border-2 border-gray-300 rounded-lg bg-white cursor-crosshair overflow-hidden"
           style={{ position: "relative" }}
         >
+          {/* Loading Skeleton */}
+          {imageLoading && !imageError && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 animate-pulse">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+                <p className="text-sm text-gray-500">Loading vehicle diagram...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {imageError && (
+            <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-center p-8">
+              <div>
+                <p className="font-semibold mb-2">Image not found</p>
+                <p className="text-sm">Please ensure the vehicle diagram image is available at /images/car_with_markers.png</p>
+              </div>
+            </div>
+          )}
+
           {/* Vehicle Image */}
           <img
-            src="/static/images/car_with_markers.png"
+            src="/images/car_with_markers.png"
             alt="Vehicle diagram for damage marking"
-            className="w-full h-full object-contain select-none"
+            className={`w-full h-full object-contain select-none transition-opacity duration-300 ${
+              imageLoading ? "opacity-0" : "opacity-100"
+            }`}
             draggable={false}
+            loading="eager"
+            fetchPriority="high"
+            onLoad={() => setImageLoading(false)}
             onError={(e) => {
+              setImageLoading(false);
+              setImageError(true);
               const target = e.target as HTMLImageElement;
               target.style.display = 'none';
-              const parent = target.parentElement;
-              if (parent) {
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'flex items-center justify-center h-full text-gray-500 text-center p-8';
-                errorDiv.innerHTML = `
-                  <div>
-                    <p class="font-semibold mb-2">Image not found</p>
-                    <p class="text-sm">Please ensure the vehicle diagram image is available at /static/images/car_with_markers.png</p>
-                  </div>
-                `;
-                parent.appendChild(errorDiv);
-              }
             }}
           />
 

@@ -76,10 +76,14 @@ INSTALLED_APPS = [
     'apps.reporting',
     'apps.notifications_app',
     'apps.documents',
+    'apps.subscriptions',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Serve static files directly from Django in production (when behind Gunicorn)
+    # If you later put Nginx in front, this can still remain enabled.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -156,9 +160,17 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
+# VIN decode (NHTSA VPIC) timeout
+VIN_DECODE_TIMEOUT_SECONDS = env.int('VIN_DECODE_TIMEOUT_SECONDS', default=5)
+
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# In production, media is typically served by Nginx (or S3). If you're using
+# a reverse proxy (like Nginx Proxy Manager) and want Django to serve media
+# directly, enable this via env: SERVE_MEDIA=True
+SERVE_MEDIA = env.bool('SERVE_MEDIA', default=False)
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -186,6 +198,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'EXCEPTION_HANDLER': 'config.exceptions.custom_exception_handler',
 }
 
 # CORS Headers (allow branch switch header by default)
@@ -313,6 +326,9 @@ PAYSTACK_PAYMENT_ENABLED = env.bool('PAYSTACK_PAYMENT_ENABLED', default=False)
 # Site URL for payment callbacks
 SITE_URL = env('SITE_URL', default='http://localhost:8000')
 
+# Frontend base URL (used for redirect-based payment success pages)
+FRONTEND_BASE_URL = env('FRONTEND_BASE_URL', default='http://localhost:3001')
+
 # Role Permissions
 ROLEPERMISSIONS_MODULE = 'config.roles'
 
@@ -364,6 +380,11 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': True,
         },
+        'apps.vehicles': {
+            'handlers': ['console', 'file', 'error_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
     },
 }
 
@@ -374,6 +395,10 @@ DJANGO_LEDGER_USE_DEPRECATED_BEHAVIOR = False  # Use new API (set to True to use
 REPEAT_VISIT_DAYS = env.int('REPEAT_VISIT_DAYS', default=30)
 REPEAT_VISIT_SIMILARITY_THRESHOLD = env.float('REPEAT_VISIT_SIMILARITY_THRESHOLD', default=0.3)
 REPEAT_VISIT_ENABLED = env.bool('REPEAT_VISIT_ENABLED', default=True)
+
+# Google reCAPTCHA Settings
+RECAPTCHA_SITE_KEY = env('RECAPTCHA_SITE_KEY', default='')
+RECAPTCHA_SECRET_KEY = env('RECAPTCHA_SECRET_KEY', default='')
 
 # Create logs directory if it doesn't exist
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)

@@ -23,21 +23,30 @@ cat > /etc/systemd/system/svr.service << EOF
 [Unit]
 Description=Smart Vehicle Repairs Gunicorn daemon
 After=network.target postgresql.service redis-server.service
+Requires=postgresql.service redis-server.service
 
 [Service]
+Type=notify
 User=svr
 Group=svr
 WorkingDirectory=$APP_DIR
 Environment="PATH=$APP_DIR/venv/bin"
 EnvironmentFile=$APP_DIR/.env
+ExecStartPre=/bin/bash -c 'timeout=30; elapsed=0; while ! /usr/bin/pg_isready -h localhost -p 5432 >/dev/null 2>&1 && [ $elapsed -lt $timeout ]; do /bin/sleep 1; elapsed=$((elapsed+1)); done; [ $elapsed -lt $timeout ]'
+ExecStartPre=/bin/bash -c 'timeout=30; elapsed=0; while ! /usr/bin/redis-cli ping >/dev/null 2>&1 && [ $elapsed -lt $timeout ]; do /bin/sleep 1; elapsed=$((elapsed+1)); done; [ $elapsed -lt $timeout ]'
 ExecStart=$APP_DIR/venv/bin/gunicorn \
     --access-logfile - \
     --workers 3 \
-    --bind unix:$APP_DIR/svr.sock \
+    --bind 0.0.0.0:8000 \
     --timeout 120 \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
     config.wsgi:application
 Restart=always
 RestartSec=10
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -49,9 +58,10 @@ cat > /etc/systemd/system/svr-celery.service << EOF
 [Unit]
 Description=Smart Vehicle Repairs Celery Worker
 After=network.target redis-server.service postgresql.service
+Requires=redis-server.service postgresql.service
 
 [Service]
-Type=forking
+Type=simple
 User=svr
 Group=svr
 WorkingDirectory=$APP_DIR
@@ -59,11 +69,13 @@ Environment="PATH=$APP_DIR/venv/bin"
 EnvironmentFile=$APP_DIR/.env
 ExecStart=$APP_DIR/venv/bin/celery -A config worker \
     --loglevel=info \
-    --logfile=$APP_DIR/logs/celery.log \
-    --pidfile=$APP_DIR/celery.pid \
-    --detach
+    --logfile=$APP_DIR/logs/celery.log
 Restart=always
 RestartSec=10
+TimeoutStartSec=60
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -75,9 +87,10 @@ cat > /etc/systemd/system/svr-celerybeat.service << EOF
 [Unit]
 Description=Smart Vehicle Repairs Celery Beat
 After=network.target redis-server.service postgresql.service
+Requires=redis-server.service postgresql.service
 
 [Service]
-Type=forking
+Type=simple
 User=svr
 Group=svr
 WorkingDirectory=$APP_DIR
@@ -86,11 +99,13 @@ EnvironmentFile=$APP_DIR/.env
 ExecStart=$APP_DIR/venv/bin/celery -A config beat \
     --loglevel=info \
     --logfile=$APP_DIR/logs/celerybeat.log \
-    --pidfile=$APP_DIR/celerybeat.pid \
-    --detach \
     --scheduler django_celery_beat.schedulers:DatabaseScheduler
 Restart=always
 RestartSec=10
+TimeoutStartSec=60
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -137,6 +152,11 @@ systemctl enable svr-celerybeat
 if [ -f "/etc/systemd/system/svr-nextjs.service" ]; then
     systemctl enable svr-nextjs
 fi
+
+# Ensure database and redis are enabled
+systemctl enable postgresql
+systemctl enable redis-server
+systemctl enable nginx
 
 echo -e "${GREEN}Services configured!${NC}"
 echo ""

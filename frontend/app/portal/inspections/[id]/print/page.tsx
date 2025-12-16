@@ -99,7 +99,7 @@ export default function InspectionPrintPage() {
       {/* Vehicle & Customer Info */}
       <div className="grid grid-cols-2 gap-8 mb-8">
         <div>
-          <h2 className="font-semibold text-gray-900 mb-2">Vehicle Information:</h2>
+          <h2 className="font-semibold text-gray-900 mb-2">Vehicle Info:</h2>
           {inspectionData.vehicle && (
             <div className="text-gray-700">
               <p className="font-medium">

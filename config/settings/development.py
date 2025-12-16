@@ -14,10 +14,10 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:8000",
+    "http://localhost:3001",  # Development Next.js
+    "http://localhost:8001",  # Development Django
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:8001",
 ]
 # Allow all methods and headers in development
 CORS_ALLOW_METHODS = [

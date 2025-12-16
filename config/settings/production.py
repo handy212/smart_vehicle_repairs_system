@@ -10,23 +10,31 @@ DEBUG = False
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')  # No default - force explicit setting
 
 # Security settings
-SECURE_HSTS_SECONDS = 31536000  # 1 year
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-SECURE_SSL_REDIRECT = True
+SECURE_HSTS_SECONDS = env.int('SECURE_HSTS_SECONDS', default=31536000)  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True)
+SECURE_HSTS_PRELOAD = env.bool('SECURE_HSTS_PRELOAD', default=True)
+SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=True)
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 # Session security
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=True)
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # CSRF security
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=True)
 CSRF_COOKIE_HTTPONLY = True
+
+# CSRF trusted origins (needed when using a separate frontend on LAN/HTTP)
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+
+# Trust reverse proxy (e.g., Nginx Proxy Manager) for HTTPS detection
+# Ensure your proxy sends: X-Forwarded-Proto: https
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
 # Frame options
 X_FRAME_OPTIONS = 'DENY'
@@ -61,10 +69,6 @@ if USE_S3:
 
 # Database connection pooling for production
 DATABASES['default']['CONN_MAX_AGE'] = 60
-DATABASES['default']['OPTIONS'] = {
-    'MAX_CONNS': 20,
-    'MIN_CONNS': 5,
-}
 
 # Production caching with Redis
 CACHES = {
@@ -96,10 +100,6 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
-        'json': {
-            'format': '{"level": "{levelname}", "time": "{asctime}", "module": "{module}", "message": "{message}"}',
-            'style': '{',
-        },
     },
     'handlers': {
         'file': {
@@ -108,7 +108,7 @@ LOGGING = {
             'filename': BASE_DIR / 'logs' / 'production.log',
             'maxBytes': 1024*1024*10,  # 10 MB
             'backupCount': 5,
-            'formatter': 'json',
+            'formatter': 'verbose',
         },
         'error_file': {
             'level': 'ERROR',
@@ -116,7 +116,7 @@ LOGGING = {
             'filename': BASE_DIR / 'logs' / 'error.log',
             'maxBytes': 1024*1024*10,  # 10 MB
             'backupCount': 5,
-            'formatter': 'json',
+            'formatter': 'verbose',
         },
         'security_file': {
             'level': 'WARNING',
@@ -124,7 +124,7 @@ LOGGING = {
             'filename': BASE_DIR / 'logs' / 'security.log',
             'maxBytes': 1024*1024*10,  # 10 MB
             'backupCount': 10,
-            'formatter': 'json',
+            'formatter': 'verbose',
         },
     },
     'root': {

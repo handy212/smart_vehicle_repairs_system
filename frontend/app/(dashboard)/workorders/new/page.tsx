@@ -94,6 +94,7 @@ export default function NewWorkOrderPage() {
     customer_type?: string;
     customer_number?: string;
   } | null>(null);
+  const [selectedConcerns, setSelectedConcerns] = useState<string[]>([]);
 
   // Fetch customers
   const { data: customersData } = useQuery({
@@ -662,7 +663,7 @@ export default function NewWorkOrderPage() {
         {selectedVehicle && (
           <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
             <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Vehicle Information
+              Vehicle Info
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex items-start">
@@ -716,33 +717,56 @@ export default function NewWorkOrderPage() {
                     </Select>
                   </div>
                   <div>
-                    <label htmlFor="common_concern" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Quick Select Common Concern
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Quick Select Common Concerns
                     </label>
-                    <Select
-                      id="common_concern"
+                    <div className="max-h-32 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-2 bg-gray-50 dark:bg-gray-900/20">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                        {COMMON_CONCERNS.filter(c => c.value !== "").map((concern) => (
+                          <label
+                            key={concern.value}
+                            className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedConcerns.includes(concern.value)}
                       onChange={(e) => {
-                        const selectedValue = e.target.value;
-                        if (selectedValue) {
-                          if (selectedValue === "Other (describe below)") {
-                            // Clear the textarea to let user describe their own concern
+                                const isChecked = e.target.checked;
+                                let updatedConcerns: string[];
+                                
+                                if (isChecked) {
+                                  if (concern.value === "Other (describe below)") {
+                                    // Clear other selections when "Other" is selected
+                                    updatedConcerns = [concern.value];
                             setValue("customer_concerns", "");
                           } else {
-                            // Set the selected concern in the textarea
-                            setValue("customer_concerns", selectedValue);
+                                    // Add to selection, but remove "Other" if it was selected
+                                    updatedConcerns = selectedConcerns
+                                      .filter(c => c !== "Other (describe below)")
+                                      .concat(concern.value);
+                                  }
+                                } else {
+                                  // Remove from selection
+                                  updatedConcerns = selectedConcerns.filter(c => c !== concern.value);
                           }
-                          // Reset the dropdown to show placeholder
-                          e.target.value = "";
+                                
+                                setSelectedConcerns(updatedConcerns);
+                                
+                                // Update textarea with selected concerns (excluding "Other")
+                                const concernsToAdd = updatedConcerns.filter(c => c !== "Other (describe below)");
+                                if (concernsToAdd.length > 0) {
+                                  setValue("customer_concerns", concernsToAdd.join("\n"));
+                                } else {
+                                  setValue("customer_concerns", "");
                         }
                       }}
-                      className="w-full"
-                    >
-                      {COMMON_CONCERNS.map((concern) => (
-                        <option key={concern.value || "empty"} value={concern.value}>
-                          {concern.label}
-                        </option>
+                              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{concern.label}</span>
+                          </label>
                       ))}
-                    </Select>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -756,8 +780,16 @@ export default function NewWorkOrderPage() {
                       id="customer_concerns"
                       {...register("customer_concerns")}
                       rows={6}
-                      placeholder="Describe the issue or service needed... (You can select a common concern above or type your own)"
+                      placeholder="Describe the issue or service needed... (You can select multiple common concerns above or type your own)"
                       className={errors.customer_concerns ? "border-red-500" : ""}
+                      onChange={(e) => {
+                        // Update the textarea value
+                        setValue("customer_concerns", e.target.value);
+                        // If user types manually, clear "Other" selection if it was selected
+                        if (selectedConcerns.includes("Other (describe below)") && e.target.value.trim() !== "") {
+                          setSelectedConcerns(prev => prev.filter(c => c !== "Other (describe below)"));
+                        }
+                      }}
                     />
                     {errors.customer_concerns && (
                       <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.customer_concerns.message}</p>

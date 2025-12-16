@@ -32,6 +32,9 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
+  const hasAccessToken =
+    typeof window !== "undefined" && !!localStorage.getItem("access_token");
+
   const { data: notificationsData, isLoading } = useQuery({
     queryKey: ["portal", "notifications", filter, typeFilter],
     queryFn: () =>
@@ -39,11 +42,13 @@ export default function NotificationsPage() {
         is_read: filter === "unread" ? false : undefined,
         notification_type: typeFilter !== "all" ? typeFilter : undefined,
       }),
+    enabled: hasAccessToken,
   });
 
   const { data: unreadCountData } = useQuery({
     queryKey: ["portal", "notifications", "unread-count"],
     queryFn: () => notificationsApi.unreadCount(),
+    enabled: hasAccessToken,
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 

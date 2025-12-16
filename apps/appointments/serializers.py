@@ -73,6 +73,11 @@ class AppointmentDetailSerializer(serializers.ModelSerializer):
 class AppointmentCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating appointments"""
     
+    # The frontend historically sends a single "notes" field. Our API uses
+    # customer_concerns / special_instructions, so accept missing/blank values.
+    customer_concerns = serializers.CharField(required=False, allow_blank=True, default="")
+    special_instructions = serializers.CharField(required=False, allow_blank=True, default="")
+    
     class Meta:
         model = Appointment
         fields = [

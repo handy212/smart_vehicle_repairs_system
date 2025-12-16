@@ -14,10 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Car, Eye, EyeOff } from "lucide-react";
 import { setSystemThemeMode } from "@/lib/hooks/useTheme";
+import { ReCAPTCHAComponent } from "@/components/ui/recaptcha";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
+  recaptcha_token: z.string().optional(),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -28,11 +30,24 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
   // Fetch branding settings using public endpoint (no auth required)
   const { data: brandingSettings } = useQuery<SystemSetting[]>({
     queryKey: ["settings", "branding", "public"],
     queryFn: () => adminApi.settings.publicBranding(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+  });
+
+  // Fetch integration settings to get reCAPTCHA site key
+  const { data: integrations } = useQuery<{
+    google_analytics_id?: string;
+    facebook_pixel_id?: string;
+    recaptcha_site_key?: string;
+  }>({
+    queryKey: ["settings", "integrations", "public"],
+    queryFn: () => adminApi.settings.publicIntegrations(),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
   });
@@ -96,16 +111,49 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
+
+  const handleRecaptchaChange = (token: string | null) => {
+    setRecaptchaToken(token);
+    setValue("recaptcha_token", token || "");
+  };
+
+  const handleRecaptchaExpired = () => {
+    setRecaptchaToken(null);
+    setValue("recaptcha_token", "");
+  };
+
+  const handleRecaptchaError = () => {
+    setRecaptchaToken(null);
+    setValue("recaptcha_token", "");
+    setError("reCAPTCHA verification failed. Please try again.");
+  };
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     setError(null);
 
+    // Check if reCAPTCHA is required and validated
+    // Use site key from backend settings if available, otherwise fall back to env var
+    const recaptchaSiteKey = integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    if (recaptchaSiteKey && !recaptchaToken) {
+      setError("Please complete the reCAPTCHA verification.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const authResponse = await authApi.login(data);
+      // Include reCAPTCHA token in login request
+      const loginData = {
+        email: data.email,
+        password: data.password,
+        ...(recaptchaToken && { recaptcha_token: recaptchaToken }),
+      };
+      
+      const authResponse = await authApi.login(loginData);
       
       // Store tokens
       if (typeof window !== "undefined") {
@@ -160,12 +208,12 @@ export default function LoginPage() {
       className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative"
       style={backgroundStyle}
     >
-      <Card className="w-full max-w-md bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-xl border-0 animate-in fade-in-0 zoom-in-95 duration-200">
+      <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-xl border-0 animate-in fade-in-0 zoom-in-95 duration-200">
         <CardHeader className="space-y-4">
           {/* Logo */}
           {logoUrl ? (
             <div className="flex justify-center">
-              <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-lg overflow-hidden bg-white dark:bg-gray-800 flex items-center justify-center shadow-md border border-gray-200 dark:border-gray-700">
+              <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-lg overflow-hidden bg-white flex items-center justify-center shadow-md border border-gray-200">
                 <img
                   src={logoUrl}
                   alt={branding.siteName}
@@ -196,7 +244,7 @@ export default function LoginPage() {
           )}
           
           <div>
-            <CardTitle className="text-2xl text-center text-gray-900 dark:text-gray-100">
+            <CardTitle className="text-2xl text-center text-gray-900">
               {branding.siteName}
             </CardTitle>
             <CardDescription className="text-center mt-2">
@@ -207,13 +255,13 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-md text-sm" role="alert">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm" role="alert">
                 {error}
               </div>
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 Email
               </label>
               <Input
@@ -222,17 +270,17 @@ export default function LoginPage() {
                 autoComplete="email"
                 autoFocus
                 {...register("email")}
-                placeholder="you@example.com"
+                // placeholder="you@example.com"
                 className={errors.email ? "border-red-500" : ""}
                 disabled={isLoading}
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email.message}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Password
               </label>
               <div className="relative">
@@ -248,7 +296,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                   disabled={isLoading}
                 >
@@ -260,14 +308,32 @@ export default function LoginPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.password.message}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
               )}
             </div>
+
+            {/* reCAPTCHA */}
+            {(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) && (
+              <div>
+                <ReCAPTCHAComponent
+                  siteKey={integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+                  onChange={handleRecaptchaChange}
+                  onExpired={handleRecaptchaExpired}
+                  onError={handleRecaptchaError}
+                  theme="light"
+                />
+                {errors.recaptcha_token && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.recaptcha_token.message}
+                  </p>
+                )}
+              </div>
+            )}
 
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={isLoading}
+              disabled={isLoading || (!!(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) && !recaptchaToken)}
             >
               {isLoading ? (
                 <span className="flex items-center justify-center">

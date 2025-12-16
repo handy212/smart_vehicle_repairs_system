@@ -237,15 +237,17 @@ class VehicleViewSet(viewsets.ModelViewSet):
                 'message': 'Vehicle with this VIN already exists in the system'
             })
         
-        # Decode VIN
+        # Decode VIN (with a hard timeout so the UI doesn't hang if NHTSA is slow/unreachable)
+        from django.conf import settings
+        timeout_seconds = float(getattr(settings, 'VIN_DECODE_TIMEOUT_SECONDS', 5))
         decoder = VehicleVINDecoder()
-        success, data = decoder.decode_vin(vin)
+        success, data = decoder.decode_vin(vin, timeout_seconds=timeout_seconds)
         
         if not success:
-            return Response(
-                {'success': False, 'error': f'VIN decode failed: {data}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            # If it looks like a timeout/network issue, return 503 to encourage retry.
+            msg = str(data)
+            http_status = status.HTTP_503_SERVICE_UNAVAILABLE if 'timed out' in msg.lower() or 'network error' in msg.lower() else status.HTTP_400_BAD_REQUEST
+            return Response({'success': False, 'error': f'VIN decode failed: {msg}'}, status=http_status)
         
         # Prepare response data
         response_data = {
@@ -264,6 +266,26 @@ class VehicleViewSet(viewsets.ModelViewSet):
             'manufacturer': data.get('manufacturer'),
             'summary': decoder.get_vehicle_summary(vin),
             'has_errors': data.get('has_errors', False),
+            # Expanded "Other Information" (manufacturer-submitted fields)
+            'series': data.get('series'),
+            'drive_type': data.get('drive_type'),
+            'gvwr': data.get('gvwr'),
+            'transmission_speeds': data.get('transmission_speeds'),
+            'transmission_style': data.get('transmission_style'),
+            'engine_cylinders': data.get('engine_cylinders'),
+            'engine_hp': data.get('engine_hp'),
+            'engine_model': data.get('engine_model'),
+            'engine_manufacturer': data.get('engine_manufacturer'),
+            'engine_displacement_l': data.get('engine_displacement_l'),
+            'fuel_type_primary': data.get('fuel_type_primary'),
+            'fuel_type_secondary': data.get('fuel_type_secondary'),
+            'electrification_level': data.get('electrification_level'),
+            'airbag_front': data.get('airbag_front'),
+            'airbag_knee': data.get('airbag_knee'),
+            'airbag_side': data.get('airbag_side'),
+            'airbag_curtain': data.get('airbag_curtain'),
+            'airbag_seat_cushion': data.get('airbag_seat_cushion'),
+            'other_restraint_info': data.get('other_restraint_info'),
         }
         
         # Add error message if exists
@@ -277,6 +299,60 @@ class VehicleViewSet(viewsets.ModelViewSet):
         response_data['full_data'] = data
         
         return Response(response_data)
+    
+    @action(detail=False, methods=['post'])
+    def check_license_plate(self, request):
+        """
+        Check if a license plate already exists in the system
+        
+        POST /api/vehicles/check_license_plate/
+        Body: { "license_plate": "ABC123", "vehicle_id": null }  # vehicle_id optional for edit
+        
+        Returns:
+        {
+            "success": true,
+            "exists": false,
+            "message": "License plate is available"
+        }
+        
+        If license plate exists:
+        {
+            "success": true,
+            "exists": true,
+            "vehicle_id": 123,
+            "vehicle": {...vehicle details...},
+            "message": "Vehicle with this license plate already exists in the system"
+        }
+        """
+        license_plate = request.data.get('license_plate', '').strip().upper()
+        vehicle_id = request.data.get('vehicle_id')  # For edit page - exclude current vehicle
+        
+        if not license_plate:
+            return Response(
+                {'success': False, 'error': 'License plate is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if license plate already exists in database
+        query = Vehicle.objects.filter(license_plate__iexact=license_plate)
+        if vehicle_id:
+            query = query.exclude(id=vehicle_id)
+        
+        existing_vehicle = query.first()
+        if existing_vehicle:
+            return Response({
+                'success': True,
+                'exists': True,
+                'vehicle_id': existing_vehicle.id,
+                'vehicle': VehicleDetailSerializer(existing_vehicle).data,
+                'message': 'Vehicle with this license plate already exists in the system'
+            })
+        
+        return Response({
+            'success': True,
+            'exists': False,
+            'message': 'License plate is available'
+        })
     
     @action(detail=False, methods=['post'])
     def import_csv(self, request):

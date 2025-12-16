@@ -3,13 +3,15 @@ import { useState, useEffect, useCallback } from 'react';
 export type Theme = 'light' | 'dark' | 'system';
 
 let systemThemeMode: Theme | null = null;
+const THEME_VERSION = 'v2-light-default';
 
 export function setSystemThemeMode(theme: Theme | null) {
   systemThemeMode = theme;
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>('system');
+  // Default to light to avoid initial flash of dark mode
+  const [theme, setTheme] = useState<Theme>('light');
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
   const [mounted, setMounted] = useState(false);
 
@@ -34,6 +36,14 @@ export function useTheme() {
 
   // Initial load - check system theme_mode setting first, then localStorage
   useEffect(() => {
+    // Force-reset any old cached theme so we can apply new default (light)
+    const storedVersion = localStorage.getItem('theme_version');
+    if (storedVersion !== THEME_VERSION) {
+      localStorage.removeItem('theme');
+      localStorage.removeItem('theme_override');
+      localStorage.setItem('theme_version', THEME_VERSION);
+    }
+
     // If system theme_mode is set, use it (unless user has manually overridden)
     const userOverride = localStorage.getItem('theme_override');
     const stored = localStorage.getItem('theme') as Theme | null;
@@ -48,7 +58,8 @@ export function useTheme() {
       // Sync to localStorage
       localStorage.setItem('theme', initial);
     } else {
-      initial = stored || 'system';
+      // Default to light when nothing is set
+      initial = stored || 'light';
     }
     
     setTheme(initial);

@@ -3,6 +3,7 @@ import apiClient from "./client";
 export interface LoginCredentials {
   email: string;
   password: string;
+  recaptcha_token?: string;
 }
 
 export interface AuthResponse {

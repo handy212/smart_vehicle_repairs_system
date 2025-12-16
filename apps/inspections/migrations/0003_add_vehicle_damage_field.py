@@ -9,10 +9,9 @@ class Migration(migrations.Migration):
         ('inspections', '0002_add_vehicle_damage_field'),
     ]
 
-    operations = [
-        migrations.AddField(
-            model_name='vehicleinspection',
-            name='vehicle_damage',
-            field=models.JSONField(blank=True, default=list, help_text='JSON data of marked damage locations on vehicle diagram'),
-        ),
-    ]
+    # NOTE:
+    # `vehicle_damage` was already added in `0002_add_vehicle_damage_field`.
+    # This migration is intentionally a no-op so fresh installs don't fail with
+    # DuplicateColumn errors, while keeping the migration graph intact for
+    # environments where 0003 is already marked as applied.
+    operations = []
