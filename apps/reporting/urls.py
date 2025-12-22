@@ -24,6 +24,9 @@ urlpatterns = [
     # Customer Reports
     path('reports/customers/', views.customer_statistics, name='customer_statistics'),
     
+    # Subscription Reports
+    path('reports/subscriptions/', views.subscription_analytics, name='subscription_analytics'),
+    
     # Vehicle Reports
     path('reports/vehicles/', views.vehicle_statistics, name='vehicle_statistics'),
     path('reports/vehicles/service-due/', views.service_due_report, name='service_due_report'),

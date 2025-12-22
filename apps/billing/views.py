@@ -780,7 +780,8 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             queryset, 
             self.request.user, 
             request=self.request, 
-            use_active_branch=not show_all
+            use_active_branch=not show_all,
+            include_unassigned=True  # Include invoices without branches (e.g., subscription invoices)
         )
         
         # Date range filtering for invoices
@@ -1362,6 +1363,16 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 'square': 'credit_card',
             }
             payment_method = payment_method_map.get(gateway_name, 'credit_card')
+            
+            # Refresh invoice to get latest state
+            invoice.refresh_from_db()
+            
+            # Check if invoice is already fully paid
+            if invoice.status == 'paid' or invoice.amount_due <= 0:
+                return Response(
+                    {"error": f"Invoice {invoice.invoice_number} is already fully paid. Cannot record additional payments."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
             # Get payment amount
             payment_amount = result.get('amount') or invoice.amount_due

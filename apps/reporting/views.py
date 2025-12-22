@@ -67,6 +67,27 @@ def dashboard_overview(request):
         parts_qs = filter_queryset_for_user_branches(Part.objects.all(), request.user, request)
         estimates_qs = filter_queryset_for_user_branches(Estimate.objects.all(), request.user, request)
         
+        # Roadside requests
+        try:
+            from apps.roadside.models import RoadsideRequest
+            roadside_qs = filter_queryset_for_user_branches(
+                RoadsideRequest.objects.all(), 
+                request.user, 
+                request
+            )
+            roadside_today = roadside_qs.filter(requested_at__date=today).count()
+            roadside_active = roadside_qs.filter(
+                status__in=['requested', 'dispatched', 'en_route', 'on_site', 'in_progress']
+            ).count()
+            roadside_completed_today = roadside_qs.filter(
+                status='completed',
+                completed_at__date=today
+            ).count()
+        except ImportError:
+            roadside_today = 0
+            roadside_active = 0
+            roadside_completed_today = 0
+        
         # Get Payment records - filter by branch through invoice
         # Revenue should be calculated from actual payment dates, not invoice dates
         payments_qs = Payment.objects.filter(
@@ -139,6 +160,36 @@ def dashboard_overview(request):
         pending_estimates = estimates_qs.filter(
             status__in=['draft', 'sent', 'viewed']
         ).count()
+        
+        # Subscription metrics
+        try:
+            from apps.subscriptions.models import Subscription
+            active_subscriptions = Subscription.objects.filter(
+                status='active',
+                payment_status='paid'
+            ).count()
+            
+            # Calculate MRR (Monthly Recurring Revenue)
+            # MRR = Sum of (purchase_price / duration_months) for all active paid subscriptions
+            active_subs = Subscription.objects.filter(
+                status='active',
+                payment_status='paid'
+            ).select_related('package')
+            
+            mrr = Decimal('0')
+            for sub in active_subs:
+                if sub.package.duration_months > 0:
+                    monthly_value = sub.purchase_price / Decimal(str(sub.package.duration_months))
+                    mrr += monthly_value
+            
+            # ARR (Annual Recurring Revenue) = MRR * 12
+            arr = mrr * Decimal('12')
+            
+        except ImportError:
+            # Subscriptions app not available
+            active_subscriptions = 0
+            mrr = Decimal('0')
+            arr = Decimal('0')
         
         recent_work_orders = work_orders_qs.select_related(
             'customer', 'vehicle', 'customer__user'
@@ -219,6 +270,8 @@ def dashboard_overview(request):
             'today': {
                 'appointments': appointments_today,
                 'revenue': float(revenue_today),
+                'roadside_requests': roadside_today,
+                'roadside_completed': roadside_completed_today,
                 'date': today.isoformat()
             },
             'week': {
@@ -231,12 +284,18 @@ def dashboard_overview(request):
             },
             'alerts': {
                 'active_work_orders': active_work_orders,
+                'active_roadside_requests': roadside_active,
                 'overdue_invoices': {
                     'count': overdue_invoices['count'] or 0,
                     'total': float(overdue_invoices['total'] or 0)
                 },
                 'low_stock_items': low_stock_count,
                 'pending_estimates': pending_estimates
+            },
+            'subscriptions': {
+                'active_count': active_subscriptions,
+                'mrr': float(mrr),
+                'arr': float(arr)
             },
             'recent_activity': {
                 'work_orders': work_orders_list,
@@ -249,10 +308,11 @@ def dashboard_overview(request):
         # Return a minimal response that won't break the frontend
         today = timezone.now().date()
         return Response({
-            'today': {'appointments': 0, 'revenue': 0.0, 'date': today.isoformat()},
+            'today': {'appointments': 0, 'revenue': 0.0, 'roadside_requests': 0, 'roadside_completed': 0, 'date': today.isoformat()},
             'week': {'revenue': 0.0, 'start_date': (today - timedelta(days=today.weekday())).isoformat()},
             'month': {'revenue': 0.0, 'start_date': today.replace(day=1).isoformat()},
-            'alerts': {'active_work_orders': 0, 'overdue_invoices': {'count': 0, 'total': 0.0}, 'low_stock_items': 0, 'pending_estimates': 0},
+            'alerts': {'active_work_orders': 0, 'active_roadside_requests': 0, 'overdue_invoices': {'count': 0, 'total': 0.0}, 'low_stock_items': 0, 'pending_estimates': 0},
+            'subscriptions': {'active_count': 0, 'mrr': 0.0, 'arr': 0.0},
             'recent_activity': {'work_orders': [], 'appointments': []},
             'error': str(e)
         }, status=status.HTTP_200_OK)
@@ -293,12 +353,32 @@ def revenue_report(request):
             invoice_date__lte=end_date
         )
         
+        # Separate subscription invoices
+        subscription_invoices = invoices.filter(
+            description__icontains="Subscription:"
+        )
+        service_invoices = invoices.exclude(
+            description__icontains="Subscription:"
+        )
+        
         # Total revenue
         total_invoiced = invoices.aggregate(total=Sum('total'))['total'] or Decimal('0')
         total_paid = invoices.filter(
             status__in=['paid', 'partial']
         ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
         total_outstanding = total_invoiced - total_paid
+        
+        # Subscription revenue breakdown
+        subscription_invoiced = subscription_invoices.aggregate(total=Sum('total'))['total'] or Decimal('0')
+        subscription_paid = subscription_invoices.filter(
+            status__in=['paid', 'partial']
+        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
+        
+        # Service revenue breakdown
+        service_invoiced = service_invoices.aggregate(total=Sum('total'))['total'] or Decimal('0')
+        service_paid = service_invoices.filter(
+            status__in=['paid', 'partial']
+        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
         
         # Revenue by period - Use Payment records for accurate revenue by payment date
         # This matches the dashboard overview calculation
@@ -392,7 +472,9 @@ def revenue_report(request):
                 'total_invoiced': float(total_invoiced),
                 'total_paid': float(total_paid),
                 'total_outstanding': float(total_outstanding),
-                'payment_rate': float((total_paid / total_invoiced * 100) if total_invoiced > 0 else 0)
+                'payment_rate': float((total_paid / total_invoiced * 100) if total_invoiced > 0 else 0),
+                'subscription_revenue': float(subscription_paid),
+                'service_revenue': float(service_paid)
             },
             'revenue_by_period': [
                 {
@@ -434,7 +516,7 @@ def revenue_report(request):
             period_val = 'daily'
         return Response({
             'period': {'start_date': today.replace(day=1).isoformat(), 'end_date': today.isoformat(), 'grouping': period_val},
-            'summary': {'total_invoiced': 0.0, 'total_paid': 0.0, 'total_outstanding': 0.0, 'payment_rate': 0.0},
+            'summary': {'total_invoiced': 0.0, 'total_paid': 0.0, 'total_outstanding': 0.0, 'payment_rate': 0.0, 'subscription_revenue': 0.0, 'service_revenue': 0.0},
             'revenue_by_period': [],
             'revenue_by_payment_method': [],
             'revenue_by_technician': [],
@@ -954,6 +1036,18 @@ def customer_statistics(request):
         created_at__gte=thirty_days_ago
     ).count()
     
+    # Subscription metrics
+    try:
+        from apps.subscriptions.models import Subscription
+        customers_with_subscriptions = Customer.objects.filter(
+            subscriptions__status='active',
+            subscriptions__payment_status='paid'
+        ).distinct().count()
+        subscription_adoption_rate = (customers_with_subscriptions / active_customers * 100) if active_customers > 0 else 0
+    except ImportError:
+        customers_with_subscriptions = 0
+        subscription_adoption_rate = 0
+    
     # Customer lifetime value (top 10)
     top_customers = []
     for customer in Customer.objects.filter(status='active'):
@@ -962,12 +1056,25 @@ def customer_statistics(request):
             status__in=['paid', 'partial']
         ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0')
         
+        # Check if customer has active subscription
+        has_active_subscription = False
+        try:
+            from apps.subscriptions.models import Subscription
+            has_active_subscription = Subscription.objects.filter(
+                customer=customer,
+                status='active',
+                payment_status='paid'
+            ).exists()
+        except ImportError:
+            pass
+        
         if total_spent > 0:
             top_customers.append({
                 'customer': {
                     'id': customer.id,
                     'name': customer.company_name or customer.full_name,
-                    'type': customer.customer_type
+                    'type': customer.customer_type,
+                    'has_subscription': has_active_subscription
                 },
                 'lifetime_value': float(total_spent),
                 'vehicles': customer.vehicles.count(),
@@ -980,13 +1087,16 @@ def customer_statistics(request):
         'total_customers': total_customers,
         'new_customers': new_customers,
         'active_customers': active_customers,
+        'customers_with_subscriptions': customers_with_subscriptions,
+        'subscription_adoption_rate': float(subscription_adoption_rate),
         'by_type': [],  # TODO: Add customer type breakdown
         'top_customers': [
             {
                 'id': item['customer']['id'],
                 'name': item['customer']['name'],
                 'revenue': item['lifetime_value'],
-                'work_orders': item['work_orders']
+                'work_orders': item['work_orders'],
+                'has_subscription': item['customer']['has_subscription']
             }
             for item in top_customers[:10]
         ]
@@ -1085,6 +1195,156 @@ def vehicle_statistics(request):
         return Response({
             'error': str(e),
             'traceback': traceback.format_exc()
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def subscription_analytics(request):
+    """
+    Comprehensive subscription analytics and metrics
+    """
+    try:
+        from apps.subscriptions.models import Subscription, Package
+        
+        # Get date range from query params
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if not start_date or not end_date:
+            # Default to last 30 days
+            end_date = timezone.now().date()
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        # Active subscriptions
+        active_subscriptions = Subscription.objects.filter(
+            status='active',
+            payment_status='paid'
+        )
+        
+        # Calculate MRR and ARR
+        mrr = Decimal('0')
+        arr = Decimal('0')
+        for sub in active_subscriptions.select_related('package'):
+            if sub.package.duration_months > 0:
+                monthly_value = sub.purchase_price / Decimal(str(sub.package.duration_months))
+                mrr += monthly_value
+        arr = mrr * Decimal('12')
+        
+        # Subscription counts by status
+        subscriptions_by_status = Subscription.objects.values('status').annotate(
+            count=Count('id')
+        )
+        
+        # New subscriptions in period
+        new_subscriptions = Subscription.objects.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        ).count()
+        
+        # Renewals in period
+        renewals = Subscription.objects.filter(
+            metadata__has_key='renewal_invoice_id',
+            updated_at__date__gte=start_date,
+            updated_at__date__lte=end_date,
+            status='active'
+        ).count()
+        
+        # Churn (expired/cancelled in period)
+        churned = Subscription.objects.filter(
+            status__in=['expired', 'cancelled'],
+            updated_at__date__gte=start_date,
+            updated_at__date__lte=end_date
+        ).count()
+        
+        # Revenue by package
+        revenue_by_package = []
+        for package in Package.objects.filter(is_active=True):
+            package_subs = Subscription.objects.filter(
+                package=package,
+                status='active',
+                payment_status='paid'
+            )
+            package_count = package_subs.count()
+            package_mrr = Decimal('0')
+            for sub in package_subs:
+                if package.duration_months > 0:
+                    monthly_value = sub.purchase_price / Decimal(str(package.duration_months))
+                    package_mrr += monthly_value
+            
+            revenue_by_package.append({
+                'package_id': package.id,
+                'package_name': package.name,
+                'active_subscriptions': package_count,
+                'mrr': float(package_mrr),
+                'arr': float(package_mrr * Decimal('12'))
+            })
+        
+        revenue_by_package.sort(key=lambda x: x['mrr'], reverse=True)
+        
+        # Subscription trends (new subscriptions over time)
+        subscriptions_trend = Subscription.objects.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        ).annotate(
+            period=TruncMonth('created_at')
+        ).values('period').annotate(
+            count=Count('id')
+        ).order_by('period')
+        
+        # Average subscription value
+        avg_subscription_value = active_subscriptions.aggregate(
+            avg=Avg('purchase_price')
+        )['avg'] or Decimal('0')
+        
+        # Renewal rate calculation (simplified)
+        total_eligible_for_renewal = Subscription.objects.filter(
+            status='active',
+            end_date__lte=end_date + timedelta(days=30)  # Expiring in next 30 days
+        ).count()
+        renewal_rate = (renewals / total_eligible_for_renewal * 100) if total_eligible_for_renewal > 0 else 0
+        
+        return Response({
+            'period': {
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat()
+            },
+            'summary': {
+                'active_subscriptions': active_subscriptions.count(),
+                'total_subscriptions': Subscription.objects.count(),
+                'mrr': float(mrr),
+                'arr': float(arr),
+                'average_subscription_value': float(avg_subscription_value),
+                'new_subscriptions': new_subscriptions,
+                'renewals': renewals,
+                'churned': churned,
+                'renewal_rate': float(renewal_rate)
+            },
+            'by_status': list(subscriptions_by_status),
+            'revenue_by_package': revenue_by_package,
+            'trends': [
+                {
+                    'period': item['period'].isoformat() if item['period'] else None,
+                    'count': item['count']
+                }
+                for item in subscriptions_trend
+            ]
+        })
+    except ImportError:
+        # Subscriptions app not available
+        return Response({
+            'error': 'Subscriptions module not available'
+        }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+    except Exception as e:
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error in subscription_analytics: {e}")
+        logger.error(traceback.format_exc())
+        return Response({
+            'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

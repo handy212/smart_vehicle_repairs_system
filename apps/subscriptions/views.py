@@ -149,8 +149,13 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             raise ValidationError("Customer is required")
         
         package = serializer.validated_data.get("package")
+        vehicle = serializer.validated_data.get("vehicle")
         if not package:
             raise ValidationError("Package is required")
+        if not vehicle:
+            raise ValidationError({"vehicle": "Vehicle is required"})
+        if vehicle.customer_id != customer.id:
+            raise ValidationError({"vehicle": "Vehicle does not belong to this customer"})
         
         auto_renew = serializer.validated_data.get("auto_renew", False)
         start_date = serializer.validated_data.get("start_date")
@@ -159,13 +164,12 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         subscription, invoice = SubscriptionService.create_subscription_with_invoice(
             customer=customer,
             package=package,
+            vehicle=vehicle,
             start_date=start_date,
             auto_renew=auto_renew,
-            created_by=user  # Use 'user' instead of 'request.user'
+            created_by=user,
+            request=self.request
         )
-        
-        # Store invoice ID in serializer context for response
-        serializer._invoice_id = invoice.id
         
         return subscription
     
@@ -289,7 +293,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             subscription, invoice = SubscriptionService.renew_subscription(
                 subscription, 
                 months=months,
-                created_by=request.user
+                created_by=request.user,
+                request=request
             )
             serializer = SubscriptionSerializer(subscription)
             serializer._invoice_id = invoice.id

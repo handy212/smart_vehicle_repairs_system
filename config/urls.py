@@ -91,6 +91,7 @@ urlpatterns = [
     path('api/notifications/', include(('apps.notifications_app.urls', 'api_notifications'))),
     path('api/documents/', include(('apps.documents.urls', 'api_documents'))),
     path('api/subscriptions/', include(('apps.subscriptions.urls', 'api_subscriptions'))),
+    path('api/roadside/', include(('apps.roadside.urls', 'api_roadside'))),
     
     # Frontend app routes (namespaced)
     path('branches/', include('apps.branches.frontend_urls', namespace='branches')),

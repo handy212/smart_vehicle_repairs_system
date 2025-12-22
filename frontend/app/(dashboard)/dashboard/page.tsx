@@ -7,7 +7,7 @@ import { appointmentsApi } from "@/lib/api/appointments";
 import { workordersApi } from "@/lib/api/workorders";
 import { reportingApi } from "@/lib/api/reporting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Car, Calendar, Wrench, DollarSign, Package, TrendingUp, AlertTriangle } from "lucide-react";
+import { Users, Car, Calendar, Wrench, DollarSign, Package, TrendingUp, AlertTriangle, CreditCard } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -131,6 +131,9 @@ export default function DashboardPage() {
       overdue_invoices: dashboardData?.alerts?.overdue_invoices?.count || 0,
       overdue_amount: dashboardData?.alerts?.overdue_invoices?.total || 0,
       low_stock_items: dashboardData?.alerts?.low_stock_items || lowStockData?.summary?.total_low_stock || 0,
+      active_subscriptions: dashboardData?.subscriptions?.active_count || 0,
+      mrr: dashboardData?.subscriptions?.mrr || 0,
+      arr: dashboardData?.subscriptions?.arr || 0,
     }),
     [
       customersData,
@@ -216,6 +219,21 @@ export default function DashboardPage() {
         link: "/inventory",
         alert: stats.low_stock_items > 0,
       },
+      ...(stats.active_subscriptions > 0
+        ? [
+            {
+              title: "Active Subscriptions",
+              value: stats.active_subscriptions,
+              icon: CreditCard,
+              color: "bg-indigo-500",
+              link: "/subscriptions",
+              subtitle: `MRR: $${parseFloat(String(stats.mrr || 0)).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}`,
+            },
+          ]
+        : []),
     ],
     [stats]
   );
@@ -556,6 +574,70 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Subscription Metrics - Only show if there are active subscriptions */}
+      {stats.active_subscriptions > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <Card>
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                Active Subscriptions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {stats.active_subscriptions}
+                </div>
+                <CreditCard className="h-6 w-6 sm:h-8 sm:w-8 text-indigo-500 flex-shrink-0" />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Currently active</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                Monthly Recurring Revenue
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  $
+                  {parseFloat(String(stats.mrr || 0)).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </div>
+                <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Recurring monthly</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                Annual Recurring Revenue
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  $
+                  {parseFloat(String(stats.arr || 0)).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </div>
+                <DollarSign className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Recurring annual</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

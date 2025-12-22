@@ -4,6 +4,8 @@ Handles payment initialization, verification, and webhooks
 """
 import logging
 import json
+import time
+import random
 from urllib.parse import urlencode
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -68,8 +70,6 @@ def initiate_paystack_payment(request, invoice_id):
     
     # Generate unique reference (invoice_number can be blank in some legacy/dev data)
     # Add timestamp to ensure uniqueness for multiple payment attempts
-    import time
-    import random
     invoice_no = (invoice.invoice_number or "").strip() or f"{invoice.id}"
     timestamp = int(time.time())
     random_suffix = random.randint(1000, 9999)
@@ -185,6 +185,14 @@ def paystack_callback(request):
     ).first()
     
     if existing_payment:
+        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3001").rstrip("/")
+        qs = urlencode({"status": "success", "invoice_id": invoice.id, "reference": reference})
+        return redirect(f"{frontend}/portal/payment/success?{qs}")
+    
+    # Check if invoice is already fully paid
+    invoice.refresh_from_db()
+    if invoice.status == 'paid' or invoice.amount_due <= 0:
+        logger.warning(f"Attempted to record payment for already paid invoice {invoice.id} (reference: {reference})")
         frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3001").rstrip("/")
         qs = urlencode({"status": "success", "invoice_id": invoice.id, "reference": reference})
         return redirect(f"{frontend}/portal/payment/success?{qs}")

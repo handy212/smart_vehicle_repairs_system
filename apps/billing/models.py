@@ -508,7 +508,7 @@ class Invoice(models.Model):
     
     # References
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='invoices')
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name='invoices')
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name='invoices', null=True, blank=True)
     work_order = models.OneToOneField(
         WorkOrder, 
         on_delete=models.PROTECT,
@@ -624,9 +624,35 @@ class Invoice(models.Model):
         return self.subtotal - self.discount_amount
     
     def save(self, *args, **kwargs):
-        # Auto-generate invoice number using branch sequence
-        if not self.invoice_number and self.branch:
-            self.invoice_number = self.branch.get_next_invoice_number()
+        # Auto-generate invoice number
+        if not self.invoice_number:
+            if self.branch:
+                # Use branch sequence if branch is available
+                self.invoice_number = self.branch.get_next_invoice_number()
+            else:
+                # Fallback: Generate invoice number without branch code
+                # Find last invoice number and increment
+                last_invoice = Invoice.objects.exclude(invoice_number='').order_by('-id').first()
+                if last_invoice and last_invoice.invoice_number:
+                    try:
+                        # Try to extract number from last invoice
+                        # Handle formats like: "BR001-INV000001" or "INV000001"
+                        number_part = last_invoice.invoice_number.split('-')[-1]
+                        if number_part.startswith('INV'):
+                            num_str = number_part.replace('INV', '')
+                            next_num = int(num_str) + 1
+                            self.invoice_number = f"INV{next_num:06d}"
+                        else:
+                            # Fallback to simple increment
+                            next_num = Invoice.objects.count() + 1
+                            self.invoice_number = f"INV{next_num:06d}"
+                    except (ValueError, AttributeError):
+                        # If parsing fails, use simple increment
+                        next_num = Invoice.objects.count() + 1
+                        self.invoice_number = f"INV{next_num:06d}"
+                else:
+                    # First invoice without branch
+                    self.invoice_number = "INV000001"
         
         # Calculate amount due
         self.amount_due = (self.total - self.amount_paid).quantize(Decimal('0.01'))
@@ -935,6 +961,21 @@ class Payment(models.Model):
         if not is_new:
             old_payment = Payment.objects.get(pk=self.pk)
             old_status = old_payment.status
+        else:
+            # For new payments, validate that invoice can accept payments
+            if self.invoice_id:
+                # Refresh invoice to get latest state
+                invoice = self.invoice
+                invoice.refresh_from_db()
+                
+                # Only prevent payments if invoice is explicitly marked as paid
+                # This is the most reliable check - other statuses may still accept payments
+                if invoice.status == 'paid':
+                    from django.core.exceptions import ValidationError
+                    inv_num = getattr(invoice, 'invoice_number', f'#{invoice.id}')
+                    raise ValidationError(
+                        f"Cannot record payment: Invoice {inv_num} is already fully paid."
+                    )
         
         super().save(*args, **kwargs)
         

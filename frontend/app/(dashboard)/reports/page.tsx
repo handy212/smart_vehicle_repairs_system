@@ -365,6 +365,46 @@ export default function ReportsPage() {
                 </Card>
               </div>
 
+              {/* Subscription vs Service Revenue Breakdown */}
+              {(revenueData.summary.subscription_revenue !== undefined || revenueData.summary.service_revenue !== undefined) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Card className="border-gray-200 dark:border-gray-800">
+                    <CardHeader className="pb-2 sm:pb-3">
+                      <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                        Subscription Revenue
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                        ${(revenueData.summary.subscription_revenue || 0).toFixed(2)}
+                      </p>
+                      {revenueData.summary.total_paid > 0 && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {((revenueData.summary.subscription_revenue || 0) / revenueData.summary.total_paid * 100).toFixed(1)}% of total
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                  <Card className="border-gray-200 dark:border-gray-800">
+                    <CardHeader className="pb-2 sm:pb-3">
+                      <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                        Service Revenue
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        ${(revenueData.summary.service_revenue || 0).toFixed(2)}
+                      </p>
+                      {revenueData.summary.total_paid > 0 && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {((revenueData.summary.service_revenue || 0) / revenueData.summary.total_paid * 100).toFixed(1)}% of total
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <Card className="border-gray-200 dark:border-gray-800">
                   <CardHeader className="pb-3 sm:pb-6">
@@ -856,6 +896,25 @@ export default function ReportsPage() {
                     </p>
                   </CardContent>
                 </Card>
+                {customerStats.customers_with_subscriptions !== undefined && (
+                  <Card className="border-gray-200 dark:border-gray-800">
+                    <CardHeader className="pb-2 sm:pb-3">
+                      <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                        With Subscriptions
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                        {customerStats.customers_with_subscriptions || 0}
+                      </p>
+                      {customerStats.subscription_adoption_rate !== undefined && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {customerStats.subscription_adoption_rate.toFixed(1)}% adoption rate
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
               {customerStats.top_customers && customerStats.top_customers.length > 0 && (
@@ -871,6 +930,7 @@ export default function ReportsPage() {
                             <TableHead className="text-xs sm:text-sm">Customer</TableHead>
                             <TableHead className="text-xs sm:text-sm">Revenue</TableHead>
                             <TableHead className="text-xs sm:text-sm">Work Orders</TableHead>
+                            <TableHead className="text-xs sm:text-sm">Subscription</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -884,6 +944,15 @@ export default function ReportsPage() {
                               </TableCell>
                               <TableCell className="text-xs sm:text-sm">
                                 {customer.work_orders || 0}
+                              </TableCell>
+                              <TableCell className="text-xs sm:text-sm">
+                                {customer.has_subscription ? (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                                    Active
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 dark:text-gray-500">—</span>
+                                )}
                               </TableCell>
                             </TableRow>
                           ))}

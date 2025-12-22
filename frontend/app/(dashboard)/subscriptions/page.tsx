@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { subscriptionsApi, Subscription } from "@/lib/api/subscriptions";
+import { subscriptionsApi, packagesApi, Subscription, Package } from "@/lib/api/subscriptions";
+import { customersApi, Customer } from "@/lib/api/customers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ import {
   User,
   Package as PackageIcon,
   Settings,
+  Plus,
 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
@@ -26,6 +28,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import Link from "next/link";
+import { Select } from "@/components/ui/select";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const subscriptionCreateSchema = z.object({
+  customer: z.number().min(1, "Customer is required"),
+  package: z.number().min(1, "Package is required"),
+  start_date: z.string().optional(),
+  auto_renew: z.boolean().optional(),
+});
+
+type SubscriptionCreateFormData = z.infer<typeof subscriptionCreateSchema>;
 
 export default function SubscriptionsPage() {
   const queryClient = useQueryClient();
@@ -38,7 +54,66 @@ export default function SubscriptionsPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [packageFilter, setPackageFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const debouncedSearch = useDebounce(search, 500);
+
+  // Fetch packages and customers for the create form
+  const { data: packagesData } = useQuery({
+    queryKey: ["packages", "available"],
+    queryFn: () => packagesApi.getAvailable(),
+  });
+
+  const { data: customersData } = useQuery({
+    queryKey: ["customers", "for-subscription"],
+    queryFn: () => customersApi.list({}),
+  });
+
+  const packages = Array.isArray(packagesData) ? packagesData : [];
+  const customers = customersData?.results || [];
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+    setValue,
+    watch,
+  } = useForm<SubscriptionCreateFormData>({
+    resolver: zodResolver(subscriptionCreateSchema),
+    defaultValues: {
+      auto_renew: false,
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: SubscriptionCreateFormData) =>
+      subscriptionsApi.create({
+        customer: data.customer,
+        package: data.package,
+        start_date: data.start_date,
+        auto_renew: data.auto_renew,
+      }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      toast({
+        title: "Success",
+        description: `Subscription created successfully. Invoice #${data.invoice_id || "N/A"} is pending payment.`,
+      });
+      setIsCreateDialogOpen(false);
+      reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || error.response?.data?.message || "Failed to create subscription",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmitCreate = (data: SubscriptionCreateFormData) => {
+    createMutation.mutate(data);
+  };
 
   const { data: subscriptionsData, isLoading } = useQuery({
     queryKey: ["subscriptions", debouncedSearch, statusFilter, packageFilter, paymentFilter],
@@ -163,6 +238,12 @@ export default function SubscriptionsPage() {
               Manage Packages
             </Button>
           </Link>
+          <PermissionGuard permission="manage_subscriptions">
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Subscription
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -223,6 +304,7 @@ export default function SubscriptionsPage() {
               <option value="expired">Expired</option>
               <option value="cancelled">Cancelled</option>
               <option value="suspended">Suspended</option>
+              <option value="pending">Pending</option>
             </select>
             <select
               value={paymentFilter}
@@ -475,6 +557,94 @@ export default function SubscriptionsPage() {
               {cancelMutation.isPending ? "Cancelling..." : "Yes, Cancel Subscription"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Subscription Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create New Subscription</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmitCreate)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="customer">Customer *</Label>
+              <Select
+                id="customer"
+                onChange={(e) => setValue("customer", parseInt(e.target.value))}
+                defaultValue=""
+              >
+                <option value="">Select a customer</option>
+                {customers.map((customer: Customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.full_name || customer.customer_number} - {customer.email}
+                  </option>
+                ))}
+              </Select>
+              {errors.customer && (
+                <p className="text-sm text-red-500">{errors.customer.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="package">Package *</Label>
+              <Select
+                id="package"
+                onChange={(e) => setValue("package", parseInt(e.target.value))}
+                defaultValue=""
+              >
+                <option value="">Select a package</option>
+                {packages.map((pkg: Package) => (
+                  <option key={pkg.id} value={pkg.id}>
+                    {pkg.name} - ${parseFloat(pkg.price).toFixed(2)} ({pkg.duration_months} months)
+                  </option>
+                ))}
+              </Select>
+              {errors.package && (
+                <p className="text-sm text-red-500">{errors.package.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="start_date">Start Date (Optional)</Label>
+              <Input
+                id="start_date"
+                type="date"
+                {...register("start_date")}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to start today
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="auto_renew"
+                {...register("auto_renew")}
+                className="rounded border-gray-300"
+              />
+              <Label htmlFor="auto_renew" className="cursor-pointer">
+                Auto-renew subscription
+              </Label>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setIsCreateDialogOpen(false);
+                  reset();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting || createMutation.isPending}>
+                {createMutation.isPending ? "Creating..." : "Create Subscription"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

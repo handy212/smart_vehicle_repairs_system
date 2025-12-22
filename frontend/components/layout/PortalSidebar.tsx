@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Package,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ const navigationGroups: NavigationGroup[] = [
       { name: "My Vehicles", href: "/portal/vehicles", icon: Car },
       { name: "My Appointments", href: "/portal/appointments", icon: Calendar },
       { name: "Book Appointment", href: "/portal/book", icon: PlusCircle },
+      { name: "Roadside Assistance", href: "/portal/roadside", icon: Wrench },
     ],
   },
   {

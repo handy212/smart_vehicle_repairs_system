@@ -284,17 +284,22 @@ export default function InvoiceDetailPage() {
                     <Mail className="w-4 h-4" />
                     {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
                   </button>
-                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                  <button
-                    onClick={() => {
-                      setShowPaymentDialog(true);
-                      setShowActionsMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                  >
-                    <DollarSign className="w-4 h-4" />
-                    Record Payment
-                  </button>
+                  {/* Only show Record Payment if invoice is not fully paid */}
+                  {invoice.status !== 'paid' && parseFloat(invoice.balance_due || "0") > 0 && (
+                    <>
+                      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                      <button
+                        onClick={() => {
+                          setShowPaymentDialog(true);
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        <DollarSign className="w-4 h-4" />
+                        Record Payment
+                      </button>
+                    </>
+                  )}
                   <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
                   <Link href={`/billing/invoices/${invoiceId}/edit`}>
                     <button

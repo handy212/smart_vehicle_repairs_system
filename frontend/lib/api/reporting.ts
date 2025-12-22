@@ -27,6 +27,11 @@ export interface DashboardOverview {
     low_stock_items?: number;
     pending_estimates?: number;
   };
+  subscriptions?: {
+    active_count: number;
+    mrr: number;
+    arr: number;
+  };
   recent_activity?: {
     work_orders?: any[];
     appointments?: any[];
@@ -44,6 +49,8 @@ export interface RevenueReport {
     total_paid: number;
     total_outstanding: number;
     payment_rate: number;
+    subscription_revenue?: number;
+    service_revenue?: number;
   };
   revenue_by_period: Array<{
     period: string;
@@ -202,6 +209,8 @@ export interface CustomerStatistics {
   total_customers: number;
   new_customers: number;
   active_customers: number;
+  customers_with_subscriptions?: number;
+  subscription_adoption_rate?: number;
   by_type: Array<{
     type: string;
     count: number;
@@ -211,6 +220,7 @@ export interface CustomerStatistics {
     name: string;
     revenue: number;
     work_orders: number;
+    has_subscription?: boolean;
   }>;
 }
 
@@ -251,6 +261,39 @@ export interface ServiceDueReport {
     next_service_due?: string;
     mileage?: number;
     odometer_reading?: number;
+  }>;
+}
+
+export interface SubscriptionAnalytics {
+  period: {
+    start_date: string;
+    end_date: string;
+  };
+  summary: {
+    active_subscriptions: number;
+    total_subscriptions: number;
+    mrr: number;
+    arr: number;
+    average_subscription_value: number;
+    new_subscriptions: number;
+    renewals: number;
+    churned: number;
+    renewal_rate: number;
+  };
+  by_status: Array<{
+    status: string;
+    count: number;
+  }>;
+  revenue_by_package: Array<{
+    package_id: number;
+    package_name: string;
+    active_subscriptions: number;
+    mrr: number;
+    arr: number;
+  }>;
+  trends: Array<{
+    period: string | null;
+    count: number;
   }>;
 }
 
@@ -344,6 +387,15 @@ export const reportingApi = {
 
   serviceDue: async (): Promise<ServiceDueReport> => {
     const response = await apiClient.get("/reporting/reports/vehicles/service-due/");
+    return response.data;
+  },
+
+  // Subscription Reports
+  subscriptionAnalytics: async (params?: {
+    start_date?: string;
+    end_date?: string;
+  }): Promise<SubscriptionAnalytics> => {
+    const response = await apiClient.get("/reporting/reports/subscriptions/", { params });
     return response.data;
   },
 };

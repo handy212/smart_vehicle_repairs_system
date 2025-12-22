@@ -134,6 +134,7 @@ class Subscription(models.Model):
     """
     
     STATUS_CHOICES = [
+        ('pending', 'Pending'),
         ('active', 'Active'),
         ('expired', 'Expired'),
         ('cancelled', 'Cancelled'),
@@ -168,6 +169,14 @@ class Subscription(models.Model):
         on_delete=models.PROTECT,
         related_name='subscriptions',
         help_text="Package type"
+    )
+    vehicle = models.ForeignKey(
+        'vehicles.Vehicle',
+        on_delete=models.PROTECT,
+        related_name='subscriptions',
+        null=True,
+        blank=True,
+        help_text="Vehicle this subscription covers (per-vehicle coverage)"
     )
     
     # Dates
@@ -413,6 +422,7 @@ class SubscriptionUsage(models.Model):
         ('workorder', 'Work Order'),
         ('appointment', 'Appointment'),
         ('inspection', 'Inspection'),
+        ('roadside', 'Roadside Request'),
         ('other', 'Other'),
     ]
     

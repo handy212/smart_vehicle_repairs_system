@@ -1128,6 +1128,218 @@ Result: {inspection.get_result_display()}
         )
         self.service.send_notification(notification)
     
+    # ==================== ROADSIDE ASSISTANCE NOTIFICATIONS ====================
+    
+    def roadside_requested(self, roadside_request):
+        """Notify customer when roadside request is created"""
+        if not roadside_request.customer.user:
+            return
+        
+        template = self._get_template('roadside_requested', 'email')
+        customer_name = self._build_customer_name(roadside_request.customer)
+        vehicle_display = self._build_vehicle_display(roadside_request.vehicle)
+        
+        title = f'Roadside Assistance Requested - {roadside_request.request_number}'
+        if template and template.subject:
+            title = self.service._render_template(template.subject, {
+                'request_number': roadside_request.request_number,
+                'customer_name': customer_name,
+            })
+        
+        message = f'''Your roadside assistance request has been received.
+
+Request: {roadside_request.request_number}
+Service: {roadside_request.get_service_type_display()}
+Vehicle: {vehicle_display}
+Location: {roadside_request.breakdown_location}
+
+We'll dispatch a service provider shortly.'''
+        if template and template.body:
+            message = self.service._render_template(template.body, {
+                'customer_name': customer_name,
+                'request_number': roadside_request.request_number,
+                'service_type': roadside_request.get_service_type_display(),
+                'vehicle_display': vehicle_display,
+                'breakdown_location': roadside_request.breakdown_location,
+                'company_name': self._get_company_name(),
+            })
+        
+        notification = Notification.objects.create(
+            recipient=roadside_request.customer.user,
+            notification_type='roadside',
+            channel='email',
+            priority='high',
+            template=template,
+            title=title,
+            message=message,
+            metadata={
+                'request_id': roadside_request.id,
+                'request_number': roadside_request.request_number,
+                'service_type': roadside_request.service_type,
+                'customer_name': customer_name,
+                'vehicle_display': vehicle_display,
+            },
+            related_object_type='roadside',
+            related_object_id=roadside_request.id
+        )
+        self.service.send_notification(notification)
+    
+    def roadside_dispatched(self, roadside_request):
+        """Notify customer when service provider is dispatched"""
+        if not roadside_request.customer.user:
+            return
+        
+        template = self._get_template('roadside_dispatched', 'email')
+        customer_name = self._build_customer_name(roadside_request.customer)
+        vehicle_display = self._build_vehicle_display(roadside_request.vehicle)
+        technician_name = roadside_request.assigned_technician.get_full_name() if roadside_request.assigned_technician else "Service Provider"
+        
+        title = f'Service Provider Dispatched - {roadside_request.request_number}'
+        if template and template.subject:
+            title = self.service._render_template(template.subject, {
+                'request_number': roadside_request.request_number,
+            })
+        
+        message = f'''A service provider has been dispatched to your location.
+
+Request: {roadside_request.request_number}
+Service Provider: {technician_name}
+Service: {roadside_request.get_service_type_display()}
+Vehicle: {vehicle_display}
+Location: {roadside_request.breakdown_location}
+
+They should arrive shortly.'''
+        if template and template.body:
+            message = self.service._render_template(template.body, {
+                'customer_name': customer_name,
+                'request_number': roadside_request.request_number,
+                'technician_name': technician_name,
+                'service_type': roadside_request.get_service_type_display(),
+                'vehicle_display': vehicle_display,
+                'breakdown_location': roadside_request.breakdown_location,
+                'company_name': self._get_company_name(),
+            })
+        
+        notification = Notification.objects.create(
+            recipient=roadside_request.customer.user,
+            notification_type='roadside',
+            channel='email',
+            priority='high',
+            template=template,
+            title=title,
+            message=message,
+            metadata={
+                'request_id': roadside_request.id,
+                'request_number': roadside_request.request_number,
+                'technician_id': roadside_request.assigned_technician.id if roadside_request.assigned_technician else None,
+                'customer_name': customer_name,
+            },
+            related_object_type='roadside',
+            related_object_id=roadside_request.id
+        )
+        self.service.send_notification(notification)
+    
+    def roadside_arrived(self, roadside_request):
+        """Notify customer when service provider arrives"""
+        if not roadside_request.customer.user:
+            return
+        
+        template = self._get_template('roadside_arrived', 'email')
+        customer_name = self._build_customer_name(roadside_request.customer)
+        technician_name = roadside_request.assigned_technician.get_full_name() if roadside_request.assigned_technician else "Service Provider"
+        
+        title = f'Service Provider Arrived - {roadside_request.request_number}'
+        if template and template.subject:
+            title = self.service._render_template(template.subject, {
+                'request_number': roadside_request.request_number,
+            })
+        
+        message = f'''Your service provider has arrived at your location.
+
+Request: {roadside_request.request_number}
+Service Provider: {technician_name}
+
+They will begin service shortly.'''
+        if template and template.body:
+            message = self.service._render_template(template.body, {
+                'customer_name': customer_name,
+                'request_number': roadside_request.request_number,
+                'technician_name': technician_name,
+                'company_name': self._get_company_name(),
+            })
+        
+        notification = Notification.objects.create(
+            recipient=roadside_request.customer.user,
+            notification_type='roadside',
+            channel='email',
+            priority='normal',
+            template=template,
+            title=title,
+            message=message,
+            metadata={
+                'request_id': roadside_request.id,
+                'request_number': roadside_request.request_number,
+                'customer_name': customer_name,
+            },
+            related_object_type='roadside',
+            related_object_id=roadside_request.id
+        )
+        self.service.send_notification(notification)
+    
+    def roadside_completed(self, roadside_request):
+        """Notify customer when roadside service is completed"""
+        if not roadside_request.customer.user:
+            return
+        
+        template = self._get_template('roadside_completed', 'email')
+        customer_name = self._build_customer_name(roadside_request.customer)
+        vehicle_display = self._build_vehicle_display(roadside_request.vehicle)
+        
+        title = f'Roadside Service Completed - {roadside_request.request_number}'
+        if template and template.subject:
+            title = self.service._render_template(template.subject, {
+                'request_number': roadside_request.request_number,
+            })
+        
+        coverage_status = "covered by your subscription" if roadside_request.is_covered_by_subscription else "charged to your account"
+        message = f'''Your roadside assistance service has been completed.
+
+Request: {roadside_request.request_number}
+Service: {roadside_request.get_service_type_display()}
+Vehicle: {vehicle_display}
+Status: {coverage_status}
+
+Thank you for using our roadside assistance service.'''
+        if template and template.body:
+            message = self.service._render_template(template.body, {
+                'customer_name': customer_name,
+                'request_number': roadside_request.request_number,
+                'service_type': roadside_request.get_service_type_display(),
+                'vehicle_display': vehicle_display,
+                'is_covered_by_subscription': roadside_request.is_covered_by_subscription,
+                'charge_amount': str(roadside_request.charge_amount) if roadside_request.charge_amount else "0.00",
+                'company_name': self._get_company_name(),
+            })
+        
+        notification = Notification.objects.create(
+            recipient=roadside_request.customer.user,
+            notification_type='roadside',
+            channel='email',
+            priority='normal',
+            template=template,
+            title=title,
+            message=message,
+            metadata={
+                'request_id': roadside_request.id,
+                'request_number': roadside_request.request_number,
+                'is_covered_by_subscription': roadside_request.is_covered_by_subscription,
+                'customer_name': customer_name,
+            },
+            related_object_type='roadside',
+            related_object_id=roadside_request.id
+        )
+        self.service.send_notification(notification)
+    
     # ==================== SYSTEM NOTIFICATIONS ====================
     
     def service_due_reminder(self, vehicle):

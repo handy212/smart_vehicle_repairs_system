@@ -183,13 +183,14 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = [
-            'customer', 'package',
+            'customer', 'package', 'vehicle',
             'start_date', 'end_date',  # end_date is optional, will be calculated
             'auto_renew', 'purchase_price',
             'payment_status'
         ]
         extra_kwargs = {
             'customer': {'required': False},
+            'vehicle': {'required': True},
             'start_date': {'required': False},
             'end_date': {'required': False},
             'purchase_price': {'required': False},
@@ -202,6 +203,14 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         user = getattr(request, 'user', None)
 
         package = data.get('package')
+        vehicle = data.get('vehicle')
+        
+        if not vehicle:
+            raise serializers.ValidationError({'vehicle': 'Vehicle is required'})
+        # Ensure vehicle belongs to the customer
+        if vehicle and data['customer'] and vehicle.customer_id != data['customer'].id:
+            raise serializers.ValidationError({'vehicle': 'Vehicle does not belong to this customer'})
+        
         start_date = data.get('start_date')
         customer = data.get('customer')
 

@@ -15,7 +15,7 @@ class SubscriptionService:
     
     @staticmethod
     @transaction.atomic
-    def create_subscription_with_invoice(customer, package, start_date=None, auto_renew=False, created_by=None):
+    def create_subscription_with_invoice(customer, package, vehicle=None, start_date=None, auto_renew=False, created_by=None, request=None):
         """
         Create a subscription and associated invoice
         
@@ -25,6 +25,7 @@ class SubscriptionService:
             start_date: Optional start date (defaults to today)
             auto_renew: Whether to auto-renew
             created_by: User who created the subscription (optional, defaults to system user)
+            request: Optional HttpRequest to resolve branch from
             
         Returns:
             tuple: (subscription, invoice)
@@ -45,16 +46,23 @@ class SubscriptionService:
                     "No system user available to create invoice. Please ensure at least one admin user exists."
                 )
         
-        # Check for duplicate active subscription
+        # Validate vehicle
+        if vehicle is None:
+            raise ValidationError("Vehicle is required for this subscription.")
+        if vehicle.customer_id != customer.id:
+            raise ValidationError("Vehicle does not belong to this customer.")
+        
+        # Check for duplicate active subscription for same customer+vehicle
         existing = Subscription.objects.filter(
             customer=customer,
+            vehicle=vehicle,
             package=package,
             status='active'
         ).first()
         
         if existing and existing.is_active():
             raise ValidationError(
-                f"Customer already has an active subscription for {package.name}"
+                f"Customer already has an active subscription for {package.name} on this vehicle."
             )
         
         # Calculate end date using relativedelta for proper month handling
@@ -64,6 +72,7 @@ class SubscriptionService:
         # Create subscription
         subscription = Subscription.objects.create(
             customer=customer,
+            vehicle=vehicle,
             package=package,
             start_date=start_date,
             end_date=end_date,
@@ -73,32 +82,24 @@ class SubscriptionService:
             status='pending'  # Will be active after payment
         )
         
-        # Get a default vehicle for the customer (for subscription invoices, vehicle is required by model)
-        # Use the customer's first vehicle, or find/create a placeholder if none exists
-        vehicle = customer.vehicles.first()
-        if not vehicle:
-            # Look for existing placeholder vehicle for this customer
-            from apps.vehicles.models import Vehicle
-            vehicle = Vehicle.objects.filter(
-                customer=customer,
-                license_plate__startswith='SUB-'
-            ).first()
-            
-            if not vehicle:
-                # Create a placeholder vehicle for subscription invoices if customer has no vehicles
-                vehicle = Vehicle.objects.create(
-                    customer=customer,
-                    make='N/A',
-                    model='Subscription Service',
-                    year=timezone.now().year,
-                    license_plate='SUB-{}'.format(customer.id),
-                    vin='SUB-{}-{}'.format(customer.id, timezone.now().strftime('%Y%m%d')),
-                )
+        # Get branch for invoice
+        from apps.branches.utils import resolve_branch
+        branch = None
+        # Try to resolve branch from request first
+        if request:
+            branch = resolve_branch(request)
+        # Fallback to customer's branch or user's primary branch
+        if not branch:
+            if hasattr(customer, 'branch') and customer.branch:
+                branch = customer.branch
+            elif created_by and hasattr(created_by, 'primary_branch') and created_by.primary_branch:
+                branch = created_by.primary_branch
         
         # Create invoice
         invoice = Invoice.objects.create(
             customer=customer,
             vehicle=vehicle,
+            branch=branch,
             invoice_date=timezone.now().date(),
             due_date=timezone.now().date(),  # Due immediately for subscriptions
             description=f"Subscription: {package.name} ({package.duration_months} months)",
@@ -160,7 +161,7 @@ class SubscriptionService:
     
     @staticmethod
     @transaction.atomic
-    def renew_subscription(subscription, months=None, created_by=None):
+    def renew_subscription(subscription, months=None, created_by=None, request=None):
         """
         Renew a subscription and create invoice
         
@@ -168,6 +169,7 @@ class SubscriptionService:
             subscription: Subscription instance
             months: Optional months to renew (defaults to package duration)
             created_by: User who created the renewal (optional, defaults to system user)
+            request: Optional HttpRequest to resolve branch from
             
         Returns:
             tuple: (renewed_subscription, invoice)
@@ -199,32 +201,29 @@ class SubscriptionService:
         subscription.payment_status = 'pending'
         subscription.save()
         
-        # Get a default vehicle for the customer (for subscription invoices, vehicle is required by model)
-        # Use the customer's first vehicle, or find/create a placeholder if none exists
-        vehicle = subscription.customer.vehicles.first()
+        # Vehicle must remain tied to the subscription
+        vehicle = subscription.vehicle
         if not vehicle:
-            # Look for existing placeholder vehicle for this customer
-            from apps.vehicles.models import Vehicle
-            vehicle = Vehicle.objects.filter(
-                customer=subscription.customer,
-                license_plate__startswith='SUB-'
-            ).first()
-            
-            if not vehicle:
-                # Create a placeholder vehicle for subscription invoices if customer has no vehicles
-                vehicle = Vehicle.objects.create(
-                    customer=subscription.customer,
-                    make='N/A',
-                    model='Subscription Service',
-                    year=timezone.now().year,
-                    license_plate='SUB-{}'.format(subscription.customer.id),
-                    vin='SUB-{}-{}'.format(subscription.customer.id, timezone.now().strftime('%Y%m%d')),
-                )
+            raise ValidationError("Subscription is missing vehicle; cannot renew without vehicle.")
+        
+        # Get branch for invoice
+        from apps.branches.utils import resolve_branch
+        branch = None
+        # Try to resolve branch from request first
+        if request:
+            branch = resolve_branch(request)
+        # Fallback to customer's branch or user's primary branch
+        if not branch:
+            if hasattr(subscription.customer, 'branch') and subscription.customer.branch:
+                branch = subscription.customer.branch
+            elif created_by and hasattr(created_by, 'primary_branch') and created_by.primary_branch:
+                branch = created_by.primary_branch
         
         # Create renewal invoice
         invoice = Invoice.objects.create(
             customer=subscription.customer,
             vehicle=vehicle,
+            branch=branch,
             invoice_date=timezone.now().date(),
             due_date=timezone.now().date(),
             description=f"Subscription Renewal: {subscription.package.name} ({months} months)",
@@ -285,12 +284,41 @@ class SubscriptionUsageService:
         if not subscription.is_active() or subscription.is_expired():
             raise ValidationError('Subscription is not active or has expired')
         
-        # Map usage types to feature keys for package lookup
+        # Map usage types to feature keys for package lookup (support both friendly and internal keys)
         usage_to_feature = {
-            'towing': 'towing_services',
+            # Towing services
+            'towing': 'towing_services_km',
+            'towing_services': 'towing_services_km',
+            'towing_services_km': 'towing_services_km',
+            # Call out charges
             'call_out': 'call_out_charges',
+            'call_out_charges': 'call_out_charges',
+            # Kilometers
             'kilometer': 'kilometers',
+            'kilometers': 'kilometers',
+            # Inspections
             'inspection': 'free_inspections',
+            'free_inspections': 'free_inspections',
+            # Battery services
+            'battery_boost': 'battery_boosts',
+            'battery_boosts': 'battery_boosts',
+            # Flat tyre
+            'flat_tyre': 'flat_tyre_service',
+            'flat_tyre_service': 'flat_tyre_service',
+            # Extrication
+            'extrication': 'extrication',
+            # First aid / roadside assistance
+            'first_aid': 'roadside_first_aid',
+            'mechanical_first_aid': 'roadside_first_aid',
+            'roadside_first_aid': 'roadside_first_aid',
+            # Key lockout
+            'key_lockout': 'key_lock_out',
+            'key_lock_out': 'key_lock_out',
+            # Emergency fuel
+            'emergency_fuel': 'emergency_fuel',
+            # Other services
+            'accident_estimate': 'accident_estimate',
+            'pre_purchase_inspection': 'pre_purchase_inspection',
         }
         
         feature_key = usage_to_feature.get(usage_type, usage_type)
@@ -323,7 +351,7 @@ class SubscriptionUsageService:
         return usage
     
     @staticmethod
-    def check_allowance(customer, feature_key, quantity_needed=1):
+    def check_allowance(customer, feature_key, quantity_needed=1, vehicle=None):
         """
         Check if customer has sufficient allowance for a service
         
@@ -335,11 +363,14 @@ class SubscriptionUsageService:
         Returns:
             tuple: (has_allowance: bool, subscription: Subscription or None, remaining: int)
         """
-        # Find active subscription
-        subscription = Subscription.objects.filter(
+        # Find active subscription (per customer + optional vehicle)
+        qs = Subscription.objects.filter(
             customer=customer,
             status='active'
-        ).first()
+        )
+        if vehicle:
+            qs = qs.filter(vehicle=vehicle)
+        subscription = qs.first()
         
         if not subscription or not subscription.is_active():
             return False, None, 0

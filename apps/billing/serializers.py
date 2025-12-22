@@ -988,14 +988,23 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
         invoice = data.get('invoice')
         amount = data.get('amount', 0)
         
+        if not invoice:
+            raise serializers.ValidationError({"invoice": "Invoice is required"})
+        
+        # Refresh invoice to get latest payment status
+        invoice.refresh_from_db()
+        
         # Ensure amount is positive
         if amount <= 0:
             raise serializers.ValidationError({"amount": "Amount must be greater than 0"})
         
-        # Warn if payment exceeds amount due (but allow it - overpayment)
-        if invoice and amount > invoice.amount_due:
-            # Could add a warning here if needed
-            pass
+        # Only prevent payments if invoice is explicitly marked as paid
+        # This is the most reliable check - other statuses may still accept payments
+        if invoice.status == 'paid':
+            inv_num = getattr(invoice, 'invoice_number', f'#{invoice.id}')
+            raise serializers.ValidationError(
+                {"invoice": f"Invoice {inv_num} is already fully paid. Cannot record additional payments."}
+            )
         
         return data
     

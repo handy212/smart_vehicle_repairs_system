@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     'apps.notifications_app',
     'apps.documents',
     'apps.subscriptions',
+    'apps.roadside',
 ]
 
 MIDDLEWARE = [
