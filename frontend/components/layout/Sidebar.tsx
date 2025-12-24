@@ -20,6 +20,7 @@ import {
   Keyboard,
   CreditCard,
   Truck,
+  Calculator,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ const navigationGroups = [
     items: [
       { name: "Inventory", href: "/inventory", icon: Package, permission: "view_inventory" },
       { name: "Billing", href: "/billing", icon: Receipt, permission: "view_billing" },
+      { name: "Accounting", href: "/accounting", icon: Calculator, permission: "view_accounting" },
       { name: "Subscriptions", href: "/subscriptions", icon: CreditCard, permission: "view_subscriptions" },
     ],
   },

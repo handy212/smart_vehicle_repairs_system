@@ -24,7 +24,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
   const pathname = usePathname();
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const isCollapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
-  
+
   // Calculate left position based on sidebar state
   // Sidebar: 256px (w-64) when expanded, 80px (w-20) when collapsed
   const sidebarLeft = sidebarCollapsed ? 80 : 256;
@@ -73,7 +73,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
             const isExactMatch = pathname === item.href;
             const isSubRoute = pathname?.startsWith(item.href + "/");
             const isActive = isExactMatch || isSubRoute;
-            
+
             return (
               <Link
                 key={item.name}
@@ -112,6 +112,15 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
   billing: [
     { name: "Invoices", href: "/billing" },
     { name: "Estimates", href: "/billing/estimates" },
+    { name: "Till Management", href: "/billing/tills" },
+    { name: "Refunds", href: "/billing/refunds" },
+  ],
+  accounting: [
+    { name: "Dashboard", href: "/accounting" },
+    { name: "Chart of Accounts", href: "/accounting/accounts" },
+    { name: "Journal Entries", href: "/accounting/journal-entries" },
+    { name: "General Ledger", href: "/accounting/general-ledger" },
+    { name: "Reports", href: "/accounting/reports" },
   ],
   admin: [
     { name: "Dashboard", href: "/admin" },
@@ -137,11 +146,17 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
     };
   }
 
-
   if (pathname.startsWith("/billing")) {
     return {
       items: subNavConfig.billing,
       title: "Billing",
+    };
+  }
+
+  if (pathname.startsWith("/accounting")) {
+    return {
+      items: subNavConfig.accounting,
+      title: "Accounting",
     };
   }
 

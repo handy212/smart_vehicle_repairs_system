@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from apps.billing.models import TaxRate, Estimate, EstimateLineItem, Invoice, Payment
+from apps.billing.models import (
+    TaxRate, Estimate, EstimateLineItem, Invoice, Payment,
+    CashierTill, CashCount, PaymentAllocation, Refund
+)
 
 
 @admin.register(TaxRate)
@@ -304,3 +307,95 @@ class PaymentAdmin(admin.ModelAdmin):
             obj.processed_by = request.user
         super().save_model(request, obj, form, change)
 
+
+# ==============================================================================
+# PHASE 2: CASH & PAYMENT MANAGEMENT ADMIN
+# ==============================================================================
+
+class CashCountInline(admin.TabularInline):
+    model = CashCount
+    extra = 0
+    readonly_fields = ['total']
+
+
+@admin.register(CashierTill)
+class CashierTillAdmin(admin.ModelAdmin):
+    list_display = [
+        'id', 'branch', 'cashier', 'status', 'opened_at', 'closed_at',
+        'opening_balance', 'closing_balance', 'variance'
+    ]
+    list_filter = ['status', 'branch', 'opened_at']
+    search_fields = ['cashier__first_name', 'cashier__last_name']
+    readonly_fields = ['opened_at', 'created_at', 'updated_at', 'duration', 'is_balanced']
+    inlines = [CashCountInline]
+    
+    fieldsets = [
+        ('Till Info', {
+            'fields': ['branch', 'cashier', 'status']
+        }),
+        ('Times', {
+            'fields': ['opened_at', 'closed_at', 'duration']
+        }),
+        ('Balances', {
+            'fields': [
+                'opening_balance', 'expected_balance',
+                'closing_balance', 'variance', 'is_balanced'
+            ]
+        }),
+        ('Notes', {
+            'fields': ['notes']
+        }),
+    ]
+
+
+@admin.register(PaymentAllocation)
+class PaymentAllocationAdmin(admin.ModelAdmin):
+    list_display = ['payment', 'invoice', 'amount', 'allocated_at', 'allocated_by']
+    list_filter = ['allocated_at']
+    search_fields = [
+        'payment__payment_number',
+        'invoice__invoice_number'
+    ]
+    readonly_fields = ['allocated_at']
+
+
+@admin.register(Refund)
+class RefundAdmin(admin.ModelAdmin):
+    list_display = [
+        'refund_number', 'customer', 'amount', 'status',
+        'refund_method', 'requested_at'
+    ]
+    list_filter = ['status', 'refund_method', 'requested_at']
+    search_fields = [
+        'refund_number', 'customer__user__first_name',
+        'customer__user__last_name', 'reference_number'
+    ]
+    readonly_fields = [
+        'refund_number', 'requested_at', 'approved_at',
+        'processed_at', 'created_at', 'updated_at'
+    ]
+    
+    fieldsets = [
+        ('Refund Info', {
+            'fields': [
+                'refund_number', 'original_payment', 'invoice',
+                'customer', 'status'
+            ]
+        }),
+        ('Details', {
+            'fields': [
+                'amount', 'reason', 'refund_method',
+                'reference_number', 'till'
+            ]
+        }),
+        ('Approval  & Processing', {
+            'fields': [
+                'requested_by', 'requested_at',
+                'approved_by', 'approved_at',
+                'processed_by', 'processed_at'
+            ]
+        }),
+        ('Notes', {
+            'fields': ['notes']
+        }),
+    ]

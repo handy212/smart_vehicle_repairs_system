@@ -47,7 +47,8 @@ class Command(BaseCommand):
             # Get all branches
             branches = Branch.objects.filter(is_active=True)
         
-        if not branches.exists():
+        # Check if branches exist (works for list or queryset)
+        if not branches:
             self.stdout.write(
                 self.style.WARNING('No active branches found.')
             )
@@ -76,6 +77,12 @@ class Command(BaseCommand):
                 )
             else:
                 self.stdout.write(f'  Chart of Accounts already exists for {branch.name}')
+            
+            # Set as default CoA for entity if not set
+            if not entity.default_coa:
+                entity.default_coa = coa
+                entity.save(update_fields=['default_coa'])
+                self.stdout.write(f'  ✓ Set as default Chart of Accounts for {branch.name}')
             
             # Define standard accounts for vehicle repair business
             accounts = [

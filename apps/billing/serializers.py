@@ -10,6 +10,10 @@ from apps.billing.models import (
     Invoice,
     InvoiceLineItem,
     Payment,
+    CashierTill,
+    CashCount,
+    PaymentAllocation,
+    Refund,
 )
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -1047,3 +1051,115 @@ class RefundPaymentSerializer(serializers.Serializer):
         if value > (payment.amount - payment.refund_amount):
             raise serializers.ValidationError("Refund amount cannot exceed remaining payment amount")
         return value
+# Phase 2 Till Management Serializers
+# Add to apps/billing/serializers.py
+
+from apps.billing.models import CashierTill, CashCount, PaymentAllocation, Refund
+
+
+class CashCountSerializer(serializers.ModelSerializer):
+    """Serializer for cash count"""
+    
+    class Meta:
+        model = CashCount
+        fields = ['id', 'denomination', 'quantity', 'total', 'count_type']
+        read_only_fields = ['total']
+
+
+class CashierTillSerializer(serializers.ModelSerializer):
+    """Serializer for cashier till"""
+    
+    cashier_name = serializers.CharField(source='cashier.get_full_name', read_only=True)
+    branch_name = serializers.CharField(source='branch.name', read_only=True)
+    cash_counts = CashCountSerializer(many=True, read_only=True)
+    duration = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CashierTill
+        fields = [
+            'id', 'branch', 'branch_name', 'cashier', 'cashier_name',
+            'opened_at', 'closed_at', 'status',
+            'opening_balance', 'closing_balance', 'expected_balance', 'variance',
+            'is_balanced', 'duration', 'notes', 'cash_counts'
+        ]
+        read_only_fields = ['opened_at', 'created_at', 'updated_at']
+    
+    def get_duration(self, obj):
+        duration = obj.duration
+        if duration:
+            hours = duration.total_seconds() // 3600
+            minutes = (duration.total_seconds() % 3600) // 60
+            return f"{int(hours)}h {int(minutes)}m"
+        return None
+
+
+class OpenTillSerializer(serializers.Serializer):
+    """Serializer for opening a till"""
+    opening_balance = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0'))]
+    )
+
+
+class CloseTillSerializer(serializers.Serializer):
+    """Serializer for closing a till"""
+    cash_counts = serializers.ListField(
+        child=serializers.DictField(),
+        required=True
+    )
+    notes = serializers.CharField(required=False, allow_blank=True)
+
+
+class PaymentAllocationSerializer(serializers.ModelSerializer):
+    """Serializer for payment allocation"""
+    
+    payment_number = serializers.CharField(source='payment.payment_number', read_only=True)
+    invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
+    allocated_by_name = serializers.CharField(source='allocated_by.get_full_name', read_only=True)
+    
+    class Meta:
+        model = PaymentAllocation
+        fields = [
+            'id', 'payment', 'payment_number', 'invoice', 'invoice_number',
+            'amount', 'allocated_at', 'allocated_by', 'allocated_by_name', 'notes'
+        ]
+        read_only_fields = ['allocated_at']
+
+
+class RefundSerializer(serializers.ModelSerializer):
+    """Serializer for refund"""
+    
+    customer_name = serializers.SerializerMethodField()
+    requested_by_name = serializers.CharField(source='requested_by.get_full_name', read_only=True)
+    approved_by_name = serializers.CharField(source='approved_by.get_full_name', read_only=True, allow_null=True)
+    processed_by_name = serializers.CharField(source='processed_by.get_full_name', read_only=True, allow_null=True)
+    
+    class Meta:
+        model = Refund
+        fields = [
+            'id', 'refund_number', 'original_payment', 'invoice', 'customer', 'customer_name',
+            'amount', 'reason', 'refund_method', 'reference_number', 'status',
+            'requested_by', 'requested_by_name', 'requested_at',
+            'approved_by', 'approved_by_name', 'approved_at',
+            'processed_by', 'processed_by_name', 'processed_at',
+            'till', 'notes'
+        ]
+        read_only_fields = ['refund_number', 'requested_at', 'approved_at', 'processed_at']
+    
+    def get_customer_name(self, obj):
+        if obj.customer.user:
+            return f"{obj.customer.user.first_name} {obj.customer.user.last_name}".strip()
+        return obj.customer.company_name or "N/A"
+
+
+class RefundCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating refunds"""
+    
+    class Meta:
+        model = Refund
+        fields = [
+            'original_payment', 'invoice', 'customer',
+            'amount', 'reason', 'refund_method', 'reference_number'
+        ]

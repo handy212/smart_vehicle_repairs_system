@@ -1440,3 +1440,1332 @@ class TaxConfigurationView(APIView):
             'getfund_rate': str(config.getfund_rate),
             'covid_rate': str(config.covid_rate),
         })
+
+
+class AccountingViewSet(viewsets.ViewSet):
+    """
+    Comprehensive accounting API using Django Ledger's built-in methods
+    
+    Endpoints:
+    - chart_of_accounts: Get Chart of Accounts
+    - financial_statements: Get all financial statements in one call
+    - balance_sheet: Get Balance Sheet
+    - income_statement: Get Income Statement
+    - cash_flow_statement: Get Cash Flow Statement
+    - account_detail: Get specific account details
+    - account_transactions: Get transactions for an account
+    """
+    permission_classes = [IsAuthenticated, HasPermission('view_billing')]
+    
+    def _get_branch(self):
+        """Helper to get branch from session or user default"""
+        return resolve_branch(self.request)
+    
+    def _get_entity(self):
+        """Helper to get Django Ledger entity for current user's branch"""
+        from apps.billing.accounting_service import AccountingService
+        
+        branch = self._get_branch()
+        if not branch:
+            return None
+        return AccountingService.get_entity(branch)
+    
+    @action(detail=False, methods=['get'])
+    def chart_of_accounts(self, request):
+        """
+        Get Chart of Accounts for user's branch
+        
+        Returns hierarchical account structure with codes, names, and types
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch. Please contact administrator.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from django_ledger.models import AccountModel
+            
+            # Use Django Ledger's built-in method
+            coa = entity.get_default_coa()
+            if not coa:
+                return Response(
+                    {'error': 'Chart of Accounts not setup. Run: python manage.py setup_chart_of_accounts'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Get all accounts for this COA
+            accounts = AccountModel.objects.filter(coa_model=coa, active=True)
+            
+            # Serialize accounts
+            data = []
+            for account in accounts:
+                data.append({
+                    'id': account.pk,
+                    'uuid': str(account.uuid),
+                    'code': account.code,
+                    'name': account.name,
+                    'role': account.role,
+                    'balance_type': account.balance_type,
+                    'active': account.active,
+                    'depth': account.depth,
+                    'locked': account.locked,
+                })
+            
+            return Response({
+                'coa_name': coa.name,
+                'coa_uuid': str(coa.uuid),
+                'entity_name': entity.name,
+                'accounts': data,
+                'total_accounts': len(data)
+            })
+        
+        except Exception as e:
+            logger.error(f"Error getting chart of accounts: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error retrieving Chart of Accounts: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def financial_statements(self, request):
+        """
+        Get ALL financial statements in one call (Balance Sheet, Income Statement, Cash Flow)
+        Uses Django Ledger's entity.digest() method for efficiency
+        
+        Query params:
+        - to_date: End date (YYYY-MM-DD), defaults to today
+        - from_date: Start date for P&L (YYYY-MM-DD), defaults to beginning of current year
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            # Parse dates
+            to_date_str = request.query_params.get('to_date')
+            if to_date_str:
+                to_date = timezone.datetime.strptime(to_date_str, '%Y-%m-%d').date()
+            else:
+                to_date = timezone.now().date()
+            
+            from_date_str = request.query_params.get('from_date')
+            if from_date_str:
+                from_date = timezone.datetime.strptime(from_date_str, '%Y-%m-%d').date()
+            else:
+                # Default to beginning of current year
+                from_date = to_date.replace(month=1, day=1)
+            
+            # MAGIC: Get all financial statements in ONE call using entity.digest()
+            financial_data = entity.digest(
+                user_model=request.user,
+                to_date=to_date,
+                from_date=from_date,
+                equity_only=False,
+                activity='op',  # Operating activities
+                process_roles=True,  # Process account roles for better grouping
+                signs=True  # Include proper debit/credit signs
+            )
+            
+            return Response({
+                'to_date': str(to_date),
+                'from_date': str(from_date),
+                'entity_name': entity.name,
+                'data': financial_data
+            })
+        
+        except Exception as e:
+            logger.error(f"Error generating financial statements: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error generating financial statements: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def balance_sheet(self, request):
+        """
+        Get Balance Sheet statement
+        
+        Query params:
+        - to_date: As of date (YYYY-MM-DD), defaults to today
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            to_date_str = request.query_params.get('to_date')
+            if to_date_str:
+                to_date = timezone.datetime.strptime(to_date_str, '%Y-%m-%d').date()
+            else:
+                to_date = timezone.now().date()
+            
+            balance_sheet = entity.get_balance_sheet_statement(
+                user_model=request.user,
+                to_date=to_date
+            )
+            
+            return Response({
+                'to_date': str(to_date),
+                'entity_name': entity.name,
+                'statement_type': 'balance_sheet',
+                'data': balance_sheet.get_report_data()
+            })
+        
+        except Exception as e:
+            logger.error(f"Error generating balance sheet: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error generating balance sheet: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def income_statement(self, request):
+        """
+        Get Income Statement (Profit & Loss)
+        
+        Query params:
+        - from_date: Start date (YYYY-MM-DD), defaults to beginning of current month
+        - to_date: End date (YYYY-MM-DD), defaults to today
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from_date_str = request.query_params.get('from_date')
+            to_date_str = request.query_params.get('to_date')
+            
+            if not from_date_str or not to_date_str:
+                # Default to current month
+                to_date = timezone.now().date()
+                from_date = to_date.replace(day=1)
+            else:
+                from_date = timezone.datetime.strptime(from_date_str, '%Y-%m-%d').date()
+                to_date = timezone.datetime.strptime(to_date_str, '%Y-%m-%d').date()
+            
+            income_statement = entity.get_income_statement(
+                user_model=request.user,
+                from_date=from_date,
+                to_date=to_date
+            )
+            
+            return Response({
+                'from_date': str(from_date),
+                'to_date': str(to_date),
+                'entity_name': entity.name,
+                'statement_type': 'income_statement',
+                'data': income_statement.get_report_data()
+            })
+        
+        except Exception as e:
+            logger.error(f"Error generating income statement: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error generating income statement: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def cash_flow_statement(self, request):
+        """
+        Get Cash Flow Statement
+        
+        Query params:
+        - from_date: Start date (YYYY-MM-DD), defaults to beginning of current month
+        - to_date: End date (YYYY-MM-DD), defaults to today
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from_date_str = request.query_params.get('from_date')
+            to_date_str = request.query_params.get('to_date')
+            
+            if not from_date_str or not to_date_str:
+                # Default to current month
+                to_date = timezone.now().date()
+                from_date = to_date.replace(day=1)
+            else:
+                from_date = timezone.datetime.strptime(from_date_str, '%Y-%m-%d').date()
+                to_date = timezone.datetime.strptime(to_date_str, '%Y-%m-%d').date()
+            
+            cash_flow = entity.get_cash_flow_statement(
+                user_model=request.user,
+                from_date=from_date,
+                to_date=to_date
+            )
+            
+            return Response({
+                'from_date': str(from_date),
+                'to_date': str(to_date),
+                'entity_name': entity.name,
+                'statement_type': 'cash_flow',
+                'data': cash_flow.get_report_data()
+            })
+        
+        except Exception as e:
+            logger.error(f"Error generating cash flow statement: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error generating cash flow statement: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def account_detail(self, request, pk=None):
+        """
+        Get details for a specific account
+        
+        Path params:
+        - pk: Account ID or code
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from django_ledger.models import AccountModel
+            
+            coa = entity.get_default_coa()
+            if not coa:
+                return Response(
+                    {'error': 'Chart of Accounts not setup'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Try to get account by ID or code
+            # Try to get account by ID, UUID, or code
+            account = None
+            if str(pk).isdigit():
+                account = AccountModel.objects.filter(pk=pk, coa_model=coa).first()
+            
+            if not account:
+                try:
+                    # Try as UUID
+                    account = AccountModel.objects.filter(uuid=pk, coa_model=coa).first()
+                except (ValueError, Exception):
+                    pass
+            
+            if not account:
+                # Try as Code
+                account = AccountModel.objects.filter(code=pk, coa_model=coa, active=True).first()
+
+            if not account:
+                return Response(
+                    {'error': f'Account with identifier {pk} not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            return Response({
+                'id': account.pk,
+                'uuid': str(account.uuid),
+                'code': account.code,
+                'name': account.name,
+                'role': account.role,
+                'balance_type': account.balance_type,
+                'active': account.active,
+                'locked': account.locked,
+                'depth': account.depth,
+            })
+        
+        except Exception as e:
+            logger.error(f"Error getting account detail: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error retrieving account: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def account_transactions(self, request, pk=None):
+        """
+        Get transactions for a specific account
+        
+        Path params:
+        - pk: Account ID or code
+        
+        Query params:
+        - limit: Maximum number of transactions to return (default: 100)
+        - offset: Offset for pagination (default: 0)
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from django_ledger.models import AccountModel, TransactionModel
+            
+            coa = entity.get_default_coa()
+            if not coa:
+                return Response(
+                    {'error': 'Chart of Accounts not setup'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Try to get account by ID or code
+            # Try to get account by ID, UUID, or code
+            account = None
+            if str(pk).isdigit():
+                account = AccountModel.objects.filter(pk=pk, coa_model=coa).first()
+            
+            if not account:
+                try:
+                    # Try as UUID
+                    account = AccountModel.objects.filter(uuid=pk, coa_model=coa).first()
+                except (ValueError, Exception):
+                    pass
+            
+            if not account:
+                # Try as Code
+                account = AccountModel.objects.filter(code=pk, coa_model=coa, active=True).first()
+
+            if not account:
+                return Response(
+                    {'error': f'Account with identifier {pk} not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Get pagination params
+            limit = int(request.query_params.get('limit', 100))
+            offset = int(request.query_params.get('offset', 0))
+            
+            # Get transactions for this account
+            transactions = TransactionModel.objects.filter(
+                account=account
+            ).select_related(
+                'journal_entry', 'journal_entry__ledger'
+            ).order_by('-journal_entry__timestamp')[offset:offset + limit]
+            
+            # Serialize transactions
+            txn_data = []
+            for txn in transactions:
+                je = txn.journal_entry
+                txn_data.append({
+                    'id': txn.pk,
+                    'uuid': str(txn.uuid),
+                    'date': je.timestamp.date().isoformat() if je.timestamp else None,
+                    'description': txn.description or je.description,
+                    'tx_type': txn.tx_type,  # 'debit' or 'credit'
+                    'amount': str(txn.amount),
+                    'journal_entry_id': je.pk,
+                    'journal_entry_uuid': str(je.uuid),
+                    'posted': je.posted,
+                    'locked': je.locked,
+                })
+            
+            return Response({
+                'account_code': account.code,
+                'account_name': account.name,
+                'transactions': txn_data,
+                'total_count': TransactionModel.objects.filter(account=account).count(),
+                'limit': limit,
+                'offset': offset,
+            })
+        
+        except Exception as e:
+            logger.error(f"Error getting account transactions: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error retrieving transactions: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def journal_entries(self, request):
+        """
+        List all journal entries for the entity
+        
+        Query params:
+        - from_date: Start date filter (YYYY-MM-DD)
+        - to_date: End date filter (YYYY-MM-DD)
+        - posted: Filter by posted status (true/false)
+        - limit: Maximum entries to return (default: 100)
+        - offset: Offset for pagination (default: 0)
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from django_ledger.models import JournalEntryModel
+            
+            # Base queryset
+            journal_entries = JournalEntryModel.objects.filter(
+                ledger__entity=entity
+            ).select_related('ledger').prefetch_related('transactionmodel_set__account')
+            
+            # Apply filters
+            from_date_str = request.query_params.get('from_date')
+            to_date_str = request.query_params.get('to_date')
+            posted_filter = request.query_params.get('posted')
+            
+            if from_date_str:
+                from_date = timezone.datetime.strptime(from_date_str, '%Y-%m-%d').date()
+                journal_entries = journal_entries.filter(timestamp__gte=from_date)
+            
+            if to_date_str:
+                to_date = timezone.datetime.strptime(to_date_str, '%Y-%m-%d').date()
+                journal_entries = journal_entries.filter(timestamp__lte=to_date)
+            
+            if posted_filter is not None:
+                posted = posted_filter.lower() == 'true'
+                journal_entries = journal_entries.filter(posted=posted)
+            
+            # Pagination
+            limit = int(request.query_params.get('limit', 100))
+            offset = int(request.query_params.get('offset', 0))
+            
+            total_count = journal_entries.count()
+            journal_entries = journal_entries.order_by('-timestamp')[offset:offset + limit]
+            
+            # Serialize
+            data = []
+            for je in journal_entries:
+                transactions = je.transactionmodel_set.all()
+                data.append({
+                    'id': je.pk,
+                    'uuid': str(je.uuid),
+                    'timestamp': je.timestamp.isoformat() if je.timestamp else None,
+                    'description': je.description,
+                    'posted': je.posted,
+                    'locked': je.locked,
+                    'ledger_name': je.ledger.name if je.ledger else None,
+                    'transactions_count': transactions.count(),
+                    'total_debit': str(sum(t.amount for t in transactions if t.tx_type == 'debit')),
+                    'total_credit': str(sum(t.amount for t in transactions if t.tx_type == 'credit')),
+                })
+            
+            return Response({
+                'journal_entries': data,
+                'total_count': total_count,
+                'limit': limit,
+                'offset': offset,
+            })
+        
+        except Exception as e:
+            logger.error(f"Error getting journal entries: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error retrieving journal entries: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'], url_path='journal_entry_detail')
+    def journal_entry_detail(self, request, pk=None):
+        """
+        Get details of a specific journal entry including all transactions
+        
+        Path params:
+        - pk: Journal Entry ID
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from django_ledger.models import JournalEntryModel
+            
+            journal_entry = JournalEntryModel.objects.filter(
+                pk=pk,
+                ledger__entity=entity
+            ).select_related('ledger').prefetch_related('transactionmodel_set__account').first()
+            
+            if not journal_entry:
+                return Response(
+                    {'error': 'Journal entry not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Serialize transactions
+            transactions = []
+            for txn in journal_entry.transactionmodel_set.all():
+                transactions.append({
+                    'id': txn.pk,
+                    'uuid': str(txn.uuid),
+                    'account_code': txn.account.code,
+                    'account_name': txn.account.name,
+                    'tx_type': txn.tx_type,
+                    'amount': str(txn.amount),
+                    'description': txn.description,
+                })
+            
+            return Response({
+                'id': journal_entry.pk,
+                'uuid': str(journal_entry.uuid),
+                'timestamp': journal_entry.timestamp.isoformat() if journal_entry.timestamp else None,
+                'description': journal_entry.description,
+                'posted': journal_entry.posted,
+                'locked': journal_entry.locked,
+                'ledger_name': journal_entry.ledger.name if journal_entry.ledger else None,
+                'transactions': transactions,
+            })
+        
+        except Exception as e:
+            logger.error(f"Error getting journal entry detail: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error retrieving journal entry: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['post'], url_path='create_journal_entry')
+    def create_journal_entry(self, request):
+        """
+        Create a new journal entry
+        
+        Request body:
+        {
+            "description": "Adjusting entry",
+            "timestamp": "2024-12-23",
+            "transactions": [
+                {
+                    "account_code": "1110",
+                    "tx_type": "debit",
+                    "amount": "100.00",
+                    "description": "Cash increase"
+                },
+                {
+                    "account_code": "4100",
+                    "tx_type": "credit",
+                    "amount": "100.00",
+                    "description": "Revenue increase"
+                }
+            ]
+        }
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from django_ledger.models import JournalEntryModel, TransactionModel, LedgerModel, AccountModel
+            from django.db import transaction
+            from decimal import Decimal
+            
+            description = request.data.get('description', '')
+            timestamp_str = request.data.get('timestamp')
+            transactions_data = request.data.get('transactions', [])
+            
+            if not transactions_data or len(transactions_data) < 2:
+                return Response(
+                    {'error': 'At least 2 transactions required (debit and credit)'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Parse timestamp
+            if timestamp_str:
+                je_timestamp = timezone.datetime.strptime(timestamp_str, '%Y-%m-%d')
+                je_timestamp = timezone.make_aware(je_timestamp.replace(hour=12))
+            else:
+                je_timestamp = timezone.now()
+            
+            # Validate balanced entry
+            total_debit = Decimal('0')
+            total_credit = Decimal('0')
+            
+            for txn_data in transactions_data:
+                amount = Decimal(str(txn_data.get('amount', '0')))
+                tx_type = txn_data.get('tx_type')
+                
+                if tx_type == 'debit':
+                    total_debit += amount
+                elif tx_type == 'credit':
+                    total_credit += amount
+            
+            if total_debit != total_credit:
+                return Response(
+                    {'error': f'Journal entry not balanced. Debit: {total_debit}, Credit: {total_credit}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get or create default ledger
+            ledger, _ = LedgerModel.objects.get_or_create(
+                entity=entity,
+                name='General Ledger',
+                defaults={'posted': True}
+            )
+            
+            coa = entity.get_default_coa()
+            if not coa:
+                return Response(
+                    {'error': 'Chart of Accounts not setup'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            with transaction.atomic():
+                # Create journal entry
+                journal_entry = JournalEntryModel.objects.create(
+                    ledger=ledger,
+                    description=description,
+                    timestamp=je_timestamp,
+                    posted=False,  # Created as draft
+                    locked=False
+                )
+                
+                # Create transactions
+                for txn_data in transactions_data:
+                    account_code = txn_data.get('account_code')
+                    account = AccountModel.objects.filter(code=account_code, coa_model=coa, active=True).first()
+                    
+                    if not account:
+                        raise ValueError(f'Account with code {account_code} not found')
+                    
+                    TransactionModel.objects.create(
+                        journal_entry=journal_entry,
+                        account=account,
+                        tx_type=txn_data.get('tx_type'),
+                        amount=Decimal(str(txn_data.get('amount', '0'))),
+                        description=txn_data.get('description', '')
+                    )
+            
+            return Response({
+                'message': 'Journal entry created successfully',
+                'journal_entry_id': journal_entry.pk,
+                'journal_entry_uuid': str(journal_entry.uuid),
+            }, status=status.HTTP_201_CREATED)
+        
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"Error creating journal entry: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error creating journal entry: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'], url_path='post')
+    def post_journal_entry(self, request, pk=None):
+        """
+        Post a journal entry (mark as posted and lock it)
+        
+        Path params:
+        - pk: Journal Entry ID
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from django_ledger.models import JournalEntryModel
+            
+            journal_entry = JournalEntryModel.objects.filter(
+                pk=pk,
+                ledger__entity=entity
+            ).first()
+            
+            if not journal_entry:
+                return Response(
+                    {'error': 'Journal entry not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            if journal_entry.posted:
+                return Response(
+                    {'error': 'Journal entry already posted'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            journal_entry.posted = True
+            journal_entry.locked = True
+            journal_entry.save()
+            
+            return Response({
+                'message': 'Journal entry posted successfully',
+                'journal_entry_id': journal_entry.pk,
+            })
+        
+        except Exception as e:
+            logger.error(f"Error posting journal entry: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error posting journal entry: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['delete'], url_path='delete_journal_entry')
+    def delete_journal_entry(self, request, pk=None):
+        """
+        Delete a journal entry (only if not posted)
+        
+        Path params:
+        - pk: Journal Entry ID
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from django_ledger.models import JournalEntryModel
+            
+            journal_entry = JournalEntryModel.objects.filter(
+                pk=pk,
+                ledger__entity=entity
+            ).first()
+            
+            if not journal_entry:
+                return Response(
+                    {'error': 'Journal entry not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            if journal_entry.posted or journal_entry.locked:
+                return Response(
+                    {'error': 'Cannot delete posted or locked journal entry'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            journal_entry.delete()
+            
+            return Response({
+                'message': 'Journal entry deleted successfully'
+            })
+        
+        except Exception as e:
+            logger.error(f"Error deleting journal entry: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error deleting journal entry: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def trial_balance(self, request):
+        """
+        Get Trial Balance report
+        
+        Query params:
+        - as_of: As of date (YYYY-MM-DD), defaults to today
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from django_ledger.models import AccountModel, TransactionModel
+            from decimal import Decimal
+            
+            as_of_str = request.query_params.get('as_of')
+            if as_of_str:
+                as_of_date = timezone.datetime.strptime(as_of_str, '%Y-%m-%d').date()
+            else:
+                as_of_date = timezone.now().date()
+            
+            coa = entity.get_default_coa()
+            if not coa:
+                return Response(
+                    {'error': 'Chart of Accounts not setup'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            accounts = AccountModel.objects.filter(coa_model=coa, active=True)
+            
+            trial_balance_data = []
+            total_debit = Decimal('0')
+            total_credit = Decimal('0')
+            
+            for account in accounts:
+                # Get transactions up to as_of_date
+                transactions = TransactionModel.objects.filter(
+                    account=account,
+                    journal_entry__timestamp__date__lte=as_of_date,
+                    journal_entry__posted=True
+                )
+                
+                # Calculate balance
+                debit_total = sum(
+                    t.amount for t in transactions if t.tx_type == 'debit'
+                ) or Decimal('0')
+                credit_total = sum(
+                    t.amount for t in transactions if t.tx_type == 'credit'
+                ) or Decimal('0')
+                
+                # Net balance
+                balance = debit_total - credit_total
+                
+                # For trial balance, show debit or credit side
+                if balance != 0:
+                    if account.balance_type == 'DEBIT':
+                        debit_amount = balance if balance > 0 else Decimal('0')
+                        credit_amount = -balance if balance < 0 else Decimal('0')
+                    else:  # CREDIT
+                        credit_amount = -balance if balance < 0 else Decimal('0')
+                        debit_amount = balance if balance > 0 else Decimal('0')
+                    
+                    trial_balance_data.append({
+                        'account_code': account.code,
+                        'account_name': account.name,
+                        'account_role': account.role,
+                        'debit': str(debit_amount) if debit_amount != 0 else '0.00',
+                        'credit': str(credit_amount) if credit_amount != 0 else '0.00',
+                    })
+                    
+                    total_debit += debit_amount
+                    total_credit += credit_amount
+            
+            return Response({
+                'as_of_date': str(as_of_date),
+                'entity_name': entity.name,
+                'trial_balance': trial_balance_data,
+                'total_debit': str(total_debit),
+                'total_credit': str(total_credit),
+                'balanced': total_debit == total_credit,
+            })
+        
+        except Exception as e:
+            logger.error(f"Error generating trial balance: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error generating trial balance: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def account_balances(self, request):
+        """
+        Get current balances for all accounts
+        
+        Query params:
+        - as_of: As of date (YYYY-MM-DD), defaults to today
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from django_ledger.models import TransactionModel, AccountModel
+            from decimal import Decimal
+            
+            as_of_str = request.query_params.get('as_of')
+            if as_of_str:
+                as_of_date = timezone.datetime.strptime(as_of_str, '%Y-%m-%d').date()
+            else:
+                as_of_date = timezone.now().date()
+            
+            coa = entity.get_default_coa()
+            if not coa:
+                return Response(
+                    {'error': 'Chart of Accounts not setup'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            accounts = AccountModel.objects.filter(coa_model=coa, active=True)
+            
+            balances = []
+            for account in accounts:
+                transactions = TransactionModel.objects.filter(
+                    account=account,
+                    journal_entry__timestamp__date__lte=as_of_date,
+                    journal_entry__posted=True
+                )
+                
+                debit_total = sum(
+                    t.amount for t in transactions if t.tx_type == 'debit'
+                ) or Decimal('0')
+                credit_total = sum(
+                    t.amount for t in transactions if t.tx_type == 'credit'
+                ) or Decimal('0')
+                
+                # Calculate balance based on account type
+                if account.balance_type == 'DEBIT':
+                    balance = debit_total - credit_total
+                else:  # CREDIT
+                    balance = credit_total - debit_total
+                
+                balances.append({
+                    'account_code': account.code,
+                    'account_name': account.name,
+                    'account_role': account.role,
+                    'balance_type': account.balance_type,
+                    'balance': str(balance),
+                })
+            
+            return Response({
+                'as_of_date': str(as_of_date),
+                'entity_name': entity.name,
+                'balances': balances,
+            })
+        
+        except Exception as e:
+            logger.error(f"Error getting account balances: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error generating account balances: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def general_ledger(self, request):
+        """
+        Get General Ledger report (all transactions for all accounts)
+        
+        Query params:
+        - from_date: Start date (YYYY-MM-DD)
+        - to_date: End date (YYYY-MM-DD)
+        - account_code: Filter by specific account (optional)
+        - limit: Maximum transactions per account (default: 100)
+        """
+        entity = self._get_entity()
+        if not entity:
+            return Response(
+                {'error': 'No entity found for your branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            from django_ledger.models import TransactionModel, AccountModel
+            
+            from_date_str = request.query_params.get('from_date')
+            to_date_str = request.query_params.get('to_date')
+            account_code = request.query_params.get('account_code')
+            limit = int(request.query_params.get('limit', 100))
+            
+            if not from_date_str or not to_date_str:
+                # Default to current month
+                to_date = timezone.now().date()
+                from_date = to_date.replace(day=1)
+            else:
+                from_date = timezone.datetime.strptime(from_date_str, '%Y-%m-%d').date()
+                to_date = timezone.datetime.strptime(to_date_str, '%Y-%m-%d').date()
+            
+            coa = entity.get_default_coa()
+            if not coa:
+                return Response(
+                    {'error': 'Chart of Accounts not setup'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Get accounts
+            if account_code:
+                account = AccountModel.objects.filter(code=account_code, coa_model=coa, active=True).first()
+                if not account:
+                    return Response(
+                        {'error': f'Account {account_code} not found'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                accounts = [account]
+            else:
+                accounts = AccountModel.objects.filter(coa_model=coa, active=True)
+            
+            general_ledger_data = []
+            
+            for account in accounts:
+                transactions = TransactionModel.objects.filter(
+                    account=account,
+                    journal_entry__timestamp__date__gte=from_date,
+                    journal_entry__timestamp__date__lte=to_date,
+                    journal_entry__posted=True
+                ).select_related('journal_entry').order_by('journal_entry__timestamp')[:limit]
+                
+                txn_list = []
+                for txn in transactions:
+                    je = txn.journal_entry
+                    txn_list.append({
+                        'date': je.timestamp.date().isoformat() if je.timestamp else None,
+                        'description': txn.description or je.description,
+                        'tx_type': txn.tx_type,
+                        'amount': str(txn.amount),
+                        'journal_entry_id': je.pk,
+                    })
+                
+                if txn_list:  # Only include accounts with transactions
+                    general_ledger_data.append({
+                        'account_code': account.code,
+                        'account_name': account.name,
+                        'transactions': txn_list,
+                        'transaction_count': len(txn_list),
+                    })
+            
+            return Response({
+                'from_date': str(from_date),
+                'to_date': str(to_date),
+                'entity_name': entity.name,
+                'accounts': general_ledger_data,
+            })
+        
+        except Exception as e:
+            logger.error(f"Error generating general ledger: {e}", exc_info=True)
+            return Response(
+                {'error': f'Error generating general ledger: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+# Phase 2: Till Management ViewSet
+# Add this to apps/billing/views.py after AccountingViewSet
+
+from apps.billing.models import CashierTill, CashCount, Refund, PaymentAllocation
+from apps.billing.serializers import (
+    CashierTillSerializer, CashCountSerializer,
+    OpenTillSerializer, CloseTillSerializer,
+    RefundSerializer, RefundCreateSerializer,
+    PaymentAllocationSerializer
+)
+
+
+class TillViewSet(viewsets.ModelViewSet):
+    """Till management for cashiers"""
+    
+    queryset = CashierTill.objects.all()
+    serializer_class = CashierTillSerializer
+    permission_classes = [IsAuthenticated, HasPermission('view_billing')]
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filter by branch if specified
+        branch_id = self.request.query_params.get('branch')
+        if branch_id:
+            queryset = queryset.filter(branch_id=branch_id)
+        
+        # Filter by status
+        status = self.request.query_params.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        # Filter by cashier
+        cashier_id = self.request.query_params.get('cashier')
+        if cashier_id:
+            queryset = queryset.filter(cashier_id=cashier_id)
+        
+        # Filter by date
+        date = self.request.query_params.get('date')
+        if date:
+            queryset = queryset.filter(opened_at__date=date)
+        
+        return queryset.select_related('branch', 'cashier').prefetch_related('cash_counts')
+    
+    @action(detail=False, methods=['post'])
+    def open(self, request):
+        """Open a new till"""
+        serializer = OpenTillSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Check if user already has an open till
+        existing_till = CashierTill.objects.filter(
+            cashier=request.user,
+            status='open'
+        ).first()
+        
+        if existing_till:
+            return Response(
+                {'error': 'You already have an open till'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get user's branch
+        from apps.branches.utils import resolve_branch
+        branch = resolve_branch(request)
+        
+        # Create till
+        till = CashierTill.objects.create(
+            branch=branch,
+            cashier=request.user,
+            opening_balance=serializer.validated_data['opening_balance'],
+            status='open'
+        )
+        
+        return Response(
+            CashierTillSerializer(till).data,
+            status=status.HTTP_201_CREATED
+        )
+    
+    @action(detail=True, methods=['post'])
+    def close(self, request, pk=None):
+        """Close a till with cash counts"""
+        till = self.get_object()
+        
+        if till.status == 'closed':
+            return Response(
+                {'error': 'Till is already closed'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if till.cashier != request.user:
+            return Response(
+                {'error': 'You can only close your own till'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        serializer = CloseTillSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Create cash counts
+        total_counted = Decimal('0')
+        for count_data in serializer.validated_data['cash_counts']:
+            cash_count = CashCount.objects.create(
+                till=till,
+                count_type='closing',
+                denomination=Decimal(str(count_data['denomination'])),
+                quantity=int(count_data['quantity'])
+            )
+            total_counted += cash_count.total
+        
+        # Calculate expected balance
+        # Expected = opening + all cash payments received through this till
+        cash_payments = Payment.objects.filter(
+            payment_method='cash',
+            payment_date__gte=till.opened_at,
+            payment_date__lte=timezone.now()
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        
+        expected_balance = till.opening_balance + cash_payments
+        
+        # Update till
+        till.closing_balance = total_counted
+        till.expected_balance = expected_balance
+        till.variance = total_counted - expected_balance
+        till.closed_at = timezone.now()
+        till.status = 'closed'
+        till.notes = serializer.validated_data.get('notes', '')
+        till.save()
+        
+        return Response({
+            'message': 'Till closed successfully',
+            'closing_balance': str(total_counted),
+            'expected_balance': str(expected_balance),
+            'variance': str(till.variance),
+            'is_balanced': abs(till.variance) < Decimal('0.01')
+        })
+    
+    @action(detail=False, methods=['get'])
+    def current(self, request):
+        """Get current user's open till"""
+        till = CashierTill.objects.filter(
+            cashier=request.user,
+            status='open'
+        ).select_related('branch').prefetch_related('cash_counts').first()
+        
+        if not till:
+            return Response(
+                {'message': 'No open till found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        return Response(CashierTillSerializer(till).data)
+
+
+class RefundViewSet(viewsets.ModelViewSet):
+    """Refund management"""
+    
+    queryset = Refund.objects.all()
+    serializer_class = RefundSerializer
+    permission_classes = [IsAuthenticated, HasPermission('view_billing')]
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filter by status
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Filter by customer
+        customer_id = self.request.query_params.get('customer')
+        if customer_id:
+            queryset = queryset.filter(customer_id=customer_id)
+        
+        return queryset.select_related(
+            'customer', 'customer__user', 'invoice', 'original_payment',
+            'requested_by', 'approved_by', 'processed_by'
+        )
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return RefundCreateSerializer
+        return RefundSerializer
+    
+    def perform_create(self, serializer):
+        serializer.save(requested_by=self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Approve a refund"""
+        refund = self.get_object()
+        
+        if refund.status != 'pending':
+            return Response(
+                {'error': 'Only pending refunds can be approved'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        refund.status = 'approved'
+        refund.approved_by = request.user
+        refund.approved_at = timezone.now()
+        refund.save()
+        
+        return Response({'message': 'Refund approved'})
+    
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Reject a refund"""
+        refund = self.get_object()
+        
+        if refund.status != 'pending':
+            return Response(
+                {'error': 'Only pending refunds can be rejected'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        refund.status = 'rejected'
+        refund.approved_by = request.user
+        refund.approved_at = timezone.now()
+        refund.save()
+        
+        return Response({'message': 'Refund rejected'})
+    
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        """Mark refund as completed"""
+        refund = self.get_object()
+        
+        if refund.status != 'approved':
+            return Response(
+                {'error': 'Only approved refunds can be completed'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        refund.status = 'completed'
+        refund.processed_by = request.user
+        refund.processed_at = timezone.now()
+        refund.save()
+        
+        # Update original payment refund amount
+        payment = refund.original_payment
+        payment.refund_amount = (payment.refund_amount or Decimal('0')) + refund.amount
+        payment.save()
+        
+        return Response({'message': 'Refund completed'})
