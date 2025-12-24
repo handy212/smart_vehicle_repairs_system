@@ -65,7 +65,14 @@ def resolve_branch(request: HttpRequest, branch_id: Optional[int] = None) -> Opt
     if primary and branches.filter(id=primary.id).exists():
         return primary
 
-    return branches.first()
+    branch = branches.first()
+    if not branch:
+        # Global fallback: try headquarters, then any active branch
+        # This is useful for customers or unassigned staff creating records
+        return Branch.objects.filter(is_active=True, is_headquarters=True).first() or \
+               Branch.objects.filter(is_active=True).first()
+    
+    return branch
 
 
 def filter_queryset_for_user_branches(

@@ -53,7 +53,7 @@ export function Toast({ id, title, message, type = "info", onClose }: ToastProps
 }
 
 export interface ToastContainerProps {
-  toasts: ToastProps[];
+  toasts: Omit<ToastProps, "onClose">[];
   onClose: (id: string) => void;
 }
 

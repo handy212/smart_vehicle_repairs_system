@@ -1,4 +1,4 @@
-#!/opt/smart_vehicle_repairs_system/venv-dev/bin/python3.11
+#!/home/dev/smart_vehicle_repairs_system/venv-dev/bin/python3
 # -*- coding: utf-8 -*-
 # Copyright 2025 Google LLC
 #

@@ -9,14 +9,40 @@ from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
 import json
 
-# Valid feature keys for packages
+# Valid feature keys for packages - AA Membership aligned
 VALID_FEATURE_KEYS = {
-    'kilometers',
+    # AA Membership service allowances (current/primary)
+    'roadside_first_aid',           # Mechanical & Electrical First Aid
+    'towing_services_km',           # Towing distance in kilometers
+    'emergency_fuel',               # Emergency Fuel Delivery
+    'key_lock_out',                 # Key Lock Out Service
+    'extrication',                  # Extrication Service
+    'accident_estimate',            # Road Trip Accident Estimate
+    'pre_purchase_inspection',      # Vehicle Pre-Purchase Inspection
+    'battery_boosts',               # Battery BOOST Service
+    'flat_tyre_service',            # Flat Tyre Service
+    'total_service_calls',          # Total Service Calls per year
+    
+    # Legacy/alternative names (for backward compatibility)
     'call_out_charges',
     'towing_services',
     'roadside_assistance',
     'free_inspections',
+    'kilometers',
     'discount_percentage',
+}
+
+# Service type mapping for roadside integration
+SERVICE_TYPE_MAP = {
+    'mechanical_first_aid': 'roadside_first_aid',
+    'battery_boost': 'battery_boosts',
+    'flat_tyre': 'flat_tyre_service',
+    'key_lockout': 'key_lock_out',
+    'emergency_fuel': 'emergency_fuel',
+    'extrication': 'extrication',
+    'towing': 'towing_services_km',
+    'accident_estimate': 'accident_estimate',
+    'pre_purchase_inspection': 'pre_purchase_inspection',
 }
 
 
@@ -126,6 +152,25 @@ class Package(models.Model):
     def feature_towing_services(self):
         """Get towing services allowance from features"""
         return self.features.get('towing_services', 0)
+    
+    def get_service_allowance(self, service_type):
+        """
+        Get allowance for specific service type using roadside service type names.
+        
+        Args:
+            service_type: Service type from roadside (e.g., 'battery_boost', 'towing')
+        Returns:
+            int/float: Allowance quantity for the service
+        """
+        from . import SERVICE_TYPE_MAP
+        
+        # Map roadside service type to feature key
+        feature_key = SERVICE_TYPE_MAP.get(service_type)
+        if not feature_key:
+            # Try direct lookup
+            return self.features.get(service_type, 0)
+        
+        return self.features.get(feature_key, 0)
 
 
 class Subscription(models.Model):
@@ -146,6 +191,14 @@ class Subscription(models.Model):
         ('paid', 'Paid'),
         ('failed', 'Failed'),
         ('refunded', 'Refunded'),
+    ]
+    
+    DISCOUNT_REASON_CHOICES = [
+        ('corporate', 'Corporate/Bulk Discount (5+ vehicles)'),
+        ('unused_renewal', 'Unused Subscription Renewal (10%)'),
+        ('promotional', 'Promotional Discount'),
+        ('manager_override', 'Manager Override'),
+        ('other', 'Other'),
     ]
     
     # Auto-generated subscription number
@@ -222,6 +275,40 @@ class Subscription(models.Model):
         choices=PAYMENT_STATUS_CHOICES,
         default='pending',
         help_text="Payment status for this subscription"
+    )
+    
+    # AA Business Rules
+    activation_date = models.DateField(
+        _('activation date'),
+        null=True,
+        blank=True,
+        help_text="Date when membership becomes active (5 working days after payment per AA policy)"
+    )
+    
+    # Discount tracking
+    discount_applied = models.DecimalField(
+        _('discount applied'),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
+        help_text="Discount percentage applied (e.g., 20.00 for 20%)"
+    )
+    discount_reason = models.CharField(
+        _('discount reason'),
+        max_length=50,
+        blank=True,
+        choices=DISCOUNT_REASON_CHOICES,
+        help_text="Reason for discount"
+    )
+    original_price = models.DecimalField(
+        _('original price'),
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0'))],
+        help_text="Original package price before discount"
     )
     
     # Cancellation
@@ -306,11 +393,46 @@ class Subscription(models.Model):
         
         super().save(*args, **kwargs)
     
+    def calculate_activation_date(self, payment_date=None):
+        """
+        Calculate activation date - 5 working days after payment (AA policy).
+        
+        Args:
+            payment_date: Date of payment (defaults to purchased_at)
+        Returns:
+            date: Activation date
+        """
+        from datetime import timedelta
+        
+        if not payment_date:
+            payment_date = self.purchased_at.date() if self.purchased_at else self.start_date
+        
+        # Add 5 working days (Monday-Friday)
+        working_days = 0
+        current_date = payment_date
+        
+        while working_days < 5:
+            current_date += timedelta(days=1)
+            # Skip weekends (Saturday=5, Sunday=6)
+            if current_date.weekday() < 5:
+                working_days += 1
+        
+        return current_date
+    
     def is_active(self):
-        """Check if subscription is currently active"""
+        """
+        Check if subscription is currently active.
+        Includes AA 5-day activation delay check.
+        """
         if self.status != 'active':
             return False
+        
         today = timezone.now().date()
+        
+        # Check activation date if set (AA 5-day rule)
+        if self.activation_date and today < self.activation_date:
+            return False
+        
         return self.start_date <= today <= self.end_date
     
     def is_expired(self):
@@ -332,6 +454,49 @@ class Subscription(models.Model):
         today = timezone.now().date()
         delta = self.end_date - today
         return max(0, delta.days)
+    
+    def is_refund_eligible(self):
+        """
+        Check if subscription is eligible for refund (within 30 days per AA policy).
+        
+        Returns:
+            bool: True if eligible for refund
+        """
+        if not self.purchased_at:
+            return False
+        
+        days_since_purchase = (timezone.now() - self.purchased_at).days
+        return days_since_purchase <= 30
+    
+    def calculate_prorated_refund(self):
+        """
+        Calculate prorated refund amount based on AA refund policy.
+        
+        Per AA: Refund will be prorated, minus any outstanding cost associated 
+        with AA service provided.
+        
+        Returns:
+            Decimal: Refund amount
+        """
+        if not self.is_refund_eligible():
+            return Decimal('0')
+        
+        # Calculate days used vs total days
+        today = timezone.now().date()
+        days_used = (today - self.start_date).days
+        total_days = (self.end_date - self.start_date).days
+        
+        if total_days <= 0:
+            return Decimal('0')
+        
+        # Calculate prorated refund
+        days_remaining = max(0, total_days - days_used)
+        refund_amount = (self.purchase_price * Decimal(days_remaining)) / Decimal(total_days)
+        
+        # TODO: Deduct cost of services already used
+        # This should query SubscriptionUsage and calculate actual costs
+        
+        return refund_amount.quantize(Decimal('0.01'))
     
     def renew(self, months=None):
         """Renew the subscription for another period"""
@@ -373,10 +538,30 @@ class Subscription(models.Model):
         self.auto_renew = False
         self.save()
         return self
+
+    def change_package(self, new_package):
+        """
+        Change subscription to a new package.
+        Resets allowances for the new package.
+        """
+        self.package = new_package
+        self.purchase_price = new_package.price
+        self.original_price = new_package.price
+        
+        # Recalculate end date based on new package duration
+        from dateutil.relativedelta import relativedelta
+        self.end_date = self.start_date + relativedelta(months=new_package.duration_months)
+        
+        # Reset specific fields if needed
+        self.discount_applied = Decimal('0')
+        self.discount_reason = ''
+        
+        self.save()
+        return self
     
     def get_remaining_allowance(self, feature_type):
         """Get remaining allowance for a specific feature type"""
-        if not self.is_active() or self.is_expired():
+        if self.status != 'active' or self.is_expired():
             return 0
         
         # Get initial allowance from package
@@ -384,9 +569,10 @@ class Subscription(models.Model):
         if initial_allowance == 0:
             return 0
         
-        # Calculate total used
+        # Calculate total used in the current period (prevent carry-over)
         total_used = self.usage_records.filter(
-            usage_type=feature_type
+            usage_type=feature_type,
+            service_date__range=(self.start_date, self.end_date)
         ).aggregate(
             total=models.Sum('quantity_used')
         )['total'] or 0

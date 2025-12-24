@@ -332,3 +332,7 @@ class CustomerNote(models.Model):
         if self.content and not self.note:
             self.note = self.content
         super().save(*args, **kwargs)
+
+
+
+

@@ -59,8 +59,8 @@ INTERNAL_IPS = [
     'localhost',
 ]
 
-# Console email backend for development
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Console email backend for development (default), but allow override from env
+EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
 
 # SQLite for development (if no DATABASE_URL provided)
 if not env('DATABASE_URL', default=None):

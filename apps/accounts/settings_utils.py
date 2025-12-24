@@ -168,7 +168,7 @@ def get_sms_settings():
     defaults = {
         'sms_enabled': 'false',
         'sms_provider': 'hubtel',
-        'hubtel_api_url': 'https://api.hubtel.com/v1/messages/send',
+        'hubtel_api_url': 'https://smsc.hubtel.com/v1/messages/send',
     }
     
     return get_settings(keys, defaults)

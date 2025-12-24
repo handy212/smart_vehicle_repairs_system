@@ -18,7 +18,7 @@ def _get_hubtel_config():
     # Try system settings first
     client_id = sms_settings.get('hubtel_client_id') or getattr(settings, 'HUBTEL_CLIENT_ID', '')
     client_secret = sms_settings.get('hubtel_client_secret') or getattr(settings, 'HUBTEL_CLIENT_SECRET', '')
-    from_id = sms_settings.get('hubtel_sender_id') or getattr(settings, 'HUBTEL_FROM', 'Vehicle Repairs')
+    from_id = sms_settings.get('hubtel_sender_id') or getattr(settings, 'HUBTEL_FROM', 'Response1')
     api_url = sms_settings.get('hubtel_api_url') or 'https://smsc.hubtel.com/v1/messages/send'
     
     # Check if SMS is enabled in system settings or Django settings
@@ -140,6 +140,7 @@ def validate_phone_number(phone_number):
 def send_sms(phone_number, message, sender=None):
     """
     Send SMS via Hubtel SMSC API
+    Uses POST method with Basic Authentication and JSON body
     
     Args:
         phone_number (str): Recipient phone number
@@ -152,7 +153,6 @@ def send_sms(phone_number, message, sender=None):
     Response dict on success:
         {
             'message_id': 'xxx',
-            'status': 0,
             'rate': 0.03,
             'phone': '233244123456'
         }
@@ -179,45 +179,81 @@ def send_sms(phone_number, message, sender=None):
     from_sender = sender or config['from_id']
     
     try:
-        # Send SMS using Hubtel SMSC API (Quick Send - GET method)
-        response = requests.get(
+        # Hubtel SMSC API uses POST with Basic Authentication
+        # Matching the working PHP implementation
+        import base64
+        
+        # Create Basic Auth header
+        credentials = f"{config['client_id']}:{config['client_secret']}"
+        auth_header = base64.b64encode(credentials.encode()).decode()
+        
+        # Prepare request body (lowercase field names as per Hubtel API)
+        payload = {
+            'from': from_sender,
+            'to': formatted_phone,
+            'content': message
+        }
+        
+        # Send SMS using POST with Basic Auth
+        response = requests.post(
             config['api_url'],
-            params={
-                'clientid': config['client_id'],
-                'clientsecret': config['client_secret'],
-                'from': from_sender,
-                'to': formatted_phone,
-                'content': message
+            json=payload,
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Basic {auth_header}'
             },
             timeout=30
         )
+        
+        # Log the request for debugging
+        logger.debug(f"Hubtel API URL: {config['api_url']}")
+        logger.debug(f"Hubtel API Request: {payload}")
         
         # Parse response
         response.raise_for_status()
         data = response.json()
         
-        # Check status (0 = sent successfully)
-        if data.get('status') == 0:
-            logger.info(f"SMS sent successfully to {formatted_phone}: {data.get('messageId')}")
+        # Success is indicated by presence of 'rate' and 'messageId' fields
+        # Status 0 also indicates success
+        if 'messageId' in data and 'rate' in data:
+            message_id = data.get('messageId')
+            logger.info(f"SMS sent successfully to {formatted_phone}: {message_id}")
             return True, {
-                'message_id': data.get('messageId'),
-                'status': data.get('status'),
-                'status_description': data.get('statusDescription'),
+                'message_id': message_id,
+                'status': data.get('status', 0),
                 'rate': data.get('rate'),
-                'network_id': data.get('networkId'),
+                'network_id': data.get('networkId', ''),
                 'phone': formatted_phone
             }
-        else:
-            error_msg = data.get('statusDescription', f"Error status: {data.get('status')}")
-            logger.error(f"Failed to send SMS to {formatted_phone}: {error_msg}")
-            return False, f"Hubtel error: {error_msg}"
+        
+        # Handle error responses
+        error_msg = data.get('message', 'Failed to send message')
+        error_code = data.get('responseCode', 'unknown')
+        logger.error(f"Failed to send SMS to {formatted_phone}: {error_msg} (code: {error_code})")
+        return False, f"Hubtel error: {error_msg}"
             
+    except requests.exceptions.HTTPError as e:
+        # Handle HTTP errors specifically
+        error_detail = str(e)
+        try:
+            error_response = e.response.json()
+            error_detail = error_response.get('message', error_response.get('Message', str(e)))
+            error_code = error_response.get('responseCode', 'unknown')
+            logger.error(f"HTTP error sending SMS: {error_detail} (code: {error_code})")
+            logger.error(f"Response body: {e.response.text}")
+        except:
+            logger.error(f"HTTP error sending SMS: {error_detail}")
+            logger.error(f"Response body: {e.response.text if hasattr(e.response, 'text') else 'N/A'}")
+        return False, f"Hubtel API error: {error_detail}"
     except requests.exceptions.RequestException as e:
         logger.error(f"Request error sending SMS via Hubtel to {formatted_phone}: {e}")
         return False, f"Hubtel request error: {str(e)}"
     except Exception as e:
         logger.error(f"Exception sending SMS via Hubtel to {formatted_phone}: {e}")
         return False, f"Hubtel error: {str(e)}"
+
+
+
 
 
 def send_bulk_sms(phone_numbers, message, sender=None):

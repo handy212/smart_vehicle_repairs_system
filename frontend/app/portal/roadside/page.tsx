@@ -6,11 +6,11 @@ import { roadsideApi, RoadsideRequest } from "@/lib/api/roadside";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Wrench, Plus, MapPin, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Wrench, Plus, MapPin, Clock, CheckCircle, XCircle, AlertCircle, Car, Navigation } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils/cn";
 
 export default function MyRoadsideRequestsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -25,10 +25,10 @@ export default function MyRoadsideRequestsPage() {
     return req.status === statusFilter;
   }) || [];
 
-  const activeRequests = filteredRequests.filter((req: RoadsideRequest) => 
+  const activeRequests = filteredRequests.filter((req: RoadsideRequest) =>
     req.status && !['completed', 'cancelled', 'failed'].includes(req.status)
   );
-  const completedRequests = filteredRequests.filter((req: RoadsideRequest) => 
+  const completedRequests = filteredRequests.filter((req: RoadsideRequest) =>
     req.status === 'completed'
   );
 
@@ -59,17 +59,18 @@ export default function MyRoadsideRequestsPage() {
       case "completed":
         return "success";
       case "requested":
+        return "secondary";
       case "dispatched":
       case "en_route":
       case "on_site":
       case "in_progress":
-        return "info";
+        return "default"; // Primary color for active action
       case "cancelled":
         return "secondary";
       case "failed":
         return "danger";
       default:
-        return "default";
+        return "secondary";
     }
   };
 
@@ -117,137 +118,116 @@ export default function MyRoadsideRequestsPage() {
       </div>
 
       {/* Filter */}
-      <div className="flex items-center gap-4">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter by status:</label>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">All Requests</option>
-          <option value="requested">Requested</option>
-          <option value="dispatched">Dispatched</option>
-          <option value="en_route">En Route</option>
-          <option value="on_site">On Site</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+      <div className="flex flex-wrap gap-2">
+        {["all", "requested", "active", "completed", "cancelled"].map((filter) => (
+          <Button
+            key={filter}
+            variant={statusFilter === filter ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter(filter)}
+            className="capitalize"
+          >
+            {filter === "active" ? "In Progress" : filter}
+          </Button>
+        ))}
       </div>
 
       {/* Active Requests */}
       {activeRequests.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Active Requests</h2>
-          {activeRequests.map((request: RoadsideRequest) => (
-            <Card key={request.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {request.request_number}
-                      </h3>
-                      <Badge variant={getStatusVariant(request.status || 'requested')}>
-                        {getStatusIcon(request.status || 'requested')}
-                        <span className="ml-1">{request.status_display || request.status}</span>
-                      </Badge>
-                      {request.is_covered_by_subscription && (
-                        <Badge variant="success" className="text-xs">
-                          Covered by Subscription
-                        </Badge>
-                      )}
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <Navigation className="h-5 w-5 text-primary" />
+            Active Requests
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {activeRequests.map((request: RoadsideRequest) => (
+              <Card key={request.id} className="hover:shadow-md transition-shadow flex flex-col h-full border-l-4 border-l-primary/80">
+                <CardContent className="p-5 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-bold text-lg">{request.request_number}</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(request.requested_at), "MMM d, h:mm a")}
+                      </p>
                     </div>
-                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      <div className="flex items-center gap-2">
-                        <Wrench className="w-4 h-4" />
-                        <span className="font-medium">{getServiceTypeDisplay(request.service_type)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>{request.breakdown_location}</span>
-                      </div>
-                      {request.vehicle_display && (
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Vehicle:</span>
-                          <span>{request.vehicle_display}</span>
-                        </div>
-                      )}
-                      {request.tow_distance_km && (
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Distance:</span>
-                          <span>{request.tow_distance_km} km</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4" />
-                        <span>Requested: {format(new Date(request.requested_at), "MMM dd, yyyy 'at' h:mm a")}</span>
-                      </div>
-                      {request.assigned_technician_name && (
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Service Provider:</span>
-                          <span>{request.assigned_technician_name}</span>
-                        </div>
-                      )}
-                    </div>
+                    <Badge variant={getStatusVariant(request.status || 'requested')}>
+                      {request.status_display || request.status}
+                    </Badge>
                   </div>
-                  <Link href={`/portal/roadside/${request.id}`}>
-                    <Button variant="secondary">View Details</Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                  <div className="space-y-3 flex-1">
+                    <div className="flex items-start gap-2 text-sm">
+                      <Wrench className="w-4 h-4 text-muted-foreground mt-0.5" />
+                      <span className="font-medium">{getServiceTypeDisplay(request.service_type)}</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-sm">
+                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                      <span className="line-clamp-2">{request.breakdown_location}</span>
+                    </div>
+                    {request.vehicle_display && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Car className="w-4 h-4 text-muted-foreground" />
+                        <span className="truncate">{request.vehicle_display}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t">
+                    <Link href={`/portal/roadside/${request.id}`} className="w-full">
+                      <Button className="w-full" variant="secondary">View Status</Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
 
       {/* Completed Requests */}
       {completedRequests.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Completed Requests</h2>
-          {completedRequests.map((request: RoadsideRequest) => (
-            <Card key={request.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {request.request_number}
-                      </h3>
-                      <Badge variant="success">
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Completed
-                      </Badge>
-                      {request.is_covered_by_subscription && (
-                        <Badge variant="success" className="text-xs">
-                          Covered by Subscription
-                        </Badge>
-                      )}
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            Completed History
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {completedRequests.map((request: RoadsideRequest) => (
+              <Card key={request.id} className="hover:shadow-md transition-shadow flex flex-col h-full bg-gray-50/50 dark:bg-gray-900/50">
+                <CardContent className="p-5 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-bold text-gray-700 dark:text-gray-300">{request.request_number}</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {request.completed_at ? format(new Date(request.completed_at), "MMM d, yyyy") :
+                          format(new Date(request.requested_at), "MMM d, yyyy")}
+                      </p>
                     </div>
-                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      <div className="flex items-center gap-2">
-                        <Wrench className="w-4 h-4" />
-                        <span className="font-medium">{getServiceTypeDisplay(request.service_type)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        <span>{request.breakdown_location}</span>
-                      </div>
-                      {request.completed_at && (
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4" />
-                          <span>Completed: {format(new Date(request.completed_at), "MMM dd, yyyy 'at' h:mm a")}</span>
-                        </div>
-                      )}
+                    <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
+                      Completed
+                    </Badge>
+                  </div>
+
+                  <div className="space-y-2 flex-1 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-2">
+                      <Wrench className="w-3 h-3" />
+                      <span>{getServiceTypeDisplay(request.service_type)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-3 h-3" />
+                      <span className="truncate">{request.breakdown_location}</span>
                     </div>
                   </div>
-                  <Link href={`/portal/roadside/${request.id}`}>
-                    <Button variant="secondary">View Details</Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                  <div className="mt-4 pt-4 border-t">
+                    <Link href={`/portal/roadside/${request.id}`} className="w-full">
+                      <Button className="w-full" variant="ghost" size="sm">View Details</Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
 

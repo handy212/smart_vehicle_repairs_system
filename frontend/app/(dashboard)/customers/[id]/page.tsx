@@ -7,12 +7,13 @@ import { customersApi } from "@/lib/api/customers";
 import { billingApi } from "@/lib/api/billing";
 import { workordersApi } from "@/lib/api/workorders";
 import { appointmentsApi } from "@/lib/api/appointments";
+import { subscriptionsApi } from "@/lib/api/subscriptions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, DollarSign, Package, Car, MessageSquare, FileText, Plus, Receipt, ClipboardList, Wrench, KeyRound, RefreshCw, Copy, Eye, EyeOff, UserCheck, UserX, Mail as MailIcon } from "lucide-react";
+import { ArrowLeft, Edit, Mail, Phone, MapPin, Calendar, DollarSign, Package, Car, MessageSquare, FileText, Plus, Receipt, ClipboardList, Wrench, KeyRound, RefreshCw, Copy, Eye, EyeOff, UserCheck, UserX, Mail as MailIcon, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -71,6 +72,14 @@ export default function CustomerDetailPage() {
     enabled: !!customerId,
   });
 
+  const { data: subscriptionsData } = useQuery({
+    queryKey: ["subscriptions", "customer", customerId],
+    queryFn: () => subscriptionsApi.list({ customer: customerId }),
+    enabled: !!customerId,
+  });
+
+  const subscriptions = subscriptionsData?.results || [];
+
   // Fetch customer-related invoices, estimates, work orders, and appointments
   const { data: invoicesData } = useQuery({
     queryKey: ["invoices", "customer", customerId],
@@ -109,7 +118,7 @@ export default function CustomerDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
       toast({
         title: "Success",
-        description: data.email_sent 
+        description: data.email_sent
           ? "Password reset successfully and email sent to customer"
           : "Password reset successfully",
       });
@@ -149,7 +158,7 @@ export default function CustomerDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
       toast({
         title: "Success",
-        description: data.email_sent 
+        description: data.email_sent
           ? "Portal access granted and welcome email sent"
           : `Portal access granted${data.password ? `. Password: ${data.password}` : ""}`,
       });
@@ -364,6 +373,7 @@ export default function CustomerDetailPage() {
           <TabsTrigger value="history">
             History ({invoices.length + estimates.length + workOrders.length + appointments.length})
           </TabsTrigger>
+          <TabsTrigger value="subscriptions">Subscriptions ({subscriptions.length})</TabsTrigger>
           <TabsTrigger value="notes">Notes ({notes.length})</TabsTrigger>
         </TabsList>
 
@@ -489,8 +499,8 @@ export default function CustomerDetailPage() {
                         {hasPortalAccess ? "Customer can log in to the portal" : "Customer cannot access the portal"}
                       </p>
                     </div>
-                    <Badge 
-                      variant={hasPortalAccess ? "default" : "secondary"} 
+                    <Badge
+                      variant={hasPortalAccess ? "default" : "secondary"}
                       className={hasPortalAccess ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}
                     >
                       {hasPortalAccess ? "Enabled" : "Disabled"}
@@ -752,6 +762,74 @@ export default function CustomerDetailPage() {
           </div>
         </TabsContent>
 
+        {/* Subscriptions Tab */}
+        <TabsContent value="subscriptions" className="mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Subscriptions ({subscriptions.length})</CardTitle>
+                <Link href={`/subscriptions/new?customer=${customerId}`}>
+                  <Button size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Subscription
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {subscriptions.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Package</TableHead>
+                      <TableHead>Vehicle</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>End Date</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {subscriptions.map((sub: any) => (
+                      <TableRow key={sub.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center space-x-2">
+                            <CreditCard className="w-4 h-4 text-blue-500" />
+                            <span>{sub.package_name || sub.package?.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{sub.vehicle_display}</TableCell>
+                        <TableCell>
+                          <Badge variant={sub.status === "active" ? "success" : sub.status === "expired" ? "secondary" : "default"}>
+                            {sub.status?.toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{format(new Date(sub.start_date), "MMM dd, yyyy")}</TableCell>
+                        <TableCell>{format(new Date(sub.end_date), "MMM dd, yyyy")}</TableCell>
+                        <TableCell>${parseFloat(sub.purchase_price).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Link href={`/subscriptions?id=${sub.id}`}>
+                            <Button variant="ghost" size="sm">
+                              View
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                  <CreditCard className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium">No subscriptions found</p>
+                  <p className="text-sm mt-1">This customer has no active or past subscriptions.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Vehicles Tab */}
         <TabsContent value="vehicles" className="mt-6">
           <Card>
@@ -875,10 +953,10 @@ export default function CustomerDetailPage() {
                                 invoice.status === "paid"
                                   ? "success"
                                   : invoice.status === "overdue"
-                                  ? "danger"
-                                  : invoice.status === "partial"
-                                  ? "warning"
-                                  : "secondary"
+                                    ? "danger"
+                                    : invoice.status === "partial"
+                                      ? "warning"
+                                      : "secondary"
                               }
                             >
                               {invoice.status?.replace("_", " ")}
@@ -967,10 +1045,10 @@ export default function CustomerDetailPage() {
                                 estimate.status === "approved"
                                   ? "success"
                                   : estimate.status === "declined"
-                                  ? "danger"
-                                  : estimate.status === "expired"
-                                  ? "secondary"
-                                  : "warning"
+                                    ? "danger"
+                                    : estimate.status === "expired"
+                                      ? "secondary"
+                                      : "warning"
                               }
                             >
                               {estimate.status?.replace("_", " ")}
@@ -1053,10 +1131,10 @@ export default function CustomerDetailPage() {
                                 wo.status === "completed"
                                   ? "success"
                                   : wo.status === "in_progress"
-                                  ? "info"
-                                  : wo.status === "cancelled"
-                                  ? "danger"
-                                  : "warning"
+                                    ? "info"
+                                    : wo.status === "cancelled"
+                                      ? "danger"
+                                      : "warning"
                               }
                             >
                               {wo.status?.replace("_", " ")}
@@ -1146,10 +1224,10 @@ export default function CustomerDetailPage() {
                                 apt.status === "completed"
                                   ? "success"
                                   : apt.status === "confirmed"
-                                  ? "info"
-                                  : apt.status === "cancelled"
-                                  ? "danger"
-                                  : "warning"
+                                    ? "info"
+                                    : apt.status === "cancelled"
+                                      ? "danger"
+                                      : "warning"
                               }
                             >
                               {apt.status?.replace("_", " ")}
@@ -1201,9 +1279,8 @@ export default function CustomerDetailPage() {
                   {notes.map((note: any) => (
                     <div
                       key={note.id}
-                      className={`p-4 rounded-lg border ${
-                        note.is_important ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
-                      }`}
+                      className={`p-4 rounded-lg border ${note.is_important ? "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        }`}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center space-x-2">

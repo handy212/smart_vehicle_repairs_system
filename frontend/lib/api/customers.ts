@@ -46,6 +46,7 @@ export const customersApi = {
     created_at__lte?: string;
     loyalty_tier?: string;
     ordering?: string;
+    page_size?: number;
   }): Promise<CustomerListResponse> => {
     const response = await apiClient.get("/customers/customers/", { params });
     return response.data;
@@ -159,9 +160,9 @@ export const customersApi = {
     message?: string;
     error?: string;
   }> => {
-    const response = await apiClient.post("/customers/customers/check_email/", { 
+    const response = await apiClient.post("/customers/customers/check_email/", {
       email: email,
-      customer_id: customerId 
+      customer_id: customerId
     });
     return response.data;
   },

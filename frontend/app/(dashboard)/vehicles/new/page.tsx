@@ -30,6 +30,7 @@ const vehicleSchema = z.object({
   engine_type: z.enum(["gasoline", "diesel", "electric", "hybrid", "plug_in_hybrid"]).optional(),
   owner: z.number().min(1, "Owner is required"),
   status: z.enum(["active", "in_service", "sold", "totaled", "inactive"]),
+  vehicle_type: z.enum(["saloon", "suv", "pickup", "minivan", "motorcycle", "truck", "other"]),
 });
 
 type VehicleFormData = z.infer<typeof vehicleSchema>;
@@ -65,6 +66,7 @@ export default function NewVehiclePage() {
       owner: customerId ? parseInt(customerId) : undefined,
       current_mileage: 0,
       year: new Date().getFullYear(),
+      vehicle_type: "saloon",
     },
   });
 
@@ -84,7 +86,16 @@ export default function NewVehiclePage() {
     if (decodedData.make) setValue("make", decodedData.make);
     if (decodedData.model) setValue("model", decodedData.model);
     if (decodedData.engine_type) setValue("engine_type", decodedData.engine_type as any);
-    if (decodedData.vin_other_information) setVinOtherInfo(decodedData.vin_other_information);
+    if (decodedData.vin_other_information) {
+      setVinOtherInfo(decodedData.vin_other_information);
+
+      // Attempt to map VIN body type to vehicle_type
+      const bodyClass = decodedData.vin_other_information.body_class?.toLowerCase() || "";
+      if (bodyClass.includes("sedan") || bodyClass.includes("saloon") || bodyClass.includes("coupe")) setValue("vehicle_type", "saloon");
+      else if (bodyClass.includes("sport utility") || bodyClass.includes("suv")) setValue("vehicle_type", "suv");
+      else if (bodyClass.includes("pickup")) setValue("vehicle_type", "pickup");
+      else if (bodyClass.includes("van") || bodyClass.includes("minivan")) setValue("vehicle_type", "minivan");
+    }
   };
 
   const createMutation = useMutation({
@@ -125,21 +136,21 @@ export default function NewVehiclePage() {
           const vinCheck = await vehiclesApi.decodeVin(data.vin.toUpperCase());
           if (vinCheck.success && vinCheck.exists && vinCheck.vehicle) {
             const vehicle = vinCheck.vehicle as any;
-            const vehicleDisplayName = vehicle.display_name || 
+            const vehicleDisplayName = vehicle.display_name ||
               `${vehicle.year} ${vehicle.make} ${vehicle.model}` ||
               `Vehicle #${vehicle.id}`;
-            
+
             toast({
               title: "Vehicle Already Exists",
               description: `${vehicleDisplayName} with this VIN already exists in the system.`,
               variant: "warning",
             });
-            
+
             if (vinCheck.vehicle_id && typeof window !== 'undefined' && confirm(`A vehicle with this VIN already exists.\n\n${vehicleDisplayName}\n\nWould you like to view the existing vehicle instead?`)) {
               router.push(`/vehicles/${vinCheck.vehicle_id}`);
               return;
             }
-            
+
             // Set error on VIN field
             setError("vin", {
               type: "manual",
@@ -159,21 +170,21 @@ export default function NewVehiclePage() {
           const licensePlateCheck = await vehiclesApi.checkLicensePlate(data.license_plate.trim().toUpperCase());
           if (licensePlateCheck.success && licensePlateCheck.exists && licensePlateCheck.vehicle) {
             const vehicle = licensePlateCheck.vehicle as any;
-            const vehicleDisplayName = vehicle.display_name || 
+            const vehicleDisplayName = vehicle.display_name ||
               `${vehicle.year} ${vehicle.make} ${vehicle.model}` ||
               `Vehicle #${vehicle.id}`;
-            
+
             toast({
               title: "License Plate Already Exists",
               description: `${vehicleDisplayName} with license plate "${data.license_plate.toUpperCase()}" already exists in the system.`,
               variant: "warning",
             });
-            
+
             if (licensePlateCheck.vehicle_id && typeof window !== 'undefined' && confirm(`A vehicle with license plate "${data.license_plate.toUpperCase()}" already exists.\n\n${vehicleDisplayName}\n\nWould you like to view the existing vehicle instead?`)) {
               router.push(`/vehicles/${licensePlateCheck.vehicle_id}`);
               return;
             }
-            
+
             // Set error on license_plate field
             setError("license_plate", {
               type: "manual",
@@ -186,9 +197,9 @@ export default function NewVehiclePage() {
           console.warn("License plate existence check failed:", licensePlateError);
         }
       }
-      
+
       let payload: VehicleFormData | FormData;
-      
+
       if (imageFile) {
         const formData = new FormData();
         Object.keys(data).forEach((key) => {
@@ -202,26 +213,26 @@ export default function NewVehiclePage() {
       } else {
         payload = data;
       }
-      
+
       await createMutation.mutateAsync(payload as any);
     } catch (error) {
       console.error("Error creating vehicle:", error);
-      
+
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
-        
+
         Object.keys(errorData).forEach((field) => {
           if (field !== 'non_field_errors' && field !== 'detail') {
-            const fieldError = Array.isArray(errorData[field]) 
-              ? errorData[field][0] 
+            const fieldError = Array.isArray(errorData[field])
+              ? errorData[field][0]
               : errorData[field];
-            setError(field as keyof VehicleFormData, { 
-              type: "server", 
-              message: fieldError 
+            setError(field as keyof VehicleFormData, {
+              type: "server",
+              message: fieldError
             });
           }
         });
-        
+
         if (errorData.non_field_errors) {
           const nonFieldError = Array.isArray(errorData.non_field_errors)
             ? errorData.non_field_errors[0]
@@ -564,6 +575,21 @@ export default function NewVehiclePage() {
                       <option value="plug_in_hybrid">Plug-in Hybrid</option>
                     </Select>
                   </div>
+                  <div>
+                    <label htmlFor="vehicle_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      Vehicle Type <span className="text-red-500">*</span>
+                    </label>
+                    <Select id="vehicle_type" {...register("vehicle_type")}>
+                      <option value="saloon">Saloon</option>
+                      <option value="suv">SUV</option>
+                      <option value="pickup">Pick-Up</option>
+                      <option value="minivan">Mini van</option>
+                      <option value="motorcycle">Motorcycle</option>
+                      <option value="truck">Truck</option>
+                      <option value="other">Other</option>
+                    </Select>
+                    <p className="mt-1 text-[10px] text-muted-foreground">AA covers: Saloon, SUV, Pick-Up, Mini van</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -588,10 +614,10 @@ export default function NewVehiclePage() {
               >
                 <option value="">Select a customer</option>
                 {customersData?.results?.map((customer) => {
-                  const displayName = customer.full_name || 
-                    customer.company_name || 
-                    (customer.user?.first_name && customer.user?.last_name 
-                      ? `${customer.user.first_name} ${customer.user.last_name}` 
+                  const displayName = customer.full_name ||
+                    customer.company_name ||
+                    (customer.user?.first_name && customer.user?.last_name
+                      ? `${customer.user.first_name} ${customer.user.last_name}`
                       : customer.user?.email || customer.customer_number);
                   return (
                     <option key={customer.id} value={customer.id}>

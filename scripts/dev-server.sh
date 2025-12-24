@@ -214,6 +214,64 @@ python manage.py migrate
 echo -e "${GREEN}✓ Database ready${NC}"
 echo ""
 
+# Initialize roles, permissions, and system data
+# echo -e "${YELLOW}Initializing system data...${NC}"
+
+# Initialize permissions and roles
+# echo -e "${YELLOW}  - Setting up roles and permissions...${NC}"
+# python manage.py init_permissions > /dev/null 2>&1
+# if [ $? -eq 0 ]; then
+#     echo -e "${GREEN}    ✓ Roles and permissions initialized${NC}"
+# else
+#     echo -e "${YELLOW}    ⚠ Roles/permissions already exist or failed${NC}"
+# fi
+
+# Initialize system settings
+# echo -e "${YELLOW}  - Setting up system settings...${NC}"
+# python manage.py init_settings > /dev/null 2>&1
+# if [ $? -eq 0 ]; then
+#     echo -e "${GREEN}    ✓ System settings initialized${NC}"
+# else
+#     echo -e "${YELLOW}    ⚠ Settings already exist or failed${NC}"
+# fi
+
+# Create email notification templates
+# echo -e "${YELLOW}  - Creating email templates...${NC}"
+# python manage.py create_all_email_templates > /dev/null 2>&1
+# python manage.py setup_invoice_email_templates > /dev/null 2>&1
+# if [ $? -eq 0 ]; then
+#     echo -e "${GREEN}    ✓ Email templates created${NC}"
+# else
+#     echo -e "${YELLOW}    ⚠ Email templates already exist or failed${NC}"
+# fi
+
+# Create inspection templates
+# echo -e "${YELLOW}  - Creating inspection templates...${NC}"
+# python manage.py create_inspection_templates > /dev/null 2>&1
+# if [ $? -eq 0 ]; then
+#     echo -e "${GREEN}    ✓ Inspection templates created${NC}"
+# else
+#     echo -e "${YELLOW}    ⚠ Inspection templates already exist or failed${NC}"
+# fi
+
+# Seed AA membership packages (subscription packages)
+# echo -e "${YELLOW}  - Seeding AA membership packages...${NC}"
+# python manage.py seed_aa_membership > /dev/null 2>&1
+# if [ $? -eq 0 ]; then
+#     echo -e "${GREEN}    ✓ AA membership packages seeded${NC}"
+# else
+#     echo -e "${YELLOW}    ⚠ AA packages already exist or failed${NC}"
+# fi
+
+# echo -e "${GREEN}✓ System initialization complete${NC}"
+# echo ""
+
+# Optional demo data (not auto-run, use manually if needed)
+# echo -e "${BLUE}💡 Optional: Run demo data seeds manually:${NC}"
+# echo -e "${YELLOW}  python manage.py seed_demo_data${NC} - Create demo users & sample data"
+# echo -e "${YELLOW}  python manage.py seed_dev_data${NC} - Create inventory, customers & vehicles"
+# echo ""
+
 # Create superuser if it doesn't exist (optional)
 echo -e "${BLUE}Backend:${NC} http://localhost:$DJANGO_PORT"
 echo -e "${BLUE}Frontend:${NC} http://localhost:$NEXTJS_PORT"

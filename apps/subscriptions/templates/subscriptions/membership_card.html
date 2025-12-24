@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Membership Card - {{ subscription.subscription_number }}</title>
+    <style>
+        @page {
+            size: 85.6mm 54mm;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+        }
+
+        .card {
+            width: 85.6mm;
+            height: 54mm;
+            background: linear-gradient(135deg, #0a41f5 0%, #3b82f6 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+
+        .header {
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .package-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .card-body {
+            padding: 0 15px;
+        }
+
+        .customer-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 10px;
+            text-transform: uppercase;
+        }
+
+        .sub-number {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-bottom: 15px;
+        }
+
+        .card-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+        }
+
+        .info-label {
+            opacity: 0.6;
+            margin-bottom: 2px;
+        }
+
+        .info-value {
+            font-weight: bold;
+        }
+
+        .watermark {
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 80px;
+            opacity: 0.05;
+            font-weight: 900;
+            color: white;
+        }
+
+        .vehicle-info {
+            font-size: 11px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="watermark">SUBS</div>
+        <div class="header">
+            <div class="logo">AA ENTITLEMENT</div>
+            <div class="package-badge">{{ subscription.package.name }}</div>
+        </div>
+
+        <div class="card-body">
+            <div class="customer-name">{{ subscription.customer.full_name }}</div>
+            <div class="sub-number">ID: {{ subscription.subscription_number }}</div>
+
+            <div class="vehicle-info">
+                <div class="info-label">Covered Vehicle</div>
+                <div class="info-value">{{ subscription.vehicle.make }} {{ subscription.vehicle.model }} ({{ subscription.vehicle.license_plate }})</div>
+            </div>
+        </div>
+
+        <div class="card-footer">
+            <div class="footer-item">
+                <div class="info-label">VALID FROM</div>
+                <div class="info-value">{{ subscription.start_date }}</div>
+            </div>
+            <div class="footer-item">
+                <div class="info-label">EXPIRES</div>
+                <div class="info-value">{{ subscription.end_date }}</div>
+            </div>
+            <div class="footer-item" style="text-align: right;">
+                <div class="info-label">STATUS</div>
+                <div class="info-value">{{ subscription.status|upper }}</div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

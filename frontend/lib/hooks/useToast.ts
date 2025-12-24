@@ -1,36 +1,8 @@
-"use client";
-
-import { useState, useCallback } from "react";
-
-export interface Toast {
-  id: string;
-  title?: string;
-  message: string;
-  type?: "success" | "error" | "warning" | "info";
-  duration?: number;
-}
+import { useCallback } from "react";
+import { useToastStore, Toast as ToastType } from "@/store/useToastStore";
 
 export function useToast() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const addToast = useCallback((toast: Omit<Toast, "id">) => {
-    const id = Math.random().toString(36).substring(7);
-    const newToast = { ...toast, id };
-
-    setToasts((prev) => [...prev, newToast]);
-
-    // Auto remove after duration (default 5 seconds)
-    const duration = toast.duration || 5000;
-    setTimeout(() => {
-      removeToast(id);
-    }, duration);
-
-    return id;
-  }, []);
-
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  }, []);
+  const { toasts, addToast, removeToast } = useToastStore();
 
   const success = useCallback(
     (message: string, title?: string) => {
@@ -70,12 +42,12 @@ export function useToast() {
         options.variant === "destructive"
           ? "error"
           : options.variant === "success"
-          ? "success"
-          : options.variant === "warning"
-          ? "warning"
-          : options.variant === "info"
-          ? "info"
-          : "info";
+            ? "success"
+            : options.variant === "warning"
+              ? "warning"
+              : options.variant === "info"
+                ? "info"
+                : "info";
       return addToast({
         title: options.title,
         message: options.description || options.title || "",

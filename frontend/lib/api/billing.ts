@@ -257,6 +257,10 @@ export const billingApi = {
       const response = await apiClient.post("/billing/payments/", data);
       return response.data;
     },
+    refund: async (id: number, data: { refund_amount: string; refund_reason: string }): Promise<Payment> => {
+      const response = await apiClient.post(`/billing/payments/${id}/refund/`, data);
+      return response.data;
+    },
   },
 
   estimates: {

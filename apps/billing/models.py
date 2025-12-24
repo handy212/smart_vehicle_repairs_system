@@ -664,8 +664,14 @@ class Invoice(models.Model):
                 if not self.paid_at:
                     self.paid_at = timezone.now()
         elif self.amount_paid > 0:
-            if self.status not in ['void', 'refunded', 'paid']:
+            if self.status not in ['void', 'refunded']:
                 self.status = 'partial'
+                self.paid_at = None
+        else:
+            # No payments at all
+            if self.status in ['paid', 'partial']:
+                self.status = 'sent' # Demote back to sent
+                self.paid_at = None
         
         # Check if overdue
         if self.status not in ['paid', 'void', 'refunded'] and self.due_date:

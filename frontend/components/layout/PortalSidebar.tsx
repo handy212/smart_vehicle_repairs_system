@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Package,
   Wrench,
+  Truck,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,7 @@ const navigationGroups: NavigationGroup[] = [
       { name: "My Vehicles", href: "/portal/vehicles", icon: Car },
       { name: "My Appointments", href: "/portal/appointments", icon: Calendar },
       { name: "Book Appointment", href: "/portal/book", icon: PlusCircle },
-      { name: "Roadside Assistance", href: "/portal/roadside", icon: Wrench },
+      { name: "Roadside Assistance", href: "/portal/roadside", icon: Truck },
     ],
   },
   {
@@ -79,7 +80,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false, onT
           aria-hidden="true"
         />
       )}
-      
+
       <aside
         className={cn(
           "fixed left-0 top-16 bottom-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto z-40 transition-all duration-300 ease-in-out",
@@ -95,9 +96,9 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false, onT
               "hidden lg:block fixed z-50 transition-all duration-300 ease-in-out",
               isCollapsed ? "left-20" : "left-64"
             )}
-            style={{ 
+            style={{
               top: '4rem', // 64px - at the top, aligned with header
-              transform: "translateX(-50%)" 
+              transform: "translateX(-50%)"
             }}
           >
             <Button
@@ -128,7 +129,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false, onT
                 {group.items.map((item) => {
                   const isActive = pathname === item.href || (item.href !== "/portal" && pathname?.startsWith(item.href));
                   const Icon = item.icon;
-                  
+
                   return (
                     <Link
                       key={item.name}

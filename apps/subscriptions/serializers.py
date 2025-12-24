@@ -83,6 +83,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     days_remaining = serializers.SerializerMethodField()
     remaining_allowances = serializers.SerializerMethodField()
     invoice_id = serializers.SerializerMethodField()
+    is_refund_eligible = serializers.SerializerMethodField()
+    calculated_refund_amount = serializers.SerializerMethodField()
     
     class Meta:
         model = Subscription
@@ -90,19 +92,22 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'id', 'subscription_number',
             'customer', 'customer_name', 'customer_full_name',
             'package', 'package_name', 'package_code',
-            'start_date', 'end_date',
-            'status', 'is_active_status', 'is_expired_status', 'days_remaining',
+            'start_date', 'end_date', 'activation_date',
+            'status', 'is_active_status','is_expired_status', 'days_remaining',
             'auto_renew',
-            'purchase_price', 'payment_status',
+            'purchase_price', 'original_price', 'discount_applied', 'discount_reason',
+            'payment_status',
             'cancelled_at', 'cancellation_reason',
             'purchased_at', 'remaining_allowances', 'invoice_id',
+            'is_refund_eligible', 'calculated_refund_amount',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'subscription_number', 'purchased_at',
             'created_at', 'updated_at',
             'is_active_status', 'is_expired_status', 'days_remaining',
-            'remaining_allowances', 'invoice_id'
+            'remaining_allowances', 'invoice_id',
+            'is_refund_eligible', 'calculated_refund_amount'
         ]
     
     def get_customer_full_name(self, obj):
@@ -152,12 +157,20 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             return invoice.id if invoice else None
         except Exception:
             return None
+    
+    def get_is_refund_eligible(self, obj):
+        """Check if subscription is eligible for refund (AA 30-day policy)"""
+        return obj.is_refund_eligible()
+    
+    def get_calculated_refund_amount(self, obj):
+        """Get calculated prorated refund amount"""
+        return str(obj.calculate_prorated_refund())
 
 
 class SubscriptionListSerializer(serializers.ModelSerializer):
     """Minimal serializer for subscription lists"""
     
-    customer_name = serializers.CharField(source='customer.customer_number', read_only=True)
+    customer_name = serializers.CharField(source='customer.full_name', read_only=True)
     package_name = serializers.CharField(source='package.name', read_only=True)
     days_remaining = serializers.SerializerMethodField()
     
@@ -183,11 +196,13 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = [
+            'id', 'subscription_number', 
             'customer', 'package', 'vehicle',
             'start_date', 'end_date',  # end_date is optional, will be calculated
             'auto_renew', 'purchase_price',
             'payment_status'
         ]
+        read_only_fields = ['id', 'subscription_number']
         extra_kwargs = {
             'customer': {'required': False},
             'vehicle': {'required': True},
@@ -207,9 +222,31 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         
         if not vehicle:
             raise serializers.ValidationError({'vehicle': 'Vehicle is required'})
+            
+        # AA Membership vehicle type validation
+        ALLOWED_VEHICLE_TYPES = ['saloon', 'suv', 'pickup', 'minivan']
+        if vehicle.vehicle_type not in ALLOWED_VEHICLE_TYPES:
+            raise serializers.ValidationError({
+                'vehicle': f'Vehicle type "{vehicle.get_vehicle_type_display()}" is not covered by AA membership and cannot be subscribed. '
+                           f'Allowed types: Saloon, SUV, Pick-Up, Mini van.'
+            })
+            
         # Ensure vehicle belongs to the customer
-        if vehicle and data['customer'] and vehicle.customer_id != data['customer'].id:
+        if vehicle and data.get('customer') and vehicle.owner_id != data.get('customer').id:
             raise serializers.ValidationError({'vehicle': 'Vehicle does not belong to this customer'})
+        
+        # Prevent multiple subscriptions for same vehicle (regardless of status)
+        if vehicle:
+            overlaps = Subscription.objects.filter(
+                vehicle=vehicle
+            )
+            if self.instance:
+                overlaps = overlaps.exclude(pk=self.instance.pk)
+            
+            if overlaps.exists():
+                raise serializers.ValidationError({
+                    'vehicle': f'Vehicle {vehicle.license_plate} already has an existing subscription.'
+                })
         
         start_date = data.get('start_date')
         customer = data.get('customer')

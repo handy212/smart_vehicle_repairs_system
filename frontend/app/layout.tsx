@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description: "Comprehensive vehicle repair and workshop management system",
 };
 
+import { Toaster } from "@/components/ui/toaster";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -19,7 +21,10 @@ export default function RootLayout({
         <ThemeScript />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <Toaster />
+        </Providers>
       </body>
     </html>
   );

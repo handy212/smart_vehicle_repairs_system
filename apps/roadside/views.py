@@ -31,38 +31,44 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
     )
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['status', 'service_type', 'customer', 'vehicle', 'branch', 'is_covered_by_subscription']
-    search_fields = ['request_number', 'customer__first_name', 'customer__last_name', 'vehicle__license_plate', 'breakdown_location']
+    filterset_fields = ['status', 'service_type', 'customer', 'vehicle', 'branch', 'is_covered_by_subscription', 'assigned_technician']
+    search_fields = ['request_number', 'customer__user__first_name', 'customer__user__last_name', 'vehicle__license_plate', 'breakdown_location']
     ordering_fields = ['requested_at', 'dispatched_at', 'completed_at', 'status']
     ordering = ['-requested_at']
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action in ['list', 'retrieve', 'my_requests']:
+        action = getattr(self, 'action', None)
+        if action in ['list', 'retrieve', 'my_requests']:
             return [IsAuthenticated()]
-        elif self.action == 'create':
+        elif action == 'create':
             # Allow customers to create their own requests
             if getattr(self.request.user, "role", None) == "customer":
                 return [IsAuthenticated()]
             return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'create_roadside_requests'])]
-        elif self.action in ['update', 'partial_update', 'dispatch', 'arrive', 'complete', 'cancel']:
+        elif action in ['update', 'partial_update', 'assign_dispatch', 'arrive', 'complete', 'cancel']:
             return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'dispatch_roadside'])]
         return [IsAuthenticated()]
     
     def get_serializer_class(self):
-        if self.action == 'create':
+        action = getattr(self, 'action', None)
+        if action == 'create':
             return RoadsideRequestCreateSerializer
-        elif self.action in ['update', 'partial_update']:
+        elif action in ['update', 'partial_update']:
             return RoadsideRequestUpdateSerializer
         return RoadsideRequestSerializer
     
     def get_queryset(self):
         """Filter requests based on user role"""
         user = self.request.user
+        action = getattr(self, 'action', None)
         
         # For my_requests action, let the action handle filtering
-        if self.action == 'my_requests':
+        if action == 'my_requests':
             return self.queryset.none()  # Will be filtered in the action itself
+        
+        if not user or user.is_anonymous:
+            return self.queryset.none()
         
         if user.role == 'customer':
             try:
@@ -87,24 +93,50 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                 use_active_branch=True
             )
     
-    @transaction.atomic
+    
     def perform_create(self, serializer):
-        """Create roadside request with subscription check and deduction"""
-        from apps.subscriptions.services import SubscriptionUsageService
+        from django.db import transaction
         
         request = self.request
+        # Determine branch
+        from apps.branches.utils import resolve_branch
         branch_id = request.data.get('branch') or request.data.get('branch_id')
         branch = resolve_branch(request, branch_id=branch_id)
         
         if branch is None:
             from rest_framework.exceptions import ValidationError
             raise ValidationError({'branch': 'A valid branch assignment is required.'})
-        
-        # Save the request
-        roadside_request = serializer.save(
-            branch=branch,
-            created_by=request.user
-        )
+            
+        # 1. Start atomic transaction for the entire request creation
+        with transaction.atomic():
+            # Create the request first
+            roadside_request = serializer.save(
+                branch=branch,
+                created_by=request.user
+            )
+            
+            # 2. Check and consume subscription allowance
+            # We wrap this logic here. If subscription consumption fails BUT we catch it,
+            # we must ensure that any created Usage record is rolled back OR never linked.
+            self._handle_subscription_usage(request, roadside_request)
+
+        # 3. Send notification ONLY after successful commit
+        def send_notification():
+            try:
+                from apps.notifications_app.triggers import notification_triggers
+                notification_triggers.roadside_requested(roadside_request)
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to send roadside request notification: {e}")
+
+        transaction.on_commit(send_notification)
+
+    def _handle_subscription_usage(self, request, roadside_request):
+        """Helper to handle strict subscription logic inside a transaction"""
+        from apps.subscriptions.services import SubscriptionUsageService
+        from apps.subscriptions.models import Subscription
+        from django.db import transaction
         
         # Map service types to subscription feature keys
         service_to_feature = {
@@ -118,91 +150,83 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         }
         
         feature_key = service_to_feature.get(roadside_request.service_type)
-        
-        if feature_key:
-            try:
-                customer = roadside_request.customer
-                vehicle = roadside_request.vehicle
-                
-                # Check if customer has active subscription for this vehicle
-                has_allowance, subscription, remaining = SubscriptionUsageService.check_allowance(
-                    customer, feature_key, 
-                    quantity_needed=roadside_request.tow_distance_km if roadside_request.service_type == 'towing' else 1,
-                    vehicle=vehicle
-                )
-                
-                if has_allowance and subscription:
-                    # Determine quantity to deduct
-                    if roadside_request.service_type == 'towing' and roadside_request.tow_distance_km:
-                        quantity_used = roadside_request.tow_distance_km
-                    else:
-                        quantity_used = 1
-                    
-                    # Map service type to usage type for subscription
-                    # (service_type is the model choice, usage_type is what subscription expects)
-                    service_to_usage_type = {
-                        'towing': 'towing_services_km',
-                        'battery_boost': 'battery_boosts',
-                        'flat_tyre': 'flat_tyre_service',
-                        'key_lockout': 'key_lock_out',
-                        'emergency_fuel': 'emergency_fuel',
-                        'extrication': 'extrication',
-                        'mechanical_first_aid': 'roadside_first_aid',
-                    }
-                    usage_type = service_to_usage_type.get(roadside_request.service_type, feature_key)
-                    
-                    # Consume allowance
-                    usage_record = SubscriptionUsageService.consume_allowance(
-                        subscription=subscription,
-                        usage_type=usage_type,
-                        quantity_used=quantity_used,
-                        reference_type='roadside',
-                        reference_id=roadside_request.id,
-                        description=f'{roadside_request.get_service_type_display()} - {roadside_request.request_number}',
-                        created_by=request.user
-                    )
-                    
-                    # Update request with subscription info
-                    roadside_request.subscription_used = subscription
-                    roadside_request.subscription_allowance_deducted = True
-                    roadside_request.subscription_usage_record = usage_record
-                    roadside_request.is_covered_by_subscription = True
-                    roadside_request.save()
-                    
-            except DjangoValidationError as e:
-                # Log but don't block request creation - subscription is optional
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(
-                    f"Subscription allowance check failed for roadside request {roadside_request.id}: {e}. "
-                    f"Service will be charged normally."
-                )
-                # Request is created but not covered by subscription
-                roadside_request.is_covered_by_subscription = False
-                roadside_request.save()
-            except Exception as e:
-                # Catch any other errors in subscription processing
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(
-                    f"Unexpected error during subscription check for roadside request {roadside_request.id}: {e}",
-                    exc_info=True
-                )
-                # Request is created but not covered by subscription
-                roadside_request.is_covered_by_subscription = False
-                roadside_request.save()
-        
-        # Send notification to customer (after all processing)
+        if not feature_key:
+            return
+
         try:
-            from apps.notifications_app.triggers import notification_triggers
-            notification_triggers.roadside_requested(roadside_request)
+            customer = roadside_request.customer
+            vehicle = roadside_request.vehicle
+            
+            if not customer or not vehicle:
+                return
+
+            # Check if customer has active subscription for this vehicle
+            has_allowance, subscription, remaining = SubscriptionUsageService.check_allowance(
+                customer, feature_key, 
+                quantity_needed=roadside_request.tow_distance_km if roadside_request.service_type == 'towing' else 1,
+                vehicle=vehicle
+            )
+            
+            if has_allowance and subscription:
+                # Use a SAVEPOINT specifically for the subscription consumption interaction
+                # If this block fails, only the subscription usage creation is rolled back.
+                try:
+                    with transaction.atomic():
+                        # Determine quantity to deduct
+                        if roadside_request.service_type == 'towing' and roadside_request.tow_distance_km:
+                            quantity_used = roadside_request.tow_distance_km
+                        else:
+                            quantity_used = 1
+                        
+                        usage_type = service_to_feature.get(roadside_request.service_type, feature_key)
+                        
+                        # Consume allowance
+                        usage_record = SubscriptionUsageService.consume_allowance(
+                            subscription=subscription,
+                            usage_type=usage_type,
+                            quantity_used=quantity_used,
+                            reference_type='roadside',
+                            reference_id=roadside_request.id,
+                            description=f'{roadside_request.get_service_type_display()} - {roadside_request.request_number}',
+                            created_by=request.user
+                        )
+                        
+                        # Update request with subscription info
+                        roadside_request.subscription_used = subscription
+                        roadside_request.subscription_allowance_deducted = True
+                        roadside_request.subscription_usage_record = usage_record
+                        roadside_request.is_covered_by_subscription = True
+                        roadside_request.save()
+                        
+                except Exception as sub_e:
+                    # Log the internal subscription failure
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Subscription consumption failed in atomic block: {sub_e}", exc_info=True)
+                    
+                    # Ensure request is clean (the savepoint rollback handled the usage record creation)
+                    # We just need to ensure the request object in memory doesn't think it's covered
+                    roadside_request.refresh_from_db()
+                    roadside_request.subscription_used = None
+                    roadside_request.subscription_usage_record = None
+                    roadside_request.subscription_allowance_deducted = False
+                    roadside_request.is_covered_by_subscription = False
+                    roadside_request.save()
+
         except Exception as e:
+            # Catch top-level logic errors in this helper
             import logging
             logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to send roadside request notification: {e}")
+            logger.error(f"Error in _handle_subscription_usage: {e}", exc_info=True)
+            # Ensure safe fallback - clear ALL subscription fields
+            roadside_request.is_covered_by_subscription = False
+            roadside_request.subscription_used = None
+            roadside_request.subscription_usage_record = None
+            roadside_request.subscription_allowance_deducted = False
+            roadside_request.save()
     
     @action(detail=True, methods=['post'])
-    def dispatch(self, request, pk=None):
+    def assign_dispatch(self, request, pk=None):
         """Dispatch a roadside request to a technician"""
         roadside_request = self.get_object()
         
@@ -349,7 +373,8 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                 
                 invoice_id = invoice.id
                 
-                # Link invoice to roadside request in metadata
+                # Link invoice to roadside request
+                roadside_request.invoice = invoice
                 roadside_request.notes = f"{roadside_request.notes}\nInvoice: {invoice.invoice_number}" if roadside_request.notes else f"Invoice: {invoice.invoice_number}"
                 roadside_request.save()
                 
@@ -443,3 +468,55 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                 {'detail': f'An error occurred: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+    
+    @action(detail=True, methods=['post'])
+    def send_customer_sms(self, request, pk=None):
+        """Send SMS to customer for this roadside request"""
+        roadside_request = self.get_object()
+        
+        # Get message from request body
+        message = request.data.get('message', '').strip()
+        if not message:
+            return Response(
+                {'error': 'Message is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if customer phone exists
+        if not roadside_request.customer_phone:
+            return Response(
+                {'error': 'Customer phone number not available'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Import SMS utilities
+        try:
+            from apps.notifications_app.hubtel_sms import send_sms, is_hubtel_available
+        except ImportError:
+            return Response(
+                {'error': 'SMS service is not configured'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        
+        # Check if Hubtel SMS is available
+        if not is_hubtel_available():
+            return Response(
+                {'error': 'SMS service is not available. Please check configuration.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        
+        # Send SMS
+        success, response = send_sms(roadside_request.customer_phone, message)
+        
+        if success:
+            return Response({
+                'success': True,
+                'message': 'SMS sent successfully',
+                'details': response
+            })
+        else:
+            return Response(
+                {'error': f'Failed to send SMS: {response}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+

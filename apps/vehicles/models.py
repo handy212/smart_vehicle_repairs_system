@@ -44,6 +44,16 @@ class Vehicle(models.Model):
         (5, 'Excellent'),
     ]
     
+    VEHICLE_TYPE_CHOICES = [
+        ('saloon', 'Saloon'),
+        ('suv', 'SUV'),
+        ('pickup', 'Pick-Up'),
+        ('minivan', 'Mini van'),
+        ('motorcycle', 'Motorcycle'),
+        ('truck', 'Truck'),
+        ('other', 'Other'),
+    ]
+    
     # Ownership
     owner = models.ForeignKey(
         Customer,
@@ -75,6 +85,12 @@ class Vehicle(models.Model):
     make = models.CharField(max_length=100, help_text="Vehicle make (e.g., Toyota, Ford)")
     model = models.CharField(max_length=100, help_text="Vehicle model")
     trim = models.CharField(max_length=100, blank=True, help_text="Trim level")
+    vehicle_type = models.CharField(
+        max_length=20,
+        choices=VEHICLE_TYPE_CHOICES,
+        default='saloon',
+        help_text="Type of vehicle (e.g., Saloon, SUV)"
+    )
     
     # Appearance
     exterior_color = models.CharField(max_length=50, blank=True)

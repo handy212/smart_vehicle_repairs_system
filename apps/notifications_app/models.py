@@ -96,6 +96,7 @@ class Notification(models.Model):
         ('inventory', 'Inventory'),
         ('vehicle', 'Vehicle'),
         ('system', 'System'),
+        ('roadside', 'Roadside Assistance'),
         ('custom', 'Custom'),
     ]
     
@@ -234,6 +235,16 @@ class NotificationPreference(models.Model):
     inventory_notifications = models.BooleanField(default=True)
     vehicle_notifications = models.BooleanField(default=True)
     system_notifications = models.BooleanField(default=True)
+    
+    # Roadside assistance notification preferences
+    roadside_requested_email = models.BooleanField(default=True, verbose_name="Roadside requested - Email")
+    roadside_requested_sms = models.BooleanField(default=True, verbose_name="Roadside requested - SMS")
+    roadside_dispatched_email = models.BooleanField(default=True, verbose_name="Technician dispatched - Email")
+    roadside_dispatched_sms = models.BooleanField(default=True, verbose_name="Technician dispatched - SMS")
+    roadside_arrived_email = models.BooleanField(default=True, verbose_name="Technician arrived - Email")
+    roadside_arrived_sms = models.BooleanField(default=False, verbose_name="Technician arrived - SMS")
+    roadside_completed_email = models.BooleanField(default=True, verbose_name="Service completed - Email")
+    roadside_completed_sms = models.BooleanField(default=True, verbose_name="Service completed - SMS")
     
     # Timing preferences
     quiet_hours_enabled = models.BooleanField(default=False)

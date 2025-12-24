@@ -4,19 +4,26 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { roadsideApi, RoadsideRequest } from "@/lib/api/roadside";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Wrench, 
-  MapPin, 
-  Clock, 
+import {
+  Wrench,
+  MapPin,
+  Clock,
   Phone,
   CheckCircle,
   XCircle,
   AlertCircle,
   ArrowLeft,
-  Car,
   User,
   Navigation,
+  Star,
+  Send,
 } from "lucide-react";
+import dynamic from "next/dynamic";
+
+const RoadsideMap = dynamic(() => import("@/components/roadside/RoadsideMap"), {
+  ssr: false,
+  loading: () => <div className="h-[250px] w-full bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+});
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -43,6 +50,8 @@ export default function RoadsideRequestDetailPage() {
   const requestId = parseInt(params.id as string);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [rating, setRating] = useState(5);
 
   const { data: request, isLoading } = useQuery({
     queryKey: ["portal", "roadside", requestId],
@@ -66,6 +75,24 @@ export default function RoadsideRequestDetailPage() {
       toast({
         title: "Cancellation Failed",
         description: error.response?.data?.error || "Failed to cancel request. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const feedbackMutation = useMutation({
+    mutationFn: (data: { customer_feedback: string }) => roadsideApi.partialUpdate(requestId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portal", "roadside", requestId] });
+      toast({
+        title: "Feedback Submitted",
+        description: "Thank you for your feedback!",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Submission Failed",
+        description: error.response?.data?.detail || "Failed to submit feedback",
         variant: "destructive",
       });
     },
@@ -259,8 +286,15 @@ export default function RoadsideRequestDetailPage() {
                 </div>
               )}
               {(req.latitude && req.longitude) && (
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  GPS: {req.latitude}, {req.longitude}
+                <div className="space-y-4">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    GPS: {req.latitude}, {req.longitude}
+                  </div>
+                  <RoadsideMap
+                    latitude={typeof req.latitude === 'string' ? parseFloat(req.latitude) : req.latitude}
+                    longitude={typeof req.longitude === 'string' ? parseFloat(req.longitude) : req.longitude}
+                    address={req.breakdown_location}
+                  />
                 </div>
               )}
             </CardContent>
@@ -321,6 +355,61 @@ export default function RoadsideRequestDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Customer Feedback */}
+          {req.status === 'completed' && (
+            <Card className="border-none shadow-premium bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                  Service Experience
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {req.customer_feedback ? (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Your Feedback:</p>
+                    <div className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl italic text-sm">
+                      "{req.customer_feedback}"
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">How was your experience with our roadside assistance today?</p>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setRating(star)}
+                          className="focus:outline-none transition-transform hover:scale-110"
+                        >
+                          <Star className={`h-8 w-8 ${star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="feedback">Tell us more (Optional)</Label>
+                      <Textarea
+                        id="feedback"
+                        placeholder="What did you like? What can we improve?"
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        className="bg-white/50 dark:bg-gray-800/50"
+                      />
+                    </div>
+                    <Button
+                      className="w-full bg-blue-600 hover:bg-blue-700 font-bold gap-2"
+                      onClick={() => feedbackMutation.mutate({ customer_feedback: feedback || `Rating: ${rating}/5` })}
+                      disabled={feedbackMutation.isPending}
+                    >
+                      <Send className="h-4 w-4" />
+                      {feedbackMutation.isPending ? "Submitting..." : "Submit Feedback"}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar */}

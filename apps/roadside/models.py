@@ -186,6 +186,16 @@ class RoadsideRequest(models.Model):
         help_text="Subscription usage record created"
     )
     
+    # Billing integration
+    invoice = models.ForeignKey(
+        'billing.Invoice',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='roadside_requests',
+        help_text="Invoice generated for this service"
+    )
+    
     # Billing
     is_covered_by_subscription = models.BooleanField(
         _('covered by subscription'),

@@ -6,19 +6,48 @@ import { subscriptionsApi, packagesApi, Subscription, Package } from "@/lib/api/
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Package as PackageIcon, Calendar, Check, X, RefreshCw, ShoppingCart, CreditCard } from "lucide-react";
+import { Package as PackageIcon, Calendar, Check, X, RefreshCw, ShoppingCart, CreditCard, Download, Car } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Select } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/lib/hooks/useToast";
 import { authApi } from "@/lib/api/auth";
+import { vehiclesApi, Vehicle } from "@/lib/api/vehicles";
+
+const formatError = (error: any, defaultMessage: string) => {
+  const data = error.response?.data;
+  if (!data) return defaultMessage;
+
+  if (typeof data === 'string') return data;
+
+  // DRF detail error
+  if (data.detail) return data.detail;
+  if (data.message) return data.message;
+
+  // DRF field-specific validation errors
+  if (typeof data === 'object') {
+    const messages = Object.entries(data)
+      .map(([key, value]) => {
+        const fieldName = key === 'non_field_errors' ? '' : `${key}: `;
+        const message = Array.isArray(value) ? value[0] : value;
+        return `${fieldName}${message}`;
+      })
+      .join('\n');
+    return messages || defaultMessage;
+  }
+
+  return defaultMessage;
+};
 
 export default function MySubscriptionsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
   const [viewMode, setViewMode] = useState<"my-subscriptions" | "available-packages">("my-subscriptions");
 
   const { data: user } = useQuery({
@@ -38,6 +67,16 @@ export default function MySubscriptionsPage() {
     enabled: viewMode === "available-packages",
   });
 
+  const { data: userVehicles } = useQuery({
+    queryKey: ["my-vehicles"],
+    queryFn: () => {
+      const customerId = user?.customer_profile?.id || (user as any)?.customer?.id;
+      if (!customerId) return Promise.resolve({ count: 0, next: null, previous: null, results: [] });
+      return vehiclesApi.list({ owner: customerId });
+    },
+    enabled: !!user,
+  });
+
   const purchaseMutation = useMutation({
     mutationFn: (pkg: Package) => {
       const customerId = user?.customer_profile?.id || (user as any)?.customer?.id;
@@ -47,6 +86,7 @@ export default function MySubscriptionsPage() {
       return subscriptionsApi.create({
         customer: customerId,
         package: pkg.id,
+        vehicle: parseInt(selectedVehicleId),
         payment_status: "pending",
       });
     },
@@ -60,7 +100,7 @@ export default function MySubscriptionsPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to purchase subscription",
+        description: formatError(error, "Failed to purchase subscription"),
         variant: "destructive",
       });
     },
@@ -75,7 +115,7 @@ export default function MySubscriptionsPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to renew subscription",
+        description: formatError(error, "Failed to renew subscription"),
         variant: "destructive",
       });
     },
@@ -83,12 +123,19 @@ export default function MySubscriptionsPage() {
 
   const handlePurchase = (pkg: Package) => {
     setSelectedPackage(pkg);
+    setSelectedVehicleId(""); // Reset vehicle selection
     setIsPurchaseDialogOpen(true);
   };
 
   const confirmPurchase = () => {
-    if (selectedPackage) {
+    if (selectedPackage && selectedVehicleId) {
       purchaseMutation.mutate(selectedPackage);
+    } else if (!selectedVehicleId) {
+      toast({
+        title: "Vehicle Required",
+        description: "Please select a vehicle for this subscription.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -101,7 +148,7 @@ export default function MySubscriptionsPage() {
       });
       return;
     }
-    
+
     if (subscription.days_remaining && subscription.days_remaining > 30) {
       toast({
         title: "Too Early",
@@ -110,7 +157,7 @@ export default function MySubscriptionsPage() {
       });
       return;
     }
-    
+
     if (confirm(`Renew subscription ${subscription.subscription_number}? An invoice will be created for payment.`)) {
       renewMutation.mutate(subscription);
     }
@@ -201,8 +248,8 @@ export default function MySubscriptionsPage() {
                           subscription.status === "active"
                             ? "default"
                             : subscription.status === "expired"
-                            ? "destructive"
-                            : "secondary"
+                              ? "danger"
+                              : "secondary"
                         }
                       >
                         {subscription.status}
@@ -240,8 +287,8 @@ export default function MySubscriptionsPage() {
                             {subscription.payment_status}
                           </Badge>
                           {subscription.payment_status === "pending" && (
-                            <Link 
-                              href={subscription.invoice_id 
+                            <Link
+                              href={subscription.invoice_id
                                 ? `/portal/payment/${subscription.invoice_id}`
                                 : `/portal/subscriptions`
                               }
@@ -283,34 +330,50 @@ export default function MySubscriptionsPage() {
                     {subscription.remaining_allowances && Object.keys(subscription.remaining_allowances).length > 0 && (
                       <div className="border-t pt-4">
                         <p className="text-sm font-semibold mb-3">Remaining Allowances</p>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {Object.entries(subscription.remaining_allowances).map(([key, value]) => {
                             const numValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
+
+                            // Determine max value based on key (heuristics or metadata if available)
+                            // Ideally, backend should provide {used, total} but we have {remaining}
+                            // We can try to map back to package features but it's tricky without a direct link to the package definition in this context easily
+                            // For now, we visualize the remaining amount. 
+                            // If we knew the total, we could show a proper progress bar.
+                            // Let's assume some defaults for common keys if we want a "full" bar, 
+                            // or just use the progress bar to show relative health (e.g. green/yellow/red) logic
+
+                            // Actually, let's just show the number prominently with a visual indicator of "health"
                             const isLow = numValue <= 1 && numValue > 0;
                             const isEmpty = numValue === 0;
+
+                            // Simplified progress visual: 
+                            // If we don't know total, we can't do a percentage. 
+                            // But we can check if the package features are available in the subscription object?
+                            // The subscription object has `package_name`, but not full features.
+                            // So we will stick to a nice card layout instead of a percentage bar for now, 
+                            // OR we can make a "infinite" or "static" bar that changes color.
+
+                            // Let's improve the card design first.
+
                             return (
-                              <div 
-                                key={key} 
-                                className={`p-2 rounded border ${
-                                  isEmpty 
-                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' 
-                                    : isLow 
-                                    ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
-                                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                                }`}
+                              <div
+                                key={key}
+                                className="flex flex-col gap-1"
                               >
-                                <div className="flex justify-between items-center">
+                                <div className="flex justify-between items-center mb-1">
                                   <span className="text-xs text-muted-foreground capitalize">
                                     {key.replace(/_/g, " ")}
                                   </span>
-                                  <span className={`text-sm font-bold ${
-                                    isEmpty ? 'text-red-600 dark:text-red-400' 
-                                    : isLow ? 'text-yellow-600 dark:text-yellow-400'
-                                    : 'text-green-600 dark:text-green-400'
-                                  }`}>
-                                    {value}
+                                  <span className={`text-sm font-bold ${isEmpty ? 'text-destructive' :
+                                    isLow ? 'text-yellow-600' : 'text-primary'
+                                    }`}>
+                                    {value} remaining
                                   </span>
                                 </div>
+                                <Progress
+                                  value={isEmpty ? 0 : isLow ? 20 : 100}
+                                  className={`h-2 ${isEmpty ? 'bg-destructive/20' : ''}`}
+                                />
                               </div>
                             );
                           })}
@@ -331,6 +394,15 @@ export default function MySubscriptionsPage() {
                             {renewMutation.isPending ? "Renewing..." : "Renew Now"}
                           </Button>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => subscriptionsApi.downloadCard(subscription.id, subscription.subscription_number)}
+                          className="h-8 gap-1"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Download Card
+                        </Button>
                       </div>
                     )}
                     {subscription.status === "expired" && (
@@ -385,7 +457,7 @@ export default function MySubscriptionsPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
                       <span>{pkg.name}</span>
-                      <Badge variant="outline">{pkg.code}</Badge>
+                      <Badge variant="info">{pkg.code}</Badge>
                     </CardTitle>
                     <div className="mt-2">
                       <span className="text-3xl font-bold">${parseFloat(pkg.price).toFixed(2)}</span>
@@ -450,47 +522,117 @@ export default function MySubscriptionsPage() {
       )}
 
       {/* Purchase Dialog */}
+      {/* Purchase Dialog */}
       <Dialog open={isPurchaseDialogOpen} onOpenChange={setIsPurchaseDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Purchase Subscription</DialogTitle>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-primary" />
+              Complete Your Purchase
+            </DialogTitle>
+            <DialogDescription>
+              Review your package selection and assign a vehicle.
+            </DialogDescription>
           </DialogHeader>
+
           {selectedPackage && (
-            <div className="space-y-4">
-              <div>
-                <p className="font-semibold">{selectedPackage.name}</p>
-                <p className="text-sm text-muted-foreground">{selectedPackage.description}</p>
-              </div>
-              <div className="border-t pt-4">
-                <div className="flex justify-between mb-2">
-                  <span>Price:</span>
-                  <span className="font-bold">${parseFloat(selectedPackage.price).toFixed(2)}</span>
+            <div className="py-6 space-y-6">
+              {/* Package Summary Card */}
+              <div className="bg-primary/5 dark:bg-primary/10 border border-primary/10 rounded-lg p-4 space-y-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-lg text-primary">{selectedPackage.name}</h3>
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {selectedPackage.description}
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="bg-background text-primary border border-primary/20">
+                    {selectedPackage.code}
+                  </Badge>
                 </div>
-                <div className="flex justify-between">
-                  <span>Duration:</span>
-                  <span>{selectedPackage.duration_months} months</span>
+
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Price</span>
+                    <span className="text-2xl font-bold flex items-baseline gap-1">
+                      ${parseFloat(selectedPackage.price).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Duration</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{selectedPackage.duration_months} Months</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground">
-                After purchase, you will be able to use the subscription benefits. Payment will be processed separately.
-              </p>
+
+              {/* Vehicle Selection */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Car className="h-4 w-4 text-primary" />
+                  Assign Vehicle
+                </label>
+                <div className="relative">
+                  <Select
+                    value={selectedVehicleId}
+                    onChange={(e) => setSelectedVehicleId(e.target.value)}
+                    className="pl-2"
+                  >
+                    <option value="" disabled>Select a vehicle from your garage</option>
+                    {userVehicles?.results?.map((vehicle) => (
+                      <option key={vehicle.id} value={vehicle.id.toString()}>
+                        {vehicle.year} {vehicle.make} {vehicle.model} — {vehicle.license_plate}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                {!userVehicles?.results?.length ? (
+                  <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                    <X className="h-3 w-3" />
+                    No vehicles found. Please add a vehicle first.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    This subscription will be linked to the selected vehicle.
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 p-3 rounded text-xs leading-relaxed">
+                <strong>Note:</strong> Payment will be processed in the next step via our secure invoice system. Your subscription will activate immediately upon confirmation.
+              </div>
             </div>
           )}
-          <DialogFooter>
+
+          <DialogFooter className="pt-2 border-t mt-0">
             <Button
               variant="outline"
               onClick={() => {
                 setIsPurchaseDialogOpen(false);
                 setSelectedPackage(null);
+                setSelectedVehicleId("");
               }}
+              className="mt-2 sm:mt-0"
             >
               Cancel
             </Button>
             <Button
               onClick={confirmPurchase}
-              disabled={purchaseMutation.isPending}
+              disabled={purchaseMutation.isPending || !selectedVehicleId}
+              className="w-full sm:w-auto min-w-[120px]"
             >
-              {purchaseMutation.isPending ? "Processing..." : "Confirm Purchase"}
+              {purchaseMutation.isPending ? (
+                <>
+                  <RefreshCw className="mr-2 h-3 w-3 animate-spin" />
+                  Processing
+                </>
+              ) : (
+                <>
+                  Confirm Purchase
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

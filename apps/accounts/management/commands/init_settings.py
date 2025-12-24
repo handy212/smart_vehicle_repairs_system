@@ -61,7 +61,7 @@ class Command(BaseCommand):
                 ('hubtel_client_id', '', 'sms', 'Hubtel API Client ID', False),
                 ('hubtel_client_secret', '', 'sms', 'Hubtel API Client Secret', True),
                 ('hubtel_sender_id', 'SmartAuto', 'sms', 'Hubtel Sender ID (max 11 chars)', False),
-                ('hubtel_api_url', 'https://sms.hubtel.com/v1/messages/send', 'sms', 'Hubtel API endpoint', False),
+                ('hubtel_api_url', 'https://smsc.hubtel.com/v1/messages/send', 'sms', 'Hubtel API endpoint', False),
                 ('sms_signature', '\n- Smart Vehicle Repairs', 'sms', 'SMS signature appended to messages', False),
                 ('sms_test_number', '', 'sms', 'Test phone number for SMS testing', False),
                 

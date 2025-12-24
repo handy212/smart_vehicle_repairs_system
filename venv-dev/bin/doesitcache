@@ -1,4 +1,4 @@
-#!/opt/smart_vehicle_repairs_system/venv-dev/bin/python3.11
+#!/home/dev/smart_vehicle_repairs_system/venv-dev/bin/python3
 import sys
 from cachecontrol._cmd import main
 if __name__ == '__main__':

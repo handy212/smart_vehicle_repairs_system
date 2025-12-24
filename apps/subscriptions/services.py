@@ -3,7 +3,7 @@ Subscription services for business logic
 """
 from django.db import transaction
 from django.utils import timezone
-from django.core.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError
 from decimal import Decimal
 from .models import Subscription, SubscriptionUsage, Package
 from apps.billing.models import Invoice, InvoiceLineItem
@@ -49,7 +49,7 @@ class SubscriptionService:
         # Validate vehicle
         if vehicle is None:
             raise ValidationError("Vehicle is required for this subscription.")
-        if vehicle.customer_id != customer.id:
+        if vehicle.owner_id != customer.id:
             raise ValidationError("Vehicle does not belong to this customer.")
         
         # Check for duplicate active subscription for same customer+vehicle
@@ -69,6 +69,34 @@ class SubscriptionService:
         from dateutil.relativedelta import relativedelta
         end_date = start_date + relativedelta(months=package.duration_months)
         
+        # Calculate discounts
+        discount_percentage = Decimal('0')
+        discount_reason = ''
+        
+        # Rule 1: Corporate/Bulk Discount (5+ vehicles)
+        if customer.vehicle_count >= 5:
+            discount_percentage = Decimal('20')
+            discount_reason = 'corporate'
+        
+        # Rule 2: Unused Subscription Renewal Discount (10%)
+        # Check if this is a renewal (roughly, if there was a previous subscription for this vehicle)
+        elif Subscription.objects.filter(customer=customer, vehicle=vehicle).exists():
+            last_sub = Subscription.objects.filter(
+                customer=customer, 
+                vehicle=vehicle
+            ).order_by('-end_date').first()
+            
+            if last_sub and last_sub.usage_records.count() == 0:
+                discount_percentage = Decimal('10')
+                discount_reason = 'unused_renewal'
+        
+        # Calculate final price
+        original_price = package.price
+        purchase_price = original_price
+        if discount_percentage > 0:
+            discount_amount = (original_price * discount_percentage) / Decimal('100')
+            purchase_price = original_price - discount_amount
+        
         # Create subscription
         subscription = Subscription.objects.create(
             customer=customer,
@@ -77,7 +105,10 @@ class SubscriptionService:
             start_date=start_date,
             end_date=end_date,
             auto_renew=auto_renew,
-            purchase_price=package.price,
+            original_price=original_price,
+            purchase_price=purchase_price,
+            discount_applied=discount_percentage,
+            discount_reason=discount_reason,
             payment_status='pending',
             status='pending'  # Will be active after payment
         )
@@ -103,21 +134,25 @@ class SubscriptionService:
             invoice_date=timezone.now().date(),
             due_date=timezone.now().date(),  # Due immediately for subscriptions
             description=f"Subscription: {package.name} ({package.duration_months} months)",
-            subtotal=package.price,
-            total=package.price,
-            amount_due=package.price,
+            subtotal=purchase_price,
+            total=purchase_price,
+            amount_due=purchase_price,
             status='pending',
             created_by=created_by
         )
         
         # Add line item
+        desc = f"Subscription Package: {package.name}"
+        if discount_percentage > 0:
+            desc += f" ({discount_percentage}% {discount_reason} discount applied)"
+            
         InvoiceLineItem.objects.create(
             invoice=invoice,
             item_type='service',
-            description=f"Subscription Package: {package.name}",
+            description=desc,
             quantity=1,
-            unit_price=package.price,
-            total=package.price,
+            unit_price=purchase_price,
+            total=purchase_price,
             is_taxable=False,
             order=1
         )
@@ -136,14 +171,15 @@ class SubscriptionService:
     @transaction.atomic
     def activate_subscription(subscription, invoice=None):
         """
-        Activate a subscription after payment
-        
-        Args:
-            subscription: Subscription instance
-            invoice: Optional invoice instance (if None, finds associated invoice)
+        Activate a subscription after payment.
+        Implements AA 5-working-day activation delay.
         """
         if subscription.status == 'active' and subscription.is_active():
             return  # Already active
+        
+        # Calculate activation date (5 working days after payment)
+        payment_date = timezone.now().date()
+        subscription.activation_date = subscription.calculate_activation_date(payment_date)
         
         subscription.status = 'active'
         subscription.payment_status = 'paid'
@@ -194,9 +230,35 @@ class SubscriptionService:
         new_start_date = subscription.end_date + relativedelta(days=1)
         new_end_date = new_start_date + relativedelta(months=months)
         
+        # Calculate discounts for renewal
+        discount_percentage = Decimal('0')
+        discount_reason = ''
+        
+        # Rule 1: Corporate/Bulk Discount (5+ vehicles)
+        if subscription.customer.vehicle_count >= 5:
+            discount_percentage = Decimal('20')
+            discount_reason = 'corporate'
+        
+        # Rule 2: Unused Subscription Renewal Discount (10%)
+        # Check if the CURRENT subscription (the one being renewed) had 0 usage
+        elif subscription.usage_records.count() == 0:
+            discount_percentage = Decimal('10')
+            discount_reason = 'unused_renewal'
+        
+        # Calculate final price
+        original_price = subscription.package.price
+        purchase_price = original_price
+        if discount_percentage > 0:
+            discount_amount = (original_price * discount_percentage) / Decimal('100')
+            purchase_price = original_price - discount_amount
+            
         # Update subscription
         subscription.start_date = new_start_date
         subscription.end_date = new_end_date
+        subscription.original_price = original_price
+        subscription.purchase_price = purchase_price
+        subscription.discount_applied = discount_percentage
+        subscription.discount_reason = discount_reason
         subscription.status = 'pending'  # Pending payment
         subscription.payment_status = 'pending'
         subscription.save()
@@ -227,20 +289,24 @@ class SubscriptionService:
             invoice_date=timezone.now().date(),
             due_date=timezone.now().date(),
             description=f"Subscription Renewal: {subscription.package.name} ({months} months)",
-            subtotal=subscription.package.price,
-            total=subscription.package.price,
-            amount_due=subscription.package.price,
+            subtotal=purchase_price,
+            total=purchase_price,
+            amount_due=purchase_price,
             status='pending',
             created_by=created_by
         )
         
+        desc = f"Subscription Renewal: {subscription.package.name}"
+        if discount_percentage > 0:
+            desc += f" ({discount_percentage}% {discount_reason} discount applied)"
+            
         InvoiceLineItem.objects.create(
             invoice=invoice,
             item_type='service',
-            description=f"Subscription Renewal: {subscription.package.name}",
+            description=desc,
             quantity=1,
-            unit_price=subscription.package.price,
-            total=subscription.package.price,
+            unit_price=purchase_price,
+            total=purchase_price,
             is_taxable=False,
             order=1
         )
@@ -281,7 +347,8 @@ class SubscriptionUsageService:
             ValidationError: If insufficient allowance
         """
         # Check if subscription is active
-        if not subscription.is_active() or subscription.is_expired():
+        # Relaxed check: if status is active, we allow usage even if activation date is future (consistent with display)
+        if subscription.status != 'active' or subscription.is_expired():
             raise ValidationError('Subscription is not active or has expired')
         
         # Map usage types to feature keys for package lookup (support both friendly and internal keys)
@@ -342,11 +409,16 @@ class SubscriptionUsageService:
             created_by=created_by
         )
         
-        # Check for low allowance and send notification
+        # Check for low allowance and send notification (non-blocking)
         if remaining - quantity_used <= 1:
-            SubscriptionNotificationService.send_low_allowance_notification(
-                subscription, feature_key, remaining - quantity_used
-            )
+            try:
+                SubscriptionNotificationService.send_low_allowance_notification(
+                    subscription, feature_key, remaining - quantity_used
+                )
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to send low allowance notification: {e}")
         
         return usage
     
@@ -372,7 +444,7 @@ class SubscriptionUsageService:
             qs = qs.filter(vehicle=vehicle)
         subscription = qs.first()
         
-        if not subscription or not subscription.is_active():
+        if not subscription or subscription.status != 'active':
             return False, None, 0
         
         # Map feature keys to usage types
@@ -403,10 +475,16 @@ class SubscriptionNotificationService:
             customer = subscription.customer
             if hasattr(customer, 'user') and customer.user:
                 Notification.objects.create(
-                    user=customer.user,
+                    recipient=customer.user,
                     title='Subscription Purchased',
                     message=f'Your subscription for {subscription.package.name} has been created. Invoice #{invoice.id} is pending payment.',
-                    notification_type='subscription_purchase',
+                    notification_type='subscription',
+                    channel='in_app',
+                    priority='normal',
+                    data={
+                        'subscription_id': subscription.id,
+                        'invoice_id': invoice.id
+                    },
                     related_object_type='subscription',
                     related_object_id=subscription.id,
                 )
@@ -427,10 +505,13 @@ class SubscriptionNotificationService:
             customer = subscription.customer
             if hasattr(customer, 'user') and customer.user:
                 Notification.objects.create(
-                    user=customer.user,
+                    recipient=customer.user,
                     title='Subscription Activated',
                     message=f'Your subscription for {subscription.package.name} is now active!',
-                    notification_type='subscription_activated',
+                    notification_type='subscription',
+                    channel='in_app',
+                    priority='normal',
+                    data={'subscription_id': subscription.id},
                     related_object_type='subscription',
                     related_object_id=subscription.id,
                 )
@@ -450,10 +531,16 @@ class SubscriptionNotificationService:
             customer = subscription.customer
             if hasattr(customer, 'user') and customer.user:
                 Notification.objects.create(
-                    user=customer.user,
+                    recipient=customer.user,
                     title='Subscription Renewed',
                     message=f'Your subscription for {subscription.package.name} has been renewed. Invoice #{invoice.id} is pending payment.',
-                    notification_type='subscription_renewed',
+                    notification_type='subscription',
+                    channel='in_app',
+                    priority='normal',
+                    data={
+                        'subscription_id': subscription.id,
+                        'invoice_id': invoice.id
+                    },
                     related_object_type='subscription',
                     related_object_id=subscription.id,
                 )
@@ -473,10 +560,16 @@ class SubscriptionNotificationService:
             customer = subscription.customer
             if hasattr(customer, 'user') and customer.user:
                 Notification.objects.create(
-                    user=customer.user,
+                    recipient=customer.user,
                     title='Subscription Expiring Soon',
                     message=f'Your subscription for {subscription.package.name} expires in {days_until_expiry} days.',
-                    notification_type='subscription_expiring',
+                    notification_type='subscription',
+                    channel='in_app',
+                    priority='high',
+                    data={
+                        'subscription_id': subscription.id,
+                        'days_until_expiry': days_until_expiry
+                    },
                     related_object_type='subscription',
                     related_object_id=subscription.id,
                 )
@@ -496,10 +589,17 @@ class SubscriptionNotificationService:
             customer = subscription.customer
             if hasattr(customer, 'user') and customer.user:
                 Notification.objects.create(
-                    user=customer.user,
+                    recipient=customer.user,
                     title='Low Subscription Allowance',
                     message=f'Your {subscription.package.name} subscription has only {remaining} {feature_type} remaining.',
-                    notification_type='subscription_low_allowance',
+                    notification_type='subscription',
+                    channel='in_app',
+                    priority='high',
+                    data={
+                        'subscription_id': subscription.id,
+                        'feature': feature_type,
+                        'remaining': remaining
+                    },
                     related_object_type='subscription',
                     related_object_id=subscription.id,
                 )

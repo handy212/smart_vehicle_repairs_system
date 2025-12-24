@@ -18,7 +18,7 @@ class VehicleListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
         fields = [
-            'id', 'vin', 'year', 'make', 'model', 'trim', 'license_plate',
+            'id', 'vin', 'year', 'make', 'model', 'trim', 'vehicle_type', 'license_plate',
             'current_mileage', 'mileage_unit', 'status', 'owner', 'owner_name',
             'owner_number', 'display_name', 'is_due_for_service', 'warranty_active',
             'last_service_date', 'next_service_due_date', 'created_at'
@@ -60,7 +60,7 @@ class VehicleCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
         fields = [
-            'owner', 'vin', 'year', 'make', 'model', 'trim',
+            'id', 'owner', 'vin', 'year', 'make', 'model', 'trim',
             'exterior_color', 'interior_color', 'license_plate', 'license_plate_state',
             'current_mileage', 'mileage_unit', 'engine_type', 'engine_size',
             'transmission_type', 'fuel_tank_capacity', 'tire_size',
@@ -68,6 +68,7 @@ class VehicleCreateSerializer(serializers.ModelSerializer):
             'warranty_type', 'warranty_coverage', 'status', 'notes', 'tags',
             'image', 'auto_decode_vin'
         ]
+        read_only_fields = ['id']
         extra_kwargs = {
             'license_plate': {'allow_blank': True, 'required': False},
         }

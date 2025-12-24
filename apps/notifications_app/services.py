@@ -164,13 +164,19 @@ class NotificationService:
         Send SMS notification via Hubtel (Ghana) or Twilio
         """
         try:
-            if not hasattr(notification.recipient, 'notification_preferences'):
-                notification.mark_as_failed("No phone number available")
-                return False
+            phone_number = None
             
-            prefs = notification.recipient.notification_preferences
-            if not prefs.phone_number:
-                notification.mark_as_failed("No phone number configured")
+            # 1. Try to get phone from preferences
+            if hasattr(notification.recipient, 'notification_preferences'):
+                phone_number = notification.recipient.notification_preferences.phone_number
+            
+            # 2. Fallback to user account phone
+            if not phone_number and hasattr(notification.recipient, 'phone'):
+                phone_number = notification.recipient.phone
+            
+            # 3. Validation
+            if not phone_number:
+                notification.mark_as_failed("No phone number configured (checked prefs and account)")
                 self._log_action(notification, 'failed', 'No phone number')
                 return False
             
@@ -185,15 +191,15 @@ class NotificationService:
             
             if is_hubtel_available():
                 success, response = send_hubtel_sms(
-                    phone_number=prefs.phone_number,
+                    phone_number=phone_number,
                     message=message
                 )
                 
                 if success:
                     notification.mark_as_sent()
                     notification.mark_as_delivered()
-                    self._log_action(notification, 'sent', f'SMS sent via Hubtel to {prefs.phone_number}')
-                    logger.info(f"SMS sent via Hubtel to {prefs.phone_number}: {response.get('message_id')}")
+                    self._log_action(notification, 'sent', f'SMS sent via Hubtel to {phone_number}')
+                    logger.info(f"SMS sent via Hubtel to {phone_number}: {response.get('message_id')}")
                     return True
                 else:
                     # Hubtel failed, try Twilio fallback
@@ -201,11 +207,11 @@ class NotificationService:
             
             # Fallback to Twilio (if configured)
             # TODO: Add Twilio integration
-            logger.info(f"SMS would be sent to {prefs.phone_number}: {message}")
+            logger.info(f"SMS would be sent to {phone_number}: {message}")
             
             notification.mark_as_sent()
             notification.mark_as_delivered()
-            self._log_action(notification, 'sent', f'SMS sent to {prefs.phone_number}')
+            self._log_action(notification, 'sent', f'SMS sent to {phone_number}')
             
             return True
             

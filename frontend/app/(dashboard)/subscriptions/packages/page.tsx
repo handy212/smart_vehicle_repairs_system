@@ -38,7 +38,18 @@ const packageSchema = z.object({
   price: z.string().min(1, "Price is required"),
   duration_months: z.number().min(1, "Duration must be at least 1 month"),
   is_active: z.boolean().optional(),
-  features: z.record(z.string(), z.any()).optional(),
+  features: z.object({
+    roadside_first_aid: z.number().min(0).optional(),
+    towing_services_km: z.number().min(0).optional(),
+    emergency_fuel: z.number().min(0).optional(),
+    key_lock_out: z.number().min(0).optional(),
+    extrication: z.number().min(0).optional(),
+    accident_estimate: z.number().min(0).optional(),
+    pre_purchase_inspection: z.number().min(0).optional(),
+    battery_boosts: z.number().min(0).optional(),
+    flat_tyre_service: z.number().min(0).optional(),
+    total_service_calls: z.number().min(0).optional(),
+  }).optional(),
 });
 
 type PackageFormData = z.infer<typeof packageSchema>;
@@ -48,6 +59,8 @@ export default function PackagesPage() {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [packageToDelete, setPackageToDelete] = useState<Package | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const debouncedSearch = useDebounce(search, 500);
@@ -87,6 +100,8 @@ export default function PackagesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["packages"] });
       toast({ title: "Success", description: "Package deleted successfully" });
+      setIsDeleteDialogOpen(false);
+      setPackageToDelete(null);
     },
     onError: (error: any) => {
       toast({
@@ -98,8 +113,13 @@ export default function PackagesPage() {
   });
 
   const handleDelete = (pkg: Package) => {
-    if (confirm(`Are you sure you want to delete package "${pkg.name}"?`)) {
-      deleteMutation.mutate(pkg.id);
+    setPackageToDelete(pkg);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (packageToDelete) {
+      deleteMutation.mutate(packageToDelete.id);
     }
   };
 
@@ -115,12 +135,16 @@ export default function PackagesPage() {
     defaultValues: {
       is_active: true,
       features: {
-        kilometers: 0,
-        call_out_charges: 0,
-        towing_services: 0,
-        roadside_assistance: false,
-        free_inspections: 0,
-        discount_percentage: 0,
+        roadside_first_aid: 0,
+        towing_services_km: 0,
+        emergency_fuel: 0,
+        key_lock_out: 0,
+        extrication: 0,
+        accident_estimate: 0,
+        pre_purchase_inspection: 0,
+        battery_boosts: 0,
+        flat_tyre_service: 0,
+        total_service_calls: 0,
       },
     },
   });
@@ -195,12 +219,16 @@ export default function PackagesPage() {
       duration_months: 12,
       is_active: true,
       features: {
-        kilometers: 0,
-        call_out_charges: 0,
-        towing_services: 0,
-        roadside_assistance: false,
-        free_inspections: 0,
-        discount_percentage: 0,
+        roadside_first_aid: 0,
+        towing_services_km: 0,
+        emergency_fuel: 0,
+        key_lock_out: 0,
+        extrication: 0,
+        accident_estimate: 0,
+        pre_purchase_inspection: 0,
+        battery_boosts: 0,
+        flat_tyre_service: 0,
+        total_service_calls: 0,
       },
     });
     setIsCreateDialogOpen(true);
@@ -240,12 +268,12 @@ export default function PackagesPage() {
               View Subscriptions
             </Button>
           </Link>
-        <PermissionGuard permission="manage_subscriptions">
-          <Button onClick={handleNew}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Package
-          </Button>
-        </PermissionGuard>
+          <PermissionGuard permission="manage_subscriptions">
+            <Button onClick={handleNew}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Package
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -342,15 +370,18 @@ export default function PackagesPage() {
                       <TableCell>${parseFloat(pkg.price).toFixed(2)}</TableCell>
                       <TableCell>{pkg.duration_months} months</TableCell>
                       <TableCell>
-                        <div className="text-sm space-y-1">
-                          {pkg.features.kilometers && (
-                            <div>KM: {pkg.features.kilometers}</div>
+                        <div className="flex flex-wrap gap-1">
+                          {pkg.features.total_service_calls !== undefined && (
+                            <Badge variant="secondary" className="text-xs">Calls: {pkg.features.total_service_calls}</Badge>
                           )}
-                          {pkg.features.call_out_charges && (
-                            <div>Call-outs: {pkg.features.call_out_charges}</div>
+                          {pkg.features.towing_services_km !== undefined && (
+                            <Badge variant="secondary" className="text-xs">Tow: {pkg.features.towing_services_km}km</Badge>
                           )}
-                          {pkg.features.towing_services && (
-                            <div>Towing: {pkg.features.towing_services}</div>
+                          {pkg.features.emergency_fuel !== undefined && (
+                            <Badge variant="secondary" className="text-xs">Fuel: {pkg.features.emergency_fuel}</Badge>
+                          )}
+                          {pkg.features.roadside_first_aid !== undefined && (
+                            <Badge variant="secondary" className="text-xs">Mechanic: {pkg.features.roadside_first_aid}</Badge>
                           )}
                         </div>
                       </TableCell>
@@ -420,6 +451,10 @@ export default function PackagesPage() {
                 <Input
                   id="code"
                   {...register("code")}
+                  onChange={(e) => {
+                    e.target.value = e.target.value.toUpperCase();
+                    register("code").onChange(e);
+                  }}
                   placeholder="e.g., LITE"
                 />
                 {errors.code && (
@@ -468,91 +503,117 @@ export default function PackagesPage() {
 
             <div className="space-y-4 border-t pt-4">
               <h3 className="font-semibold text-base">Package Features</h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="kilometers">Kilometers</Label>
+                  <Label htmlFor="total_service_calls">Total Service Calls</Label>
                   <Input
-                    id="kilometers"
+                    id="total_service_calls"
                     type="number"
-                    value={String(watchedFeatures.kilometers || 0)}
+                    value={String(watchedFeatures?.total_service_calls || 0)}
                     onChange={(e) =>
-                      setValue("features", {
-                        ...watchedFeatures,
-                        kilometers: parseInt(e.target.value) || 0,
-                      })
+                      setValue("features", { ...watchedFeatures, total_service_calls: parseInt(e.target.value) || 0 })
                     }
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="call_out_charges">Call Out Charges</Label>
+                  <Label htmlFor="towing_services_km">Towing Limit (km)</Label>
                   <Input
-                    id="call_out_charges"
+                    id="towing_services_km"
                     type="number"
-                    value={String(watchedFeatures.call_out_charges || 0)}
+                    value={String(watchedFeatures?.towing_services_km || 0)}
                     onChange={(e) =>
-                      setValue("features", {
-                        ...watchedFeatures,
-                        call_out_charges: parseInt(e.target.value) || 0,
-                      })
+                      setValue("features", { ...watchedFeatures, towing_services_km: parseInt(e.target.value) || 0 })
                     }
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="towing_services">Towing Services</Label>
+                  <Label htmlFor="roadside_first_aid">Roadside First Aid (Mech/Elec)</Label>
                   <Input
-                    id="towing_services"
+                    id="roadside_first_aid"
                     type="number"
-                    value={String(watchedFeatures.towing_services || 0)}
+                    value={String(watchedFeatures?.roadside_first_aid || 0)}
                     onChange={(e) =>
-                      setValue("features", {
-                        ...watchedFeatures,
-                        towing_services: parseInt(e.target.value) || 0,
-                      })
+                      setValue("features", { ...watchedFeatures, roadside_first_aid: parseInt(e.target.value) || 0 })
                     }
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="free_inspections">Free Inspections</Label>
+                  <Label htmlFor="emergency_fuel">Emergency Fuel</Label>
                   <Input
-                    id="free_inspections"
+                    id="emergency_fuel"
                     type="number"
-                    value={String(watchedFeatures.free_inspections || 0)}
+                    value={String(watchedFeatures?.emergency_fuel || 0)}
                     onChange={(e) =>
-                      setValue("features", {
-                        ...watchedFeatures,
-                        free_inspections: parseInt(e.target.value) || 0,
-                      })
+                      setValue("features", { ...watchedFeatures, emergency_fuel: parseInt(e.target.value) || 0 })
                     }
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="discount_percentage">Discount %</Label>
+                  <Label htmlFor="key_lock_out">Key Lock Out</Label>
                   <Input
-                    id="discount_percentage"
+                    id="key_lock_out"
                     type="number"
-                    value={String(watchedFeatures.discount_percentage || 0)}
+                    value={String(watchedFeatures?.key_lock_out || 0)}
                     onChange={(e) =>
-                      setValue("features", {
-                        ...watchedFeatures,
-                        discount_percentage: parseFloat(e.target.value) || 0,
-                      })
+                      setValue("features", { ...watchedFeatures, key_lock_out: parseInt(e.target.value) || 0 })
                     }
                   />
                 </div>
-                <div className="space-y-2 flex items-center">
-                <div className="flex items-center space-x-2 pt-6">
-                  <Switch
-                      checked={Boolean(watchedFeatures?.roadside_assistance)}
-                    onCheckedChange={(checked) =>
-                      setValue("features", {
-                        ...watchedFeatures,
-                        roadside_assistance: checked,
-                      })
+                <div className="space-y-2">
+                  <Label htmlFor="extrication">Extrication</Label>
+                  <Input
+                    id="extrication"
+                    type="number"
+                    value={String(watchedFeatures?.extrication || 0)}
+                    onChange={(e) =>
+                      setValue("features", { ...watchedFeatures, extrication: parseInt(e.target.value) || 0 })
                     }
                   />
-                    <Label htmlFor="roadside_assistance" className="cursor-pointer">Roadside Assistance</Label>
-                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="accident_estimate">Accident Estimate</Label>
+                  <Input
+                    id="accident_estimate"
+                    type="number"
+                    value={String(watchedFeatures?.accident_estimate || 0)}
+                    onChange={(e) =>
+                      setValue("features", { ...watchedFeatures, accident_estimate: parseInt(e.target.value) || 0 })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pre_purchase_inspection">Pre-Purchase Inspection</Label>
+                  <Input
+                    id="pre_purchase_inspection"
+                    type="number"
+                    value={String(watchedFeatures?.pre_purchase_inspection || 0)}
+                    onChange={(e) =>
+                      setValue("features", { ...watchedFeatures, pre_purchase_inspection: parseInt(e.target.value) || 0 })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="battery_boosts">Battery Boosts</Label>
+                  <Input
+                    id="battery_boosts"
+                    type="number"
+                    value={String(watchedFeatures?.battery_boosts || 0)}
+                    onChange={(e) =>
+                      setValue("features", { ...watchedFeatures, battery_boosts: parseInt(e.target.value) || 0 })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="flat_tyre_service">Flat Tyre Service</Label>
+                  <Input
+                    id="flat_tyre_service"
+                    type="number"
+                    value={String(watchedFeatures?.flat_tyre_service || 0)}
+                    onChange={(e) =>
+                      setValue("features", { ...watchedFeatures, flat_tyre_service: parseInt(e.target.value) || 0 })
+                    }
+                  />
                 </div>
               </div>
             </div>
@@ -582,6 +643,36 @@ export default function PackagesPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Package</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Are you sure you want to delete package{" "}
+              <span className="font-semibold">{packageToDelete?.name}</span>?
+              This action cannot be undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete Package"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

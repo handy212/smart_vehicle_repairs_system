@@ -22,6 +22,8 @@ from .serializers import (
     SubscriptionUsageSerializer,
     SubscriptionUsageCreateSerializer,
 )
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from apps.accounts.permissions import HasPermission, HasAnyPermission
 from apps.customers.models import Customer
 
@@ -91,6 +93,11 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     """
     queryset = Subscription.objects.all()
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['customer', 'vehicle', 'status', 'payment_status', 'package', 'auto_renew']
+    search_fields = ['subscription_number', 'customer__user__first_name', 'customer__user__last_name', 'package__name']
+    ordering_fields = ['start_date', 'end_date', 'created_at', 'status']
+    ordering = ['-created_at']
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -101,7 +108,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             if getattr(self.request.user, "role", None) == "customer":
                 return [IsAuthenticated()]
             return [IsAuthenticated(), HasAnyPermission(['manage_subscriptions', 'create_subscriptions'])]
-        elif self.action in ['update', 'partial_update', 'cancel', 'renew']:
+        elif self.action in ['update', 'partial_update', 'cancel', 'renew', 'destroy', 'change_plan']:
             return [IsAuthenticated(), HasAnyPermission(['manage_subscriptions', 'cancel_subscriptions'])]
         elif self.action in ['usage', 'remaining']:
             return [IsAuthenticated()]
@@ -135,7 +142,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Set purchase date and handle subscription creation with invoice"""
         from .services import SubscriptionService
-        from django.core.exceptions import ValidationError
+        from rest_framework.exceptions import ValidationError
         
         # If the caller is a customer, force the subscription to that customer
         user = self.request.user
@@ -154,7 +161,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             raise ValidationError("Package is required")
         if not vehicle:
             raise ValidationError({"vehicle": "Vehicle is required"})
-        if vehicle.customer_id != customer.id:
+        if vehicle.owner_id != customer.id:
             raise ValidationError({"vehicle": "Vehicle does not belong to this customer"})
         
         auto_renew = serializer.validated_data.get("auto_renew", False)
@@ -261,7 +268,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
     def renew(self, request, pk=None):
         """Renew a subscription and create invoice"""
         from .services import SubscriptionService
-        from django.core.exceptions import ValidationError
+        from rest_framework.exceptions import ValidationError
         
         subscription = self.get_object()
         
@@ -332,6 +339,84 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         subscription.cancel(reason=reason)
         serializer = SubscriptionSerializer(subscription)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def change_plan(self, request, pk=None):
+        """Change subscription package plan"""
+        subscription = self.get_object()
+        
+        # Check permissions (same as cancel/renew)
+        if request.user.role not in ['admin', 'manager']:
+            return Response(
+                {'detail': 'You do not have permission to change the plan'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        package_id = request.data.get('package_id')
+        if not package_id:
+            return Response(
+                {'detail': 'package_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            new_package = Package.objects.get(pk=package_id, is_active=True)
+            subscription.change_package(new_package)
+            
+            # Record plan change in usage description for history if needed
+            # For now just return updated subscription
+            serializer = SubscriptionSerializer(subscription)
+            return Response({
+                'subscription': serializer.data,
+                'message': f'Subscription plan changed to {new_package.name} successfully.'
+            })
+        except Package.DoesNotExist:
+            return Response(
+                {'detail': 'Invalid or inactive package ID'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {'detail': f'Error changing plan: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Generate membership card PDF"""
+        from django.template.loader import render_to_string
+        from django.http import HttpResponse
+        import logging
+        import traceback
+        
+        logger = logging.getLogger(__name__)
+        subscription = self.get_object()
+        
+        try:
+            from weasyprint import HTML
+            
+            context = {
+                'subscription': subscription,
+                'generated_at': timezone.now(),
+            }
+            
+            # Render HTML template
+            html_string = render_to_string('subscriptions/membership_card.html', context, request=request)
+            
+            # Generate PDF
+            pdf = HTML(string=html_string).write_pdf()
+            
+            # Return PDF response
+            response = HttpResponse(pdf, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="membership_card_{subscription.subscription_number}.pdf"'
+            return response
+            
+        except Exception as e:
+            logger.error(f"Membership card PDF generation error: {str(e)}\n{traceback.format_exc()}")
+            return Response(
+                {"detail": f"Error generating PDF: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class SubscriptionUsageViewSet(viewsets.ModelViewSet):

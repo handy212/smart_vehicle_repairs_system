@@ -1,22 +1,25 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { roadsideApi, RoadsideRequestCreate } from "@/lib/api/roadside";
+import { subscriptionsApi } from "@/lib/api/subscriptions";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { authApi } from "@/lib/api/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, MapPin, Phone, AlertCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Phone, AlertCircle, Truck, Battery, Disc, Key, Droplet, AlertTriangle, Wrench, MoreHorizontal, Car, Check } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils/cn";
+import { Select } from "@/components/ui/select";
 
 const roadsideRequestSchema = z.object({
   vehicle: z.number().min(1, "Vehicle is required"),
@@ -69,12 +72,15 @@ export default function NewRoadsideRequestPage() {
     enabled: !!customerId,
   });
 
+
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     watch,
     setValue,
+    control,
   } = useForm<RoadsideRequestFormData>({
     resolver: zodResolver(roadsideRequestSchema),
     defaultValues: {
@@ -85,26 +91,49 @@ export default function NewRoadsideRequestPage() {
   const serviceType = watch("service_type");
   const selectedVehicle = watch("vehicle");
 
+  const { data: vehicleSubscriptions } = useQuery({
+    queryKey: ["subscriptions", "vehicle", selectedVehicle],
+    queryFn: () => subscriptionsApi.list({ vehicle: selectedVehicle, status: "active" }),
+    enabled: !!selectedVehicle,
+  });
+
+  // Get the first active subscription for the vehicle (should be unique per vehicle)
+  const activeSubscription = vehicleSubscriptions?.results?.[0];
+
+  const [isLocating, setIsLocating] = useState(false);
+
   // Get current location
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
+      setIsLocating(true);
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setValue("latitude", position.coords.latitude);
           setValue("longitude", position.coords.longitude);
+          // Set the visible input field so the user knows something happened
+          setValue("breakdown_location", `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`, { shouldValidate: true });
+          setIsLocating(false);
           toast({
             title: "Location captured",
             description: "Your current location has been set",
           });
         },
         (error) => {
+          setIsLocating(false);
           toast({
             title: "Location error",
             description: "Could not get your location. Please enter it manually.",
             variant: "destructive",
           });
-        }
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
+    } else {
+      toast({
+        title: "Not Supported",
+        description: "Geolocation is not supported by your browser",
+        variant: "destructive",
+      });
     }
   };
 
@@ -118,8 +147,8 @@ export default function NewRoadsideRequestPage() {
         vehicle: data.vehicle,
         service_type: data.service_type,
         breakdown_location: data.breakdown_location,
-        latitude: data.latitude,
-        longitude: data.longitude,
+        latitude: data.latitude ? Number(data.latitude.toFixed(6)) : undefined,
+        longitude: data.longitude ? Number(data.longitude.toFixed(6)) : undefined,
         description: data.description,
         customer_phone: data.customer_phone,
         tow_distance_km: data.tow_distance_km,
@@ -137,10 +166,10 @@ export default function NewRoadsideRequestPage() {
       router.push(`/portal/roadside/${data.id}`);
     },
     onError: (error: any) => {
-      const errorMessage = error.response?.data?.detail || 
-                          error.response?.data?.message ||
-                          Object.values(error.response?.data || {}).flat().join(", ") ||
-                          "Failed to submit request. Please try again.";
+      const errorMessage = error.response?.data?.detail ||
+        error.response?.data?.message ||
+        Object.values(error.response?.data || {}).flat().join(", ") ||
+        "Failed to submit request. Please try again.";
       setServerError(errorMessage);
       toast({
         title: "Error",
@@ -155,16 +184,44 @@ export default function NewRoadsideRequestPage() {
     createMutation.mutate(data);
   };
 
+  const onError = (errors: any) => {
+    console.log("Validation errors:", errors);
+    const missingFields = Object.keys(errors).map(field => {
+      if (field === 'vehicle') return 'Vehicle';
+      if (field === 'service_type') return 'Service Type';
+      if (field === 'breakdown_location') return 'Location';
+      if (field === 'customer_phone') return 'Phone';
+      if (field === 'tow_distance_km') return 'Tow Distance';
+      return field;
+    }).join(', ');
+
+    toast({
+      title: "Please check the form",
+      description: `Missing or invalid fields: ${missingFields}`,
+      variant: "destructive",
+    });
+  };
+
   const serviceTypes = [
-    { value: 'towing', label: 'Towing Service' },
-    { value: 'battery_boost', label: 'Battery Boost' },
-    { value: 'flat_tyre', label: 'Flat Tyre Service' },
-    { value: 'key_lockout', label: 'Key Lock Out' },
-    { value: 'emergency_fuel', label: 'Emergency Fuel Delivery' },
-    { value: 'extrication', label: 'Extrication Service' },
-    { value: 'mechanical_first_aid', label: 'Mechanical & Electrical First Aid' },
-    { value: 'other', label: 'Other' },
+    { value: 'towing', label: 'Towing Service', icon: Truck },
+    { value: 'battery_boost', label: 'Battery Boost', icon: Battery },
+    { value: 'flat_tyre', label: 'Flat Tyre Service', icon: Disc },
+    { value: 'key_lockout', label: 'Key Lock Out', icon: Key },
+    { value: 'emergency_fuel', label: 'Emergency Fuel', icon: Droplet },
+    { value: 'extrication', label: 'Extrication', icon: AlertTriangle },
+    { value: 'mechanical_first_aid', label: 'Mechanical', icon: Wrench },
+    { value: 'other', label: 'Other', icon: MoreHorizontal },
   ];
+
+  const serviceToAllowanceMap: Record<string, string> = {
+    towing: 'towing_services_km',
+    battery_boost: 'battery_boosts',
+    flat_tyre: 'flat_tyre_service',
+    key_lockout: 'key_lock_out',
+    emergency_fuel: 'emergency_fuel',
+    extrication: 'extrication',
+    mechanical_first_aid: 'roadside_first_aid',
+  };
 
   return (
     <div className="space-y-6">
@@ -190,7 +247,7 @@ export default function NewRoadsideRequestPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6">
             {serverError && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-4 rounded-lg flex items-start gap-2">
                 <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
@@ -204,10 +261,10 @@ export default function NewRoadsideRequestPage() {
             {/* Vehicle Selection */}
             <div>
               <Label htmlFor="vehicle">Vehicle *</Label>
-              <select
+              <Select
                 id="vehicle"
                 {...register("vehicle", { valueAsNumber: true })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full"
               >
                 <option value="">Select a vehicle</option>
                 {vehicles?.results?.map((vehicle: any) => (
@@ -215,7 +272,7 @@ export default function NewRoadsideRequestPage() {
                     {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.license_plate ? `(${vehicle.license_plate})` : ''}
                   </option>
                 ))}
-              </select>
+              </Select>
               {errors.vehicle && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.vehicle.message}</p>
               )}
@@ -224,18 +281,86 @@ export default function NewRoadsideRequestPage() {
             {/* Service Type */}
             <div>
               <Label htmlFor="service_type">Service Type *</Label>
-              <select
-                id="service_type"
-                {...register("service_type")}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select service type</option>
-                {serviceTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
+              <Controller
+                control={control}
+                name="service_type"
+                render={({ field }) => (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {serviceTypes.map((type) => {
+                      const Icon = type.icon;
+                      const isSelected = field.value === type.value;
+
+                      // Check allowance
+                      let isDisabled = false;
+                      let allowanceText = null;
+                      let isPayAsYouGo = false;
+
+                      if (activeSubscription && activeSubscription.remaining_allowances) {
+                        const allowanceKey = serviceToAllowanceMap[type.value];
+                        if (allowanceKey) {
+                          const remaining = activeSubscription.remaining_allowances[allowanceKey];
+                          if (remaining === 0) {
+                            // Previously disabled, now allowed as Pay-As-You-Go
+                            isPayAsYouGo = true;
+                            allowanceText = "0 Left (Chargeable)";
+                          } else if (remaining !== undefined) {
+                            allowanceText = type.value === 'towing' ? `${remaining}km left` : `${remaining} left`;
+                          }
+                        } else if (type.value !== 'other') {
+                          // Not in allowances -> Not covered -> Pay-As-You-Go
+                          const key = serviceToAllowanceMap[type.value];
+                          if (key && activeSubscription.remaining_allowances[key] === undefined) {
+                            isPayAsYouGo = true;
+                            allowanceText = "Pay-As-You-Go";
+                          }
+                        }
+                      }
+
+                      return (
+                        <div
+                          key={type.value}
+                          onClick={() => !isDisabled && field.onChange(type.value)}
+                          className={cn(
+                            "cursor-pointer rounded-lg border-2 p-4 flex flex-col items-center gap-3 transition-all relative",
+                            isDisabled
+                              ? "border-muted bg-gray-100 dark:bg-gray-800 opacity-60 cursor-not-allowed"
+                              : isSelected
+                                ? isPayAsYouGo
+                                  ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20 shadow-sm"
+                                  : "border-primary bg-primary/5 dark:bg-primary/10 shadow-sm"
+                                : isPayAsYouGo
+                                  ? "border-dashed border-amber-300 bg-amber-50/30 hover:bg-amber-50 hover:border-amber-400 dark:border-amber-800 dark:bg-amber-950/10"
+                                  : "border-muted bg-card hover:border-primary/50"
+                          )}
+                        >
+                          <div className={cn(
+                            "p-2 rounded-full",
+                            isSelected
+                              ? isPayAsYouGo ? "bg-amber-500 text-white" : "bg-primary text-primary-foreground"
+                              : "bg-secondary text-secondary-foreground"
+                          )}>
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <span className="text-sm font-medium text-center leading-tight">{type.label}</span>
+                          {allowanceText && (
+                            <span className={cn(
+                              "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                              isDisabled
+                                ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                : isPayAsYouGo
+                                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                  : "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                            )}>
+                              {allowanceText}
+                            </span>
+                          )}
+                          {isSelected && <div className="absolute top-2 right-2 text-primary"><Check className="w-4 h-4" /></div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              />
               {errors.service_type && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.service_type.message}</p>
               )}
@@ -255,10 +380,11 @@ export default function NewRoadsideRequestPage() {
                   type="button"
                   variant="secondary"
                   onClick={getCurrentLocation}
+                  disabled={isLocating}
                   className="flex items-center gap-2"
                 >
-                  <MapPin className="w-4 h-4" />
-                  Use Current Location
+                  <MapPin className={cn("w-4 h-4", isLocating && "animate-pulse")} />
+                  {isLocating ? "Locating..." : "Use Current Location"}
                 </Button>
               </div>
               {errors.breakdown_location && (

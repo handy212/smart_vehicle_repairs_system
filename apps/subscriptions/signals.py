@@ -3,7 +3,8 @@ Signals for subscription module
 """
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from .models import Subscription
 from apps.billing.models import Invoice, Payment
 
@@ -45,21 +46,26 @@ def activate_subscription_on_payment(sender, instance, created, **kwargs):
 
 
 @receiver(pre_save, sender=Subscription)
-def check_duplicate_active_subscription(sender, instance, **kwargs):
+def check_duplicate_subscription(sender, instance, **kwargs):
     """
-    Prevent duplicate active subscriptions for same package/customer
+    Prevent duplicate subscriptions for same vehicle (regardless of status).
     """
     if instance.pk is None:  # New instance
-        # Check for existing active subscription
+        if not instance.vehicle:
+            return
+            
+        # Check for existing subscription for this vehicle
         existing = Subscription.objects.filter(
-            customer=instance.customer,
-            package=instance.package,
-            status='active'
+            vehicle=instance.vehicle
         ).exclude(pk=instance.pk).first()
         
-        if existing and existing.is_active():
-            raise ValidationError(
-                f"Customer already has an active subscription for {instance.package.name}. "
-                f"Please cancel the existing subscription first or wait for it to expire."
+        if existing:
+            # We raise DRFValidationError to ensure 400 response in API
+            # but we also provide a way to handle it if called outside API
+            message = (
+                f"Vehicle {instance.vehicle.license_plate} already has an existing subscription. "
+                f"Duplicate subscriptions for the same vehicle are not allowed."
             )
+            # Use DRF ValidationError for API compatibility
+            raise DRFValidationError(message)
 

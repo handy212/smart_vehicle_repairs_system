@@ -76,6 +76,7 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = [
+            'id', 'customer_number',
             # User fields
             'email', 'username', 'password', 'first_name', 'last_name', 'phone',
             'grant_portal_access', 'send_welcome_email',
@@ -90,6 +91,7 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
             'insurance_policy_number', 'insurance_phone', 'notes', 'tags',
             'referred_by', 'marketing_emails', 'marketing_sms'
         ]
+        read_only_fields = ['id', 'customer_number']
     
     def validate_email(self, value):
         """Validate that email is unique"""

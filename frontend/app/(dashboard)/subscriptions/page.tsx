@@ -17,6 +17,8 @@ import {
   Package as PackageIcon,
   Settings,
   Plus,
+  Download,
+  Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
@@ -36,12 +38,41 @@ import { z } from "zod";
 
 const subscriptionCreateSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
+  vehicle: z.number().min(1, "Vehicle is required"),
   package: z.number().min(1, "Package is required"),
   start_date: z.string().optional(),
   auto_renew: z.boolean().optional(),
 });
 
 type SubscriptionCreateFormData = z.infer<typeof subscriptionCreateSchema>;
+
+const formatError = (error: any, defaultMessage: string) => {
+  console.error("Subscription Error:", error);
+  const data = error.response?.data;
+  if (!data) return defaultMessage;
+
+  if (typeof data === 'string') return data;
+
+  if (data.detail) return data.detail;
+  if (data.message) return data.message;
+
+  // DRF field errors
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    const messages = Object.entries(data)
+      .map(([key, value]) => {
+        const message = Array.isArray(value) ? value[0] : value;
+        return `${key}: ${message}`;
+      })
+      .join('\n');
+    return messages || defaultMessage;
+  }
+
+  if (Array.isArray(data)) {
+    return data[0] || defaultMessage;
+  }
+
+  return defaultMessage;
+};
 
 export default function SubscriptionsPage() {
   const queryClient = useQueryClient();
@@ -55,6 +86,9 @@ export default function SubscriptionsPage() {
   const [packageFilter, setPackageFilter] = useState<string>("all");
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isChangePlanDialogOpen, setIsChangePlanDialogOpen] = useState(false);
+  const [newPackageId, setNewPackageId] = useState<number | null>(null);
   const debouncedSearch = useDebounce(search, 500);
 
   // Fetch packages and customers for the create form
@@ -89,6 +123,7 @@ export default function SubscriptionsPage() {
     mutationFn: (data: SubscriptionCreateFormData) =>
       subscriptionsApi.create({
         customer: data.customer,
+        vehicle: data.vehicle,
         package: data.package,
         start_date: data.start_date,
         auto_renew: data.auto_renew,
@@ -105,11 +140,27 @@ export default function SubscriptionsPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || error.response?.data?.message || "Failed to create subscription",
+        description: formatError(error, "Failed to create subscription"),
         variant: "destructive",
       });
     },
   });
+
+  const selectedCustomerId = watch("customer");
+  const { data: customerVehicles, isLoading: isLoadingVehicles } = useQuery({
+    queryKey: ["customers", selectedCustomerId, "vehicles"],
+    queryFn: () => customersApi.vehicles(selectedCustomerId),
+    enabled: !!selectedCustomerId,
+  });
+
+  const { data: usageHistory, isLoading: isLoadingUsage } = useQuery({
+    queryKey: ["subscriptions", selectedSubscription?.id, "usage"],
+    queryFn: () => subscriptionsApi.usage(selectedSubscription!.id),
+    enabled: !!selectedSubscription && isDetailsDialogOpen,
+  });
+
+  const selectedPackageId = watch("package");
+  const selectedPackage = packages.find((p: any) => p.id === selectedPackageId);
 
   const onSubmitCreate = (data: SubscriptionCreateFormData) => {
     createMutation.mutate(data);
@@ -154,6 +205,44 @@ export default function SubscriptionsPage() {
     },
   });
 
+
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => subscriptionsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      toast({ title: "Success", description: "Subscription deleted successfully" });
+      setIsDeleteDialogOpen(false);
+      setSelectedSubscription(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: formatError(error, "Failed to delete subscription"),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const changePlanMutation = useMutation({
+    mutationFn: ({ id, packageId }: { id: number; packageId: number }) =>
+      subscriptionsApi.changePlan(id, packageId),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      toast({ title: "Success", description: data.message || "Plan changed successfully" });
+      setIsChangePlanDialogOpen(false);
+      setSelectedSubscription(null);
+      setNewPackageId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: formatError(error, "Failed to change plan"),
+        variant: "destructive",
+      });
+    },
+  });
+
   const renewMutation = useMutation({
     mutationFn: ({ id, months }: { id: number; months?: number }) =>
       subscriptionsApi.renew(id, months),
@@ -164,7 +253,7 @@ export default function SubscriptionsPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to renew subscription",
+        description: formatError(error, "Failed to renew subscription"),
         variant: "destructive",
       });
     },
@@ -182,6 +271,21 @@ export default function SubscriptionsPage() {
   const handleRenew = (subscription: Subscription) => {
     if (confirm(`Renew subscription ${subscription.subscription_number}?`)) {
       renewMutation.mutate({ id: subscription.id });
+    }
+  };
+
+  const handleDelete = () => {
+    if (selectedSubscription) {
+      deleteMutation.mutate(selectedSubscription.id);
+    }
+  };
+
+  const handleChangePlan = () => {
+    if (selectedSubscription && newPackageId) {
+      changePlanMutation.mutate({
+        id: selectedSubscription.id,
+        packageId: newPackageId,
+      });
     }
   };
 
@@ -375,8 +479,8 @@ export default function SubscriptionsPage() {
                             subscription.status === "active"
                               ? "default"
                               : subscription.status === "expired"
-                        ? "danger"
-                              : "secondary"
+                                ? "danger"
+                                : "secondary"
                           }
                         >
                           {subscription.status}
@@ -388,8 +492,8 @@ export default function SubscriptionsPage() {
                             subscription.payment_status === "paid"
                               ? "default"
                               : subscription.payment_status === "pending"
-                              ? "secondary"
-                        : "danger"
+                                ? "secondary"
+                                : "danger"
                           }
                         >
                           {subscription.payment_status}
@@ -421,10 +525,35 @@ export default function SubscriptionsPage() {
                                   setIsCancelDialogOpen(true);
                                 }}
                               >
-                                <X className="h-4 w-4" />
+                                <X className="h-4 w-4 text-red-500" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Change Plan"
+                                onClick={() => {
+                                  setSelectedSubscription(subscription);
+                                  setNewPackageId(subscription.package);
+                                  setIsChangePlanDialogOpen(true);
+                                }}
+                              >
+                                <Settings className="h-4 w-4 text-blue-500" />
                               </Button>
                             </>
                           )}
+                          <PermissionGuard permission="manage_subscriptions">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Delete Subscription"
+                              onClick={() => {
+                                setSelectedSubscription(subscription);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </PermissionGuard>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -451,10 +580,10 @@ export default function SubscriptionsPage() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</Label>
-                <div>
-                  <Badge variant={selectedSubscription.status === "active" ? "default" : "secondary"}>
-                    {selectedSubscription.status}
-                  </Badge>
+                  <div>
+                    <Badge variant={selectedSubscription.status === "active" ? "default" : "secondary"}>
+                      {selectedSubscription.status}
+                    </Badge>
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -473,44 +602,139 @@ export default function SubscriptionsPage() {
                   <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">End Date</Label>
                   <p className="text-sm">{format(new Date(selectedSubscription.end_date), "MMM dd, yyyy")}</p>
                 </div>
+
+                {/* AA Compliance Fields */}
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Activation Date (AA Policy)</Label>
+                  <p className="text-sm font-semibold text-blue-600">
+                    {selectedSubscription.activation_date
+                      ? format(new Date(selectedSubscription.activation_date), "MMM dd, yyyy")
+                      : "Pending Payment / Processing"}
+                  </p>
+                </div>
                 <div className="space-y-1">
                   <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Days Remaining</Label>
                   <p className="text-sm font-semibold">{selectedSubscription.days_remaining || 0} days</p>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Purchase Price</Label>
-                  <p className="text-sm font-semibold">${parseFloat(selectedSubscription.purchase_price).toFixed(2)}</p>
+
+                <div className="space-y-1 border-t pt-2">
+                  <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Original Price</Label>
+                  <p className="text-sm">${parseFloat(selectedSubscription.original_price || selectedSubscription.purchase_price).toFixed(2)}</p>
                 </div>
+                <div className="space-y-1 border-t pt-2">
+                  <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Paid Amount</Label>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold">${parseFloat(selectedSubscription.purchase_price).toFixed(2)}</p>
+                    {selectedSubscription.discount_applied > 0 && (
+                      <Badge variant="success" className="text-[10px] py-0">
+                        {selectedSubscription.discount_applied}% {selectedSubscription.discount_reason}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
                 <div className="space-y-1">
                   <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Status</Label>
-                <div>
-                  <Badge variant={selectedSubscription.payment_status === "paid" ? "default" : "secondary"}>
-                    {selectedSubscription.payment_status}
-                  </Badge>
+                  <div>
+                    <Badge variant={selectedSubscription.payment_status === "paid" ? "default" : "secondary"}>
+                      {selectedSubscription.payment_status}
+                    </Badge>
                   </div>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Auto Renew</Label>
                   <p className="text-sm">{selectedSubscription.auto_renew ? "Yes" : "No"}</p>
                 </div>
+
+                {/* Refund Visibility */}
+                {selectedSubscription.status === 'active' && (
+                  <div className="col-span-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-md border border-amber-200 dark:border-amber-800">
+                    <p className="text-xs font-semibold uppercase text-amber-700 dark:text-amber-400 mb-1">Administrative: Refund Eligibility</p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">{selectedSubscription.is_refund_eligible ? "✅ Within 30-day window" : "❌ Past 30-day window"}</span>
+                      {selectedSubscription.is_refund_eligible && (
+                        <span className="text-sm font-bold">Estimated: ${parseFloat(selectedSubscription.calculated_refund_amount || "0").toFixed(2)}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Usage History Section */}
+              <div className="border-t pt-4 space-y-3">
+                <Label className="text-sm font-semibold">Usage History</Label>
+                {isLoadingUsage ? (
+                  <div className="text-sm text-gray-500">Loading usage history...</div>
+                ) : usageHistory && usageHistory.length > 0 ? (
+                  <div className="rounded-md border max-h-40 overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="h-8">Date</TableHead>
+                          <TableHead className="h-8">Type</TableHead>
+                          <TableHead className="h-8">Amount</TableHead>
+                          <TableHead className="h-8">Ref</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {usageHistory.map((usage: any) => (
+                          <TableRow key={usage.id} className="h-8">
+                            <TableCell className="py-1">{format(new Date(usage.service_date), "MMM dd")}</TableCell>
+                            <TableCell className="py-1 capitalize">{usage.usage_type?.replace(/_/g, " ")}</TableCell>
+                            <TableCell className="py-1">{usage.quantity_used}</TableCell>
+                            <TableCell className="py-1 text-xs text-muted-foreground">{usage.reference_type || "-"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">No usage history recorded.</p>
+                )}
               </div>
 
               {selectedSubscription.remaining_allowances && Object.keys(selectedSubscription.remaining_allowances).length > 0 && (
                 <div className="border-t pt-4 space-y-3">
                   <Label className="text-sm font-semibold">Remaining Allowances</Label>
                   <div className="grid grid-cols-2 gap-3">
-                    {Object.entries(selectedSubscription.remaining_allowances).map(([key, value]) => (
-                      <div key={key} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                        <span className="text-sm capitalize text-gray-600 dark:text-gray-400">{key.replace(/_/g, " ")}</span>
-                        <span className="text-sm font-semibold">{value}</span>
-                      </div>
-                    ))}
+                    {Object.entries(selectedSubscription.remaining_allowances).map(([key, value]) => {
+                      const labelMap: Record<string, string> = {
+                        roadside_first_aid: "Mech/Elec First Aid",
+                        towing_services_km: "Towing Limit (km)",
+                        emergency_fuel: "Emergency Fuel",
+                        key_lock_out: "Key Lock Out",
+                        extrication: "Extrication",
+                        accident_estimate: "Accident Estimate",
+                        pre_purchase_inspection: "Pre-Purchase Insp.",
+                        battery_boosts: "Battery Boosts",
+                        flat_tyre_service: "Flat Tyre Service",
+                        total_service_calls: "Total Service Calls",
+                      };
+                      return (
+                        <div key={key} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{labelMap[key] || key.replace(/_/g, " ")}</span>
+                          <span className="text-sm font-semibold">{value}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex justify-between items-center sm:justify-between">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (selectedSubscription) {
+                  subscriptionsApi.downloadCard(selectedSubscription.id, selectedSubscription.subscription_number);
+                }
+              }}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Download Membership Card
+            </Button>
             <Button onClick={() => setIsDetailsDialogOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
@@ -605,6 +829,53 @@ export default function SubscriptionsPage() {
               )}
             </div>
 
+            {selectedPackage && (
+              <div className="bg-muted/50 p-3 rounded-md text-sm space-y-1 border">
+                <div className="font-medium">{selectedPackage.name} Summary</div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mt-1">
+                  <div>Duration: {selectedPackage.duration_months} months</div>
+                  <div>Price: ${parseFloat(selectedPackage.price).toFixed(2)}</div>
+                  <div>Calls: {selectedPackage.features?.total_service_calls || 0}</div>
+                  <div>Towing: {selectedPackage.features?.towing_services_km || 0} km</div>
+                  <div>Mechanic: {selectedPackage.features?.roadside_first_aid || 0}</div>
+                  <div>Fuel: {selectedPackage.features?.emergency_fuel || 0}</div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="vehicle">Vehicle *</Label>
+              <Select
+                id="vehicle"
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  setValue("vehicle", isNaN(val) ? 0 : val);
+                }}
+                defaultValue=""
+                disabled={!selectedCustomerId || isLoadingVehicles}
+              >
+                <option value="">{selectedCustomerId ? "Select a vehicle" : "Select a customer first"}</option>
+                {customerVehicles?.map((v: any) => {
+                  const vehicleType = v.vehicle_type || '';
+                  const isAllowed = ['saloon', 'suv', 'pickup', 'minivan'].includes(vehicleType.toLowerCase());
+                  return (
+                    <option key={v.id} value={v.id} disabled={!isAllowed}>
+                      {v.year} {v.make} {v.model} ({v.license_plate}) - {vehicleType ? vehicleType.toUpperCase() : 'UNKNOWN'} {!isAllowed ? "(NOT COVERED)" : ""}
+                    </option>
+                  );
+                })}
+              </Select>
+              {errors.vehicle && (
+                <p className="text-sm text-red-500">{errors.vehicle.message}</p>
+              )}
+              {selectedCustomerId && customerVehicles && customerVehicles.length === 0 && !isLoadingVehicles && (
+                <p className="text-sm text-amber-600">No vehicles found for this customer.</p>
+              )}
+              {selectedCustomerId && customerVehicles && customerVehicles.length > 0 && customerVehicles.every((v: any) => !['saloon', 'suv', 'pickup', 'minivan'].includes((v.vehicle_type || '').toLowerCase())) && (
+                <p className="text-sm text-red-500">None of this customer's vehicles are eligible for AA membership (Saloon, SUV, Pick-Up, Mini van only).</p>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="start_date">Start Date (Optional)</Label>
               <Input
@@ -645,6 +916,89 @@ export default function SubscriptionsPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Plan Dialog */}
+      <Dialog open={isChangePlanDialogOpen} onOpenChange={setIsChangePlanDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change Subscription Plan</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 space-y-4 py-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Select a new package for subscription <span className="font-mono font-semibold">{selectedSubscription?.subscription_number}</span>.
+              This will update the package and reset allowances.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="new_package">New Package</Label>
+              <Select
+                id="new_package"
+                value={newPackageId?.toString()}
+                onChange={(e) => setNewPackageId(parseInt(e.target.value))}
+              >
+                <option value="">Select a new package</option>
+                {packages.map((pkg: Package) => (
+                  <option key={pkg.id} value={pkg.id}>
+                    {pkg.name} - ${parseFloat(pkg.price).toFixed(2)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsChangePlanDialogOpen(false);
+                setNewPackageId(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleChangePlan}
+              disabled={changePlanMutation.isPending || !newPackageId || newPackageId === selectedSubscription?.package}
+            >
+              {changePlanMutation.isPending ? "Updating..." : "Change Plan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Delete Subscription</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 py-4 space-y-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Are you sure you want to <strong>permanently delete</strong> subscription{" "}
+              <span className="font-mono font-semibold">{selectedSubscription?.subscription_number}</span>?
+            </p>
+            <p className="text-xs text-red-500 font-medium">
+              This action cannot be undone. All usage history and allowances for this subscription will be lost.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setSelectedSubscription(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Permanently Delete"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
