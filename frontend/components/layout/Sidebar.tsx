@@ -12,7 +12,6 @@ import {
   Receipt,
   FileText,
   BarChart3,
-  Bell,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -21,10 +20,15 @@ import {
   CreditCard,
   Truck,
   Calculator,
+  Landmark,
+  HelpCircle,
+  BookOpen,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { APP_CONFIG } from "@/lib/config";
 
 // Group navigation items by category for better organization with permission requirements
 const navigationGroups = [
@@ -42,6 +46,7 @@ const navigationGroups = [
       { name: "Appointments", href: "/appointments", icon: Calendar, permission: "view_appointments" },
       { name: "Work Orders", href: "/workorders", icon: Wrench, permission: "view_workorders" },
       { name: "Roadside", href: "/roadside", icon: Truck, permission: "view_roadside" },
+      { name: "Technicians", href: "/technicians", icon: UserCog, permission: "view_technicians" },
     ],
   },
   {
@@ -49,7 +54,8 @@ const navigationGroups = [
     items: [
       { name: "Inventory", href: "/inventory", icon: Package, permission: "view_inventory" },
       { name: "Billing", href: "/billing", icon: Receipt, permission: "view_billing" },
-      { name: "Accounting", href: "/accounting", icon: Calculator, permission: "view_accounting" },
+      // { name: "Accounting", href: "/ledger", icon: Calculator, permission: "view_accounting" },
+      { name: "Assets", href: "/fixed-assets", icon: Landmark, permission: "view_fixed_assets" },
       { name: "Subscriptions", href: "/subscriptions", icon: CreditCard, permission: "view_subscriptions" },
     ],
   },
@@ -64,7 +70,6 @@ const navigationGroups = [
   {
     name: "System",
     items: [
-      { name: "Notifications", href: "/notifications", icon: Bell, permission: undefined },
       { name: "Administration", href: "/admin", icon: Settings, permission: "view_admin" },
     ],
   },
@@ -93,31 +98,14 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
 
       <aside
         className={cn(
-          "fixed left-0 top-16 bottom-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto z-40 transition-all duration-300 ease-in-out",
+          "fixed left-0 top-16 bottom-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 z-40 transition-all duration-300 ease-in-out flex flex-col",
           "lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
           isCollapsed ? "w-20" : "w-64"
         )}
       >
-        {/* Collapse/Expand Toggle Button - Inside sidebar at top */}
-        {onToggleCollapse && (
-          <div className="hidden lg:flex items-center justify-end p-3 border-b border-gray-200 dark:border-gray-800">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleCollapse}
-              className="h-8 w-8 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-              title={`${isCollapsed ? "Expand" : "Collapse"} sidebar (Ctrl+B)`}
-            >
-              {isCollapsed ? (
-                <ChevronRight className="w-4 h-4" />
-              ) : (
-                <ChevronLeft className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-        )}
-        <nav className={cn("p-4 space-y-6", isCollapsed && "px-2")}>
+
+        <nav className={cn("flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800", isCollapsed && "px-2")}>
           {navigationGroups.map((group) => (
             <div key={group.name}>
               {!isCollapsed && (
@@ -151,7 +139,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
                     >
                       {/* Active indicator */}
                       {isActive && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 dark:bg-blue-500 rounded-r-full" />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 bg-blue-600 dark:bg-blue-500 rounded-r-full shadow-sm" />
                       )}
                       <Icon
                         className={cn(
@@ -189,8 +177,35 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
             </div>
           ))}
         </nav>
+
+        {/* Footer */}
+        {!isCollapsed && (
+          <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+            <div className="space-y-2">
+              <Link
+                href="/help"
+                className="flex items-center px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <HelpCircle className="w-4 h-4 mr-2" />
+                Help & Support
+              </Link>
+              <div className="px-3 py-2 text-xs text-gray-500 dark:text-gray-500">
+                Version {APP_CONFIG.version}
+              </div>
+            </div>
+          </div>
+        )}
+        {isCollapsed && (
+          <div className="flex-shrink-0 p-2 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+            <button
+              title="Help & Support"
+              className="w-full flex items-center justify-center p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+          </div>
+        )}
       </aside>
     </>
   );
 }
-

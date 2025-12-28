@@ -5,18 +5,20 @@ import { inventoryApi, PurchaseOrder } from "@/lib/api/inventory";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, CheckCircle, XCircle, Package } from "lucide-react";
+import { ArrowLeft, Edit, CheckCircle, XCircle, Package, Printer } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
+import { usePrint } from "@/lib/hooks/usePrint";
 
 export default function PurchaseOrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { downloadPDF, isDownloading } = usePrint();
   const id = parseInt(params.id as string);
 
   const { data: purchaseOrder, isLoading } = useQuery({
@@ -120,7 +122,7 @@ export default function PurchaseOrderDetailPage() {
       <div className="text-center py-12">
         <p className="text-gray-500">Purchase order not found.</p>
         <Link href="/inventory/purchase-orders">
-          <Button className="mt-4"variant="secondary">
+          <Button className="mt-4" variant="secondary">
             Back to Purchase Orders
           </Button>
         </Link>
@@ -151,6 +153,18 @@ export default function PurchaseOrderDetailPage() {
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            onClick={() => downloadPDF({
+              documentType: 'purchase_order',
+              documentId: id,
+              documentNumber: purchaseOrder.po_number
+            })}
+            disabled={isDownloading}
+          >
+            <Printer className="w-4 h-4 mr-2" />
+            {isDownloading ? 'Printing...' : 'Print PO'}
+          </Button>
           {purchaseOrder.status === "draft" && (
             <>
               <Link href={`/inventory/purchase-orders/${id}/edit`}>

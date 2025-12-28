@@ -484,6 +484,7 @@ class Invoice(models.Model):
     
     STATUS_CHOICES = [
         ('draft', 'Draft'),
+        ('proforma', 'Proforma'),
         ('sent', 'Sent to Customer'),
         ('viewed', 'Viewed by Customer'),
         ('partial', 'Partially Paid'),
@@ -628,31 +629,55 @@ class Invoice(models.Model):
         if not self.invoice_number:
             if self.branch:
                 # Use branch sequence if branch is available
-                self.invoice_number = self.branch.get_next_invoice_number()
+                # Use separate numbering for proforma invoices
+                if self.status == 'proforma':
+                    self.invoice_number = self.branch.get_next_proforma_number()
+                else:
+                    self.invoice_number = self.branch.get_next_invoice_number()
             else:
                 # Fallback: Generate invoice number without branch code
                 # Find last invoice number and increment
-                last_invoice = Invoice.objects.exclude(invoice_number='').order_by('-id').first()
-                if last_invoice and last_invoice.invoice_number:
-                    try:
-                        # Try to extract number from last invoice
-                        # Handle formats like: "BR001-INV000001" or "INV000001"
-                        number_part = last_invoice.invoice_number.split('-')[-1]
-                        if number_part.startswith('INV'):
-                            num_str = number_part.replace('INV', '')
-                            next_num = int(num_str) + 1
-                            self.invoice_number = f"INV{next_num:06d}"
-                        else:
-                            # Fallback to simple increment
+                if self.status == 'proforma':
+                    # For proforma without branch, use PRO prefix
+                    last_proforma = Invoice.objects.filter(
+                        status='proforma'
+                    ).exclude(invoice_number='').order_by('-id').first()
+                    if last_proforma and last_proforma.invoice_number:
+                        try:
+                            number_part = last_proforma.invoice_number.split('-')[-1]
+                            if number_part.startswith('PRO'):
+                                num_str = number_part.replace('PRO', '')
+                                next_num = int(num_str) + 1
+                                self.invoice_number = f"PRO{next_num:06d}"
+                            else:
+                                self.invoice_number = "PRO000001"
+                        except (ValueError, AttributeError):
+                            self.invoice_number = "PRO000001"
+                    else:
+                        self.invoice_number = "PRO000001"
+                else:
+                    # Standard invoice fallback numbering
+                    last_invoice = Invoice.objects.exclude(invoice_number='').order_by('-id').first()
+                    if last_invoice and last_invoice.invoice_number:
+                        try:
+                            # Try to extract number from last invoice
+                            # Handle formats like: "BR001-INV000001" or "INV000001"
+                            number_part = last_invoice.invoice_number.split('-')[-1]
+                            if number_part.startswith('INV'):
+                                num_str = number_part.replace('INV', '')
+                                next_num = int(num_str) + 1
+                                self.invoice_number = f"INV{next_num:06d}"
+                            else:
+                                # Fallback to simple increment
+                                next_num = Invoice.objects.count() + 1
+                                self.invoice_number = f"INV{next_num:06d}"
+                        except (ValueError, AttributeError):
+                            # If parsing fails, use simple increment
                             next_num = Invoice.objects.count() + 1
                             self.invoice_number = f"INV{next_num:06d}"
-                    except (ValueError, AttributeError):
-                        # If parsing fails, use simple increment
-                        next_num = Invoice.objects.count() + 1
-                        self.invoice_number = f"INV{next_num:06d}"
-                else:
-                    # First invoice without branch
-                    self.invoice_number = "INV000001"
+                    else:
+                        # First invoice without branch
+                        self.invoice_number = "INV000001"
         
         # Calculate amount due
         self.amount_due = (self.total - self.amount_paid).quantize(Decimal('0.01'))

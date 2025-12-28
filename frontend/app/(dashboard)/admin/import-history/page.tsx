@@ -10,11 +10,11 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Download, RefreshCw } from "lucide-react";
+import { Search, Download, RefreshCw, FileText, CheckCircle2, AlertOctagon, XCircle } from "lucide-react";
 import { useState } from "react";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { exportToCSV } from "@/lib/utils/export";
 import { useToast } from "@/lib/hooks/useToast";
+import { Label } from "@/components/ui/label";
 
 export default function ImportHistoryPage() {
   const [modelFilter, setModelFilter] = useState<string>("");
@@ -65,9 +65,9 @@ export default function ImportHistoryPage() {
       case "Customer":
         return "default";
       case "Vehicle":
-        return "success";
+        return "secondary";
       case "Part":
-        return "warning";
+        return "outline";
       default:
         return "secondary";
     }
@@ -76,188 +76,225 @@ export default function ImportHistoryPage() {
   const getStatusBadge = (log: AuditLog) => {
     const changes = log.changes || {};
     if (changes.error) {
-      return <Badge variant="danger">Failed</Badge>;
+      return (
+        <Badge variant="danger" className="h-5 px-1.5 gap-1">
+          <AlertOctagon className="w-3 h-3" /> Failed
+        </Badge>
+      );
     }
     if (changes.imported > 0) {
-      return <Badge variant="success">Success</Badge>;
+      return (
+        <Badge variant="success" className="h-5 px-1.5 gap-1">
+          <CheckCircle2 className="w-3 h-3" /> Success
+        </Badge>
+      );
     }
-    return <Badge variant="secondary">No imports</Badge>;
+    return <Badge variant="secondary" className="h-5 px-1.5">No imports</Badge>;
   };
 
-  if (isLoading && !data) {
-    return <TableSkeleton />;
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 dark:bg-gray-900 min-h-screen">
+      <div className="flex items-center justify-between px-4 pt-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Import History</h1>
-          <p className="mt-1 text-sm text-gray-500">View and track all CSV import operations</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Import History</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Track bulk data import operations</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="secondary" onClick={() => refetch()}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
+          <Button variant="ghost" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0" title="Refresh">
+            <RefreshCw className="w-4 h-4 text-gray-500" />
           </Button>
-          <Button variant="secondary" onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
-            <Download className="w-4 h-4 mr-2" />
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={!data?.results || data.results.length === 0} className="h-8 text-xs bg-white dark:bg-gray-800">
+            <Download className="w-3.5 h-3.5 mr-1.5" />
             Export CSV
           </Button>
         </div>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Filter by Model</label>
-              <Select value={modelFilter} onChange={(e) => setModelFilter(e.target.value)}>
+      <Card className="mx-4 border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <CardContent className="p-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Model</Label>
+              <Select
+                value={modelFilter}
+                onChange={(e) => {
+                  setModelFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900"
+              >
                 <option value="">All Models</option>
                 <option value="Customer">Customers</option>
                 <option value="Vehicle">Vehicles</option>
                 <option value="Part">Parts</option>
               </Select>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">Start Date</label>
+
+            <div className="space-y-1">
+              <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Start Date</Label>
               <Input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  setPage(1);
+                }}
+                className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900"
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">End Date</label>
+
+            <div className="space-y-1">
+              <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">End Date</Label>
               <Input
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => {
+                  setEndDate(e.target.value);
+                  setPage(1);
+                }}
+                className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900"
               />
             </div>
-            <div className="flex items-end">
+
+            {(modelFilter || startDate || endDate) && (
               <Button
-                variant="secondary"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setModelFilter("");
                   setStartDate("");
                   setEndDate("");
                   setSearch("");
+                  setPage(1);
                 }}
-                className="w-full"
+                className="h-8 text-xs text-gray-500 hover:text-gray-900"
               >
-                Clear Filters
+                <XCircle className="w-3.5 h-3.5 mr-1" />
+                Clear
               </Button>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Import History Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Import Operations</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <TableSkeleton />
-          ) : !data?.results || data.results.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No import history found</p>
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date & Time</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Model</TableHead>
-                      <TableHead>File</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Imported</TableHead>
-                      <TableHead>Skipped</TableHead>
-                      <TableHead>Errors</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.results.map((log) => {
-                      const changes = log.changes || {};
-                      const filename = changes.filename || "Unknown";
-                      const imported = changes.imported || 0;
-                      const skipped = changes.skipped || 0;
-                      const errorCount = changes.total_errors || 0;
-
-                      return (
-                        <TableRow key={log.id}>
-                          <TableCell>
-                            {format(new Date(log.timestamp), "MMM d, yyyy h:mm a")}
-                          </TableCell>
-                          <TableCell>{log.user_name || log.user_email || "Unknown"}</TableCell>
-                          <TableCell>
-                            <Badge variant={getModelBadgeVariant(log.model_name) as any}>
-                              {log.model_name || "N/A"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="max-w-xs truncate" title={filename}>
-                            {filename}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(log)}</TableCell>
-                          <TableCell>
-                            <span className="text-green-700 font-medium">{imported}</span>
-                          </TableCell>
-                          <TableCell>
-                            {skipped > 0 ? (
-                              <span className="text-yellow-700 font-medium">{skipped}</span>
-                            ) : (
-                              <span className="text-gray-400">0</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {errorCount > 0 ? (
-                              <span className="text-red-700 font-medium">{errorCount}</span>
-                            ) : (
-                              <span className="text-gray-400">0</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+      <div className="px-4 pb-8">
+        <Card className="border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+          <CardContent className="p-0">
+            {isLoading ? (
+              <div className="p-8">
+                <TableSkeleton />
               </div>
-
-              {/* Pagination */}
-              {data.count > 0 && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-gray-600">
-                    Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, data.count)} of {data.count} imports
-                  </p>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="secondary"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={!data.previous}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setPage((p) => p + 1)}
-                      disabled={!data.next}
-                    >
-                      Next
-                    </Button>
-                  </div>
+            ) : !data?.results || data.results.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-3">
+                  <FileText className="w-6 h-6 text-gray-400" />
                 </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">No import history found</p>
+                <p className="text-xs text-gray-500 mt-1">Try adjusting your filters</p>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-gray-50/80">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider w-[180px]">Date & Time</TableHead>
+                        <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">User</TableHead>
+                        <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Model</TableHead>
+                        <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">File</TableHead>
+                        <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</TableHead>
+                        <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Imported</TableHead>
+                        <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Skipped</TableHead>
+                        <TableHead className="h-9 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Errors</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.results.map((log) => {
+                        const changes = log.changes || {};
+                        const filename = changes.filename || "Unknown";
+                        const imported = changes.imported || 0;
+                        const skipped = changes.skipped || 0;
+                        const errorCount = changes.total_errors || 0;
+
+                        return (
+                          <TableRow key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                            <TableCell className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">
+                              {format(new Date(log.timestamp), "MMM d, yyyy h:mm a")}
+                            </TableCell>
+                            <TableCell className="px-4 py-2.5 text-xs text-gray-700 dark:text-gray-300 font-medium">
+                              {log.user_name || log.user_email || "Unknown"}
+                            </TableCell>
+                            <TableCell className="px-4 py-2.5">
+                              <Badge variant={getModelBadgeVariant(log.model_name) as any} className="text-[10px] h-5 px-2 font-medium border-gray-200">
+                                {log.model_name || "N/A"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="px-4 py-2.5">
+                              <div className="flex items-center gap-1.5 max-w-[200px]" title={filename}>
+                                <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                <span className="text-xs text-gray-600 dark:text-gray-400 truncate">{filename}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-4 py-2.5">
+                              {getStatusBadge(log)}
+                            </TableCell>
+                            <TableCell className="px-4 py-2.5 text-right">
+                              <span className={`text-xs font-mono font-medium ${imported > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                                {imported}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-4 py-2.5 text-right">
+                              <span className={`text-xs font-mono font-medium ${skipped > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>
+                                {skipped}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-4 py-2.5 text-right">
+                              <span className={`text-xs font-mono font-medium ${errorCount > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                                {errorCount}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Pagination */}
+                {data.count > 0 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50">
+                    <p className="text-xs text-gray-500">
+                      Showing <span className="font-medium text-gray-900 dark:text-gray-200">{((page - 1) * 20) + 1}</span> to <span className="font-medium text-gray-900 dark:text-gray-200">{Math.min(page * 20, data.count)}</span> of <span className="font-medium text-gray-900 dark:text-gray-200">{data.count}</span> results
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={!data.previous}
+                        className="h-7 text-xs bg-white"
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setPage((p) => p + 1)}
+                        disabled={!data.next}
+                        className="h-7 text-xs bg-white"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
-

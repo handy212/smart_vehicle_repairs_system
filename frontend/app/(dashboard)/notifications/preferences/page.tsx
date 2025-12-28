@@ -76,14 +76,14 @@ export default function NotificationPreferencesPage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Link href="/notifications">
-          <Button variant="secondary">
+          <Button size="sm" className="h-9" variant="secondary">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Notification Preferences</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Notification Preferences</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Manage how and when you receive notifications
           </p>
         </div>
@@ -274,7 +274,7 @@ export default function NotificationPreferencesPage() {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={updateMutation.isPending}>
+          <Button type="submit" size="sm" className="h-9" disabled={updateMutation.isPending}>
             <Save className="w-4 h-4 mr-2" />
             {updateMutation.isPending ? "Saving..." : "Save Preferences"}
           </Button>

@@ -146,6 +146,18 @@ export interface StockAdjustment {
   notes?: string;
 }
 
+export interface InventoryTransaction {
+  id: number;
+  transaction_type: string;
+  quantity: number;
+  balance_after: number;
+  reference_number?: string;
+  notes?: string;
+  created_at: string;
+  created_by_name?: string;
+  reason?: string;
+}
+
 export const inventoryApi = {
   // Parts
   list: async (params?: {
@@ -203,6 +215,11 @@ export const inventoryApi = {
   lowStock: async (): Promise<Part[]> => {
     const response = await apiClient.get("/inventory/parts/low_stock/");
     return response.data.results || response.data;
+  },
+
+  getTransactions: async (id: number): Promise<InventoryTransaction[]> => {
+    const response = await apiClient.get(`/inventory/parts/${id}/transaction_history/`);
+    return response.data;
   },
 
   // Categories

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Plus, Search, Calendar, Clock, Trash2, Download, CalendarDays, X, ChevronDown, MoreVertical, Eye, Edit, Mail } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -24,6 +25,14 @@ import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/adva
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function AppointmentsPage() {
   const [search, setSearch] = useState("");
@@ -36,10 +45,10 @@ export default function AppointmentsPage() {
   const [newStatus, setNewStatus] = useState<string>("confirmed");
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const router = useRouter();
   const { hasPermission } = usePermissions();
 
   // Advanced filter options
@@ -314,57 +323,48 @@ export default function AppointmentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage appointments and scheduling
-          </p>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Appointments</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Appointments</h1>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="relative">
-            <Button
-             variant="secondary"
-              onClick={() => setShowActionsMenu(!showActionsMenu)}
-              className="dark:border-gray-700 dark:text-gray-200"
-            >
-              Actions
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
-            {showActionsMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowActionsMenu(false)}
-                />
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                  <div className="py-1">
-                    <button
-                      onClick={() => {
-                        handleExport();
-                        setShowActionsMenu(false);
-                      }}
-                      disabled={!data?.results || data.results.length === 0}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      Export CSV
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+              >
+                Actions
+                <ChevronDown className="w-3.5 h-3.5 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                onClick={() => handleExport()}
+                disabled={!data?.results || data.results.length === 0}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Link href="/appointments/calendar">
-            <Button variant="secondary">
-              <CalendarDays className="w-4 h-4 mr-2" />
+            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+              <CalendarDays className="w-3.5 h-3.5 mr-2" />
               Calendar View
             </Button>
           </Link>
           <PermissionGuard permission="create_appointments">
             <Link href="/appointments/new">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
+              <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                <Plus className="w-3.5 h-3.5 mr-2" />
                 New Appointment
               </Button>
             </Link>
@@ -376,8 +376,8 @@ export default function AppointmentsPage() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Search */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
             <Input
               type="text"
               placeholder="Search appointments..."
@@ -386,7 +386,7 @@ export default function AppointmentsPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 h-9"
+              className="pl-8 h-9 text-sm w-80 transition-all focus:w-full focus:max-w-md bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800"
             />
           </div>
 
@@ -451,11 +451,11 @@ export default function AppointmentsPage() {
               const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
               if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
               if (key.includes("_to")) return null;
-              
+
               const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
                 ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
                 : String(value);
-              
+
               const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
 
               return (
@@ -507,8 +507,8 @@ export default function AppointmentsPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>
+                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
+                    <TableHead className="w-[40px] pl-4">
                       <input
                         type="checkbox"
                         checked={bulkSelection.isAllSelected}
@@ -516,28 +516,31 @@ export default function AppointmentsPage() {
                           if (input) input.indeterminate = bulkSelection.isIndeterminate;
                         }}
                         onChange={bulkSelection.toggleSelectAll}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                     </TableHead>
                     <SortableHeader
                       field="appointment_number"
                       sortConfig={sortConfig}
                       onSort={handleSort}
+                      className="text-[10px] uppercase tracking-wider font-semibold text-gray-500"
                     >
-                      Appointment #
+                      Appt #
                     </SortableHeader>
                     <SortableHeader
                       field="customer__user__last_name"
                       sortConfig={sortConfig}
                       onSort={handleSort}
+                      className="text-[10px] uppercase tracking-wider font-semibold text-gray-500"
                     >
                       Customer
                     </SortableHeader>
-                    <TableHead>Vehicle</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-wider font-semibold text-gray-500">Vehicle</TableHead>
                     <SortableHeader
                       field="appointment_date"
                       sortConfig={sortConfig}
                       onSort={handleSort}
+                      className="text-[10px] uppercase tracking-wider font-semibold text-gray-500"
                     >
                       Date & Time
                     </SortableHeader>
@@ -545,6 +548,7 @@ export default function AppointmentsPage() {
                       field="service_type"
                       sortConfig={sortConfig}
                       onSort={handleSort}
+                      className="text-[10px] uppercase tracking-wider font-semibold text-gray-500"
                     >
                       Service Type
                     </SortableHeader>
@@ -552,6 +556,7 @@ export default function AppointmentsPage() {
                       field="priority"
                       sortConfig={sortConfig}
                       onSort={handleSort}
+                      className="text-[10px] uppercase tracking-wider font-semibold text-gray-500"
                     >
                       Priority
                     </SortableHeader>
@@ -559,31 +564,37 @@ export default function AppointmentsPage() {
                       field="status"
                       sortConfig={sortConfig}
                       onSort={handleSort}
+                      className="text-[10px] uppercase tracking-wider font-semibold text-gray-500"
                     >
                       Status
                     </SortableHeader>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-right text-[10px] uppercase tracking-wider font-semibold text-gray-500 pr-4">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.results.map((appointment) => (
-                    <TableRow key={appointment.id} className="transition-colors duration-150 hover:bg-gray-50">
-                      <TableCell>
+                    <TableRow
+                      key={appointment.id}
+                      className="hover:bg-gray-50/80 transition-colors cursor-pointer group"
+                      onDoubleClick={() => router.push(`/appointments/${appointment.id}`)}
+                    >
+                      <TableCell className="pl-4 py-2.5">
                         <input
                           type="checkbox"
                           checked={bulkSelection.isSelected(appointment.id)}
                           onChange={() => bulkSelection.toggleSelection(appointment.id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
+                      <TableCell className="font-mono text-xs font-medium py-2.5">
                         {appointment.appointment_number || "-"}
                       </TableCell>
-                      <TableCell>{appointment.customer_name || "N/A"}</TableCell>
-                      <TableCell>{appointment.vehicle_info || "N/A"}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="w-4 h-4 text-gray-400" />
+                      <TableCell className="py-2.5 text-sm">{appointment.customer_name || "N/A"}</TableCell>
+                      <TableCell className="py-2.5 text-sm">{appointment.vehicle_info || "N/A"}</TableCell>
+                      <TableCell className="py-2.5">
+                        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                          <Calendar className="w-3.5 h-3.5" />
                           <span>
                             {appointment.appointment_date
                               ? format(new Date(appointment.appointment_date), "MMM dd, yyyy")
@@ -591,91 +602,73 @@ export default function AppointmentsPage() {
                           </span>
                           {appointment.appointment_time && (
                             <>
-                              <Clock className="w-4 h-4 text-gray-400 ml-2" />
+                              <Clock className="w-3.5 h-3.5 ml-2" />
                               <span>{appointment.appointment_time}</span>
                             </>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="capitalize">
-                        {appointment.service_type?.replace("_", " ") || appointment.service_type || "-"}
+                      <TableCell className="capitalize py-2.5">
+                        <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
+                          {appointment.service_type?.replace("_", " ") || appointment.service_type || "-"}
+                        </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={getPriorityVariant(appointment.priority) as any}>
+                      <TableCell className="py-2.5">
+                        <Badge variant={getPriorityVariant(appointment.priority) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
                           {appointment.priority || "-"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusVariant(appointment.status) as any}>
+                      <TableCell className="py-2.5">
+                        <Badge variant={getStatusVariant(appointment.status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
                           {appointment.status?.replace("_", " ") || appointment.status || "-"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="relative flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setActionMenuOpen(actionMenuOpen === appointment.id ? null : appointment.id)}
-                            className="h-8 w-8 p-0 dark:hover:bg-gray-700"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                          {actionMenuOpen === appointment.id && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-10"
-                                onClick={() => setActionMenuOpen(null)}
-                              />
-                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                                <div className="py-1">
-                                  <Link
-                                    href={`/appointments/${appointment.id}`}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    onClick={() => setActionMenuOpen(null)}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                    View Details
-                                  </Link>
-                                  <Link
-                                    href={`/appointments/${appointment.id}/edit`}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    onClick={() => setActionMenuOpen(null)}
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                    Edit Appointment
-                                  </Link>
-                                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                  <button
-                                    onClick={() => {
-                                      // TODO: Implement send reminder
-                                      setActionMenuOpen(null);
-                                    }}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                  >
-                                    <Mail className="w-4 h-4" />
-                                    Send Reminder
-                                  </button>
-                                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                  <PermissionGuard permission="delete_appointments">
-                                    <button
-                                      onClick={() => {
-                                        if (window.confirm(`Are you sure you want to delete appointment "${appointment.appointment_number}"? This action cannot be undone.`)) {
-                                          handleDelete(appointment);
-                                        }
-                                        setActionMenuOpen(null);
-                                      }}
-                                      disabled={deleteMutation.isPending}
-                                      className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                      Delete Appointment
-                                    </button>
-                                  </PermissionGuard>
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
+                      <TableCell className="text-right py-2.5 pr-4">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 dark:hover:bg-gray-700 data-[state=open]:bg-gray-100 dark:data-[state=open]:bg-gray-800"
+                            >
+                              <span className="sr-only">Open menu</span>
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => router.push(`/appointments/${appointment.id}`)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <PermissionGuard permission="edit_appointments">
+                              <DropdownMenuItem onClick={() => router.push(`/appointments/${appointment.id}/edit`)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Appointment
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => { }}>
+                              <Mail className="mr-2 h-4 w-4" />
+                              Send Reminder
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <PermissionGuard permission="delete_appointments">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  if (window.confirm(`Are you sure you want to delete appointment "${appointment.appointment_number}"? This action cannot be undone.`)) {
+                                    handleDelete(appointment);
+                                  }
+                                }}
+                                className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20"
+                                disabled={deleteMutation.isPending}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete Appointment
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -687,7 +680,7 @@ export default function AppointmentsPage() {
               <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No appointments found.</p>
               <Link href="/appointments/new">
-                <Button className="mt-4"variant="secondary">
+                <Button className="mt-4" variant="secondary">
                   <Plus className="w-4 h-4 mr-2" />
                   Schedule First Appointment
                 </Button>
@@ -703,7 +696,7 @@ export default function AppointmentsPage() {
               </div>
               <div className="flex space-x-2">
                 <Button
-                 variant="secondary"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!data.previous}
@@ -711,7 +704,7 @@ export default function AppointmentsPage() {
                   Previous
                 </Button>
                 <Button
-                 variant="secondary"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!data.next}
@@ -745,7 +738,7 @@ export default function AppointmentsPage() {
           <DialogFooter>
             <Button
               type="button"
-             variant="secondary"
+              variant="secondary"
               onClick={() => setShowStatusDialog(false)}
             >
               Cancel

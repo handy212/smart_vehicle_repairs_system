@@ -634,51 +634,20 @@ class EstimateViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def pdf(self, request, pk=None):
-        """Generate PDF for estimate"""
-        from django.template.loader import render_to_string
-        from django.http import HttpResponse
-        import traceback
+        """Generate professional PDF for estimate using new print service"""
+        from apps.core.services.print_service import generate_estimate_pdf
+        from django.utils import timezone
         
         estimate = self.get_object()
         
         try:
-            from weasyprint import HTML
-            
-            # Prepare context
-            context = {
-                'estimate': estimate,
-                'print_generated_at': timezone.now(),
-                'print_branch': estimate.branch or (estimate.work_order.branch if estimate.work_order else None),
-            }
-            
-            # Render HTML template
-            html_string = render_to_string('billing/estimate_print.html', context, request=request)
-            
-            # Generate PDF
-            pdf = HTML(string=html_string).write_pdf()
-            
-            # Return PDF response
-            response = HttpResponse(pdf, content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="estimate_{estimate.estimate_number}.pdf"'
-            return response
-            
-        except ImportError as e:
-            logger.error(f"WeasyPrint import error: {str(e)}")
-            return Response(
-                {"error": "PDF generation requires WeasyPrint. Please install it: pip install weasyprint"},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-        except AttributeError as e:
-            # Handle WeasyPrint/pycparser compatibility issues
-            logger.error(f"WeasyPrint compatibility error: {str(e)}\n{traceback.format_exc()}")
-            return Response(
-                {"error": "PDF generation is currently unavailable due to a dependency issue. Please use the Print button and save as PDF from your browser."},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
+            # Add print timestamp to context
+            estimate.print_generated_at = timezone.now()
+            return generate_estimate_pdf(estimate, branch=estimate.branch)
         except Exception as e:
-            logger.error(f"PDF generation error: {str(e)}\n{traceback.format_exc()}")
+            logger.error(f"PDF generation error: {e}", exc_info=True)
             return Response(
-                {"error": f"Error generating PDF: {str(e)}. Please use the Print button and save as PDF from your browser."},
+                {"error": f"Failed to generate PDF: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
@@ -827,6 +796,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # If draft, promote to sent. If proforma, keep as proforma but mark sent.
         if invoice.status == 'draft':
             invoice.status = 'sent'
         
@@ -851,8 +821,14 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         """Mark invoice as viewed by customer"""
         invoice = self.get_object()
         
-        if invoice.status == 'sent' and not invoice.viewed_at:
-            invoice.status = 'viewed'
+        # Mark viewed if sent or proforma
+        if invoice.status in ['sent', 'proforma'] and not invoice.viewed_at:
+            if invoice.status == 'sent':
+                invoice.status = 'viewed'
+            # If proforma, we might want to keep it as proforma but just set viewed_at
+            # But standard logic often promotes 'sent' to 'viewed'. 
+            # Let's keep proforma as proforma to preserve the type.
+            
             invoice.viewed_at = timezone.now()
             invoice.save()
         
@@ -893,7 +869,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
     def unpaid(self, request):
         """Get unpaid invoices"""
         unpaid = self.queryset.filter(
-            status__in=['sent', 'viewed', 'overdue', 'partial']
+            status__in=['sent', 'viewed', 'overdue', 'partial', 'proforma']
         ).exclude(
             status='void'
         )
@@ -912,7 +888,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         today = timezone.now().date()
         overdue = self.queryset.filter(
             due_date__lt=today,
-            status__in=['sent', 'viewed', 'overdue', 'partial']
+            status__in=['sent', 'viewed', 'overdue', 'partial', 'proforma']
         ).exclude(
             status__in=['paid', 'void', 'refunded']
         )
@@ -974,6 +950,54 @@ class InvoiceViewSet(viewsets.ModelViewSet):
                 {"error": f"Error generating PDF: {str(e)}. Please use the Print button and save as PDF from your browser."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+    
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Generate professional PDF for invoice using new print service"""
+        from apps.core.services.print_service import generate_invoice_pdf
+        from django.utils import timezone
+        
+        invoice = self.get_object()
+        
+        try:
+            # Add print timestamp to context
+            invoice.print_generated_at = timezone.now()
+            return generate_invoice_pdf(invoice, branch=invoice.branch)
+        except Exception as e:
+            logger.error(f"PDF generation error: {e}", exc_info=True)
+            return Response(
+                {"error": f"Failed to generate PDF: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def convert_to_invoice(self, request, pk=None):
+        """Convert proforma invoice to standard invoice"""
+        invoice = self.get_object()
+        
+        # Validate status
+        if invoice.status != 'proforma':
+            return Response(
+                {"error": "Only proforma invoices can be converted to standard invoices"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generate new invoice number (standard sequence)
+        # Clear the existing invoice_number so save() will generate a new one
+        old_number = invoice.invoice_number
+        invoice.invoice_number = ''
+        
+        # Update status to draft (will be treated as a new invoice)
+        invoice.status = 'draft'
+        
+        # Save will auto-generate new standard invoice number
+        invoice.save()
+        
+        serializer = self.get_serializer(invoice)
+        return Response({
+            "message": f"Proforma {old_number} converted to invoice {invoice.invoice_number} successfully",
+            "invoice": serializer.data
+        })
     
     @action(detail=False, methods=['get'])
     def aging_report(self, request):
@@ -1423,6 +1447,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Generate PDF for payment receipt"""
+        from apps.core.services.print_service import generate_receipt_pdf
+        
+        payment = self.get_object()
+        return generate_receipt_pdf(payment)
 
 
 class TaxConfigurationView(APIView):
@@ -2676,6 +2708,154 @@ class TillViewSet(viewsets.ModelViewSet):
             )
         
         return Response(CashierTillSerializer(till).data)
+
+
+class BranchPLComparisonViewSet(viewsets.ViewSet):
+    """
+    Branch Profit & Loss Comparison Report
+    Compare P&L across multiple branches for performance analysis
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @action(detail=False, methods=['get'])
+    def compare(self, request):
+        """
+        Compare P&L across branches
+        
+        Query params:
+        - from_date: Start date (YYYY-MM-DD), defaults to beginning of month
+        - to_date: End date (YYYY-MM-DD), defaults to today
+        - branches: Comma-separated branch IDs (optional, defaults to user's accessible branches)
+        """
+        from apps.branches.models import Branch
+        from apps.billing.accounting_service import AccountingService
+        from decimal import Decimal
+        
+        # Parse dates
+        from_date_str = request.query_params.get('from_date')
+        to_date_str = request.query_params.get('to_date')
+        
+        if not from_date_str or not to_date_str:
+            to_date = timezone.now().date()
+            from_date = to_date.replace(day=1)
+        else:
+            from_date = timezone.datetime.strptime(from_date_str, '%Y-%m-%d').date()
+            to_date = timezone.datetime.strptime(to_date_str, '%Y-%m-%d').date()
+        
+        # Get branches to compare
+        branch_ids_str = request.query_params.get('branches')
+        if branch_ids_str:
+            branch_ids = [int(bid) for bid in branch_ids_str.split(',')]
+            branches = Branch.objects.filter(id__in=branch_ids, is_active=True)
+        else:
+            # Use user's accessible branches
+            from apps.branches.utils import filter_queryset_for_user_branches
+            branches = filter_queryset_for_user_branches(
+                Branch.objects.filter(is_active=True),
+                request.user,
+                request,
+                use_active_branch=False
+            )
+        
+        results = []
+        totals = {
+            'revenue': Decimal('0'),
+            'cogs': Decimal('0'),
+            'gross_profit': Decimal('0'),
+            'operating_expenses': Decimal('0'),
+            'net_income': Decimal('0')
+        }
+        
+        for branch in branches:
+            # Get Django Ledger entity for this branch
+            entity = AccountingService.get_entity(branch)
+            
+            if not entity:
+                # Skip branches without accounting setup
+                continue
+            
+            try:
+                # Get income statement for this branch
+                income_statement = entity.get_income_statement(
+                    user_model=request.user,
+                    from_date=from_date,
+                    to_date=to_date
+                )
+                
+                data = income_statement.get_report_data()
+                
+                # Extract key metrics
+                revenue = Decimal(str(data.get('operating', {}).get('net_operating_revenue', 0)))
+                cogs = abs(Decimal(str(data.get('operating', {}).get('net_cogs', 0))))
+                gross_profit = Decimal(str(data.get('operating', {}).get('gross_profit', 0)))
+                operating_expenses = abs(Decimal(str(data.get('operating', {}).get('net_operating_expenses', 0))))
+                net_income = Decimal(str(data.get('net_income', 0)))
+                
+                # Calculate margins
+                gross_margin = (gross_profit / revenue * 100) if revenue > 0 else Decimal('0')
+                net_margin = (net_income / revenue * 100) if revenue > 0 else Decimal('0')
+                
+                branch_data = {
+                    'branch_id': branch.id,
+                    'branch_name': branch.name,
+                    'revenue': float(revenue),
+                    'cogs': float(cogs),
+                    'gross_profit': float(gross_profit),
+                    'gross_margin_percent': float(gross_margin),
+                    'operating_expenses': float(operating_expenses),
+                    'net_income': float(net_income),
+                    'net_margin_percent': float(net_margin)
+                }
+                
+                results.append(branch_data)
+                
+                # Add to totals
+                totals['revenue'] += revenue
+                totals['cogs'] += cogs
+                totals['gross_profit'] += gross_profit
+                totals['operating_expenses'] += operating_expenses
+                totals['net_income'] += net_income
+                
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error(f'Error getting P&L for branch {branch.name}: {e}', exc_info=True)
+                
+                # Add branch with zero values
+                results.append({
+                    'branch_id': branch.id,
+                    'branch_name': branch.name,
+                    'revenue': 0,
+                    'cogs': 0,
+                    'gross_profit': 0,
+                    'gross_margin_percent': 0,
+                    'operating_expenses': 0,
+                    'net_income': 0,
+                    'net_margin_percent': 0,
+                    'error': str(e)
+                })
+        
+        # Calculate total margins
+        total_gross_margin = (totals['gross_profit'] / totals['revenue'] * 100) if totals['revenue'] > 0 else Decimal('0')
+        total_net_margin = (totals['net_income'] / totals['revenue'] * 100) if totals['revenue'] > 0 else Decimal('0')
+        
+        return Response({
+            'period': {
+                'from_date': str(from_date),
+                'to_date': str(to_date)
+            },
+            'branches': sorted(results, key=lambda x: x['revenue'], reverse=True),
+            'totals': {
+                'revenue': float(totals['revenue']),
+                'cogs': float(totals['cogs']),
+                'gross_profit': float(totals['gross_profit']),
+                'gross_margin_percent': float(total_gross_margin),
+                'operating_expenses': float(totals['operating_expenses']),
+                'net_income': float(totals['net_income']),
+                'net_margin_percent': float(total_net_margin)
+            },
+            'branch_count': len(results)
+        })
+
 
 
 class RefundViewSet(viewsets.ModelViewSet):

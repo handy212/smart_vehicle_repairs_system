@@ -32,26 +32,30 @@ export function useToast() {
     [addToast]
   );
 
+  type ToastOptions = {
+    title?: string;
+    description?: string;
+    variant?: "default" | "destructive" | "success" | "warning" | "info";
+    duration?: number;
+  };
+
   const toast = useCallback(
-    (options: {
-      title?: string;
-      description?: string;
-      variant?: "default" | "destructive" | "success" | "warning" | "info";
-    }) => {
+    ({ title, description, variant, duration }: ToastOptions) => {
       const type =
-        options.variant === "destructive"
+        variant === "destructive"
           ? "error"
-          : options.variant === "success"
+          : variant === "success"
             ? "success"
-            : options.variant === "warning"
+            : variant === "warning"
               ? "warning"
-              : options.variant === "info"
+              : variant === "info"
                 ? "info"
                 : "info";
       return addToast({
-        title: options.title,
-        message: options.description || options.title || "",
+        title,
+        message: description || title || "",
         type,
+        duration,
       });
     },
     [addToast]

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { appointmentsApi } from "@/lib/api/appointments";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useMemo } from "react";
@@ -102,11 +102,11 @@ export default function AppointmentCalendarPage() {
           start: eventDate.toISOString(),
           end: appointment.end_time
             ? new Date(
-                new Date(eventDate).setHours(
-                  parseInt(appointment.end_time.split(":")[0]),
-                  parseInt(appointment.end_time.split(":")[1])
-                )
-              ).toISOString()
+              new Date(eventDate).setHours(
+                parseInt(appointment.end_time.split(":")[0]),
+                parseInt(appointment.end_time.split(":")[1])
+              )
+            ).toISOString()
             : new Date(eventDate.getTime() + (appointment.estimated_duration || 60) * 60000).toISOString(),
           backgroundColor,
           borderColor,
@@ -151,25 +151,31 @@ export default function AppointmentCalendarPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <Link href="/appointments" className="hover:text-blue-600 transition-colors">Appointments</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Calendar</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Appointment Calendar</h1>
+        </div>
+        <div className="flex items-center space-x-2">
           <Link href="/appointments">
-            <Button variant="secondary">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to List
+            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+              <ArrowLeft className="w-3.5 h-3.5 mr-2" />
+              List View
             </Button>
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Appointment Calendar</h1>
-            <p className="text-sm text-gray-500 mt-1">View and manage appointments in calendar format</p>
-          </div>
+          <Link href="/appointments/new">
+            <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+              <Plus className="w-3.5 h-3.5 mr-2" />
+              New Appointment
+            </Button>
+          </Link>
         </div>
-        <Link href="/appointments/new">
-          <Button>
-            <CalendarIcon className="w-4 h-4 mr-2" />
-            New Appointment
-          </Button>
-        </Link>
       </div>
 
       {/* Calendar */}

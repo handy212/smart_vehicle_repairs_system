@@ -23,9 +23,10 @@ import DiagnosisTab from "./components/DiagnosisTab";
 import WorkflowActions from "./components/WorkflowActions";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { usePrint } from "@/lib/hooks/usePrint";
 
 // Workflow Progress Indicator Component
-function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusChange, onStartRepairs }: { 
+function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusChange, onStartRepairs }: {
   status: string;
   workOrderId: number;
   workOrder: any;
@@ -82,7 +83,7 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
           Status: <span className="font-semibold capitalize text-gray-900 dark:text-gray-100">{status.replace('_', ' ')}</span>
         </span>
-        <Badge variant={getStatusVariantForProgress(status) as any} className="text-xs px-2 py-0.5">
+        <Badge variant={getStatusVariantForProgress(status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
           {status?.replace("_", " ") || status}
         </Badge>
       </div>
@@ -91,38 +92,35 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
           {workflowSteps.map((step, index) => {
             const stepStatus = getStepStatus(index);
             const isLast = index === workflowSteps.length - 1;
-            
+
             return (
               <div key={step.key} className="flex items-center flex-shrink-0">
                 <div className="flex flex-col items-center">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
-                      stepStatus === 'completed'
-                        ? 'bg-green-500 text-white'
-                        : stepStatus === 'current'
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${stepStatus === 'completed'
+                      ? 'bg-green-500 text-white'
+                      : stepStatus === 'current'
                         ? 'bg-blue-600 text-white ring-2 ring-blue-200 dark:ring-blue-900'
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                    }`}
+                      }`}
                   >
                     {stepStatus === 'completed' ? '✓' : step.icon}
                   </div>
                   <span
-                    className={`text-xs mt-1 text-center whitespace-nowrap max-w-[70px] truncate ${
-                      stepStatus === 'current'
-                        ? 'font-semibold text-blue-600 dark:text-blue-400'
-                        : stepStatus === 'completed'
+                    className={`text-xs mt-1 text-center whitespace-nowrap max-w-[70px] truncate ${stepStatus === 'current'
+                      ? 'font-semibold text-blue-600 dark:text-blue-400'
+                      : stepStatus === 'completed'
                         ? 'text-gray-600 dark:text-gray-400'
                         : 'text-gray-400 dark:text-gray-500'
-                    }`}
+                      }`}
                   >
                     {step.label}
                   </span>
                 </div>
                 {!isLast && (
                   <div
-                    className={`h-0.5 w-6 mx-1 ${
-                      stepStatus === 'completed' ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
-                    }`}
+                    className={`h-0.5 w-6 mx-1 ${stepStatus === 'completed' ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
+                      }`}
                   />
                 )}
               </div>
@@ -171,6 +169,7 @@ export default function WorkOrderDetailPage() {
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
+  const { downloadPDF, isDownloading } = usePrint();
 
   const { data: workOrder, isLoading, error } = useQuery({
     queryKey: ["workorder", workOrderId],
@@ -246,77 +245,84 @@ export default function WorkOrderDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="secondary" onClick={() => router.back()}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
+      {/* Header */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-              Work Order #{workOrder.work_order_number}
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+              <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+              <span>/</span>
+              <Link href="/workorders" className="hover:text-blue-600 transition-colors">Work Orders</Link>
+              <span>/</span>
+              <span className="text-gray-900 dark:text-gray-100 font-medium">#{workOrder.work_order_number}</span>
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+              {workOrder.customer_name || "Customer"} - {workOrder.vehicle_info || "Vehicle"}
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {workOrder.customer_name || "Customer"}
-            </p>
           </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          {/* Print Dropdown */}
-          <div className="relative">
-            <Button 
-             variant="secondary" 
-              onClick={() => setShowPrintMenu(!showPrintMenu)}
-              className="flex items-center"
-            >
-              <Printer className="w-4 h-4 mr-2" />
-              Print
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
-            {showPrintMenu && (
-              <>
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={() => setShowPrintMenu(false)}
-                />
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20">
-                  <Link 
-                    href={`/workorders/${workOrderId}/print`} 
-                    target="_blank"
-                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() => setShowPrintMenu(false)}
-                  >
-                    <FileText className="w-4 h-4 inline mr-2" />
-                    Print Work Order
-                  </Link>
-                  <Link 
-                    href={`/workorders/${workOrderId}/jobcard`} 
-                    target="_blank"
-                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                    onClick={() => setShowPrintMenu(false)}
-                  >
-                    <FileText className="w-4 h-4 inline mr-2" />
-                    Print Job Card
-                  </Link>
-                </div>
-              </>
-            )}
-          </div>
-          <PermissionGuard permission="edit_workorders">
-            <Link href={`/workorders/${workOrderId}/edit`}>
-              <Button>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Work Order
+          <div className="flex items-center space-x-2">
+            {/* Print Dropdown */}
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPrintMenu(!showPrintMenu)}
+                className="flex items-center h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+              >
+                <Printer className="w-3.5 h-3.5 mr-2" />
+                Print
+                <ChevronDown className="w-3.5 h-3.5 ml-2" />
               </Button>
-            </Link>
-          </PermissionGuard>
+              {showPrintMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowPrintMenu(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                    <div
+                      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                      onClick={() => {
+                        setShowPrintMenu(false);
+                        downloadPDF({
+                          documentType: 'work_order',
+                          documentId: workOrderId,
+                          documentNumber: workOrder.work_order_number
+                        });
+                      }}
+                    >
+                      <FileText className="w-4 h-4 inline mr-2" />
+                      {isDownloading ? 'Generating PDF...' : 'Print Work Order (PDF)'}
+                    </div>
+                    <Link
+                      href={`/workorders/${workOrderId}/jobcard`}
+                      target="_blank"
+                      className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      onClick={() => setShowPrintMenu(false)}
+                    >
+                      <FileText className="w-4 h-4 inline mr-2" />
+                      Print Job Card
+                    </Link>
+                  </div>
+                </>
+              )}
+            </div>
+            <PermissionGuard permission="edit_workorders">
+              <Link href={`/workorders/${workOrderId}/edit`}>
+                <Button size="sm" className="h-9">
+                  <Edit className="w-3.5 h-3.5 mr-2" />
+                  Edit Order
+                </Button>
+              </Link>
+            </PermissionGuard>
+          </div>
         </div>
       </div>
 
       {/* Workflow Progress Indicator & Next Action - Combined */}
       <Card>
         <CardContent className="py-4 px-4">
-          <WorkflowProgressIndicator 
+          <WorkflowProgressIndicator
             status={workOrder.status}
             workOrderId={workOrderId}
             workOrder={workOrder}
@@ -373,17 +379,17 @@ export default function WorkOrderDetailPage() {
         </TabsContent>
 
         <TabsContent value="parts" className="mt-6">
-          <WorkOrderPartsTab 
-            workOrderId={workOrderId} 
-            parts={parts} 
+          <WorkOrderPartsTab
+            workOrderId={workOrderId}
+            parts={parts}
             onRefresh={refreshData}
           />
         </TabsContent>
 
         <TabsContent value="notes" className="mt-6">
-          <WorkOrderNotesTab 
-            workOrderId={workOrderId} 
-            notes={notes} 
+          <WorkOrderNotesTab
+            workOrderId={workOrderId}
+            notes={notes}
             onRefresh={refreshData}
           />
         </TabsContent>
@@ -393,8 +399,8 @@ export default function WorkOrderDetailPage() {
         </TabsContent>
 
         <TabsContent value="diagnosis" className="mt-6">
-          <DiagnosisTab 
-            workOrderId={workOrderId} 
+          <DiagnosisTab
+            workOrderId={workOrderId}
             workOrder={workOrder}
             onRefresh={refreshData}
           />
@@ -412,7 +418,7 @@ export default function WorkOrderDetailPage() {
               <div className="relative">
                 {/* Timeline line */}
                 <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-                
+
                 <div className="space-y-6 pl-8">
                   {/* Work Order Created */}
                   {workOrder.created_at && (
@@ -425,8 +431,8 @@ export default function WorkOrderDetailPage() {
                         </p>
                         {workOrder.created_by && (
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            Created by: {typeof workOrder.created_by === 'object' ? 
-                              (workOrder.created_by.first_name + ' ' + workOrder.created_by.last_name) : 
+                            Created by: {typeof workOrder.created_by === 'object' ?
+                              (workOrder.created_by.first_name + ' ' + workOrder.created_by.last_name) :
                               'System'}
                           </p>
                         )}
@@ -495,9 +501,8 @@ export default function WorkOrderDetailPage() {
 
                   {(workOrder as any).quality_check_at && (
                     <div className="relative flex items-start">
-                      <div className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 shadow-sm ${
-                        (workOrder as any).quality_check_passed ? 'bg-green-500' : 'bg-red-500'
-                      }`}></div>
+                      <div className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 shadow-sm ${(workOrder as any).quality_check_passed ? 'bg-green-500' : 'bg-red-500'
+                        }`}></div>
                       <div className="flex-1 pt-0.5">
                         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                           Quality Check {(workOrder as any).quality_check_passed ? 'Passed' : 'Failed'}
@@ -531,15 +536,14 @@ export default function WorkOrderDetailPage() {
                         .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                         .map((note: any) => (
                           <div key={note.id} className="relative flex items-start">
-                            <div className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 shadow-sm ${
-                              note.note_type === 'customer' ? 'bg-blue-400' :
+                            <div className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 shadow-sm ${note.note_type === 'customer' ? 'bg-blue-400' :
                               note.is_important ? 'bg-red-500' : 'bg-gray-400'
-                            }`}></div>
+                              }`}></div>
                             <div className="flex-1 pt-0.5">
                               <div className="flex items-center gap-2 mb-1">
                                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                  {note.note_type === 'customer' ? 'Customer Note' : 
-                                   note.is_important ? 'Important Note' : 'Internal Note'}
+                                  {note.note_type === 'customer' ? 'Customer Note' :
+                                    note.is_important ? 'Important Note' : 'Internal Note'}
                                 </p>
                               </div>
                               <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">{note.note}</p>

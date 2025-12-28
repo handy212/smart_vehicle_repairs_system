@@ -40,6 +40,7 @@ export default function RoadsideMap({ latitude, longitude, address }: RoadsideMa
     return (
         <div className="h-[300px] w-full rounded-xl overflow-hidden shadow-inner border dark:border-gray-700 relative z-0">
             <MapContainer
+                key={`${latitude}-${longitude}`}
                 center={position}
                 zoom={15}
                 style={{ height: "100%", width: "100%" }}

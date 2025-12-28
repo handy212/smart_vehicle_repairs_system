@@ -614,6 +614,197 @@ class PartViewSet(viewsets.ModelViewSet):
                 request=request
             )
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['get'])
+    def inventory_accounting_report(self, request):
+        """
+        Comprehensive Inventory Accounting Report
+        
+        Query params:
+        - date_from: Start date (YYYY-MM-DD), defaults to beginning of current month
+        - date_to: End date (YYYY-MM-DD), defaults to today
+        - category: Filter by category ID
+        - include_inactive: Include inactive parts (default: false)
+        """
+        from django.db.models import ExpressionWrapper, DecimalField
+        from datetime import datetime, timedelta
+        
+        # Date filtering
+        date_from_str = request.query_params.get('date_from')
+        date_to_str = request.query_params.get('date_to')
+        
+        if not date_from_str:
+            # Default to beginning of current month
+            today = timezone.now().date()
+            date_from = today.replace(day=1)
+        else:
+            date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+        
+        if not date_to_str:
+            date_to = timezone.now().date()
+        else:
+            date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+        
+        # Part filtering
+        parts = self.queryset
+        
+        if request.query_params.get('include_inactive', 'false').lower() != 'true':
+            parts = parts.filter(is_active=True)
+        
+        category_id = request.query_params.get('category')
+        if category_id:
+            parts = parts.filter(category_id=category_id)
+        
+        # Calculate inventory metrics
+        total_parts = parts.count()
+        total_quantity = parts.aggregate(total=Sum('quantity_in_stock'))['total'] or 0
+        
+        # Calculate inventory value
+        total_cost_value = Decimal('0.00')
+        total_selling_value = Decimal('0.00')
+        potential_profit = Decimal('0.00')
+        
+        for part in parts:
+            cost_val = part.cost_price * part.quantity_in_stock if part.cost_price else Decimal('0')
+            sell_val = part.selling_price * part.quantity_in_stock if part.selling_price else Decimal('0')
+            
+            total_cost_value += cost_val
+            total_selling_value += sell_val
+            potential_profit += (sell_val - cost_val)
+        
+        # Get COGS for the period
+        transactions = InventoryTransaction.objects.filter(
+            transaction_type='sale',
+            transaction_date__date__gte=date_from,
+            transaction_date__date__lte=date_to
+        ).select_related('part')
+        
+        cogs = Decimal('0.00')
+        units_sold = 0
+        
+        for txn in transactions:
+            if txn.unit_cost:
+                cogs += abs(txn.quantity) * txn.unit_cost
+            elif txn.part and txn.part.cost_price:
+                cogs += abs(txn.quantity) * txn.part.cost_price
+            units_sold += abs(txn.quantity)
+        
+        # Calculate turnover ratio
+        avg_inventory_value = total_cost_value  # Simplified - should be (beginning + ending) / 2
+        inventory_turnover = (cogs / avg_inventory_value) if avg_inventory_value > 0 else Decimal('0')
+        
+        # Days inventory outstanding
+        days_in_period = (date_to - date_from).days or 1
+        dio = (avg_inventory_value / cogs * days_in_period) if cogs > 0 else Decimal('0')
+        
+        # Category breakdown
+        by_category = []
+        categories = PartCategory.objects.filter(is_active=True)
+        
+        for category in categories:
+            category_parts = parts.filter(category=category)
+            if not category_parts.exists():
+                continue
+            
+            cat_qty = 0
+            cat_cost_value = Decimal('0.00')
+            cat_sell_value = Decimal('0.00')
+            
+            for part in category_parts:
+                cat_qty += part.quantity_in_stock
+                if part.cost_price:
+                    cat_cost_value += part.cost_price * part.quantity_in_stock
+                if part.selling_price:
+                    cat_sell_value += part.selling_price * part.quantity_in_stock
+            
+            by_category.append({
+                'category_id': category.id,
+                'category_name': category.name,
+                'parts_count': category_parts.count(),
+                'total_quantity': cat_qty,
+                'cost_value': float(cat_cost_value),
+                'selling_value': float(cat_sell_value),
+                'potential_profit': float(cat_sell_value - cat_cost_value),
+                'margin_percent': float((cat_sell_value - cat_cost_value) / cat_sell_value * 100) if cat_sell_value > 0 else 0
+            })
+        
+        # Stock aging analysis
+        aging_categories = {
+            '0-90_days': {'count': 0, 'value': Decimal('0')},
+            '91-180_days': {'count': 0, 'value': Decimal('0')},
+            '181-365_days': {'count': 0, 'value': Decimal('0')},
+            'over_365_days': {'count': 0, 'value': Decimal('0')},
+        }
+        
+        today = timezone.now().date()
+        for part in parts:
+            if part.last_sold_date:
+                days_since_sale = (today - part.last_sold_date).days
+            elif part.created_at:
+                days_since_sale = (today - part.created_at.date()).days
+            else:
+                days_since_sale = 0
+            
+            part_value = part.total_value
+            
+            if days_since_sale <= 90:
+                aging_categories['0-90_days']['count'] += 1
+                aging_categories['0-90_days']['value'] += part_value
+            elif days_since_sale <= 180:
+                aging_categories['91-180_days']['count'] += 1
+                aging_categories['91-180_days']['value'] += part_value
+            elif days_since_sale <= 365:
+                aging_categories['181-365_days']['count'] += 1
+                aging_categories['181-365_days']['value'] += part_value
+            else:
+                aging_categories['over_365_days']['count'] += 1
+                aging_categories['over_365_days']['value'] += part_value
+        
+        return Response({
+            'period': {
+                'date_from': str(date_from),
+                'date_to': str(date_to),
+                'days': days_in_period
+            },
+            'inventory_summary': {
+                'total_parts': total_parts,
+                'total_quantity': total_quantity,
+                'total_cost_value': float(total_cost_value),
+                'total_selling_value': float(total_selling_value),
+                'potential_profit': float(potential_profit),
+                'potential_margin_percent': float(potential_profit / total_selling_value * 100) if total_selling_value > 0 else 0
+            },
+            'cogs_analysis': {
+                'cogs': float(cogs),
+                'units_sold': units_sold,
+                'avg_cost_per_unit': float(cogs / units_sold) if units_sold > 0 else 0,
+                'inventory_turnover_ratio': float(inventory_turnover),
+                'days_inventory_outstanding': float(dio)
+            },
+            'by_category': sorted(by_category, key=lambda x: x['cost_value'], reverse=True),
+            'stock_aging': [
+                {
+                    'age_range': '0-90 days',
+                    'parts_count': aging_categories['0-90_days']['count'],
+                    'value': float(aging_categories['0-90_days']['value'])
+                },
+                {
+                    'age_range': '91-180 days',
+                    'parts_count': aging_categories['91-180_days']['count'],
+                    'value': float(aging_categories['91-180_days']['value'])
+                },
+                {
+                    'age_range': '181-365 days',
+                    'parts_count': aging_categories['181-365_days']['count'],
+                    'value': float(aging_categories['181-365_days']['value'])
+                },
+                {
+                    'age_range': 'Over 365 days',
+                    'parts_count': aging_categories['over_365_days']['count'],
+                    'value': float(aging_categories['over_365_days']['value'])
+                }
+            ]
+        })
 
 
 class PurchaseOrderViewSet(viewsets.ModelViewSet):
@@ -749,6 +940,14 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         )
         serializer = PurchaseOrderListSerializer(orders, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Generate PDF for purchase order"""
+        from apps.core.services.print_service import generate_purchase_order_pdf
+        
+        po = self.get_object()
+        return generate_purchase_order_pdf(po)
 
 
 class PurchaseOrderItemViewSet(viewsets.ModelViewSet):

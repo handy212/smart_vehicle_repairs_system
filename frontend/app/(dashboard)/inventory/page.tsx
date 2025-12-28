@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Package, AlertTriangle, Trash2, Download, Upload, ChevronDown, MoreVertical, Eye, Edit } from "lucide-react";
+import { Plus, Search, Package, AlertTriangle, Trash2, Download, Upload, ChevronDown, MoreVertical, Eye, Edit, X } from "lucide-react";
 import { ImportDialog } from "@/components/ui/import-dialog";
 import { downloadPartTemplate } from "@/lib/utils/import-templates";
 import { exportPartsForImport } from "@/lib/utils/export-templates";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
 import { exportToCSV } from "@/lib/utils/export";
@@ -20,13 +21,19 @@ import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function InventoryPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
@@ -90,42 +97,36 @@ export default function InventoryPage() {
 
   const handleExport = () => {
     if (!data?.results || data.results.length === 0) {
-      toast({
-        title: "No Data",
-        description: "No parts to export",
-        variant: "destructive",
-      });
+      toast({ title: "No Data", description: "No parts to export", variant: "destructive" });
       return;
     }
-
-    exportToCSV(
-      data.results,
-      "inventory",
-      [
-        { key: "part_number", label: "Part Number" },
-        { key: "name", label: "Name" },
-        { key: "category", label: "Category" },
-        { key: "quantity_in_stock", label: "Stock" },
-        { key: "minimum_stock", label: "Min Stock" },
-        { key: "cost_price", label: "Cost Price" },
-        { key: "selling_price", label: "Selling Price" },
-        { key: "is_active", label: "Status" },
-      ]
-    );
-
+    exportToCSV(data.results, "inventory", [
+      { key: "part_number", label: "Part Number" },
+      { key: "name", label: "Name" },
+      { key: "category", label: "Category" },
+      { key: "quantity_in_stock", label: "Stock" },
+      { key: "minimum_stock", label: "Min Stock" },
+      { key: "cost_price", label: "Cost Price" },
+      { key: "selling_price", label: "Selling Price" },
+      { key: "is_active", label: "Status" },
+    ]);
     toast({ title: "Success", description: "Inventory exported successfully" });
   };
 
+  const isLowStock = (part: any) => part.quantity_in_stock <= part.minimum_stock;
+  const hasActiveFilters = !!search;
+  const clearFilters = () => { setSearch(""); setPage(1); };
+
   if (isLoading && !data) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="flex justify-between items-center">
           <div>
-            <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-2"></div>
-            <div className="h-5 w-64 bg-gray-200 rounded animate-pulse"></div>
+            <div className="h-7 w-36 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-1"></div>
+            <div className="h-4 w-56 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
           </div>
         </div>
-        <Card>
+        <Card className="border-t shadow-sm">
           <CardContent className="pt-6">
             <TableSkeleton rows={8} columns={8} />
           </CardContent>
@@ -142,86 +143,49 @@ export default function InventoryPage() {
     );
   }
 
-  const isLowStock = (part: any) => {
-    return part.quantity_in_stock <= part.minimum_stock;
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex justify-between items-center pt-2">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inventory</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage parts and inventory
-          </p>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Inventory</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Inventory</h1>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="relative">
-            <Button
-             variant="secondary"
-              onClick={() => setShowActionsMenu(!showActionsMenu)}
-              className="dark:border-gray-700 dark:text-gray-200"
-            >
-              Actions
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
-            {showActionsMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowActionsMenu(false)}
-                />
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                  <div className="py-1">
-                    <PermissionGuard permission="import_inventory">
-                      <button
-                        onClick={() => {
-                          setShowImportDialog(true);
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Import CSV
-                      </button>
-                    </PermissionGuard>
-                    <PermissionGuard permission="export_inventory">
-                      <button
-                        onClick={() => {
-                          handleExport();
-                          setShowActionsMenu(false);
-                        }}
-                        disabled={!data?.results || data.results.length === 0}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        Export CSV
-                      </button>
-                    </PermissionGuard>
-                    <PermissionGuard permission="export_inventory">
-                      <button
-                        onClick={() => {
-                          if (data?.results) {
-                            exportPartsForImport(data.results);
-                          }
-                          setShowActionsMenu(false);
-                        }}
-                        disabled={!data?.results || data.results.length === 0}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        Export for Import
-                      </button>
-                    </PermissionGuard>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+                Actions
+                <ChevronDown className="w-3.5 h-3.5 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <PermissionGuard permission="import_inventory">
+                <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import CSV
+                </DropdownMenuItem>
+              </PermissionGuard>
+              <PermissionGuard permission="export_inventory">
+                <DropdownMenuItem onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { if (data?.results) exportPartsForImport(data.results); }} disabled={!data?.results || data.results.length === 0}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export for Import
+                </DropdownMenuItem>
+              </PermissionGuard>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <PermissionGuard permission="create_parts">
             <Link href="/inventory/new">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
+              <Button size="sm" className="h-9">
+                <Plus className="w-3.5 h-3.5 mr-2" />
                 Add Part
               </Button>
             </Link>
@@ -229,24 +193,27 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
+      {/* Filter Bar */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
             <Input
               type="text"
-              placeholder="Search parts by name, part number, or description..."
+              placeholder="Search parts..."
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="pl-10"
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="pl-9 h-9 text-sm bg-white dark:bg-gray-900 w-64 focus:w-80 transition-all duration-300"
             />
           </div>
-        </CardContent>
-      </Card>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
+              <X className="h-4 h-4 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
+      </div>
 
       {/* Bulk Action Toolbar */}
       <BulkActionToolbar
@@ -256,160 +223,128 @@ export default function InventoryPage() {
       />
 
       {/* Inventory Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            All Parts ({data?.count || 0})
-          </CardTitle>
+      <Card className="border-t shadow-sm">
+        <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
+          <CardTitle className="text-sm font-semibold">All Parts ({data?.count || 0})</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading ? (
-            <TableSkeleton rows={8} columns={10} />
+            <div className="p-6"><TableSkeleton rows={8} columns={10} /></div>
           ) : data?.results && data.results.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 dark:bg-gray-800/50">
+                  <TableHead className="px-4 h-10 w-10">
+                    <input
+                      type="checkbox"
+                      checked={bulkSelection.isAllSelected}
+                      ref={(input) => { if (input) input.indeterminate = bulkSelection.isIndeterminate; }}
+                      onChange={bulkSelection.toggleSelectAll}
+                      className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </TableHead>
+                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Part #</TableHead>
+                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Name</TableHead>
+                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Category</TableHead>
+                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Stock</TableHead>
+                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Min</TableHead>
+                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Cost</TableHead>
+                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Sell</TableHead>
+                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
+                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.results.map((part) => (
+                  <TableRow
+                    key={part.id}
+                    className={`group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800 cursor-pointer ${isLowStock(part) ? "bg-red-50/50 dark:bg-red-900/10" : ""}`}
+                    onDoubleClick={() => router.push(`/inventory/${part.id}`)}
+                  >
+                    <TableCell className="px-4 py-2">
                       <input
                         type="checkbox"
-                        checked={bulkSelection.isAllSelected}
-                        ref={(input) => {
-                          if (input) input.indeterminate = bulkSelection.isIndeterminate;
-                        }}
-                        onChange={bulkSelection.toggleSelectAll}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        checked={bulkSelection.isSelected(part.id)}
+                        onChange={() => bulkSelection.toggleSelection(part.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
-                    </TableHead>
-                    <TableHead>Part Number</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Min Stock</TableHead>
-                    <TableHead>Cost Price</TableHead>
-                    <TableHead>Selling Price</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.results.map((part) => (
-                    <TableRow key={part.id} className={`transition-colors duration-150 ${isLowStock(part) ? "bg-red-50" : "hover:bg-gray-50"}`}>
-                      <TableCell>
-                        <input
-                          type="checkbox"
-                          checked={bulkSelection.isSelected(part.id)}
-                          onChange={() => bulkSelection.toggleSelection(part.id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {part.part_number || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Package className="w-4 h-4 text-gray-400" />
-                          <span className="font-medium">{part.name || "-"}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="capitalize">
-                        {typeof part.category === 'object' && part.category !== null 
-                          ? part.category.name 
-                          : part.category || "-"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <span className={isLowStock(part) ? "font-semibold text-red-600" : ""}>
-                            {part.quantity_in_stock || 0}
-                          </span>
-                          {isLowStock(part) && (
-                            <AlertTriangle className="w-4 h-4 text-red-500" />
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{part.minimum_stock || 0}</TableCell>
-                      <TableCell>
-                        {part.cost_price ? `$${parseFloat(part.cost_price).toFixed(2)}` : "-"}
-                      </TableCell>
-                      <TableCell>
-                        {part.selling_price ? `$${parseFloat(part.selling_price).toFixed(2)}` : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={part.is_active ? "success" : "secondary"}>
-                          {part.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="relative flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setActionMenuOpen(actionMenuOpen === part.id ? null : part.id)}
-                            className="h-8 w-8 p-0 dark:hover:bg-gray-700"
-                          >
-                            <MoreVertical className="w-4 h-4" />
+                    </TableCell>
+                    <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700 dark:text-gray-300">
+                      {part.part_number || "-"}
+                    </TableCell>
+                    <TableCell className="px-4 py-2">
+                      <div className="flex items-center space-x-2">
+                        <Package className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{part.name || "-"}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 capitalize">
+                      {typeof part.category === 'object' && part.category !== null ? part.category.name : part.category || "-"}
+                    </TableCell>
+                    <TableCell className="px-4 py-2">
+                      <div className="flex items-center space-x-1.5">
+                        <span className={`text-sm font-medium ${isLowStock(part) ? "text-red-600" : "text-gray-900 dark:text-gray-100"}`}>
+                          {part.quantity_in_stock || 0}
+                        </span>
+                        {isLowStock(part) && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-xs text-gray-500">{part.minimum_stock || 0}</TableCell>
+                    <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">
+                      {part.cost_price ? `$${parseFloat(part.cost_price).toFixed(2)}` : "-"}
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">
+                      {part.selling_price ? `$${parseFloat(part.selling_price).toFixed(2)}` : "-"}
+                    </TableCell>
+                    <TableCell className="px-4 py-2">
+                      <Badge variant={part.is_active ? "success" : "secondary"} className="text-[10px] px-1.5 py-0">
+                        {part.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <MoreVertical className="w-3.5 h-3.5" />
                           </Button>
-                          {actionMenuOpen === part.id && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-10"
-                                onClick={() => setActionMenuOpen(null)}
-                              />
-                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                                <div className="py-1">
-                                  <Link
-                                    href={`/inventory/${part.id}`}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    onClick={() => setActionMenuOpen(null)}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                    View Details
-                                  </Link>
-                                  <PermissionGuard permission="edit_parts">
-                                    <Link
-                                      href={`/inventory/${part.id}/edit`}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                      onClick={() => setActionMenuOpen(null)}
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                      Edit Part
-                                    </Link>
-                                  </PermissionGuard>
-                                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                  <PermissionGuard permission="delete_parts">
-                                    <button
-                                      onClick={() => {
-                                        if (window.confirm(`Are you sure you want to delete part "${part.name}" (${part.part_number})? This action cannot be undone.`)) {
-                                          handleDelete(part);
-                                        }
-                                        setActionMenuOpen(null);
-                                      }}
-                                      disabled={deleteMutation.isPending}
-                                      className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                      Delete Part
-                                    </button>
-                                  </PermissionGuard>
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/inventory/${part.id}`} className="flex items-center">
+                              <Eye className="w-4 h-4 mr-2" />
+                              View
+                            </Link>
+                          </DropdownMenuItem>
+                          <PermissionGuard permission="edit_parts">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/inventory/${part.id}/edit`} className="flex items-center">
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </Link>
+                            </DropdownMenuItem>
+                          </PermissionGuard>
+                          <DropdownMenuSeparator />
+                          <PermissionGuard permission="delete_parts">
+                            <DropdownMenuItem onClick={() => handleDelete(part)} disabled={deleteMutation.isPending} className="text-red-600 dark:text-red-400">
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </PermissionGuard>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
             <div className="text-center py-12">
-              <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No parts found.</p>
+              <Package className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm text-gray-500 mb-4">No parts found.</p>
               <Link href="/inventory/new">
-                <Button className="mt-4"variant="secondary">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Your First Part
+                <Button variant="outline" size="sm" className="h-8">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Your First Part
                 </Button>
               </Link>
             </div>
@@ -417,25 +352,13 @@ export default function InventoryPage() {
 
           {/* Pagination */}
           {data && data.count > 0 && (
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Showing page {page} of {Math.ceil(data.count / 10)}
-              </div>
+            <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <div className="text-xs text-gray-500">Page {page} of {Math.ceil(data.count / 10)}</div>
               <div className="flex space-x-2">
-                <Button
-                 variant="secondary"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={!data.previous}
-                >
+                <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={!data.previous} className="h-7 text-xs">
                   Previous
                 </Button>
-                <Button
-                 variant="secondary"
-                  size="sm"
-                  onClick={() => setPage((p) => p + 1)}
-                  disabled={!data.next}
-                >
+                <Button variant="ghost" size="sm" onClick={() => setPage((p) => p + 1)} disabled={!data.next} className="h-7 text-xs">
                   Next
                 </Button>
               </div>
@@ -454,10 +377,9 @@ export default function InventoryPage() {
           return result;
         }}
         title="Import Parts"
-        description="Upload a CSV file with part data. Required columns: part_number, name, category (ID or name)."
+        description="Upload a CSV file with part data. Required columns: part_number, name, category."
         onDownloadTemplate={downloadPartTemplate}
       />
     </div>
   );
 }
-

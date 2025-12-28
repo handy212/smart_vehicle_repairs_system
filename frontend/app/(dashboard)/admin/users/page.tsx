@@ -14,6 +14,15 @@ import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils/cn";
 
 export default function UsersManagementPage() {
   const router = useRouter();
@@ -23,7 +32,6 @@ export default function UsersManagementPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [branchFilter, setBranchFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
-  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
 
   // Fetch branches for filter
   const { data: branchesData } = useQuery({
@@ -127,292 +135,238 @@ export default function UsersManagementPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 dark:bg-gray-900 min-h-screen p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link href="/admin">
-            <Button variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">User Management</h1>
+    <div className="space-y-4 dark:bg-gray-900 min-h-screen">
+      <div className="flex items-center justify-between px-4 pt-4">
+        <div>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/admin" className="hover:text-blue-600 transition-colors">Admin</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Users</span>
           </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">User Management</h1>
         </div>
         <Link href="/admin/users/new">
-          <Button className="dark:bg-blue-600 dark:hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
+          <Button size="sm" className="h-8 dark:bg-blue-600 dark:hover:bg-blue-700">
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
             Add User
           </Button>
         </Link>
       </div>
 
       {/* Filters */}
-      <Card className="dark:bg-gray-800 dark:border-gray-700">
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-              <Filter className="w-4 h-4" />
-              <span>Filters:</span>
+      <Card className="mx-4 border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <CardContent className="p-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-center">
+            <div className="flex items-center gap-2 text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[60px]">
+              <Filter className="w-3.5 h-3.5" />
+              <span>Filters</span>
             </div>
-            <Select
-              value={roleFilter}
-              onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(1);
-              }}
-              className="dark:bg-gray-700 dark:border-gray-600 dark:text-white flex-1"
-            >
-              <option value="all">All Roles</option>
-              <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
-              <option value="service_coordinator">Service Coordinator</option>
-              <option value="receptionist">Receptionist</option>
-              <option value="technician">Technician</option>
-              <option value="parts_manager">Parts Manager</option>
-              <option value="accountant">Accountant</option>
-            </Select>
-            <Select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="dark:bg-gray-700 dark:border-gray-600 dark:text-white flex-1"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </Select>
-            <Select
-              value={branchFilter}
-              onChange={(e) => {
-                setBranchFilter(e.target.value);
-                setPage(1);
-              }}
-              className="dark:bg-gray-700 dark:border-gray-600 dark:text-white flex-1"
-            >
-              <option value="all">All Branches</option>
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </Select>
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+              <Select
+                value={roleFilter}
+                onChange={(e) => {
+                  setRoleFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="h-8 text-sm bg-white dark:bg-gray-900"
+              >
+                <option value="all">All Roles</option>
+                <option value="admin">Admin</option>
+                <option value="manager">Manager</option>
+                <option value="service_coordinator">Service Coordinator</option>
+                <option value="receptionist">Receptionist</option>
+                <option value="technician">Technician</option>
+                <option value="parts_manager">Parts Manager</option>
+                <option value="accountant">Accountant</option>
+              </Select>
+              <Select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="h-8 text-sm bg-white dark:bg-gray-900"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </Select>
+              <Select
+                value={branchFilter}
+                onChange={(e) => {
+                  setBranchFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="h-8 text-sm bg-white dark:bg-gray-900"
+              >
+                <option value="all">All Branches</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Users Table */}
-      <Card className="dark:bg-gray-800 dark:border-gray-700">
-        <CardHeader>
-          <CardTitle className="dark:text-white">
-            Users ({usersData?.count || 0})
+      <Card className="mx-4 border-t shadow-sm dark:bg-gray-800 dark:border-gray-700">
+        <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
+          <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Users Directory <span className="text-muted-foreground font-normal ml-1">({usersData?.count || 0})</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {users.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Role
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Branch
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <div className="rounded-md">
+              <Table>
+                <TableHeader className="bg-gray-50/50 hover:bg-gray-50/50 dark:bg-gray-900/50">
+                  <TableRow>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">User</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Role</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Branch</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Status</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Created</TableHead>
+                    <TableHead className="px-4 h-10 text-right text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {users.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <TableRow key={user.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 cursor-pointer transition-colors" onDoubleClick={() => router.push(`/admin/users/${user.id}`)}>
+                      <TableCell className="px-4 py-2 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-blue-600 dark:bg-blue-700 flex items-center justify-center text-white font-medium text-sm flex-shrink-0">
+                          <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs flex-shrink-0 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
                             {user.first_name?.[0] || user.email[0].toUpperCase()}
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          <div className="ml-3">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {user.full_name || `${user.first_name} ${user.last_name}`.trim() || user.username}
                             </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
-                            {user.phone && (
-                              <div className="text-xs text-gray-400 dark:text-gray-500">{user.phone}</div>
-                            )}
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{user.email}</div>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge variant={getRoleVariant(user.role) as any} className="text-xs">
+                      </TableCell>
+                      <TableCell className="px-4 py-2 whitespace-nowrap">
+                        <Badge variant={getRoleVariant(user.role) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
                           {getRoleLabel(user.role)}
                         </Badge>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {user.role === "manager" && user.managed_branches_names && user.managed_branches_names.length > 0 ? (
-                          <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-gray-100">
-                            <Building2 className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                            <span>{user.managed_branches_names.join(", ")}</span>
-                          </div>
-                        ) : user.branch_name ? (
-                          <div className="flex items-center gap-1 text-sm text-gray-900 dark:text-gray-100">
-                            <Building2 className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                      </TableCell>
+                      <TableCell className="px-4 py-2 whitespace-nowrap">
+                        <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+                          {user.role === "manager" && user.managed_branches_names && user.managed_branches_names.length > 0 ? (
+                            <span className="truncate max-w-[150px]" title={user.managed_branches_names.join(", ")}>
+                              {user.managed_branches_names.length > 1 ? `${user.managed_branches_names.length} Branches` : user.managed_branches_names[0]}
+                            </span>
+                          ) : user.branch_name ? (
                             <span>{user.branch_name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-400 dark:text-gray-500 italic">No branch</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {user.is_active ? (
-                          <Badge variant="default" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                            Active
-                          </Badge>
-                        ) : (
-                          <Badge variant="danger" className="text-xs">
-                            Inactive
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {format(new Date(user.created_at), "MMM dd, yyyy")}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="relative flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setActionMenuOpen(actionMenuOpen === user.id ? null : user.id)}
-                            className="h-8 w-8 p-0 dark:hover:bg-gray-700"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                          {actionMenuOpen === user.id && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-10"
-                                onClick={() => setActionMenuOpen(null)}
-                              />
-                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                                <div className="py-1">
-                                  <Link
-                                    href={`/admin/users/${user.id}`}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    onClick={() => setActionMenuOpen(null)}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                    View Details
-                                  </Link>
-                                  <Link
-                                    href={`/admin/users/${user.id}`}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    onClick={() => setActionMenuOpen(null)}
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                    Edit User
-                                  </Link>
-                                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                  <button
-                                    onClick={() => {
-                                      handleToggleActive(user);
-                                      setActionMenuOpen(null);
-                                    }}
-                                    disabled={toggleActiveMutation.isPending}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                  >
-                                    {user.is_active ? (
-                                      <>
-                                        <UserX className="w-4 h-4" />
-                                        Deactivate User
-                                      </>
-                                    ) : (
-                                      <>
-                                        <UserCheck className="w-4 h-4" />
-                                        Activate User
-                                      </>
-                                    )}
-                                  </button>
-                                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                  <PermissionGuard permission="delete_users">
-                                    <button
-                                      onClick={() => {
-                                        if (window.confirm(`Are you sure you want to delete user "${user.full_name || user.email}"? This action cannot be undone.`)) {
-                                          handleDelete(user);
-                                        }
-                                        setActionMenuOpen(null);
-                                      }}
-                                      disabled={deleteMutation.isPending}
-                                      className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                      Delete User
-                                    </button>
-                                  </PermissionGuard>
-                                </div>
-                              </div>
-                            </>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600">-</span>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className="px-4 py-2 whitespace-nowrap">
+                        {user.is_active ? (
+                          <div className="flex items-center space-x-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                            <span className="text-xs text-green-700 dark:text-green-400 font-medium">Active</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                            <span className="text-xs text-red-600 dark:text-red-400">Inactive</span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                        {format(new Date(user.created_at), "MMM dd, yyyy")}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 whitespace-nowrap text-right">
+                        <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                <div className="flex gap-0.5">
+                                  <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
+                                  <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
+                                  <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
+                                </div>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={() => router.push(`/admin/users/${user.id}`)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/admin/users/${user.id}`)}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit User
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleToggleActive(user)}>
+                                {user.is_active ? <UserX className="w-4 h-4 mr-2" /> : <UserCheck className="w-4 h-4 mr-2" />}
+                                {user.is_active ? 'Deactivate' : 'Activate'}
+                              </DropdownMenuItem>
+                              <PermissionGuard permission="delete_users">
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    if (window.confirm(`Are you sure you want to delete user "${user.full_name || user.email}"? This action cannot be undone.`)) {
+                                      handleDelete(user);
+                                    }
+                                  }}
+                                  className="text-red-600 dark:text-red-400"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete User
+                                </DropdownMenuItem>
+                              </PermissionGuard>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <div className="text-center py-12">
-              <Users className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">No users found</p>
+              <Users className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">No users found matching your filters.</p>
             </div>
           )}
 
           {/* Pagination */}
-          {usersData && (usersData.next || usersData.previous) && (
-            <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="text-sm text-gray-700 dark:text-gray-300">
-                Showing {users.length} of {usersData.count} users
+          {usersData && (usersData.next || usersData.previous || usersData.count > 0) && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/30">
+              <div className="text-xs text-gray-500">
+                {((page - 1) * 20) + 1}-{Math.min(page * 20, usersData.count)} of {usersData.count}
               </div>
               <div className="flex items-center space-x-2">
                 <Button
-                 variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!usersData.previous || isLoading}
-                  className="dark:border-gray-700 dark:text-gray-200"
+                  className="h-7 text-xs px-2"
                 >
-                  Previous
+                  Prev
                 </Button>
-                <span className="text-sm text-gray-700 dark:text-gray-300">
-                  Page {page}
-                </span>
+                <div className="text-xs font-medium px-2">Page {page}</div>
                 <Button
-                 variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!usersData.next || isLoading}
-                  className="dark:border-gray-700 dark:text-gray-200"
+                  className="h-7 text-xs px-2"
                 >
                   Next
                 </Button>

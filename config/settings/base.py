@@ -60,7 +60,8 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'django_celery_beat',
     'django_celery_results',
-    'django_ledger',  
+    'django_ledger',
+    'auditlog',  
     
     # Local apps
     'apps.accounts',
@@ -78,6 +79,8 @@ INSTALLED_APPS = [
     'apps.documents',
     'apps.subscriptions',
     'apps.roadside',
+    'apps.fixed_assets.apps.FixedAssetsConfig',  
+    'apps.technicians', 
 ]
 
 MIDDLEWARE = [
@@ -93,6 +96,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    'apps.accounts.middleware.AuditlogDRFMiddleware',
+    'auditlog.middleware.AuditlogMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'

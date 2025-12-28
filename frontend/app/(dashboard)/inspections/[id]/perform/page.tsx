@@ -101,7 +101,7 @@ export default function PerformInspectionPage() {
       });
       return merged;
     });
-    
+
     // Only update showNotes if we're adding new ones, don't reset existing state
     setShowNotes((prev) => {
       const updated = { ...prev };
@@ -140,7 +140,7 @@ export default function PerformInspectionPage() {
   });
 
   const completeMutation = useMutation({
-    mutationFn: (data?: { technician_signature?: string }) => 
+    mutationFn: (data?: { technician_signature?: string }) =>
       inspectionsApi.complete(inspectionId, data),
     onSuccess: () => {
       toast({
@@ -204,14 +204,14 @@ export default function PerformInspectionPage() {
   const hasDamageChanged = () => {
     const currentDamage = inspection?.vehicle_damage || [];
     if (currentDamage.length !== vehicleDamage.length) return true;
-    
+
     // Create maps for easier comparison
     const currentMap = new Map((currentDamage as DamageMark[]).map(m => [m.id, m]));
     const newMap = new Map(vehicleDamage.map(m => [m.id, m]));
-    
+
     // Check if any marks were added, removed, or changed
     if (currentMap.size !== newMap.size) return true;
-    
+
     for (const [id, mark] of newMap) {
       const currentMark = currentMap.get(id);
       if (!currentMark) return true; // New mark added
@@ -226,7 +226,7 @@ export default function PerformInspectionPage() {
         return true;
       }
     }
-    
+
     return false;
   };
 
@@ -234,13 +234,13 @@ export default function PerformInspectionPage() {
     const payload = getFilledResults();
     let hasChanges = false;
     const promises: Promise<any>[] = [];
-    
+
     // Save inspection results if any
     if (payload.length > 0) {
       promises.push(saveMutation.mutateAsync(payload));
       hasChanges = true;
     }
-    
+
     // Always save vehicle damage if there are any marks
     // This ensures vehicle damage saves regardless of change detection
     if (vehicleDamage.length > 0) {
@@ -254,7 +254,7 @@ export default function PerformInspectionPage() {
         hasChanges = true;
       }
     }
-    
+
     if (!hasChanges) {
       toast({
         title: "No Changes",
@@ -263,7 +263,7 @@ export default function PerformInspectionPage() {
       });
       return;
     }
-    
+
     // Execute all saves
     try {
       await Promise.all(promises);
@@ -362,58 +362,54 @@ export default function PerformInspectionPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div className="flex gap-3 items-center">
-          <Link href={`/inspections/${inspectionId}`}>
-            <Button variant="secondary" size="icon">
-              <ArrowLeft />
-            </Button>
-          </Link>
-
-          <div>
-            <h1 className="text-2xl font-bold">
-              Perform Inspection #{inspection.inspection_number}
-            </h1>
-            <p className="text-gray-500 text-sm">
-              {templateData?.name} –{" "}
-              {format(
-                new Date(inspection.inspection_date),
-                "MMMM dd, yyyy h:mm a"
-              )}
-            </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <Link href="/inspections" className="hover:text-blue-600 transition-colors">Inspections</Link>
+            <span>/</span>
+            <Link href={`/inspections/${inspectionId}`} className="hover:text-blue-600 transition-colors">#{inspection.inspection_number}</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Perform</span>
           </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+            Perform Inspection
+          </h1>
         </div>
 
-        <div className="flex gap-2">
-          <Button onClick={save}variant="secondary">
-            <Save className="mr-2" /> Save
+        <div className="flex items-center gap-2">
+          <Button onClick={save} variant="outline" size="sm" className="h-9">
+            <Save className="w-3.5 h-3.5 mr-2" /> Save
           </Button>
 
-          <Button onClick={saveAndComplete}>
-            <CheckCircle className="mr-2" /> Save & Complete
+          <Button onClick={saveAndComplete} size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+            <CheckCircle className="w-3.5 h-3.5 mr-2" /> Save & Complete
           </Button>
         </div>
       </div>
 
       {/* Summary */}
-      <div className="flex items-center gap-6 py-4 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-500">Vehicle:</span>
-          <span className="text-sm text-gray-900">{inspection.vehicle_info || "N/A"}</span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</span>
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{inspection.vehicle_info || "N/A"}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-500">Template:</span>
-          <span className="text-sm text-gray-900">{templateData?.name}</span>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Template</span>
+          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{templateData?.name}</span>
         </div>
-        <div className="flex items-center gap-2 flex-1">
-          <span className="text-sm font-medium text-gray-500">Progress:</span>
-          <div className="flex-1 max-w-xs bg-gray-200 h-2 rounded">
+        <div className="flex flex-col gap-1">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</span>
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{inspection.completion_percentage}%</span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
             <div
-              className="h-2 bg-blue-600 rounded transition-all"
+              className="h-full bg-blue-600 rounded-full transition-all duration-500"
               style={{ width: `${inspection.completion_percentage}%` }}
             />
           </div>
-          <span className="text-sm text-gray-600">{inspection.completion_percentage}%</span>
         </div>
       </div>
 
@@ -454,20 +450,19 @@ export default function PerformInspectionPage() {
                   {(cat.items || []).map((item) => {
                     const r = results[item.id] || {};
                     const isCritical = item.is_critical;
-                    const isChecked = !!results[item.id]?.result || 
-                                     results[item.id]?.measurement_value !== undefined ||
-                                     results[item.id]?.percentage_value !== undefined ||
-                                     results[item.id]?.rating_value !== undefined ||
-                                     results[item.id]?.condition ||
-                                     results[item.id]?.text_note;
-                    
-                    const rowClassName = `flex flex-col gap-2 p-3 rounded-md border ${
-                      isCritical && !isChecked 
-                        ? "border-red-500 bg-red-50" 
-                        : isCritical 
-                          ? "border-red-200 bg-red-50/30" 
+                    const isChecked = !!results[item.id]?.result ||
+                      results[item.id]?.measurement_value !== undefined ||
+                      results[item.id]?.percentage_value !== undefined ||
+                      results[item.id]?.rating_value !== undefined ||
+                      results[item.id]?.condition ||
+                      results[item.id]?.text_note;
+
+                    const rowClassName = `flex flex-col gap-2 p-3 rounded-md border ${isCritical && !isChecked
+                        ? "border-red-500 bg-red-50"
+                        : isCritical
+                          ? "border-red-200 bg-red-50/30"
                           : "border-gray-200 hover:bg-gray-50"
-                    } transition-colors`;
+                      } transition-colors`;
 
                     return (
                       <div key={item.id} className={rowClassName}>
@@ -487,177 +482,176 @@ export default function PerformInspectionPage() {
                             </span>
                           )}
                         </div>
-                          
+
                         {/* Input Fields - Inline */}
                         <div className="flex flex-col gap-2">
-                            {item.item_type === "yes_no" || item.item_type === "pass_fail" ? (
-                              <div className="flex items-center gap-3 flex-wrap">
-                                <div className="flex items-center gap-2">
-                                  <Label className="text-sm whitespace-nowrap">Result:</Label>
-                                  <select
-                                    value={r.result || "not_checked"}
-                                    onChange={(e) =>
-                                      updateResult(item.id, "result", e.target.value)
-                                    }
-                                    className="w-40 h-8 text-sm rounded-md border border-gray-300 px-2"
-                                  >
-                                    <option value="not_checked">Not Checked</option>
-                                    <option value="pass">Pass</option>
-                                    <option value="fail">Fail</option>
-                                    <option value="advisory">Advisory</option>
-                                    <option value="not_applicable">N/A</option>
-                                  </select>
-                                </div>
-                                <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={showNotes[item.id] || false}
-                                    onChange={(e) => {
-                                      setShowNotes((prev) => ({
-                                        ...prev,
-                                        [item.id]: e.target.checked,
-                                      }));
-                                      // Clear notes when hiding
-                                      if (!e.target.checked) {
-                                        updateResult(item.id, "notes", "");
-                                      }
-                                    }}
-                                    className="w-4 h-4"
-                                  />
-                                  <span className="text-xs">Add Notes</span>
-                                </label>
-                              </div>
-                            ) : null}
-
-                            {item.item_type === "measurement" && (
+                          {item.item_type === "yes_no" || item.item_type === "pass_fail" ? (
+                            <div className="flex items-center gap-3 flex-wrap">
                               <div className="flex items-center gap-2">
-                                <Label className="text-sm whitespace-nowrap">
-                                  Value ({item.measurement_unit}):
-                                </Label>
-                                <Input
-                                  type="number"
-                                  value={r.measurement_value || ""}
-                                  onChange={(e) =>
-                                    updateResult(
-                                      item.id,
-                                      "measurement_value",
-                                      Number(e.target.value)
-                                    )
-                                  }
-                                  className="w-32 h-8 text-sm"
-                                />
-                              </div>
-                            )}
-
-                            {item.item_type === "percentage" && (
-                              <div className="flex items-center gap-2">
-                                <Label className="text-sm whitespace-nowrap">Percentage:</Label>
-                                <Input
-                                  type="number"
-                                  max={100}
-                                  value={r.percentage_value || ""}
-                                  onChange={(e) =>
-                                    updateResult(
-                                      item.id,
-                                      "percentage_value",
-                                      Number(e.target.value)
-                                    )
-                                  }
-                                  className="w-24 h-8 text-sm"
-                                />
-                                <span className="text-sm text-gray-500">%</span>
-                              </div>
-                            )}
-
-                            {item.item_type === "rating" && (
-                              <div className="flex items-center gap-2">
-                                <Label className="text-sm whitespace-nowrap">Rating:</Label>
-                                <div className="flex gap-1">
-                                  {[1, 2, 3, 4, 5].map((n) => (
-                                    <button
-                                      key={n}
-                                      type="button"
-                                      onClick={() =>
-                                        updateResult(item.id, "rating_value", n)
-                                      }
-                                      className={`w-8 h-8 text-xs rounded border transition-colors ${
-                                        r.rating_value === n
-                                          ? "bg-blue-600 text-white border-blue-600"
-                                          : "bg-white border-gray-300 hover:border-blue-400"
-                                      }`}
-                                    >
-                                      {n}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {item.item_type === "condition" && (
-                              <div className="flex items-center gap-2">
-                                <Label className="text-sm whitespace-nowrap">Condition:</Label>
+                                <Label className="text-sm whitespace-nowrap">Result:</Label>
                                 <select
-                                  value={r.condition || ""}
+                                  value={r.result || "not_checked"}
                                   onChange={(e) =>
-                                    updateResult(item.id, "condition", e.target.value || null)
+                                    updateResult(item.id, "result", e.target.value)
                                   }
                                   className="w-40 h-8 text-sm rounded-md border border-gray-300 px-2"
                                 >
-                                  <option value="">Select...</option>
-                                  <option value="excellent">Excellent</option>
-                                  <option value="good">Good</option>
-                                  <option value="fair">Fair</option>
-                                  <option value="poor">Poor</option>
-                                  <option value="critical">Critical</option>
+                                  <option value="not_checked">Not Checked</option>
+                                  <option value="pass">Pass</option>
+                                  <option value="fail">Fail</option>
+                                  <option value="advisory">Advisory</option>
+                                  <option value="not_applicable">N/A</option>
                                 </select>
                               </div>
-                            )}
-
-                            {item.item_type === "text" && (
-                              <div className="w-full">
-                                <Label className="text-sm">Note:</Label>
-                                <Textarea
-                                  value={r.text_note || ""}
-                                  onChange={(e) =>
-                                    updateResult(item.id, "text_note", e.target.value)
-                                  }
-                                  className="w-full text-sm min-h-[60px] mt-1"
-                                  placeholder="Enter text note..."
+                              <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={showNotes[item.id] || false}
+                                  onChange={(e) => {
+                                    setShowNotes((prev) => ({
+                                      ...prev,
+                                      [item.id]: e.target.checked,
+                                    }));
+                                    // Clear notes when hiding
+                                    if (!e.target.checked) {
+                                      updateResult(item.id, "notes", "");
+                                    }
+                                  }}
+                                  className="w-4 h-4"
                                 />
-                              </div>
-                            )}
+                                <span className="text-xs">Add Notes</span>
+                              </label>
+                            </div>
+                          ) : null}
 
-                            {/* Notes - Only show when checkbox is checked */}
-                            {showNotes[item.id] && (
-                              <div className="w-full">
-                                <Textarea
-                                  placeholder="Add notes..."
-                                  value={r.notes || ""}
-                                  onChange={(e) =>
-                                    updateResult(item.id, "notes", e.target.value)
-                                  }
-                                  className="w-full text-sm min-h-[60px]"
-                                />
-                              </div>
-                            )}
-
-                            {/* Needs Attention Checkbox */}
-                            <label className="flex items-center gap-1.5 text-sm cursor-pointer mt-1">
-                              <input
-                                type="checkbox"
-                                checked={r.needs_immediate_attention || false}
+                          {item.item_type === "measurement" && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm whitespace-nowrap">
+                                Value ({item.measurement_unit}):
+                              </Label>
+                              <Input
+                                type="number"
+                                value={r.measurement_value || ""}
                                 onChange={(e) =>
                                   updateResult(
                                     item.id,
-                                    "needs_immediate_attention",
-                                    e.target.checked
+                                    "measurement_value",
+                                    Number(e.target.value)
                                   )
                                 }
-                                className="w-4 h-4"
+                                className="w-32 h-8 text-sm"
                               />
-                              <span className="text-xs">Needs Attention</span>
-                            </label>
-                          </div>
+                            </div>
+                          )}
+
+                          {item.item_type === "percentage" && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm whitespace-nowrap">Percentage:</Label>
+                              <Input
+                                type="number"
+                                max={100}
+                                value={r.percentage_value || ""}
+                                onChange={(e) =>
+                                  updateResult(
+                                    item.id,
+                                    "percentage_value",
+                                    Number(e.target.value)
+                                  )
+                                }
+                                className="w-24 h-8 text-sm"
+                              />
+                              <span className="text-sm text-gray-500">%</span>
+                            </div>
+                          )}
+
+                          {item.item_type === "rating" && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm whitespace-nowrap">Rating:</Label>
+                              <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                  <button
+                                    key={n}
+                                    type="button"
+                                    onClick={() =>
+                                      updateResult(item.id, "rating_value", n)
+                                    }
+                                    className={`w-8 h-8 text-xs rounded border transition-colors ${r.rating_value === n
+                                        ? "bg-blue-600 text-white border-blue-600"
+                                        : "bg-white border-gray-300 hover:border-blue-400"
+                                      }`}
+                                  >
+                                    {n}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {item.item_type === "condition" && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm whitespace-nowrap">Condition:</Label>
+                              <select
+                                value={r.condition || ""}
+                                onChange={(e) =>
+                                  updateResult(item.id, "condition", e.target.value || null)
+                                }
+                                className="w-40 h-8 text-sm rounded-md border border-gray-300 px-2"
+                              >
+                                <option value="">Select...</option>
+                                <option value="excellent">Excellent</option>
+                                <option value="good">Good</option>
+                                <option value="fair">Fair</option>
+                                <option value="poor">Poor</option>
+                                <option value="critical">Critical</option>
+                              </select>
+                            </div>
+                          )}
+
+                          {item.item_type === "text" && (
+                            <div className="w-full">
+                              <Label className="text-sm">Note:</Label>
+                              <Textarea
+                                value={r.text_note || ""}
+                                onChange={(e) =>
+                                  updateResult(item.id, "text_note", e.target.value)
+                                }
+                                className="w-full text-sm min-h-[60px] mt-1"
+                                placeholder="Enter text note..."
+                              />
+                            </div>
+                          )}
+
+                          {/* Notes - Only show when checkbox is checked */}
+                          {showNotes[item.id] && (
+                            <div className="w-full">
+                              <Textarea
+                                placeholder="Add notes..."
+                                value={r.notes || ""}
+                                onChange={(e) =>
+                                  updateResult(item.id, "notes", e.target.value)
+                                }
+                                className="w-full text-sm min-h-[60px]"
+                              />
+                            </div>
+                          )}
+
+                          {/* Needs Attention Checkbox */}
+                          <label className="flex items-center gap-1.5 text-sm cursor-pointer mt-1">
+                            <input
+                              type="checkbox"
+                              checked={r.needs_immediate_attention || false}
+                              onChange={(e) =>
+                                updateResult(
+                                  item.id,
+                                  "needs_immediate_attention",
+                                  e.target.checked
+                                )
+                              }
+                              className="w-4 h-4"
+                            />
+                            <span className="text-xs">Needs Attention</span>
+                          </label>
+                        </div>
                       </div>
                     );
                   })}
@@ -693,7 +687,7 @@ export default function PerformInspectionPage() {
 
           <DialogFooter>
             <Button
-             variant="secondary"
+              variant="secondary"
               onClick={() => {
                 setShowCompleteDialog(false);
                 setTechnicianSignature(null);

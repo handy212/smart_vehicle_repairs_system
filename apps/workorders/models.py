@@ -509,6 +509,20 @@ class WorkOrder(models.Model):
             self.completed_at = now
         
         self.save()
+
+        # Inventory Integration (Phase 4)
+        try:
+            from apps.inventory.services import InventoryService
+            if new_status == 'in_progress':
+                InventoryService.reserve_parts_for_work_order(self, user)
+            elif new_status == 'completed':
+                InventoryService.consume_parts_for_work_order(self, user)
+        except Exception as e:
+            # Log error but preserve transaction status (don't rollback whole WO transition)
+            # In strict mode, we might want to raise here.
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Inventory integration failed for WO {self.work_order_number}: {e}")
         
         # Convert repair recommendations to tasks when starting work
         if new_status == 'in_progress' and old_status != 'in_progress':
@@ -1263,6 +1277,16 @@ class WorkOrderPart(models.Model):
         blank=True,
         related_name='parts',
         help_text="Optional - link to specific task"
+    )
+    
+    # Inventory Link (Phase 4)
+    inventory_part = models.ForeignKey(
+        'inventory.Part',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='work_order_usages',
+        help_text="Link to actual inventory part"
     )
     
     # Part Details

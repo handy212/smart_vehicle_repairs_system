@@ -47,6 +47,7 @@ const invoiceSchema = z.object({
   discount_percentage: z.number().min(0).max(100).optional(),
   discount_reason: z.string().optional(),
   line_items: z.array(lineItemSchema).min(1, "At least one line item is required"),
+  status: z.string().optional(),
 });
 
 type InvoiceFormData = z.infer<typeof invoiceSchema>;
@@ -64,6 +65,7 @@ export default function NewInvoicePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const workOrderId = searchParams.get("work_order");
+  const invoiceType = searchParams.get("type"); // 'proforma' or null
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
   const [dueDateManual, setDueDateManual] = useState(false);
@@ -121,6 +123,7 @@ export default function NewInvoicePage() {
       discount_percentage: 0,
       discount_reason: "",
       line_items: lineItems.map(item => ({ ...item, is_taxable: item.is_taxable ?? true })),
+      status: invoiceType === 'proforma' ? 'proforma' : 'draft',
     },
   });
 
@@ -192,7 +195,7 @@ export default function NewInvoicePage() {
     const subtotal = lineItems
       .filter(item => item.is_taxable)
       .reduce((sum, item) => sum + calculateLineItemTotal(item), 0);
-    
+
     // Apply discount proportionally to taxable items
     const discountPercentage = watch("discount_percentage") || 0;
     const taxableAfterDiscount = subtotal * (1 - discountPercentage / 100);
@@ -219,6 +222,7 @@ export default function NewInvoicePage() {
         due_date: data.due_date,
         terms: PAYMENT_TERMS.find(t => t.value === data.payment_terms)?.label || data.payment_terms,
         notes: data.notes,
+        status: data.status,
         line_items: data.line_items.map((item, idx) => ({
           item_type: item.item_type,
           description: item.description,
@@ -252,26 +256,27 @@ export default function NewInvoicePage() {
     },
   });
 
-  const onSubmit = (data: InvoiceFormData) => {
+  const onSubmit = (data: InvoiceFormData, status?: string) => {
     setServerError(null);
-    createMutation.mutate(data);
+    createMutation.mutate({ ...data, status });
   };
 
   const taxBreakdown = calculateGhanaTax(calculateTaxableSubtotal(), taxConfig);
 
+  const isProforma = invoiceType === 'proforma';
+  const pageTitle = isProforma ? 'Create Proforma Invoice' : 'Create Invoice';
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/billing">
-          <Button variant="secondary" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold">Create Invoice</h1>
-          <p className="text-muted-foreground">Create a new invoice for a customer</p>
+    <div className="space-y-4">
+      <div>
+        <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+          <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+          <span>/</span>
+          <Link href="/billing" className="hover:text-blue-600 transition-colors">Billing</Link>
+          <span>/</span>
+          <span className="text-gray-900 dark:text-gray-100 font-medium">{pageTitle}</span>
         </div>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">{pageTitle}</h1>
       </div>
 
       {serverError && (
@@ -288,7 +293,7 @@ export default function NewInvoicePage() {
         </Card>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
             <Card>
@@ -574,11 +579,27 @@ export default function NewInvoicePage() {
                 </div>
 
                 <div className="pt-4 space-y-2">
-                  <Button type="submit" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? "Creating..." : "Create Invoice"}
+                  <Button
+                    type="button"
+                    className="w-full"
+                    disabled={isSubmitting}
+                    onClick={handleSubmit((data) => onSubmit(data, isProforma ? 'proforma' : 'draft'))}
+                  >
+                    {isSubmitting ? "Creating..." : (isProforma ? "Create Proforma Invoice" : "Create Invoice")}
                   </Button>
+                  {!isProforma && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      disabled={isSubmitting}
+                      onClick={handleSubmit((data) => onSubmit(data, 'proforma'))}
+                    >
+                      {isSubmitting ? "Saving..." : "Save as Proforma"}
+                    </Button>
+                  )}
                   <Link href="/billing">
-                    <Button type="button"variant="secondary" className="w-full">
+                    <Button type="button" variant="secondary" className="w-full">
                       Cancel
                     </Button>
                   </Link>

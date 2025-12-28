@@ -24,10 +24,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     setMounted(true);
     const subNavCollapsed = localStorage.getItem("subNavCollapsed") === "true";
     setIsSubNavCollapsed(subNavCollapsed);
-    
+
     const sidebarCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
     setIsSidebarCollapsed(sidebarCollapsed);
-    
+
     // Check if desktop
     const checkDesktop = () => {
       setIsDesktop(window.innerWidth >= 1024);
@@ -36,7 +36,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         setIsSidebarOpen(true);
       }
     };
-    
+
     checkDesktop();
     window.addEventListener("resize", checkDesktop);
     return () => window.removeEventListener("resize", checkDesktop);
@@ -96,22 +96,30 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const sidebarWidthCollapsed = 80; // w-20 = 5rem = 80px
   const sidebarCollapsed = mounted ? isSidebarCollapsed : false; // Default to expanded during SSR
   const sidebarWidth = sidebarCollapsed ? sidebarWidthCollapsed : sidebarWidthExpanded;
-  
+
   const subNavWidthExpanded = 224; // w-56 = 14rem = 224px
   const subNavWidthCollapsed = 48; // w-12 = 3rem = 48px
   const subNavCollapsed = mounted ? isSubNavCollapsed : false; // Default to expanded during SSR
   const subNavWidth = hasSubNav && !subNavCollapsed ? subNavWidthExpanded : hasSubNav && subNavCollapsed ? subNavWidthCollapsed : 0;
-  
+
   // On mobile, sidebar is hidden by default (overlay), on desktop it's always visible
   const totalMargin = isDesktop ? sidebarWidth + subNavWidth : 0;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar 
+      <Navbar
         onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}
+        onToggleCollapse={() => {
+          const newCollapsed = !isSidebarCollapsed;
+          setIsSidebarCollapsed(newCollapsed);
+          if (mounted) {
+            localStorage.setItem("sidebarCollapsed", newCollapsed.toString());
+          }
+        }}
+        isSidebarCollapsed={mounted ? isSidebarCollapsed : false}
       />
-      <Sidebar 
+      <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         isCollapsed={mounted ? isSidebarCollapsed : false}
@@ -124,8 +132,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         }}
       />
       {hasSubNav && subNavConfig && (
-        <SubNav 
-          items={subNavConfig.items} 
+        <SubNav
+          items={subNavConfig.items}
           title={subNavConfig.title}
           onToggle={(collapsed) => {
             setIsSubNavCollapsed(collapsed);
@@ -140,14 +148,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       )}
       <main
         className="min-h-screen px-4 py-0 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 transition-all duration-300"
-        style={{ 
+        style={{
           marginLeft: `${totalMargin}px`,
           paddingTop: '5rem' // 80px to account for header (64px) + extra space for mobile search
         }}
       >
         {children}
       </main>
-      
+
       {/* Keyboard Shortcuts Dialog */}
       <KeyboardShortcutsDialog
         open={showShortcutsDialog}

@@ -38,208 +38,187 @@ export default function AdminDashboardPage() {
   }, {} as Record<string, number>) || {};
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Administration</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage users, settings, and system configuration</p>
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Administration</h1>
+        <p className="text-xs text-gray-500 mt-0.5">Manage users, settings, and system configuration</p>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-gray-500" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-gray-400" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             <div className="text-2xl font-bold">{totalUsers}</div>
-            <p className="text-xs text-gray-500 mt-1">All registered users</p>
+            <p className="text-[10px] text-muted-foreground mt-1">All registered users</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active</CardTitle>
             <UserCheck className="h-4 w-4 text-green-500" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             <div className="text-2xl font-bold text-green-600">{activeUsers}</div>
-            <p className="text-xs text-gray-500 mt-1">Currently active</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Currently active</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inactive Users</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Inactive</CardTitle>
             <UserX className="h-4 w-4 text-red-500" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             <div className="text-2xl font-bold text-red-600">{inactiveUsers}</div>
-            <p className="text-xs text-gray-500 mt-1">Disabled accounts</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Disabled accounts</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Staff Members</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Staff</CardTitle>
             <Shield className="h-4 w-4 text-blue-500" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             <div className="text-2xl font-bold text-blue-600">{staffCount}</div>
-            <p className="text-xs text-gray-500 mt-1">Admin, Manager, Technician, etc.</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Internal roles</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>User Management</CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Quick Actions - Compact */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="py-3 px-4 border-b">
+            <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Manage user accounts, roles, and permissions
-            </p>
-            <Link href="/admin/users">
-              <Button className="w-full">Manage Users</Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>System Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Configure system-wide settings and preferences
-            </p>
-            <Link href="/admin/settings">
-              <Button className="w-full"variant="secondary">
-                <Settings className="w-4 h-4 mr-2" />
-                System Settings
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Audit Log</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
-              View system activity and audit trail
-            </p>
-            <Link href="/admin/audit-log">
-              <Button className="w-full"variant="secondary">
-                <FileText className="w-4 h-4 mr-2" />
-                View Audit Log
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Subscription Management</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Manage subscription packages and customer subscriptions
-            </p>
-            <div className="space-y-2">
-              <Link href="/subscriptions/packages">
-                <Button className="w-full" variant="secondary">
-                  <Package className="w-4 h-4 mr-2" />
-                  Manage Packages
+          <CardContent className="p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Link href="/admin/users">
+                <Button variant="outline" className="w-full justify-start h-auto py-2 px-3 text-left flex flex-col items-start gap-1 hover:bg-slate-50 border-slate-200">
+                  <Users className="h-4 w-4 text-blue-600 mb-1" />
+                  <span className="font-semibold text-xs">Users</span>
+                  <span className="text-[10px] text-gray-500 font-normal">Manage accounts</span>
+                </Button>
+              </Link>
+              <Link href="/admin/settings">
+                <Button variant="outline" className="w-full justify-start h-auto py-2 px-3 text-left flex flex-col items-start gap-1 hover:bg-slate-50 border-slate-200">
+                  <Settings className="h-4 w-4 text-slate-600 mb-1" />
+                  <span className="font-semibold text-xs">Settings</span>
+                  <span className="text-[10px] text-gray-500 font-normal">System config</span>
+                </Button>
+              </Link>
+              <Link href="/admin/audit-log">
+                <Button variant="outline" className="w-full justify-start h-auto py-2 px-3 text-left flex flex-col items-start gap-1 hover:bg-slate-50 border-slate-200">
+                  <FileText className="h-4 w-4 text-orange-600 mb-1" />
+                  <span className="font-semibold text-xs">Audit Log</span>
+                  <span className="text-[10px] text-gray-500 font-normal">View history</span>
                 </Button>
               </Link>
               <Link href="/subscriptions">
-                <Button className="w-full" variant="outline">
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  View Subscriptions
+                <Button variant="outline" className="w-full justify-start h-auto py-2 px-3 text-left flex flex-col items-start gap-1 hover:bg-slate-50 border-slate-200">
+                  <CreditCard className="h-4 w-4 text-green-600 mb-1" />
+                  <span className="font-semibold text-xs">Subs</span>
+                  <span className="text-[10px] text-gray-500 font-normal">Manage plans</span>
                 </Button>
               </Link>
             </div>
           </CardContent>
         </Card>
+
+        {/* Roles Distribution - Compact */}
+        <Card>
+          <CardHeader className="py-3 px-4 border-b">
+            <CardTitle className="text-sm font-semibold">Staff Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(roleCounts).slice(0, 6).map(([role, count]) => (
+                <div key={role} className="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-100">
+                  <span className="text-xs font-medium capitalize truncate">{role.replace("_", " ")}</span>
+                  <span className="text-xs font-bold text-gray-700 bg-white px-1.5 py-0.5 rounded border border-gray-200 shadow-sm">{count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Users by Role */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Users by Role</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.entries(roleCounts).map(([role, count]) => (
-              <div key={role} className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-gray-900">{count}</div>
-                <div className="text-sm text-gray-600 capitalize mt-1">{role.replace("_", " ")}</div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Audit Logs</CardTitle>
+          <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-semibold">Recent Audit Logs</CardTitle>
+            <Link href="/admin/audit-log" className="text-xs text-blue-600 hover:underline">View All</Link>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {dashboardStats?.recent_logs && dashboardStats.recent_logs.length > 0 ? (
-              <div className="space-y-3">
+              <div className="divide-y divide-gray-100">
                 {dashboardStats.recent_logs.slice(0, 5).map((log) => (
-                  <div key={log.id} className="text-sm border-b border-gray-200 pb-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{log.user_name || log.user_email || "System"}</span>
-                      <span className="text-xs text-gray-500">
-                        {format(new Date(log.timestamp), "MMM dd, HH:mm")}
+                  <div key={log.id} className="p-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center space-x-2">
+                        <span className={`w-1.5 h-1.5 rounded-full ${log.action === 'create' ? 'bg-green-500' :
+                            log.action === 'update' ? 'bg-blue-500' :
+                              log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
+                          }`}></span>
+                        <span className="text-xs font-medium text-gray-900">{log.user_name || "System"}</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono">
+                        {format(new Date(log.timestamp), "HH:mm")}
                       </span>
                     </div>
-                    <p className="text-gray-600 mt-1">
-                      {log.action} - {log.model_name || "N/A"}
-                    </p>
+                    <div className="flex items-center justify-between pl-3.5">
+                      <p className="text-xs text-gray-600 truncate max-w-[200px] capitalize">
+                        {log.action} {log.model_name}
+                      </p>
+                      <span className="text-[10px] text-gray-400 truncate max-w-[100px]" title={log.object_repr}>
+                        {log.object_repr}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">No recent activity</p>
+              <p className="text-gray-500 text-xs p-4 text-center italic">No recent activity</p>
             )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Backups</CardTitle>
+          <CardHeader className="py-3 px-4 border-b">
+            <CardTitle className="text-sm font-semibold">Recent Backups</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {dashboardStats?.recent_backups && dashboardStats.recent_backups.length > 0 ? (
-              <div className="space-y-3">
+              <div className="divide-y divide-gray-100">
                 {dashboardStats.recent_backups.map((backup) => (
-                  <div key={backup.id} className="text-sm border-b border-gray-200 pb-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium capitalize">{backup.backup_type}</span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        backup.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        backup.status === 'failed' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {backup.status}
+                  <div key={backup.id} className="p-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <Database className="w-3 h-3 text-gray-400" />
+                        <span className="text-xs font-medium capitalize">{backup.backup_type} Backup</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 pl-5 block">
+                        {format(new Date(backup.started_at), "MMM dd, HH:mm")}
                       </span>
                     </div>
-                    <p className="text-gray-600 mt-1">
-                      {format(new Date(backup.started_at), "MMM dd, yyyy HH:mm")}
-                    </p>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${backup.status === 'completed' ? 'bg-green-50 text-green-700 border-green-100' :
+                        backup.status === 'failed' ? 'bg-red-50 text-red-700 border-red-100' :
+                          'bg-yellow-50 text-yellow-700 border-yellow-100'
+                      }`}>
+                      {backup.status}
+                    </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">No backups found</p>
+              <p className="text-gray-500 text-xs p-4 text-center italic">No recent backups found</p>
             )}
           </CardContent>
         </Card>

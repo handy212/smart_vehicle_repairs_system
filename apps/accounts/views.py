@@ -140,6 +140,10 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         user = self.get_object()
         
+        # Check permissions
+        if not request.user.has_perm('accounts.edit_users') and not request.user.is_superuser:
+             return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+        
         new_password = request.data.get('new_password')
         send_email = request.data.get('send_email', False)
         
@@ -172,7 +176,6 @@ class UserViewSet(viewsets.ModelViewSet):
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send password reset email to {user.email}: {str(e)}")
-                # Continue even if email fails - password is already reset
         
         return Response({
             'detail': 'Password reset successfully.',
@@ -186,8 +189,13 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         user = self.get_object()
         
+        # Check permissions
+        if not request.user.has_perm('accounts.edit_users') and not request.user.is_superuser:
+             return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+        
         try:
             self._send_password_reset_link_email(user, request)
+            
             return Response({
                 'detail': f'Password reset link sent to {user.email}'
             }, status=status.HTTP_200_OK)

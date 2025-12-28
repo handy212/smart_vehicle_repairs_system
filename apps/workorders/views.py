@@ -191,6 +191,14 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         })
     
     # ========== STATUS WORKFLOW ACTIONS ==========
+
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Generate PDF for work order"""
+        from apps.core.services.print_service import generate_work_order_pdf
+        
+        work_order = self.get_object()
+        return generate_work_order_pdf(work_order)
     
     @action(detail=True, methods=['post'])
     def start_intake(self, request, pk=None):
@@ -1189,6 +1197,121 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             'notified_count': len(notified),
             'notified_ids': notified
         })
+    
+    @action(detail=False, methods=['get'])
+    def job_profitability(self, request):
+        """
+        Job Profitability Report - Analyze revenue, costs, and margins for completed work orders
+        
+        Query params:
+        - date_from: Start date (YYYY-MM-DD), defaults to 30 days ago
+        - date_to: End date (YYYY-MM-DD), defaults to today
+        - technician: Filter by technician ID
+        - customer: Filter by customer ID
+        - min_margin: Filter for jobs with margin % greater than this
+        - sort: Sort by 'revenue', 'cost', 'margin', 'margin_percent' (default: '-revenue')
+        """
+        from decimal import Decimal
+        
+        queryset = self.get_queryset().filter(status='completed')
+        
+        # Date filtering
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        
+        if not date_from:
+            date_from = (timezone.now() - timedelta(days=30)).date()
+        else:
+            date_from = timezone.datetime.strptime(date_from, '%Y-%m-%d').date()
+        
+        if not date_to:
+            date_to = timezone.now().date()
+        else:
+            date_to = timezone.datetime.strptime(date_to, '%Y-%m-%d').date()
+        
+        queryset = queryset.filter(completed_at__date__gte=date_from, completed_at__date__lte=date_to)
+        
+        # Additional filters
+        technician_id = request.query_params.get('technician')
+        if technician_id:
+            queryset = queryset.filter(primary_technician_id=technician_id)
+        
+        customer_id = request.query_params.get('customer')
+        if customer_id:
+            queryset = queryset.filter(customer_id=customer_id)
+        
+        # Build profitability data
+        jobs = []
+        total_revenue = Decimal('0')
+        total_labor_cost = Decimal('0')
+        total_parts_cost = Decimal('0')
+        total_cost = Decimal('0')
+        total_profit = Decimal('0')
+        
+        for wo in queryset.select_related('customer', 'customer__user', 'primary_technician', 'branch'):
+            revenue = wo.actual_total or Decimal('0')
+            labor_cost = wo.actual_labor_cost or Decimal('0')
+            parts_cost = wo.actual_parts_cost or Decimal('0')
+            cost = labor_cost + parts_cost
+            profit = revenue - cost
+            margin_percent = (profit / revenue * 100) if revenue > 0 else Decimal('0')
+           
+            job_data = {
+                'work_order_id': wo.id,
+                'work_order_number': wo.work_order_number,
+                'customer_name': f"{wo.customer.user.first_name} {wo.customer.user.last_name}" if wo.customer.user else wo.customer.company_name or "N/A",
+                'vehicle': f"{wo.vehicle.year} {wo.vehicle.make} {wo.vehicle.model}" if wo.vehicle else "N/A",
+                'technician': wo.primary_technician.get_full_name() if wo.primary_technician else "Unassigned",
+                'branch': wo.branch.name if wo.branch else "N/A",
+                'completed_at': wo.completed_at.isoformat() if wo.completed_at else None,
+                'revenue': float(revenue),
+                'labor_cost': float(labor_cost),
+                'parts_cost': float(parts_cost),
+                'total_cost': float(cost),
+                'profit': float(profit),
+                'margin_percent': float(margin_percent),
+            }
+            
+            # Apply margin filter if specified
+            min_margin = request.query_params.get('min_margin')
+            if min_margin:
+                if margin_percent < Decimal(min_margin):
+                    continue
+            
+            jobs.append(job_data)
+            total_revenue += revenue
+            total_labor_cost += labor_cost
+            total_parts_cost += parts_cost
+            total_cost += cost
+            total_profit += profit
+        
+        # Sort jobs
+        sort_by = request.query_params.get('sort', '-revenue')
+        reverse = sort_by.startswith('-')
+        sort_field = sort_by.lstrip('-')
+        
+        if sort_field in ['revenue', 'cost', 'profit', 'margin_percent']:
+            jobs.sort(key=lambda x: x.get(sort_field, 0), reverse=reverse)
+        
+        # Calculate totals
+        total_margin_percent = (total_profit / total_revenue * 100) if total_revenue > 0 else Decimal('0')
+        
+        return Response({
+            'date_from': str(date_from),
+            'date_to': str(date_to),
+            'summary': {
+                'total_jobs': len(jobs),
+                'total_revenue': float(total_revenue),
+                'total_labor_cost': float(total_labor_cost),
+                'total_parts_cost': float(total_parts_cost),
+                'total_cost': float(total_cost),
+                'total_profit': float(total_profit),
+                'avg_margin_percent': float(total_margin_percent),
+                'avg_revenue_per_job': float(total_revenue / len(jobs)) if len(jobs) > 0 else 0,
+            },
+            'jobs': jobs
+        })
+
 
 
 class ServiceTaskViewSet(viewsets.ModelViewSet):

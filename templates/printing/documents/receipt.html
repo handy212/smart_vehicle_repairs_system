@@ -1,0 +1,136 @@
+{% extends 'printing/base/document_base.html' %}
+
+{% block title %}Receipt {{ document.payment_number }}{% endblock %}
+
+{% block document_type %}Payment Receipt{% endblock %}
+
+{% block document_number %}{{ document.payment_number }}{% endblock %}
+
+{% block document_meta %}
+<div>Date: {{ document.payment_date|date:"F d, Y" }}</div>
+<div>Method: {{ document.get_payment_method_display }}</div>
+{% if document.reference_number %}
+<div>Ref #: {{ document.reference_number }}</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- Payment Details -->
+<div class="mb-8">
+    <div class="text-center py-6 bg-gray-50 rounded border border-gray-200">
+        <div class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Amount Paid</div>
+        <div class="text-4xl font-bold text-gray-900">{{ branch.currency_symbol|default:"$" }}{{
+            document.amount|floatformat:2 }}</div>
+    </div>
+</div>
+
+<!-- Customer & Invoice Info -->
+<div class="grid-2-col mb-8">
+    <!-- Customer Info -->
+    <div class="col-1-2">
+        <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Received From</div>
+        <div class="info-card">
+            <div class="font-bold text-gray-900 mb-1">
+                {% if document.customer.is_business %}
+                {{ document.customer.company_name }}
+                {% else %}
+                {{ document.customer.first_name }} {{ document.customer.last_name }}
+                {% endif %}
+            </div>
+            <div class="text-sm text-gray-600">
+                {% if document.customer.address_line1 %}
+                <div>{{ document.customer.address_line1 }}</div>
+                {% endif %}
+                {% if document.customer.city %}
+                <div>
+                    {{ document.customer.city }}{% if document.customer.state %}, {{ document.customer.state }}{% endif
+                    %} {{ document.customer.zip_code }}
+                </div>
+                {% endif %}
+                {% if document.customer.phone %}
+                <div class="mt-1">P: {{ document.customer.phone }}</div>
+                {% endif %}
+                {% if document.customer.email %}
+                <div>E: {{ document.customer.email }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment For -->
+    <div class="col-1-2">
+        <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Applied To</div>
+        <div class="info-card">
+            <div class="text-sm text-gray-600 mb-1">Invoice Number:</div>
+            <div class="font-bold text-gray-900 mb-2">{{ document.invoice.invoice_number }}</div>
+
+            <table class="w-full text-sm">
+                <tr>
+                    <td class="text-gray-600 py-1">Invoice Total:</td>
+                    <td class="text-right font-medium">{{ branch.currency_symbol|default:"$" }}{{
+                        document.invoice.total|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td class="text-gray-600 py-1">Previous Payments:</td>
+                    <td class="text-right font-medium">{{ branch.currency_symbol|default:"$" }}{{
+                        previous_payments|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td class="text-gray-600 py-1 font-semibold">Balance Due:</td>
+                    <td
+                        class="text-right font-bold {% if document.invoice.amount_due > 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                        {{ branch.currency_symbol|default:"$" }}{{ document.invoice.amount_due|floatformat:2 }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Details -->
+<div class="mb-8 ">
+    <div class="grid-2-col">
+        <div class="col-1-2">
+            {% if document.notes %}
+            <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Notes</div>
+            <div class="text-sm text-gray-700 leading-relaxed p-3 bg-gray-50 rounded">
+                {{ document.notes|linebreaks }}
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-1-2">
+            {% if document.transaction_id or document.phone_number %}
+            <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Mobile Money / Transaction Details</div>
+            <table class="w-full text-sm">
+                {% if document.network_provider %}
+                <tr>
+                    <td class="text-gray-600 py-1">Network:</td>
+                    <td class="text-right">{{ document.network_provider }}</td>
+                </tr>
+                {% endif %}
+                {% if document.phone_number %}
+                <tr>
+                    <td class="text-gray-600 py-1">Phone Number:</td>
+                    <td class="text-right">{{ document.phone_number }}</td>
+                </tr>
+                {% endif %}
+                {% if document.transaction_id %}
+                <tr>
+                    <td class="text-gray-600 py-1">Transaction ID:</td>
+                    <td class="text-right font-mono text-xs">{{ document.transaction_id }}</td>
+                </tr>
+                {% endif %}
+            </table>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<div class="mt-12 text-center">
+    <div class="text-gray-900 font-bold text-lg mb-2">Thank You for Your Business!</div>
+    <div class="text-sm text-gray-500">
+        If you have any questions about this receipt, please contact us at {{ branch.phone }} or {{ branch.email }}.
+    </div>
+</div>
+{% endblock %}

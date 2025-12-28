@@ -77,9 +77,11 @@ export default function InvoiceDetailPage() {
             Back
           </Button>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Invoice #{invoice.invoice_number}
+            {invoice.status === 'proforma' ? 'Proforma Invoice' : 'Invoice'} #{invoice.invoice_number}
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Invoice Details</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {invoice.status === 'proforma' ? 'Proforma Details' : 'Invoice Details'}
+          </p>
         </div>
         <div className="flex items-center space-x-2">
           {canPay && (
@@ -136,8 +138,10 @@ export default function InvoiceDetailPage() {
                       invoice.status === "paid"
                         ? "success"
                         : invoice.status === "overdue"
-                        ? "danger"
-                        : "warning"
+                          ? "danger"
+                          : invoice.status === "proforma"
+                            ? "secondary"
+                            : "warning"
                     }
                   >
                     {invoice.status}
@@ -150,8 +154,8 @@ export default function InvoiceDetailPage() {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Work Order</p>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
-                    #{typeof invoice.work_order === 'object' && invoice.work_order !== null 
-                      ? invoice.work_order.id 
+                    #{typeof invoice.work_order === 'object' && invoice.work_order !== null
+                      ? invoice.work_order.id
                       : invoice.work_order}
                   </p>
                 </div>
@@ -274,8 +278,8 @@ export default function InvoiceDetailPage() {
                                 payment.status === "completed" || payment.status === "success"
                                   ? "success"
                                   : payment.status === "pending"
-                                  ? "warning"
-                                  : "secondary"
+                                    ? "warning"
+                                    : "secondary"
                               }
                             >
                               {payment.status}

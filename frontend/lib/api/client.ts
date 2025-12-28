@@ -14,9 +14,15 @@ apiClient.interceptors.request.use(
     if (typeof window !== "undefined") {
       // If sending FormData, remove Content-Type header to let browser set it with boundary
       if (config.data instanceof FormData && config.headers) {
-        delete config.headers['Content-Type'];
+        // Axios v1.x uses AxiosHeaders which requires .delete()
+        // But we check for method existence to be safe
+        if (typeof (config.headers as any).delete === 'function') {
+          (config.headers as any).delete('Content-Type');
+        } else {
+          delete config.headers['Content-Type'];
+        }
       }
-      
+
       const token = localStorage.getItem("access_token");
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -46,6 +52,23 @@ apiClient.interceptors.request.use(
   }
 );
 
+// Flag to track if token refresh is in progress
+let isRefreshing = false;
+// Queue of failed requests waiting for token refresh
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+
+  failedQueue = [];
+};
+
 // Response interceptor for token refresh
 apiClient.interceptors.response.use(
   (response) => response,
@@ -55,7 +78,23 @@ apiClient.interceptors.response.use(
     };
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return apiClient(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       if (typeof window !== "undefined") {
         const refreshToken = localStorage.getItem("refresh_token");
@@ -71,12 +110,18 @@ apiClient.interceptors.response.use(
             const { access } = response.data;
             localStorage.setItem("access_token", access);
 
+            // Process queue with new token
+            processQueue(null, access);
+
             if (originalRequest.headers) {
               originalRequest.headers.Authorization = `Bearer ${access}`;
             }
 
             return apiClient(originalRequest);
           } catch (refreshError) {
+            // Process queue with error
+            processQueue(refreshError, null);
+
             // Refresh failed, redirect to login
             localStorage.removeItem("access_token");
             localStorage.removeItem("refresh_token");
@@ -84,6 +129,8 @@ apiClient.interceptors.response.use(
               window.location.href = "/login";
             }
             return Promise.reject(refreshError);
+          } finally {
+            isRefreshing = false;
           }
         } else {
           // No refresh token, redirect to login

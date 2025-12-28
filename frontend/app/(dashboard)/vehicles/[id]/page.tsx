@@ -19,6 +19,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { DocumentList } from "@/components/documents/DocumentList";
 
 export default function VehicleDetailPage() {
   const params = useParams();
@@ -165,6 +166,8 @@ export default function VehicleDetailPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="history">Service History</TabsTrigger>
+          <TabsTrigger value="docs">Documents</TabsTrigger>
           <TabsTrigger value="roadside">Roadside Assistance ({roadsideRequests.length})</TabsTrigger>
         </TabsList>
 
@@ -582,6 +585,10 @@ export default function VehicleDetailPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="docs" className="mt-6">
+          <DocumentList vehicleId={vehicle.id} />
         </TabsContent>
       </Tabs>
 

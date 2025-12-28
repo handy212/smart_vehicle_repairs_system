@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Search, Mail, CheckCircle2, XCircle, Edit2, Eye, X, Code2, Info, FileText, Monitor, Copy, Sparkles, Plus } from "lucide-react";
+import { ArrowLeft, Save, Search, Mail, Edit2, Eye, X, Code2, Info, FileText, Monitor, Copy, Sparkles, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
@@ -16,7 +16,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import { Select } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function EmailTemplatesPage() {
   const { toast } = useToast();
@@ -188,97 +189,74 @@ export default function EmailTemplatesPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-        Error loading email templates. Please try again.
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 dark:bg-gray-900 min-h-screen">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link href="/admin/settings">
-            <Button variant="secondary" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Email Templates</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Customize email notification templates for your business</p>
+      <div className="flex items-center justify-between px-4 pt-4">
+        <div>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/admin/settings" className="hover:text-blue-600 transition-colors">Settings</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Templates</span>
           </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Email Templates</h1>
         </div>
-        <Button onClick={handleCreate} className="bg-blue-600 hover:bg-blue-700 text-white">
-          <Plus className="w-4 h-4 mr-2" />
-          Create New Template
+        <Button onClick={handleCreate} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700">
+          <Plus className="w-3.5 h-3.5 mr-1.5" />
+          Create Template
         </Button>
       </div>
 
-      {/* Filters - Compact Design */}
-      <Card className="border-gray-200 dark:border-gray-800 shadow-sm">
-        <CardContent className="p-4">
+      {/* Filters */}
+      <Card className="mx-4 border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <CardContent className="p-3">
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 min-w-[240px]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
               <Input
                 type="text"
-                placeholder="Search by name, subject, or content..."
+                placeholder="Search templates..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10 h-10 border-gray-300 dark:border-gray-700 focus:border-blue-500 dark:focus:border-blue-400"
+                className="pl-8 h-8 text-sm bg-white dark:bg-gray-900"
               />
             </div>
 
-            <select
+            <Select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="h-10 min-w-[220px] rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white"
+              className="h-8 w-[180px] text-xs bg-white dark:bg-gray-900"
             >
-              <option value="">All Template Types</option>
-              <option value="invoice_generated">Invoice Generated/Sent</option>
-              <option value="invoice_due">Invoice Due Reminder</option>
+              <option value="">All Types</option>
+              <option value="invoice_generated">Invoice Generated</option>
+              <option value="invoice_due">Invoice Due</option>
               <option value="invoice_overdue">Invoice Overdue</option>
               <option value="payment_received">Payment Received</option>
               <option value="appointment_reminder">Appointment Reminder</option>
               <option value="appointment_confirmation">Appointment Confirmation</option>
-              <option value="appointment_cancelled">Appointment Cancelled</option>
               <option value="work_order_created">Work Order Created</option>
               <option value="work_order_completed">Work Order Completed</option>
-              <option value="work_order_approved">Work Order Approved</option>
-              <option value="vehicle_ready">Vehicle Ready</option>
-              <option value="inspection_completed">Inspection Completed</option>
-              <option value="low_stock_alert">Low Stock Alert</option>
-              <option value="service_due">Service Due</option>
-              <option value="parts_arrived">Parts Arrived</option>
-              <option value="estimate_sent">Estimate Sent</option>
-              <option value="estimate_expiring_soon">Estimate Expiring Soon</option>
-              <option value="estimate_expired">Estimate Expired</option>
               <option value="user_welcome">User Welcome</option>
               <option value="password_reset">Password Reset</option>
-              <option value="password_reset_link">Password Reset Link</option>
-            </select>
+            </Select>
 
             {(search || typeFilter) && (
               <Button
-               variant="secondary"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setSearch("");
                   setTypeFilter("");
                 }}
-                className="h-10"
-                size="sm"
+                className="h-8 px-2 text-xs"
               >
-                <X className="w-4 h-4 mr-2" />
-                Clear Filters
+                <X className="w-3.5 h-3.5 mr-1" />
+                Clear
               </Button>
             )}
           </div>
@@ -286,87 +264,68 @@ export default function EmailTemplatesPage() {
       </Card>
 
       {/* Templates Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4 pb-8">
         {filteredTemplates.map((template: NotificationTemplateType) => (
-          <Card 
-            key={template.id} 
-            className="hover:shadow-lg transition-all duration-200 border-gray-200 dark:border-gray-800 group"
+          <Card
+            key={template.id}
+            className="hover:shadow-md transition-all duration-200 group border border-gray-200 dark:border-gray-800"
           >
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-base font-semibold text-gray-900 dark:text-white line-clamp-1">
+            <CardHeader className="p-3 pb-0">
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-[200px]" title={template.name}>
                     {template.name || "Unnamed Template"}
                   </CardTitle>
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <Badge 
-                      variant={template.is_active ? "success" : "secondary"}
-                      className="text-xs"
-                    >
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-gray-200 bg-gray-50 text-gray-600">
                       {template.template_type.replace(/_/g, " ")}
                     </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      {template.channel}
-                    </Badge>
+                    {template.channel === 'email' && <Mail className="w-3 h-3 text-gray-400" />}
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                  <Switch
-                    checked={template.is_active}
-                    onCheckedChange={() => handleToggleActive(template)}
-                    disabled={toggleActiveMutation.isPending}
-                    className="data-[state=checked]:bg-green-500"
-                  />
-                  <span className={`text-xs font-medium ${template.is_active ? "text-green-600 dark:text-green-400" : "text-gray-500"}`}>
-                    {template.is_active ? "Active" : "Inactive"}
-                  </span>
-                </div>
+                <Switch
+                  checked={template.is_active}
+                  onCheckedChange={() => handleToggleActive(template)}
+                  disabled={toggleActiveMutation.isPending}
+                  className="scale-75 data-[state=checked]:bg-green-500"
+                />
               </div>
             </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-4">
+            <CardContent className="p-3 pt-2">
+              <div className="space-y-2">
                 <div>
-                  <Label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    Subject
-                  </Label>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white mt-1.5 line-clamp-2">
-                    {template.subject || <span className="text-gray-400 italic">(No subject)</span>}
+                  <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Subject</div>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 truncate font-medium">
+                    {template.subject || <span className="text-gray-400 italic">No subject</span>}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    Preview
-                  </Label>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1.5 line-clamp-3 leading-relaxed">
-                    {template.body ? (
-                      template.body.substring(0, 150) + (template.body.length > 150 ? "..." : "")
-                    ) : (
-                      <span className="text-gray-400 italic">(No body content)</span>
-                    )}
+                  <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Preview</div>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-2 min-h-[2.5em]">
+                    {template.body || <span className="text-gray-400 italic">No content</span>}
                   </p>
                 </div>
-                <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-800">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    Updated {format(new Date(template.updated_at), "MMM dd, yyyy")}
+
+                <div className="flex items-center justify-between pt-2 mt-1 border-t border-gray-100 dark:border-gray-800">
+                  <span className="text-[10px] text-gray-400">
+                    {format(new Date(template.updated_at), "MMM d, yyyy")}
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
-                     variant="secondary"
+                      variant="ghost"
                       size="sm"
                       onClick={() => handlePreview(template)}
-                      className="h-8 px-3"
+                      className="h-6 w-6 p-0 hover:text-blue-600"
                     >
-                      <Eye className="w-3.5 h-3.5 mr-1.5" />
-                      Preview
+                      <Eye className="w-3.5 h-3.5" />
                     </Button>
                     <Button
-                      variant="default"
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleEdit(template)}
-                      className="h-8 px-3"
+                      className="h-6 w-6 p-0 hover:text-blue-600"
                     >
-                      <Edit2 className="w-3.5 h-3.5 mr-1.5" />
-                      Edit
+                      <Edit2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </div>
@@ -377,252 +336,173 @@ export default function EmailTemplatesPage() {
       </div>
 
       {filteredTemplates.length === 0 && (
-        <Card className="border-gray-200 dark:border-gray-800">
-          <CardContent className="py-16">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Mail className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No templates found</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {search || typeFilter 
-                  ? "Try adjusting your search or filter criteria"
-                  : "No email templates available"}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="text-center py-12 px-4">
+          <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Mail className="w-6 h-6 text-gray-400" />
+          </div>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">No templates found</h3>
+          <p className="text-xs text-gray-500 mt-1">
+            {search || typeFilter ? "Try adjusting your filters" : "Create a new template to get started"}
+          </p>
+        </div>
       )}
 
-      {/* Create Dialog */}
-      {creatingTemplate && (
-        <Dialog open={creatingTemplate} onOpenChange={(open) => !open && setCreatingTemplate(false)}>
-          <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
-            <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+      {/* Create/Edit Dialog */}
+      {(creatingTemplate || editingTemplate) && (
+        <Dialog
+          open={creatingTemplate || !!editingTemplate}
+          onOpenChange={(open) => !open && (creatingTemplate ? setCreatingTemplate(false) : setEditingTemplate(null))}
+        >
+          <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 gap-0">
+            <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${creatingTemplate ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
+                  {creatingTemplate ? <Plus className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
                 </div>
-                <div className="flex-1">
-                  <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                    Create New Template
+                <div>
+                  <DialogTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                    {creatingTemplate ? "Create Template" : "Edit Template"}
                   </DialogTitle>
-                  <DialogDescription className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    Create a new email template. Variables like {'{customer_name}'} will be replaced automatically.
+                  <DialogDescription className="text-xs text-gray-500">
+                    {creatingTemplate ? "New email notification template" : editingTemplate?.name}
                   </DialogDescription>
                 </div>
               </div>
             </DialogHeader>
-            
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Editor - 2 columns */}
-                <div className="lg:col-span-2 space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="create-template-type" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Template Type <span className="text-red-500">*</span>
-                      </Label>
-                      <select
-                        id="create-template-type"
-                        value={editForm.template_type || ""}
-                        onChange={(e) => setEditForm({ ...editForm, template_type: e.target.value })}
-                        className="h-10 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
-                      >
-                        <option value="">Select template type...</option>
-                        <option value="invoice_generated">Invoice Generated</option>
-                        <option value="invoice_due">Invoice Due</option>
-                        <option value="invoice_overdue">Invoice Overdue</option>
-                        <option value="payment_received">Payment Received</option>
-                        <option value="appointment_reminder">Appointment Reminder</option>
-                        <option value="appointment_confirmation">Appointment Confirmation</option>
-                        <option value="appointment_cancelled">Appointment Cancelled</option>
-                        <option value="work_order_created">Work Order Created</option>
-                        <option value="work_order_completed">Work Order Completed</option>
-                        <option value="work_order_approved">Work Order Approved</option>
-                        <option value="vehicle_ready">Vehicle Ready</option>
-                        <option value="inspection_completed">Inspection Completed</option>
-                        <option value="low_stock_alert">Low Stock Alert</option>
-                        <option value="service_due">Service Due</option>
-                        <option value="parts_arrived">Parts Arrived</option>
-                        <option value="estimate_sent">Estimate Sent</option>
-                        <option value="estimate_expiring_soon">Estimate Expiring Soon</option>
-                        <option value="estimate_expired">Estimate Expired</option>
-                        <option value="user_welcome">User Welcome</option>
-                        <option value="password_reset">Password Reset</option>
-                        <option value="password_reset_link">Password Reset Link</option>
-                        <option value="custom">Custom</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="create-channel" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Channel <span className="text-red-500">*</span>
-                      </Label>
-                      <select
-                        id="create-channel"
-                        value={editForm.channel || "email"}
-                        onChange={(e) => setEditForm({ ...editForm, channel: e.target.value })}
-                        className="h-10 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white"
-                      >
-                        <option value="email">Email</option>
-                        <option value="sms">SMS</option>
-                        <option value="push">Push Notification</option>
-                        <option value="in_app">In-App Notification</option>
-                      </select>
-                    </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="create-name" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Template Name <span className="text-red-500">*</span>
-                    </Label>
+            <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+              {/* Main Editor */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name" className="text-xs font-semibold">Template Name <span className="text-red-500">*</span></Label>
                     <Input
-                      id="create-name"
+                      id="name"
                       value={editForm.name || ""}
                       onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      className="h-10"
-                      placeholder="e.g., User Welcome - Default"
+                      className="h-8 text-sm"
+                      placeholder="e.g., Welcome Email"
                     />
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="create-subject" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Email Subject Line <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="create-subject"
-                      value={editForm.subject || ""}
-                      onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
-                      className="h-10"
-                      placeholder="Welcome to Smart Vehicle Repairs System"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Use variables like {'{user_name}'}, {'{email}'}, etc.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Email Body Content <span className="text-red-500">*</span>
-                    </Label>
-                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "plain" | "html")} className="w-full">
-                      <TabsList className="grid w-full grid-cols-2 h-11">
-                        <TabsTrigger value="plain" className="flex items-center gap-2 text-sm">
-                          <FileText className="w-4 h-4" />
-                          Plain Text
-                        </TabsTrigger>
-                        <TabsTrigger value="html" className="flex items-center gap-2 text-sm">
-                          <Monitor className="w-4 h-4" />
-                          HTML
-                        </TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="plain" className="mt-4 space-y-2">
-                        <Textarea
-                          id="create-body"
-                          value={editForm.body || ""}
-                          onChange={(e) => setEditForm({ ...editForm, body: e.target.value })}
-                          className="font-mono text-sm min-h-[450px] resize-none border-gray-300 dark:border-gray-700 focus:border-blue-500"
-                          placeholder="Dear {user_name},&#10;&#10;Welcome to Smart Vehicle Repairs System!..."
-                        />
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Plain text version (required)
-                        </p>
-                      </TabsContent>
-                      
-                      <TabsContent value="html" className="mt-4 space-y-2">
-                        <Textarea
-                          id="create-html_body"
-                          value={editForm.html_body || ""}
-                          onChange={(e) => setEditForm({ ...editForm, html_body: e.target.value })}
-                          className="font-mono text-sm min-h-[450px] resize-none border-gray-300 dark:border-gray-700 focus:border-blue-500"
-                          placeholder="&lt;html&gt;&lt;body&gt;&lt;p&gt;Dear {user_name},&lt;/p&gt;..."
-                        />
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          HTML version (optional, enables rich formatting and styling)
-                        </p>
-                      </TabsContent>
-                    </Tabs>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="type" className="text-xs font-semibold">Type <span className="text-red-500">*</span></Label>
+                    <Select
+                      value={editForm.template_type || ""}
+                      onChange={(e) => setEditForm({ ...editForm, template_type: e.target.value })}
+                      className="h-8 w-full text-sm"
+                      disabled={!!editingTemplate}
+                    >
+                      <option value="">Select type...</option>
+                      <option value="invoice_generated">Invoice Generated</option>
+                      <option value="invoice_due">Invoice Due</option>
+                      <option value="invoice_overdue">Invoice Overdue</option>
+                      <option value="payment_received">Payment Received</option>
+                      <option value="appointment_reminder">Appointment Reminder</option>
+                      <option value="user_welcome">User Welcome</option>
+                      <option value="password_reset">Password Reset</option>
+                      <option value="custom">Custom</option>
+                    </Select>
                   </div>
                 </div>
 
-                {/* Sidebar - Variable Helper - 1 column */}
-                <div className="lg:col-span-1">
-                  <Card className="sticky top-4 border-gray-200 dark:border-gray-800 shadow-sm">
-                    <CardHeader className="pb-3 border-b border-gray-200 dark:border-gray-800">
-                      <CardTitle className="text-base font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
-                        <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                          <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                        </div>
-                        Available Variables
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-4 space-y-4">
-                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                        <div className="flex items-start gap-2">
-                          <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                          <p className="text-xs text-blue-900 dark:text-blue-200 leading-relaxed">
-                            Click any variable below to copy it. Variables are automatically replaced with actual values when emails are sent.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        {getVariableHints(editForm.template_type).map((variable, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={async () => {
-                              try {
-                                await navigator.clipboard.writeText(variable);
-                                toast({
-                                  title: "Copied!",
-                                  description: `${variable} copied to clipboard`,
-                                });
-                              } catch (err) {
-                                console.error("Failed to copy:", err);
-                              }
-                            }}
-                            className="w-full text-left px-3 py-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-sm font-mono text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors flex items-center justify-between group"
-                          >
-                            <span>{variable}</span>
-                            <Copy className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </button>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="space-y-1.5">
+                  <Label htmlFor="subject" className="text-xs font-semibold">Subject Line <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="subject"
+                    value={editForm.subject || ""}
+                    onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
+                    className="h-8 text-sm"
+                    placeholder="Email subject..."
+                  />
+                </div>
+
+                <div className="space-y-2 flex-1 flex flex-col min-h-[400px]">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">Content</Label>
+                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "plain" | "html")} className="h-7">
+                      <TabsList className="h-7 p-0.5 bg-gray-100">
+                        <TabsTrigger value="plain" className="h-6 text-[10px] px-2">Plain Text</TabsTrigger>
+                        <TabsTrigger value="html" className="h-6 text-[10px] px-2">HTML</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+
+                  <div className="flex-1 relative border rounded-md border-gray-200 dark:border-gray-700 overflow-hidden">
+                    {activeTab === "plain" ? (
+                      <Textarea
+                        value={editForm.body || ""}
+                        onChange={(e) => setEditForm({ ...editForm, body: e.target.value })}
+                        className="w-full h-full min-h-[400px] resize-none border-0 p-4 font-mono text-sm focus-visible:ring-0"
+                        placeholder="Email content..."
+                      />
+                    ) : (
+                      <Textarea
+                        value={editForm.html_body || ""}
+                        onChange={(e) => setEditForm({ ...editForm, html_body: e.target.value })}
+                        className="w-full h-full min-h-[400px] resize-none border-0 p-4 font-mono text-sm focus-visible:ring-0"
+                        placeholder="<p>HTML content...</p>"
+                      />
+                    )}
+                  </div>
+                  <p className="text-[10px] text-gray-500 text-right">
+                    {activeTab === "plain" ? "Required fallback version" : "Optional rich version"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Sidebar */}
+              <div className="w-full lg:w-[280px] border-l border-gray-100 dark:border-gray-800 bg-gray-50/50 flex flex-col">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3" /> Variables
+                  </h4>
+                </div>
+                <ScrollArea className="flex-1 p-2">
+                  <div className="space-y-1">
+                    {getVariableHints(editForm.template_type).map((variable, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          navigator.clipboard.writeText(variable);
+                          toast({ title: "Copied!", description: variable, duration: 1000 });
+                        }}
+                        className="w-full text-left px-3 py-2 text-[10px] font-mono text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors flex items-center justify-between group border border-transparent hover:border-blue-100"
+                      >
+                        {variable}
+                        <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100" />
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+                <div className="p-3 bg-blue-50 border-t border-blue-100">
+                  <p className="text-[10px] text-blue-700 leading-tight">
+                    Click to copy variables to clipboard.
+                  </p>
                 </div>
               </div>
             </div>
 
-            <DialogFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
+            <DialogFooter className="px-6 py-3 border-t border-gray-100 dark:border-gray-800 flex-shrink-0 bg-gray-50/50">
               <div className="flex items-center justify-between w-full">
                 <Button
-                 variant="secondary"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
-                    setCreatingTemplate(false);
-                    setEditForm({});
+                    if (creatingTemplate) setCreatingTemplate(false);
+                    else setEditingTemplate(null);
                   }}
-                  disabled={createMutation.isPending}
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="h-8 text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleSave}
-                  disabled={createMutation.isPending || !editForm.name || !editForm.template_type || !editForm.body}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={createMutation.isPending || updateMutation.isPending || !editForm.name || !editForm.subject || !editForm.body}
+                  size="sm"
+                  className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  {createMutation.isPending ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Creating...
-                    </span>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Create Template
-                    </>
-                  )}
+                  {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Save Template"}
                 </Button>
               </div>
             </DialogFooter>
@@ -630,321 +510,50 @@ export default function EmailTemplatesPage() {
         </Dialog>
       )}
 
-      {/* Edit Dialog - Clean & Modern */}
-      {editingTemplate && (
-        <Dialog open={!!editingTemplate} onOpenChange={() => setEditingTemplate(null)}>
-          <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col p-0 gap-0">
-            <DialogClose onOpenChange={(open) => !open && setEditingTemplate(null)} />
-            <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                  <Edit2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                    Edit Template
-                  </DialogTitle>
-                  <DialogDescription className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    {editingTemplate.name} • Variables like {'{customer_name}'} will be replaced automatically
-                  </DialogDescription>
-                </div>
-              </div>
-            </DialogHeader>
-            
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Editor - 2 columns */}
-                <div className="lg:col-span-2 space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Template Name
-                    </Label>
-                    <Input
-                      id="name"
-                      value={editForm.name || ""}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      className="h-10"
-                      placeholder="e.g., Invoice Sent - Default"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="subject" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Email Subject Line
-                    </Label>
-                    <Input
-                      id="subject"
-                      value={editForm.subject || ""}
-                      onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
-                      className="h-10"
-                      placeholder="Invoice {invoice_number} - ${total}"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Use variables like {'{customer_name}'}, {'{invoice_number}'}, etc.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Email Body Content
-                    </Label>
-                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "plain" | "html")} className="w-full">
-                      <TabsList className="grid w-full grid-cols-2 h-11">
-                        <TabsTrigger value="plain" className="flex items-center gap-2 text-sm">
-                          <FileText className="w-4 h-4" />
-                          Plain Text
-                        </TabsTrigger>
-                        <TabsTrigger value="html" className="flex items-center gap-2 text-sm">
-                          <Monitor className="w-4 h-4" />
-                          HTML
-                        </TabsTrigger>
-                      </TabsList>
-                      
-                      <TabsContent value="plain" className="mt-4 space-y-2">
-                        <Textarea
-                          id="body"
-                          value={editForm.body || ""}
-                          onChange={(e) => setEditForm({ ...editForm, body: e.target.value })}
-                          className="font-mono text-sm min-h-[450px] resize-none border-gray-300 dark:border-gray-700 focus:border-blue-500"
-                          placeholder="Dear {customer_name},&#10;&#10;Your invoice is ready..."
-                        />
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Plain text version (used as fallback for email clients without HTML support)
-                        </p>
-                      </TabsContent>
-                      
-                      <TabsContent value="html" className="mt-4 space-y-2">
-                        <Textarea
-                          id="html_body"
-                          value={editForm.html_body || ""}
-                          onChange={(e) => setEditForm({ ...editForm, html_body: e.target.value })}
-                          className="font-mono text-sm min-h-[450px] resize-none border-gray-300 dark:border-gray-700 focus:border-blue-500"
-                          placeholder="&lt;html&gt;&lt;body&gt;&lt;p&gt;Dear {customer_name},&lt;/p&gt;..."
-                        />
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          HTML version (optional, enables rich formatting and styling)
-                        </p>
-                      </TabsContent>
-                    </Tabs>
-                  </div>
-                </div>
-
-                {/* Sidebar - Variable Helper - 1 column */}
-                <div className="lg:col-span-1">
-                  <Card className="sticky top-4 border-gray-200 dark:border-gray-800 shadow-sm">
-                    <CardHeader className="pb-3 border-b border-gray-200 dark:border-gray-800">
-                      <CardTitle className="text-base font-semibold flex items-center gap-2 text-gray-900 dark:text-white">
-                        <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                          <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                        </div>
-                        Available Variables
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-4 space-y-4">
-                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                        <div className="flex items-start gap-2">
-                          <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                          <p className="text-xs text-blue-900 dark:text-blue-200 leading-relaxed">
-                            Click any variable below to copy it. Variables are automatically replaced with actual values when emails are sent.
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3 block uppercase tracking-wide">
-                          Template Variables
-                        </Label>
-                        <div className="space-y-2 max-h-[550px] overflow-y-auto pr-1">
-                          {getVariableHints(editingTemplate.template_type).map((variable, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => {
-                                navigator.clipboard.writeText(variable);
-                                toast({
-                                  title: "Copied!",
-                                  description: `${variable} copied to clipboard`,
-                                });
-                              }}
-                              className="w-full text-left px-3 py-2.5 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 text-xs font-mono text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-all duration-150 flex items-center justify-between group"
-                            >
-                              <span className="flex-1">{variable}</span>
-                              <Copy className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400" />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div className="pt-3 border-t border-gray-200 dark:border-gray-800">
-                        <div className="flex items-start gap-2">
-                          <Info className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
-                          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                            <strong className="font-semibold">Note:</strong> Variables are case-sensitive. Include the curly braces exactly as shown.
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </div>
-            
-            <DialogFooter className="border-t border-gray-200 dark:border-gray-800 px-6 py-4 bg-gray-50 dark:bg-gray-900/50">
-              <Button 
-               variant="secondary" 
-                onClick={() => setEditingTemplate(null)}
-                className="h-10"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={updateMutation.isPending || !editForm.name || !editForm.subject || !editForm.body}
-                className="h-10 min-w-[120px]"
-              >
-                {updateMutation.isPending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Preview Dialog - Clean & Modern */}
+      {/* Preview Dialog */}
       {previewTemplate && (
         <Dialog open={!!previewTemplate} onOpenChange={() => setPreviewTemplate(null)}>
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
-            <DialogClose onOpenChange={(open) => !open && setPreviewTemplate(null)} />
-            <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-800">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                  <Eye className="w-5 h-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="flex-1">
-                  <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                    Email Preview
-                  </DialogTitle>
-                  <DialogDescription className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    {previewTemplate.name} • This is how recipients will see the email
-                  </DialogDescription>
+          <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 gap-0">
+            <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-green-600" />
+                <div>
+                  <DialogTitle className="text-base font-bold">Preview: {previewTemplate.name}</DialogTitle>
                 </div>
               </div>
             </DialogHeader>
-            
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-              <Tabs 
-                value={previewTemplate.html_body ? (previewTab === "html" ? "html" : previewTab === "source" ? "source" : "plain") : "plain"} 
-                onValueChange={(v) => {
-                  if (v === "html" && !previewTemplate.html_body) return;
-                  setPreviewTab(v);
-                }} 
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-3 h-11">
-                  <TabsTrigger value="plain" className="flex items-center gap-2 text-sm">
-                    <FileText className="w-4 h-4" />
-                    Plain Text
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="html" 
-                    className={`flex items-center gap-2 text-sm ${!previewTemplate.html_body ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
-                  >
-                    <Monitor className="w-4 h-4" />
-                    HTML Preview
-                  </TabsTrigger>
-                  <TabsTrigger value="source" className="flex items-center gap-2 text-sm">
-                    <Code2 className="w-4 h-4" />
-                    Source Code
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="plain" className="mt-6 space-y-4">
-                  <div>
-                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
-                      Email Subject
-                    </Label>
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {previewTemplate.subject || <span className="text-gray-400 italic">(No subject)</span>}
-                      </p>
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="px-6 py-3 border-b border-gray-100 bg-gray-50/50">
+                <p className="text-sm font-medium text-gray-900">
+                  <span className="text-gray-500 font-normal mr-2">Subject:</span>
+                  {previewTemplate.subject}
+                </p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                <Tabs
+                  value={previewTemplate.html_body ? (previewTab === "html" ? "html" : "plain") : "plain"}
+                  onValueChange={setPreviewTab}
+                  className="w-full"
+                >
+                  <TabsList className="w-full justify-start h-9 p-1 bg-gray-100 border-b border-gray-200 rounded-none mb-4">
+                    <TabsTrigger value="plain" className="text-xs h-7">Plain Text</TabsTrigger>
+                    <TabsTrigger value="html" className="text-xs h-7" disabled={!previewTemplate.html_body}>HTML</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="plain" className="mt-0">
+                    <div className="font-mono text-sm whitespace-pre-wrap text-gray-800 leading-relaxed">
+                      {previewTemplate.body}
                     </div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
-                      Plain Text Body
-                    </Label>
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 font-mono text-sm whitespace-pre-wrap max-h-[550px] overflow-y-auto text-gray-900 dark:text-gray-100 leading-relaxed">
-                      {previewTemplate.body || <span className="text-gray-400 italic">(No body content)</span>}
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="html" className="mt-6 space-y-4">
-                  <div>
-                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
-                      Email Subject
-                    </Label>
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {previewTemplate.subject || <span className="text-gray-400 italic">(No subject)</span>}
-                      </p>
-                    </div>
-                  </div>
-                  {previewTemplate.html_body ? (
-                    <div>
-                      <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
-                        HTML Email Preview
-                      </Label>
-                      <div className="p-6 border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 shadow-sm max-h-[550px] overflow-y-auto">
-                        <div dangerouslySetInnerHTML={{ __html: previewTemplate.html_body }} />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-12 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
-                      <Monitor className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-sm text-gray-500 dark:text-gray-400">No HTML version available</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Add HTML content in the editor to see a preview</p>
-                    </div>
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="source" className="mt-6 space-y-4">
-                  <div>
-                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
-                      Subject Source
-                    </Label>
-                    <div className="p-4 bg-gray-900 dark:bg-gray-950 rounded-lg border border-gray-800 font-mono text-sm text-green-400 max-h-[120px] overflow-y-auto">
-                      <pre className="whitespace-pre-wrap">{previewTemplate.subject || "(No subject)"}</pre>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
-                      HTML Source Code
-                    </Label>
-                    <div className="p-4 bg-gray-900 dark:bg-gray-950 rounded-lg border border-gray-800 font-mono text-xs text-green-400 max-h-[550px] overflow-y-auto">
-                      <pre className="whitespace-pre-wrap">{previewTemplate.html_body || previewTemplate.body || "(No content)"}</pre>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
+                  </TabsContent>
+                  <TabsContent value="html" className="mt-0">
+                    <div className="prose max-w-none text-sm" dangerouslySetInnerHTML={{ __html: previewTemplate.html_body || "" }} />
+                  </TabsContent>
+                </Tabs>
+              </div>
             </div>
-            
-            <DialogFooter className="border-t border-gray-200 dark:border-gray-800 px-6 py-4 bg-gray-50 dark:bg-gray-900/50">
-              <Button 
-               variant="secondary" 
-                onClick={() => setPreviewTemplate(null)}
-                className="h-10"
-              >
-                Close Preview
-              </Button>
+            <DialogFooter className="px-6 py-3 border-t border-gray-100">
+              <Button variant="secondary" size="sm" onClick={() => setPreviewTemplate(null)} className="h-8 text-xs">Close</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

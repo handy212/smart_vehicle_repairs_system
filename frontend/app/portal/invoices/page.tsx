@@ -78,6 +78,8 @@ export default function MyInvoicesPage() {
         return "warning";
       case "overdue":
         return "danger";
+      case "proforma":
+        return "secondary";
       default:
         return "secondary";
     }
@@ -159,6 +161,7 @@ export default function MyInvoicesPage() {
               className="w-48"
             >
               <option value="all">All Status</option>
+              <option value="proforma">Proforma</option>
               <option value="pending">Pending</option>
               <option value="sent">Sent</option>
               <option value="paid">Paid</option>
@@ -179,7 +182,7 @@ export default function MyInvoicesPage() {
                     <div className="flex items-center space-x-3 mb-2">
                       <FileText className="w-5 h-5 text-blue-500" />
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        Invoice #{invoice.invoice_number}
+                        {invoice.status === 'proforma' ? 'Proforma Invoice' : 'Invoice'} #{invoice.invoice_number}
                       </h3>
                     </div>
                     <div className="ml-8 space-y-1">

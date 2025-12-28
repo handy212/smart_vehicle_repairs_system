@@ -9,6 +9,7 @@ router.register(r'estimate-items', views.EstimateLineItemViewSet, basename='esti
 router.register(r'invoices', views.InvoiceViewSet, basename='invoice')
 router.register(r'payments', views.PaymentViewSet, basename='payment')
 router.register(r'accounting', views.AccountingViewSet, basename='accounting')
+router.register(r'branch-pl-comparison', views.BranchPLComparisonViewSet, basename='branch-pl-comparison')
 # Phase 2: Cash & Payment Management
 router.register(r'tills', views.TillViewSet, basename='till')
 router.register(r'refunds', views.RefundViewSet, basename='refund')

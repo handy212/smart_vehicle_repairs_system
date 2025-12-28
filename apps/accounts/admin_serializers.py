@@ -3,8 +3,10 @@ Serializers for Admin Features
 """
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .admin_models import SystemSettings, AuditLog, SystemBackup, EmailTemplate, SMSTemplate
+from auditlog.models import LogEntry
+from .admin_models import SystemSettings, SystemBackup, EmailTemplate, SMSTemplate
 from .permission_models import Role, Permission
+import json
 
 User = get_user_model()
 
@@ -41,13 +43,22 @@ class SystemSettingsSerializer(serializers.ModelSerializer):
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
-    """Serializer for AuditLog"""
+    """Serializer for AuditLog (using django-auditlog LogEntry)"""
+    user = serializers.SerializerMethodField()
     user_email = serializers.SerializerMethodField()
     user_name = serializers.SerializerMethodField()
+    action = serializers.SerializerMethodField()
+    model_name = serializers.SerializerMethodField()
+    object_id = serializers.CharField(source='object_pk')
+    object_repr = serializers.CharField()
+    changes = serializers.JSONField()
+    # LogEntry calls it remote_addr
+    ip_address = serializers.SerializerMethodField()
+    user_agent = serializers.SerializerMethodField() # Not stored by default in basic auditlog middleware but we map for frontend compat
     changes_display = serializers.SerializerMethodField()
     
     class Meta:
-        model = AuditLog
+        model = LogEntry
         fields = [
             'id', 'user', 'user_email', 'user_name', 'action', 'model_name',
             'object_id', 'object_repr', 'changes', 'changes_display',
@@ -55,16 +66,49 @@ class AuditLogSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'timestamp']
     
+    def get_user(self, obj):
+        return obj.actor.id if obj.actor else None
+
     def get_user_email(self, obj):
-        return obj.user.email if obj.user else None
+        return obj.actor.email if obj.actor else "system@system.local"
     
     def get_user_name(self, obj):
-        if obj.user:
-            return obj.user.get_full_name() or f"{obj.user.first_name} {obj.user.last_name}".strip()
-        return None
+        if obj.actor:
+            return obj.actor.get_full_name() or f"{obj.actor.first_name} {obj.actor.last_name}".strip()
+        return "System"
+    
+    def get_action(self, obj):
+        # Map integer action to string
+        # LogEntry.Action.CREATE = 0
+        # LogEntry.Action.UPDATE = 1
+        # LogEntry.Action.DELETE = 2
+        actions = {
+            0: 'create',
+            1: 'update',
+            2: 'delete',
+        }
+        return actions.get(obj.action, str(obj.action))
+
+    def get_model_name(self, obj):
+        return obj.content_type.model
+
+    def get_ip_address(self, obj):
+        return obj.remote_addr
+    
+    def get_user_agent(self, obj):
+        # Generic django-auditlog doesn't store UA by default in the same field name
+        # We return empty string to maintain API contract
+        return ""
     
     def get_changes_display(self, obj):
-        return obj.get_changes_display() if hasattr(obj, 'get_changes_display') else None
+        # obj.changes is a JSON dict of diffs
+        if not obj.changes:
+            return "No changes"
+        try:
+             # Basic formatting
+             return json.dumps(obj.changes, indent=2)
+        except:
+             return str(obj.changes)
 
 
 class SystemBackupSerializer(serializers.ModelSerializer):
@@ -181,4 +225,3 @@ class RoleCreateUpdateSerializer(serializers.ModelSerializer):
         if permission_ids is not None:
             instance.permissions.set(permission_ids)
         return instance
-

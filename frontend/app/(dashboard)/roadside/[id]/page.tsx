@@ -10,8 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import {
     ArrowLeft, Truck, User as UserIcon, Phone,
     MapPin, Clock, CheckCircle, XCircle,
-    Wrench, Navigation, Info,
-    ExternalLink, MessageSquare, History, ShieldCheck
+    Wrench, Navigation,
+    ExternalLink, MessageSquare, ShieldCheck,
+    Car
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -55,7 +56,6 @@ export default function RoadsideDetailPage() {
     const queryClient = useQueryClient();
     const { toast } = useToast();
 
-    // Parse ID and handle potential NaN
     const requestIdStr = params?.id as string;
     const requestId = requestIdStr ? parseInt(requestIdStr) : NaN;
     const isValidId = !isNaN(requestId);
@@ -168,6 +168,20 @@ export default function RoadsideDetailPage() {
         }
     });
 
+    const getStatusVariant = (status: string) => {
+        switch (status) {
+            case "completed": return "success";
+            case "requested": return "warning";
+            case "dispatched":
+            case "en_route":
+            case "on_site":
+            case "in_progress": return "info";
+            case "cancelled": return "secondary";
+            case "failed": return "danger";
+            default: return "default";
+        }
+    };
+
     if (!isValidId) {
         return (
             <div className="p-8 text-center space-y-4">
@@ -179,7 +193,11 @@ export default function RoadsideDetailPage() {
     }
 
     if (isLoading) {
-        return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading request details...</div>;
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        );
     }
 
     if (!request) {
@@ -192,180 +210,166 @@ export default function RoadsideDetailPage() {
         );
     }
 
-    const getStatusVariant = (status: string) => {
-        switch (status) {
-            case "completed": return "success";
-            case "requested": return "warning";
-            case "dispatched": return "info";
-            case "en_route": return "info";
-            case "on_site": return "info";
-            case "in_progress": return "info";
-            case "cancelled": return "secondary";
-            case "failed": return "danger";
-            default: return "default";
-        }
-    };
-
     return (
-        <div className="space-y-6 pb-12">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="sm" onClick={() => router.back()}>
-                    <ArrowLeft className="h-4 w-4 mr-2" /> Back to List
-                </Button>
+        <div className="space-y-5">
+            {/* Compact Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                    <Button variant="ghost" size="sm" onClick={() => router.back()} className="h-8">
+                        <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back
+                    </Button>
+                    <div>
+                        <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-0.5">
+                            <Link href="/roadside" className="hover:underline">Roadside</Link>
+                            <span>/</span>
+                            <span className="text-gray-900 dark:text-gray-100 font-medium">{request.request_number}</span>
+                        </div>
+                        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+                            {request.service_type_display}
+                        </h1>
+                    </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Badge variant={getStatusVariant(request.status) as any} className="text-[10px] px-2 py-0.5">
+                        {request.status_display}
+                    </Badge>
+                    {request.is_covered_by_subscription && (
+                        <Badge variant="success" className="text-[10px] px-2 py-0.5">
+                            <ShieldCheck className="h-3 w-3 mr-0.5" /> AA
+                        </Badge>
+                    )}
+                    <Button variant="ghost" size="sm" className="h-8" onClick={handleOpenEdit}>
+                        <Wrench className="w-3.5 h-3.5 mr-1" />
+                        Edit
+                    </Button>
+                </div>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-6">
-                <div className="flex-1 space-y-6">
-                    {/* Main Info Card */}
-                    <Card className="border-none shadow-sm overflow-hidden">
-                        <div className="h-2 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
-                        <CardHeader className="flex flex-row items-start justify-between">
-                            <div>
-                                <div className="flex items-center gap-3 mb-1">
-                                    <Badge variant={getStatusVariant(request.status)} className="px-3 py-1">
-                                        {request.status_display}
-                                    </Badge>
-                                    <span className="text-sm font-bold text-muted-foreground">{request.request_number}</span>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <CardTitle className="text-2xl">{request.service_type_display}</CardTitle>
-                                    <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1" onClick={handleOpenEdit}>
-                                        <Wrench className="h-3 w-3" /> Edit Details
-                                    </Button>
-                                </div>
-                                <CardDescription className="flex items-center gap-1 mt-1">
-                                    <Clock className="h-3.5 w-3.5" />
-                                    Requested on {format(new Date(request.requested_at), "MMMM d, yyyy 'at' h:mm a")}
-                                </CardDescription>
-                            </div>
-                            <div className="flex flex-col items-end gap-2">
-                                {request.is_covered_by_subscription && (
-                                    <Badge variant="success" className="gap-1 px-3 py-1">
-                                        <ShieldCheck className="h-3.5 w-3.5" /> Covered by AA
-                                    </Badge>
-                                )}
-                                <div className="text-right">
-                                    <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Charge Amount</div>
-                                    <div className="text-xl font-black text-gray-900 dark:text-gray-100">
-                                        {request.charge_amount ? `GH¢ ${request.charge_amount}` : "N/A"}
-                                    </div>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <div className="flex items-start gap-3">
-                                        <div className="h-8 w-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600">
-                                            <MapPin className="h-4 w-4" />
-                                        </div>
-                                        <div>
-                                            <div className="text-xs font-bold uppercase text-muted-foreground">Breakdown Location</div>
-                                            <div className="text-sm font-medium">{request.breakdown_location}</div>
-                                            {request.latitude && request.longitude && (
-                                                <a
-                                                    href={`https://www.google.com/maps?q=${request.latitude},${request.longitude}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-xs text-blue-600 flex items-center gap-1 mt-1 hover:underline"
-                                                >
-                                                    View on Map <ExternalLink className="h-3 w-3" />
-                                                </a>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {request.destination && (
-                                        <div className="flex items-start gap-3">
-                                            <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
-                                                <Navigation className="h-4 w-4" />
-                                            </div>
-                                            <div>
-                                                <div className="text-xs font-bold uppercase text-muted-foreground">Towing Destination</div>
-                                                <div className="text-sm font-medium">{request.destination}</div>
-                                                {request.tow_distance_km && (
-                                                    <div className="text-xs text-muted-foreground mt-0.5">Estimated distance: {request.tow_distance_km} km</div>
-                                                )}
-                                            </div>
-                                        </div>
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Left Column */}
+                <div className="lg:col-span-2 space-y-4">
+                    {/* Location & Customer Info - 2 column grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Location Card */}
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <MapPin className="h-4 w-4" />
+                                    Location
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Breakdown Location</p>
+                                    <p className="text-sm text-gray-900 dark:text-gray-100">{request.breakdown_location}</p>
+                                    {request.latitude && request.longitude && (
+                                        <a
+                                            href={`https://www.google.com/maps?q=${request.latitude},${request.longitude}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-1 hover:underline"
+                                        >
+                                            Open in Maps <ExternalLink className="h-3 w-3" />
+                                        </a>
                                     )}
                                 </div>
-
-                                <div className="space-y-4">
-                                    <div className="flex items-start gap-3">
-                                        <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
-                                            <Truck className="h-4 w-4" />
-                                        </div>
-                                        <div>
-                                            <div className="text-xs font-bold uppercase text-muted-foreground">Vehicle Information</div>
-                                            <div className="text-sm font-medium">{request.vehicle_display}</div>
-                                            <Link href={`/vehicles/${request.vehicle}`} className="text-xs text-blue-600 hover:underline">
-                                                View Vehicle Details
-                                            </Link>
-                                        </div>
+                                {request.destination && (
+                                    <div className="pt-3 border-t">
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Destination</p>
+                                        <p className="text-sm text-gray-900 dark:text-gray-100">{request.destination}</p>
+                                        {request.tow_distance_km && (
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                {request.tow_distance_km} km
+                                            </p>
+                                        )}
                                     </div>
+                                )}
+                            </CardContent>
+                        </Card>
 
-                                    <div className="flex items-start gap-3">
-                                        <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600">
-                                            <UserIcon className="h-4 w-4" />
-                                        </div>
-                                        <div>
-                                            <div className="text-xs font-bold uppercase text-muted-foreground">Customer</div>
-                                            <div className="text-sm font-medium">{request.customer_name}</div>
-                                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                                <Phone className="h-3 w-3" /> {request.customer_phone || "No phone listed"}
-                                            </div>
-                                        </div>
+                        {/* Customer & Vehicle Card */}
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <UserIcon className="h-4 w-4" />
+                                    Customer & Vehicle
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Customer</p>
+                                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{request.customer_name}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+                                        <Phone className="h-3 w-3" /> {request.customer_phone}
+                                    </p>
+                                </div>
+                                <div className="pt-3 border-t">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Vehicle</p>
+                                    <p className="text-sm text-gray-900 dark:text-gray-100">{request.vehicle_display}</p>
+                                    <Link href={`/vehicles/${request.vehicle}`} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                                        View Details
+                                    </Link>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Description & Notes */}
+                    {(request.description || request.notes) && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base">Details</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                {request.description && (
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Problem Description</p>
+                                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+                                            {request.description}
+                                        </p>
                                     </div>
-                                </div>
-                            </div>
-
-                            {request.description && (
-                                <div className="pt-4 border-t">
-                                    <div className="text-xs font-bold uppercase text-muted-foreground mb-2">Problem Description</div>
-                                    <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 text-sm whitespace-pre-wrap italic">
-                                        "{request.description}"
+                                )}
+                                {request.notes && (
+                                    <div className={request.description ? "pt-3 border-t" : ""}>
+                                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Internal Notes</p>
+                                        <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                            {request.notes}
+                                        </p>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
 
-                            {request.notes && (
-                                <div className="pt-4 border-t">
-                                    <div className="text-xs font-bold uppercase text-muted-foreground mb-2">Internal Notes</div>
-                                    <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                        {request.notes}
-                                    </div>
-                                </div>
-                            )}
+                    {/* Map */}
+                    {request.latitude && request.longitude && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base">Map</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <RoadsideMap
+                                    latitude={typeof request.latitude === 'string' ? parseFloat(request.latitude) : request.latitude}
+                                    longitude={typeof request.longitude === 'string' ? parseFloat(request.longitude) : request.longitude}
+                                    address={request.breakdown_location}
+                                />
+                            </CardContent>
+                        </Card>
+                    )}
 
-                            {request.latitude && request.longitude && (
-                                <div className="pt-4 border-t">
-                                    <div className="text-xs font-bold uppercase text-muted-foreground mb-3">Map View</div>
-                                    <RoadsideMap
-                                        latitude={typeof request.latitude === 'string' ? parseFloat(request.latitude) : request.latitude}
-                                        longitude={typeof request.longitude === 'string' ? parseFloat(request.longitude) : request.longitude}
-                                        address={request.breakdown_location}
-                                    />
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Activity Timeline */}
-                    <Card className="border-none shadow-sm">
+                    {/* Service Timeline */}
+                    <Card>
                         <CardHeader>
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                <History className="h-5 w-5 text-blue-600" />
-                                Service History
-                            </CardTitle>
+                            <CardTitle>Service History</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="relative space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100 dark:before:bg-gray-800">
+                            <div className="relative space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200 dark:before:bg-gray-700">
                                 <div className="relative pl-8">
                                     <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-blue-600"></div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm font-bold">Request Created</span>
-                                        <span className="text-xs text-muted-foreground">{format(new Date(request.requested_at), "h:mm a")}</span>
+                                        <span className="text-sm font-semibold">Request Created</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">{format(new Date(request.requested_at), "h:mm a")}</span>
                                     </div>
                                 </div>
 
@@ -373,11 +377,11 @@ export default function RoadsideDetailPage() {
                                     <div className="relative pl-8">
                                         <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-indigo-600"></div>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-sm font-bold">Technician Dispatched</span>
-                                            <span className="text-xs text-muted-foreground">{format(new Date(request.dispatched_at), "h:mm a")}</span>
+                                            <span className="text-sm font-semibold">Technician Dispatched</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">{format(new Date(request.dispatched_at), "h:mm a")}</span>
                                         </div>
                                         {request.assigned_technician_name && (
-                                            <div className="text-xs text-muted-foreground mt-0.5">Assigned to: {request.assigned_technician_name}</div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Assigned to: {request.assigned_technician_name}</p>
                                         )}
                                     </div>
                                 )}
@@ -386,8 +390,8 @@ export default function RoadsideDetailPage() {
                                     <div className="relative pl-8">
                                         <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-emerald-600"></div>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-sm font-bold">Technician Arrived</span>
-                                            <span className="text-xs text-muted-foreground">{format(new Date(request.arrived_at), "h:mm a")}</span>
+                                            <span className="text-sm font-semibold">Technician Arrived</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">{format(new Date(request.arrived_at), "h:mm a")}</span>
                                         </div>
                                     </div>
                                 )}
@@ -396,15 +400,15 @@ export default function RoadsideDetailPage() {
                                     <div className="relative pl-8">
                                         <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-green-600"></div>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-sm font-bold">Service Completed</span>
-                                            <span className="text-xs text-muted-foreground">{format(new Date(request.completed_at), "h:mm a")}</span>
+                                            <span className="text-sm font-semibold">Service Completed</span>
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">{format(new Date(request.completed_at), "h:mm a")}</span>
                                         </div>
                                         {request.invoice_number && (
                                             <div className="text-xs mt-1 flex items-center gap-2">
-                                                <span className="text-muted-foreground">Invoice:</span>
+                                                <span className="text-gray-500 dark:text-gray-400">Invoice:</span>
                                                 <Link
                                                     href={`/billing/invoices/${request.invoice}`}
-                                                    className="font-bold text-blue-600 hover:underline flex items-center gap-1"
+                                                    className="font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
                                                 >
                                                     {request.invoice_number} <ExternalLink className="h-3 w-3" />
                                                 </Link>
@@ -416,9 +420,7 @@ export default function RoadsideDetailPage() {
                                 {request.status === 'cancelled' && (
                                     <div className="relative pl-8">
                                         <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-red-600"></div>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-bold">Request Cancelled</span>
-                                        </div>
+                                        <span className="text-sm font-semibold">Request Cancelled</span>
                                     </div>
                                 )}
                             </div>
@@ -426,122 +428,211 @@ export default function RoadsideDetailPage() {
                     </Card>
                 </div>
 
-                <div className="w-full lg:w-80 space-y-6">
-                    {/* Actions Panel */}
-                    <Card className="border-none shadow-sm">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Control Center</CardTitle>
+                {/* Right Column - Sidebar */}
+                <div className="space-y-3">
+                    {/* Actions Card */}
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm">Actions</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-3">
+                        <CardContent className="space-y-2">
                             {request.status === 'requested' && (
-                                <Button
-                                    className="w-full bg-blue-600 hover:bg-blue-700"
-                                    onClick={() => setIsDispatchDialogOpen(true)}
-                                >
-                                    <Truck className="h-4 w-4 mr-2" /> Dispatch Technician
+                                <Button size="sm" className="w-full" onClick={() => setIsDispatchDialogOpen(true)}>
+                                    <Truck className="h-3 w-3 mr-1.5" /> Dispatch
                                 </Button>
                             )}
 
                             {request.status === 'dispatched' && (
-                                <Button
-                                    className="w-full bg-amber-600 hover:bg-amber-700"
-                                    onClick={() => statusUpdateMutation.mutate('en_route')}
-                                >
-                                    <Navigation className="h-4 w-4 mr-2" /> Technician En Route
+                                <Button size="sm" className="w-full" onClick={() => statusUpdateMutation.mutate('en_route')}>
+                                    <Navigation className="h-3 w-3 mr-1.5" /> En Route
                                 </Button>
                             )}
 
                             {request.status === 'en_route' && (
-                                <Button
-                                    className="w-full bg-indigo-600 hover:bg-indigo-700"
-                                    onClick={() => statusUpdateMutation.mutate('arrive')}
-                                >
-                                    <MapPin className="h-4 w-4 mr-2" /> Mark as Arrived
+                                <Button size="sm" className="w-full" onClick={() => statusUpdateMutation.mutate('arrive')}>
+                                    <MapPin className="h-3 w-3 mr-1.5" /> Arrived
                                 </Button>
                             )}
 
                             {['on_site', 'arrived'].includes(request.status) && (
-                                <Button
-                                    className="w-full bg-purple-600 hover:bg-purple-700"
-                                    onClick={() => statusUpdateMutation.mutate('in_progress')}
-                                >
-                                    <Wrench className="h-4 w-4 mr-2" /> Start Service
+                                <Button size="sm" className="w-full" onClick={() => statusUpdateMutation.mutate('in_progress')}>
+                                    <Wrench className="h-3 w-3 mr-1.5" /> Start
                                 </Button>
                             )}
 
                             {request.status === 'in_progress' && (
-                                <Button
-                                    className="w-full bg-green-600 hover:bg-green-700"
-                                    onClick={() => statusUpdateMutation.mutate('complete')}
-                                >
-                                    <CheckCircle className="h-4 w-4 mr-2" /> Complete Service
+                                <Button size="sm" className="w-full" onClick={() => statusUpdateMutation.mutate('complete')}>
+                                    <CheckCircle className="h-3 w-3 mr-1.5" /> Complete
                                 </Button>
                             )}
 
+                            <Button variant="secondary" size="sm" className="w-full" onClick={() => setIsSmsDialogOpen(true)}>
+                                <MessageSquare className="h-3 w-3 mr-1.5" /> Message
+                            </Button>
+
                             {request.can_be_cancelled && (
                                 <Button
-                                    variant="outline"
-                                    className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                    variant="secondary"
+                                    size="sm"
+                                    className="w-full text-red-600 dark:text-red-400"
                                     onClick={() => {
                                         if (confirm("Are you sure you want to cancel this request?")) {
                                             statusUpdateMutation.mutate('cancel');
                                         }
                                     }}
                                 >
-                                    <XCircle className="h-4 w-4 mr-2" /> Cancel Request
+                                    <XCircle className="h-3 w-3 mr-1.5" /> Cancel
                                 </Button>
                             )}
-
-                            <Button
-                                variant="outline"
-                                className="w-full"
-                                onClick={() => setIsSmsDialogOpen(true)}
-                            >
-                                <MessageSquare className="h-4 w-4 mr-2" /> Message Customer
-                            </Button>
                         </CardContent>
                     </Card>
 
-                    {/* Provider Card */}
-                    {request.assigned_technician && (
-                        <Card className="border-none shadow-sm">
+                    {/* Workflow Progress - Compact Horizontal */}
+                    {!['cancelled', 'failed'].includes(request.status) && (
+                        <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm uppercase tracking-wider text-muted-foreground font-bold">Assigned Technician</CardTitle>
+                                <CardTitle className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Progress</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="flex items-center gap-3">
-                                    <div className="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-lg font-bold text-blue-600">
-                                        {request.assigned_technician_name?.substring(0, 2).toUpperCase()}
+                                <div className="flex items-center justify-between space-x-1">
+                                    {/* Requested */}
+                                    <div className="flex flex-col items-center">
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status)
+                                            ? 'bg-green-500 text-white'
+                                            : request.status === 'requested'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                            }`}>
+                                            {['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? '✓' : '1'}
+                                        </div>
+                                        <span className="text-[9px] mt-0.5 text-gray-500 dark:text-gray-400">Request</span>
                                     </div>
-                                    <div>
-                                        <div className="font-bold">{request.assigned_technician_name}</div>
-                                        <div className="text-xs text-muted-foreground">Mobile Technician</div>
+                                    <div className={`h-px flex-1 ${['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+
+                                    {/* Dispatched */}
+                                    <div className="flex flex-col items-center">
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status)
+                                            ? 'bg-green-500 text-white'
+                                            : request.status === 'dispatched'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                            }`}>
+                                            {['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? '✓' : '2'}
+                                        </div>
+                                        <span className="text-[9px] mt-0.5 text-gray-500 dark:text-gray-400">Dispatch</span>
+                                    </div>
+                                    <div className={`h-px flex-1 ${['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+
+                                    {/* En Route */}
+                                    <div className="flex flex-col items-center">
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['on_site', 'in_progress', 'completed'].includes(request.status)
+                                            ? 'bg-green-500 text-white'
+                                            : request.status === 'en_route'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                            }`}>
+                                            {['on_site', 'in_progress', 'completed'].includes(request.status) ? '✓' : '3'}
+                                        </div>
+                                        <span className="text-[9px] mt-0.5 text-gray-500 dark:text-gray-400">En Route</span>
+                                    </div>
+                                    <div className={`h-px flex-1 ${['on_site', 'in_progress', 'completed'].includes(request.status) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+
+                                    {/* On Site */}
+                                    <div className="flex flex-col items-center">
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['in_progress', 'completed'].includes(request.status)
+                                            ? 'bg-green-500 text-white'
+                                            : ['on_site', 'arrived'].includes(request.status)
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                            }`}>
+                                            {['in_progress', 'completed'].includes(request.status) ? '✓' : '4'}
+                                        </div>
+                                        <span className="text-[9px] mt-0.5 text-gray-500 dark:text-gray-400">On Site</span>
+                                    </div>
+                                    <div className={`h-px flex-1 ${['in_progress', 'completed'].includes(request.status) ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+
+                                    {/* In Progress */}
+                                    <div className="flex flex-col items-center">
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${request.status === 'completed'
+                                            ? 'bg-green-500 text-white'
+                                            : request.status === 'in_progress'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                            }`}>
+                                            {request.status === 'completed' ? '✓' : '5'}
+                                        </div>
+                                        <span className="text-[9px] mt-0.5 text-gray-500 dark:text-gray-400">Working</span>
+                                    </div>
+                                    <div className={`h-px flex-1 ${request.status === 'completed' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+
+                                    {/* Completed */}
+                                    <div className="flex flex-col items-center">
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${request.status === 'completed'
+                                            ? 'bg-green-600 text-white'
+                                            : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                                            }`}>
+                                            {request.status === 'completed' ? '✓' : '6'}
+                                        </div>
+                                        <span className="text-[9px] mt-0.5 text-gray-500 dark:text-gray-400">Done</span>
                                     </div>
                                 </div>
-                                <Button variant="secondary" size="sm" className="w-full mt-4" onClick={() => setIsDispatchDialogOpen(true)}>
-                                    Change Technician
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Technician Card */}
+                    {request.assigned_technician && (
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Technician</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-bold text-blue-600">
+                                        {request.assigned_technician_name?.substring(0, 2).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">{request.assigned_technician_name}</div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">Mobile Tech</div>
+                                    </div>
+                                </div>
+                                <Button variant="secondary" size="sm" className="w-full text-xs" onClick={() => setIsDispatchDialogOpen(true)}>
+                                    Change
                                 </Button>
                             </CardContent>
                         </Card>
                     )}
 
-                    {/* Subscription Info Card */}
+                    {/* AA Coverage Card */}
                     {request.is_covered_by_subscription && (
-                        <Card className="border-none shadow-sm bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800">
+                        <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-bold text-emerald-800 dark:text-emerald-300">AA Coverage</CardTitle>
+                                <CardTitle className="text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                                    <ShieldCheck className="h-3 w-3" /> AA Coverage
+                                </CardTitle>
                             </CardHeader>
-                            <CardContent className="text-xs space-y-2 text-emerald-700 dark:text-emerald-400">
+                            <CardContent className="text-xs space-y-1.5">
                                 <div className="flex justify-between">
-                                    <span>Subscription:</span>
-                                    <span className="font-bold">{request.subscription_number}</span>
+                                    <span className="text-gray-600 dark:text-gray-400">Plan:</span>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">{request.subscription_number}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span>Allowance Used:</span>
-                                    <span className="font-bold">Yes</span>
+                                    <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                                    <span className="font-medium text-emerald-600 dark:text-emerald-400">Deducted</span>
                                 </div>
-                                <div className="pt-2 border-t border-emerald-200 dark:border-emerald-800 mt-2">
-                                    <p>This service call has been deducted from the member's annual allowance.</p>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Charge Amount Card */}
+                    {request.charge_amount && (
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">Charge</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                                    GH¢ {request.charge_amount}
                                 </div>
                             </CardContent>
                         </Card>
@@ -549,22 +640,22 @@ export default function RoadsideDetailPage() {
                 </div>
             </div>
 
-            {/* Dispatch Dialog */}
+            {/* Dialogs */}
             <Dialog open={isDispatchDialogOpen} onOpenChange={setIsDispatchDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>Assign Technician</DialogTitle>
-                        <DialogDescription>
+                <DialogContent className="sm:max-w-[400px] p-0 gap-0 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-xl rounded-xl">
+                    <DialogHeader className="p-6 pb-3">
+                        <DialogTitle className="text-base font-semibold">Assign Technician</DialogTitle>
+                        <DialogDescription className="text-xs">
                             Select a technician to perform the {request.service_type_display}.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4 space-y-4">
+                    <div className="px-6 pb-4 pt-2 space-y-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Technician</label>
                             <select
                                 value={selectedTechnicianId}
                                 onChange={(e) => setSelectedTechnicianId(e.target.value)}
-                                className="w-full h-10 px-3 py-2 border rounded-md bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full h-9 px-3 py-2 border rounded-md bg-white dark:bg-gray-800 text-sm"
                             >
                                 <option value="">-- Choose technician --</option>
                                 {technicians?.map(tech => (
@@ -573,11 +664,13 @@ export default function RoadsideDetailPage() {
                             </select>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="ghost" onClick={() => setIsDispatchDialogOpen(false)}>Cancel</Button>
+                    <DialogFooter className="p-6 pt-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 rounded-b-xl">
+                        <Button variant="ghost" size="sm" onClick={() => setIsDispatchDialogOpen(false)}>Cancel</Button>
                         <Button
+                            size="sm"
                             onClick={() => dispatchMutation.mutate(parseInt(selectedTechnicianId))}
                             disabled={!selectedTechnicianId || dispatchMutation.isPending}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
                         >
                             {dispatchMutation.isPending ? "Assigning..." : "Assign & Dispatch"}
                         </Button>
@@ -585,7 +678,6 @@ export default function RoadsideDetailPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Edit Request Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
@@ -648,7 +740,7 @@ export default function RoadsideDetailPage() {
                             </div>
                         </div>
                         <DialogFooter className="pt-4">
-                            <Button type="button" variant="ghost" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                            <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
                             <Button type="submit" disabled={updateRequestMutation.isPending}>
                                 {updateRequestMutation.isPending ? "Saving..." : "Save Changes"}
                             </Button>
@@ -657,7 +749,6 @@ export default function RoadsideDetailPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* SMS Dialog */}
             <Dialog open={isSmsDialogOpen} onOpenChange={setIsSmsDialogOpen}>
                 <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
@@ -677,13 +768,13 @@ export default function RoadsideDetailPage() {
                                 rows={5}
                                 maxLength={160}
                             />
-                            <p className="text-xs text-muted-foreground text-right">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 text-right">
                                 {smsMessage.length}/160 characters
                             </p>
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="ghost" onClick={() => { setIsSmsDialogOpen(false); setSmsMessage(""); }}>
+                        <Button variant="secondary" onClick={() => { setIsSmsDialogOpen(false); setSmsMessage(""); }}>
                             Cancel
                         </Button>
                         <Button

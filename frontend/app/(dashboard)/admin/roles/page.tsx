@@ -18,6 +18,8 @@ import { Select } from "@/components/ui/select";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { Checkbox } from "@/components/ui/checkbox";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 // Category display names mapping
 const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
@@ -90,7 +92,7 @@ export default function RolesPage() {
     const systemRoles = roles.filter(r => r.is_system).length;
     const totalUsers = roles.reduce((sum, r) => sum + (r.user_count || 0), 0);
     const totalPermissions = permissions.length;
-    
+
     return { totalRoles, activeRoles, systemRoles, totalUsers, totalPermissions };
   }, [roles, permissions]);
 
@@ -157,100 +159,92 @@ export default function RolesPage() {
   }, [roles, debouncedSearch]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 dark:bg-gray-900 min-h-screen">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between px-4 pt-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Roles & Permissions</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Manage user roles and assign permissions
-          </p>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/admin" className="hover:text-blue-600 transition-colors">Admin</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Roles</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Roles & Permissions</h1>
         </div>
         <PermissionGuard permission="manage_roles">
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
+          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="h-8 dark:bg-blue-600 dark:hover:bg-blue-700">
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
             New Role
           </Button>
         </PermissionGuard>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Roles</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalRoles}</p>
-              </div>
-              <Shield className="w-8 h-8 text-blue-500" />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mx-4">
+        <Card className="shadow-sm">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Total Roles</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalRoles}</p>
             </div>
+            <Shield className="w-5 h-5 text-blue-500 opacity-80" />
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Roles</p>
-                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.activeRoles}</p>
-              </div>
-              <Shield className="w-8 h-8 text-green-500" />
+        <Card className="shadow-sm">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Active</p>
+              <p className="text-xl font-bold text-green-600 dark:text-green-400">{stats.activeRoles}</p>
             </div>
+            <Shield className="w-5 h-5 text-green-500 opacity-80" />
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">System Roles</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.systemRoles}</p>
-              </div>
-              <Shield className="w-8 h-8 text-gray-500" />
+        <Card className="shadow-sm">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">System</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.systemRoles}</p>
             </div>
+            <Shield className="w-5 h-5 text-gray-400 opacity-80" />
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Users</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalUsers}</p>
-              </div>
-              <Users className="w-8 h-8 text-purple-500" />
+        <Card className="shadow-sm">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Users</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalUsers}</p>
             </div>
+            <Users className="w-5 h-5 text-purple-500 opacity-80" />
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Permissions</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalPermissions}</p>
-              </div>
-              <Shield className="w-8 h-8 text-orange-500" />
+        <Card className="hidden md:block shadow-sm">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Perms</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalPermissions}</p>
             </div>
+            <Shield className="w-5 h-5 text-orange-500 opacity-80" />
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4 flex-wrap">
+      <Card className="mx-4 border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <CardContent className="p-3">
+          <div className="flex items-center gap-3">
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
               <Input
                 type="text"
                 placeholder="Search roles..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-8 h-8 text-sm bg-white dark:bg-gray-900"
               />
             </div>
             <Select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-[150px]"
+              className="w-[140px] h-8 text-sm bg-white dark:bg-gray-900"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -259,7 +253,7 @@ export default function RolesPage() {
             <Select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-[150px]"
+              className="w-[140px] h-8 text-sm bg-white dark:bg-gray-900"
             >
               <option value="all">All Types</option>
               <option value="system">System</option>
@@ -270,224 +264,169 @@ export default function RolesPage() {
       </Card>
 
       {/* Roles Table */}
-      {isLoading ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <Card className="mx-4 border-t shadow-sm">
+        <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+          <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Roles Directory <span className="text-muted-foreground font-normal ml-1">({filteredRoles.length})</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             </div>
-          </CardContent>
-        </Card>
-      ) : filteredRoles.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
+          ) : filteredRoles.length === 0 ? (
             <div className="text-center py-12">
-              <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">No roles found.</p>
+              <Shield className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">No roles found.</p>
               {search && (
-                <Button
-                 variant="secondary"
-                  className="mt-4"
-                  onClick={() => setSearch("")}
-                >
+                <Button variant="link" size="sm" onClick={() => setSearch("")} className="mt-1 h-auto p-0">
                   Clear Search
                 </Button>
               )}
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Roles ({filteredRoles.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
+          ) : (
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Users</TableHead>
-                    <TableHead>Permissions</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Code</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Users</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Perms</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
+                    <th className="px-4 py-2 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-2 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
                   {filteredRoles.map((role) => (
-                    <TableRow key={role.id}>
-                      <TableCell>
+                    <tr key={role.id} className="hover:bg-gray-50/80 transition-colors group">
+                      <TableCell className="px-4 py-2.5">
                         <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100">{role.name}</div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{role.name}</div>
                           {role.description && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            <div className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[200px]">
                               {role.description}
                             </div>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
+                      <TableCell className="px-4 py-2.5">
+                        <code className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono border border-slate-200">
                           {role.code}
                         </code>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Users className="w-4 h-4 text-gray-400" />
-                          <span className="font-medium">{role.user_count || 0}</span>
+                      <TableCell className="px-4 py-2.5">
+                        <div className="flex items-center space-x-1.5 text-xs text-gray-600">
+                          <Users className="w-3 h-3 text-gray-400" />
+                          <span>{role.user_count || 0}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Shield className="w-4 h-4 text-gray-400" />
-                          <span className="font-medium">{role.permission_ids?.length || 0}</span>
+                      <TableCell className="px-4 py-2.5">
+                        <div className="flex items-center space-x-1.5 text-xs text-gray-600">
+                          <Shield className="w-3 h-3 text-gray-400" />
+                          <span>{role.permission_ids?.length || 0}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{role.priority}</Badge>
+                      <TableCell className="px-4 py-2.5">
+                        <span className="text-xs font-mono text-gray-600">{role.priority}</span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
-                          <Badge variant={role.is_active ? "default" : "secondary"}>
-                            {role.is_active ? "Active" : "Inactive"}
-                          </Badge>
+                          {role.is_active ? (
+                            <div className="flex items-center space-x-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                              <span className="text-xs text-green-700 font-medium">Active</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                              <span className="text-xs text-red-600">Inactive</span>
+                            </div>
+                          )}
                           {role.is_system && (
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge variant="secondary" className="text-[9px] px-1 h-4 font-normal bg-gray-100 text-gray-500 border-gray-200">
                               System
                             </Badge>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="relative flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setActionMenuOpen(actionMenuOpen === role.id ? null : role.id)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                          {actionMenuOpen === role.id && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-10"
-                                onClick={() => setActionMenuOpen(null)}
-                              />
-                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                                <div className="py-1">
-                                  <PermissionGuard permission="manage_permissions">
-                                    <button
-                                      onClick={() => {
-                                        setSelectedRole(role);
-                                        setIsPermissionsDialogOpen(true);
-                                        setActionMenuOpen(null);
-                                      }}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    >
-                                      <Shield className="w-4 h-4" />
-                                      Manage Permissions
-                                    </button>
-                                  </PermissionGuard>
-                                  <PermissionGuard permission="manage_roles">
-                                    <button
-                                      onClick={() => {
-                                        setEditingRole(role);
-                                        setActionMenuOpen(null);
-                                      }}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                      Edit Role
-                                    </button>
-                                  </PermissionGuard>
-                                  {!role.is_system && (
-                                    <PermissionGuard permission="manage_roles">
-                                      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                      <button
-                                        onClick={() => {
-                                          handleDelete(role);
-                                          setActionMenuOpen(null);
-                                        }}
-                                        disabled={deleteMutation.isPending}
-                                        className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete Role
-                                      </button>
-                                    </PermissionGuard>
-                                  )}
-                                </div>
-                              </div>
-                            </>
+                      <TableCell className="px-4 py-2.5 text-right">
+                        <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <PermissionGuard permission="manage_permissions">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => { setSelectedRole(role); setIsPermissionsDialogOpen(true); }}
+                              className="h-7 w-7 p-0 text-gray-500 hover:text-blue-600"
+                              title="Manage Permissions"
+                            >
+                              <Shield className="w-3.5 h-3.5" />
+                            </Button>
+                          </PermissionGuard>
+                          <PermissionGuard permission="manage_roles">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setEditingRole(role)}
+                              className="h-7 w-7 p-0 text-gray-500 hover:text-green-600"
+                              title="Edit Role"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </Button>
+                          </PermissionGuard>
+                          {!role.is_system && (
+                            <PermissionGuard permission="manage_roles">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(role)}
+                                className="h-7 w-7 p-0 text-gray-500 hover:text-red-600"
+                                title="Delete Role"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </PermissionGuard>
                           )}
                         </div>
                       </TableCell>
-                    </TableRow>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Recent Audit Logs */}
-      {canViewAudit && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recent Role Audit Logs</CardTitle>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Latest changes to roles (showing last {recentAuditLogs.length || 0})
-                </p>
-              </div>
-              <PermissionGuard permission="view_audit_logs">
-                <a
-                  href="/admin/audit-log"
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  View full audit log
-                </a>
-              </PermissionGuard>
-            </div>
+      {/* Recent Audit Logs - Compact */}
+      {canViewAudit && recentAuditLogs.length > 0 && (
+        <Card className="mx-4 border-t shadow-sm">
+          <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between bg-gray-50/30">
+            <CardTitle className="text-sm font-semibold text-gray-700">Recent Role Changes</CardTitle>
+            <PermissionGuard permission="view_audit_logs">
+              <Link href="/admin/audit-log" className="text-xs text-blue-600 hover:underline">View All</Link>
+            </PermissionGuard>
           </CardHeader>
-          <CardContent>
-            {recentAuditLogs.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">No recent changes.</p>
-            ) : (
-              <div className="space-y-3">
-                {recentAuditLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="p-3 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
-                  >
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary">{log.action}</Badge>
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                            {log.object_repr}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          {log.user_name || log.user_email || "System"} • {new Date(log.timestamp).toLocaleString()}
-                        </div>
-                        {log.changes_display && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 whitespace-pre-wrap">
-                            {log.changes_display}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          <div className="divide-y divide-gray-100">
+            {recentAuditLogs.map((log) => (
+              <div key={log.id} className="px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className={`w-1.5 h-1.5 rounded-full ${log.action === 'create' ? 'bg-green-500' :
+                      log.action === 'update' ? 'bg-blue-500' :
+                        log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
+                    }`}></span>
+                  <span className="text-xs font-medium text-gray-900">{log.object_repr}</span>
+                  <span className="text-[10px] text-gray-500 uppercase tracking-wide px-1.5 bg-gray-100 rounded-sm">{log.action}</span>
+                </div>
+                <div className="text-[10px] text-gray-400">
+                  <span className="font-medium text-gray-600 mr-2">{log.user_name || "System"}</span>
+                  {new Date(log.timestamp).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
+                </div>
               </div>
-            )}
-          </CardContent>
+            ))}
+          </div>
         </Card>
       )}
 
@@ -594,13 +533,13 @@ function RoleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{role ? "Edit Role" : "Create New Role"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="name">
+            <Label htmlFor="name" className="text-xs">
               Name <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -609,11 +548,11 @@ function RoleDialog({
               onChange={(e) => setName(e.target.value)}
               required
               placeholder="e.g., Senior Manager"
-              className="mt-1"
+              className="mt-1 h-8 text-sm"
             />
           </div>
           <div>
-            <Label htmlFor="code">
+            <Label htmlFor="code" className="text-xs">
               Code <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -623,57 +562,59 @@ function RoleDialog({
               required
               disabled={!!role}
               placeholder="e.g., SENIOR_MANAGER"
-              className="mt-1 font-mono"
+              className="mt-1 font-mono h-8 text-sm"
             />
             {!role && (
-              <p className="text-xs text-gray-500 mt-1">Code cannot be changed after creation</p>
+              <p className="text-[10px] text-gray-500 mt-1">Code cannot be changed after creation</p>
             )}
           </div>
           <div>
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description" className="text-xs">Description</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              placeholder="Describe the role's responsibilities and permissions..."
-              className="mt-1"
+              placeholder="Describe the role's responsibilities..."
+              className="mt-1 text-sm bg-gray-50 border-gray-200"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="priority">Priority</Label>
+              <Label htmlFor="priority" className="text-xs">Priority</Label>
               <Input
                 id="priority"
                 type="number"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
-                className="mt-1"
+                className="mt-1 h-8 text-sm"
                 min="0"
                 max="100"
               />
-              <p className="text-xs text-gray-500 mt-1">Higher priority roles have more access</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">0-100 scale</p>
             </div>
-            <div className="flex items-end">
+            <div className="flex items-end h-10 pb-1">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="is_active"
                   checked={isActive}
                   onCheckedChange={(checked) => setIsActive(checked === true)}
                 />
-                <Label htmlFor="is_active" className="cursor-pointer">
-                  Active
+                <Label htmlFor="is_active" className="cursor-pointer text-sm">
+                  Active Status
                 </Label>
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button"variant="secondary" onClick={onClose}>
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="ghost" size="sm" onClick={onClose} className="h-8">
               Cancel
             </Button>
             <Button
               type="submit"
+              size="sm"
               disabled={createMutation.isPending || updateMutation.isPending}
+              className="h-8 py-0"
             >
               {role ? "Update Role" : "Create Role"}
             </Button>
@@ -735,24 +676,24 @@ function PermissionsDialog({
     if (!search && selectedCategory === "all") {
       return permissionsByCategory;
     }
-    
+
     const filtered: Record<string, Permission[]> = {};
     Object.entries(permissionsByCategory).forEach(([category, perms]) => {
       if (selectedCategory !== "all" && category !== selectedCategory) {
         return;
       }
-      
+
       const filteredPerms = perms.filter(perm =>
         perm.name.toLowerCase().includes(search.toLowerCase()) ||
         perm.code.toLowerCase().includes(search.toLowerCase()) ||
         perm.description?.toLowerCase().includes(search.toLowerCase())
       );
-      
+
       if (filteredPerms.length > 0) {
         filtered[category] = filteredPerms;
       }
     });
-    
+
     return filtered;
   }, [permissionsByCategory, search, selectedCategory]);
 
@@ -767,7 +708,7 @@ function PermissionsDialog({
   const toggleCategory = (category: string, permissions: Permission[]) => {
     const categoryPermIds = permissions.map(p => p.id);
     const allSelected = categoryPermIds.every(id => selectedPermissions.includes(id));
-    
+
     if (allSelected) {
       // Deselect all in category
       setSelectedPermissions(prev => prev.filter(id => !categoryPermIds.includes(id)));
@@ -810,31 +751,33 @@ function PermissionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Manage Permissions - {role.name}</DialogTitle>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Select the permissions for this role ({selectedCount} of {totalCount} selected)
-          </p>
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-6 py-4 border-b">
+          <DialogTitle className="flex items-center justify-between">
+            <span>Manage Permissions <span className="text-gray-400 font-normal mx-2">|</span> {role.name}</span>
+            <span className="text-xs font-normal bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">
+              {selectedCount} Selected
+            </span>
+          </DialogTitle>
         </DialogHeader>
-        
-        <div className="flex-1 overflow-hidden flex flex-col space-y-4">
+
+        <div className="flex-1 overflow-hidden flex flex-col bg-gray-50/50">
           {/* Search and Filter Bar */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 px-6 py-3 border-b bg-white">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
               <Input
                 type="text"
                 placeholder="Search permissions..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-9 h-8 text-sm"
               />
             </div>
             <Select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-[200px]"
+              className="w-[180px] h-8 text-sm"
             >
               <option value="all">All Categories</option>
               {Object.keys(permissionsByCategory).map((category) => (
@@ -845,18 +788,19 @@ function PermissionsDialog({
             </Select>
             <Button
               type="button"
-             variant="secondary"
+              variant="outline"
               size="sm"
               onClick={toggleAll}
+              className="h-8 text-xs"
             >
               {selectedCount === totalCount ? (
                 <>
-                  <Square className="w-4 h-4 mr-2" />
+                  <Square className="w-3.5 h-3.5 mr-1.5" />
                   Deselect All
                 </>
               ) : (
                 <>
-                  <CheckSquare className="w-4 h-4 mr-2" />
+                  <CheckSquare className="w-3.5 h-3.5 mr-1.5" />
                   Select All
                 </>
               )}
@@ -864,112 +808,101 @@ function PermissionsDialog({
           </div>
 
           {/* Permissions List */}
-          <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {Object.keys(filteredCategories).length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                 <Shield className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <p>No permissions found</p>
-                {permissions.length === 0 && (
-                  <p className="text-sm mt-2">Loading permissions...</p>
-                )}
               </div>
             ) : (
               Object.entries(filteredCategories).map(([category, perms]) => {
-              const categoryPermIds = perms.map(p => p.id);
-              const selectedInCategory = categoryPermIds.filter(id => selectedPermissions.includes(id)).length;
-              const allSelected = categoryPermIds.length > 0 && selectedInCategory === categoryPermIds.length;
-              const isExpanded = expandedCategories.has(category);
+                const categoryPermIds = perms.map(p => p.id);
+                const selectedInCategory = categoryPermIds.filter(id => selectedPermissions.includes(id)).length;
+                const allSelected = categoryPermIds.length > 0 && selectedInCategory === categoryPermIds.length;
+                const isExpanded = expandedCategories.has(category);
 
-              return (
-                <Card key={category} className="overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
+                return (
+                  <Card key={category} className="overflow-hidden border shadow-sm group">
+                    <div className="flex items-center justify-between p-3 bg-white hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-100" onClick={() => toggleExpanded(category)}>
                       <div className="flex items-center gap-3">
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => toggleCategory(category, perms)}
-                          className="h-8 px-2"
+                          onClick={(e) => { e.stopPropagation(); toggleCategory(category, perms); }}
+                          className="h-6 w-6 p-0 hover:bg-gray-200"
                         >
                           {allSelected ? (
-                            <CheckSquare className="w-4 h-4" />
+                            <CheckSquare className="w-4 h-4 text-blue-600" />
+                          ) : selectedInCategory > 0 ? (
+                            <div className="w-4 h-4 bg-blue-100 border border-blue-400 rounded flex items-center justify-center">
+                              <span className="block w-2 h-2 bg-blue-600 rounded-sm"></span>
+                            </div>
                           ) : (
-                            <Square className="w-4 h-4" />
+                            <Square className="w-4 h-4 text-gray-400" />
                           )}
                         </Button>
                         <div>
-                          <CardTitle className="text-base">{category}</CardTitle>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {selectedInCategory} of {perms.length} selected
+                          <h4 className="text-sm font-semibold text-gray-800">{category}</h4>
+                          <p className="text-[10px] text-gray-500 mt-0">
+                            {selectedInCategory} / {perms.length} selected
                           </p>
                         </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleExpanded(category)}
-                      >
-                        <ChevronDown
-                          className={`w-4 h-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`}
-                        />
-                      </Button>
+                      <ChevronDown
+                        className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? '' : '-rotate-90'}`}
+                      />
                     </div>
-                  </CardHeader>
-                  {isExpanded && (
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {perms.map((perm) => (
-                          <label
-                            key={perm.id}
-                            className="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
-                          >
-                            <Checkbox
-                              checked={selectedPermissions.includes(perm.id)}
-                              onCheckedChange={() => togglePermission(perm.id)}
-                              className="mt-0.5"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {perm.name}
-                              </div>
-                              {perm.description && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  {perm.description}
+                    {isExpanded && (
+                      <div className="p-3 bg-gray-50/30">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                          {perms.map((perm) => (
+                            <label
+                              key={perm.id}
+                              className={`flex items-start space-x-2.5 p-2 rounded border cursor-pointer transition-all ${selectedPermissions.includes(perm.id) ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-gray-200 hover:border-blue-200'}`}
+                            >
+                              <Checkbox
+                                checked={selectedPermissions.includes(perm.id)}
+                                onCheckedChange={() => togglePermission(perm.id)}
+                                className="mt-0.5"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-[13px] font-medium text-gray-800 leading-tight">
+                                  {perm.name}
                                 </div>
-                              )}
-                              <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-mono">
-                                {perm.code}
+                                <div className="text-[10px] text-gray-500 mt-0.5 truncate" title={perm.description}>
+                                  {perm.description || perm.code}
+                                </div>
                               </div>
-                            </div>
-                          </label>
-                        ))}
+                            </label>
+                          ))}
+                        </div>
                       </div>
-                    </CardContent>
-                  )}
-                </Card>
-              );
-            })
+                    )}
+                  </Card>
+                );
+              })
             )}
           </div>
         </div>
 
-        <DialogFooter className="border-t pt-4">
+        <DialogFooter className="px-6 py-3 border-t bg-white">
           <div className="flex items-center justify-between w-full">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              {selectedCount} of {totalCount} permissions selected
+            <div className="text-xs text-muted-foreground">
+              <span className="font-semibold">{selectedCount}</span> permissions to be saved
             </div>
             <div className="flex gap-2">
-              <Button type="button"variant="secondary" onClick={onClose}>
+              <Button type="button" variant="ghost" size="sm" onClick={onClose} className="h-8">
                 Cancel
               </Button>
               <Button
                 type="button"
+                size="sm"
                 onClick={handleSave}
                 disabled={updateMutation.isPending}
+                className="h-8"
               >
-                {updateMutation.isPending ? "Saving..." : "Save Permissions"}
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </div>

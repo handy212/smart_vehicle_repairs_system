@@ -28,6 +28,12 @@ export default function PartDetailPage() {
     queryFn: () => inventoryApi.get(partId),
   });
 
+  const { data: transactions } = useQuery({
+    queryKey: ["part-transactions", partId],
+    queryFn: () => inventoryApi.getTransactions(partId),
+    enabled: !!partId,
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -122,6 +128,7 @@ export default function PartDetailPage() {
                     <TabsTrigger value="inventory">Inventory</TabsTrigger>
                     <TabsTrigger value="pricing">Pricing</TabsTrigger>
                     <TabsTrigger value="details">Details</TabsTrigger>
+                    <TabsTrigger value="history">History</TabsTrigger>
                   </TabsList>
                 </div>
 
@@ -350,6 +357,55 @@ export default function PartDetailPage() {
                       )}
                     </div>
                   )}
+                </TabsContent>
+
+                <TabsContent value="history" className="p-6">
+                  <div className="rounded-md border">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500 font-medium">
+                        <tr>
+                          <th className="px-4 py-3">Date</th>
+                          <th className="px-4 py-3">Type</th>
+                          <th className="px-4 py-3 text-right">Quantity</th>
+                          <th className="px-4 py-3 text-right">Balance</th>
+                          <th className="px-4 py-3">User</th>
+                          <th className="px-4 py-3">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {transactions?.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                              No transactions found.
+                            </td>
+                          </tr>
+                        ) : (
+                          transactions?.map((txn) => (
+                            <tr key={txn.id}>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                {format(new Date(txn.created_at), "MMM dd, yyyy HH:mm")}
+                              </td>
+                              <td className="px-4 py-3 capitalize">
+                                {txn.transaction_type.replace('_', ' ')}
+                              </td>
+                              <td className={`px-4 py-3 text-right font-medium ${txn.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {txn.quantity > 0 ? '+' : ''}{txn.quantity}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                {txn.balance_after}
+                              </td>
+                              <td className="px-4 py-3">
+                                {txn.created_by_name || '-'}
+                              </td>
+                              <td className="px-4 py-3 text-gray-500">
+                                {txn.reason || txn.notes || '-'}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </TabsContent>
               </Tabs>
             </CardContent>

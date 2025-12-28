@@ -1,0 +1,103 @@
+{% load static %}
+{% load django_ledger %}
+{% load cache %}
+{% load i18n %}
+{% now "Y" as current_year %}
+
+<nav class="navbar" role="navigation" aria-label="main navigation">
+    <div class="container">
+        <div class="navbar-brand">
+            {% if entity_model %}
+            <a class="navbar-item" href="{% url 'django_ledger:entity-dashboard' entity_slug=entity_model.slug %}">
+                <span class="icon-text">
+                    <span class="icon has-text-primary">
+                        <iconify-icon icon="carbon:car" width="28"></iconify-icon>
+                    </span>
+                    <span class="has-text-weight-bold ml-2 is-hidden-touch">Smart Vehicle Repairs</span>
+                </span>
+            </a>
+            {% else %}
+            <a class="navbar-item" href="{% url 'django_ledger:home' %}">
+                <span class="icon-text">
+                    <span class="icon has-text-primary">
+                        <iconify-icon icon="carbon:car" width="28"></iconify-icon>
+                    </span>
+                    <span class="has-text-weight-bold ml-2 is-hidden-touch">Smart Vehicle Repairs</span>
+                </span>
+            </a>
+            {% endif %}
+            <span class="navbar-item is-hidden-touch">
+                <span class="tag is-primary is-light">Accounting</span>
+            </span>
+            <a role="button" class="navbar-burger burger" aria-label="menu" aria-expanded="false"
+                data-target="djl-navbar-menu">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </a>
+        </div>
+
+        <div id="djl-navbar-menu" class="navbar-menu">
+            {% navigation_menu 'mobile' %}
+            <div class="navbar-end">
+                {% if tx_digest_context.IO_RESULT.ce_from_date %}
+                <div class="navbar-item">CE FROM: {{ tx_digest_context.IO_RESULT.ce_from_date | date }}</div>
+                {% endif %}
+                {% if tx_digest_context.IO_RESULT.ce_to_date %}
+                <div class="navbar-item">CE TO: {{ tx_digest_context.IO_RESULT.ce_to_date | date }}</div>
+                {% endif %}
+
+                <!-- Back to Main Dashboard -->
+                <div class="navbar-item">
+                    <a href="{% url 'dashboard' %}" class="button is-light">
+                        <span class="icon">
+                            <iconify-icon icon="carbon:home"></iconify-icon>
+                        </span>
+                        <span class="is-hidden-touch">Main Dashboard</span>
+                    </a>
+                </div>
+
+                <!-- Theme toggle -->
+                <div class="navbar-item">
+                    <button id="djl-theme-toggle" class="button is-small is-text" type="button"
+                        aria-label="Toggle color mode" aria-pressed="false">
+                        <iconify-icon id="djl-theme-toggle-icon" icon="mdi:weather-sunny"></iconify-icon>
+                        <span id="djl-theme-toggle-label" class="ml-2">Light</span>
+                    </button>
+                </div>
+
+                <div class="navbar-item">
+                    <form action="{% url 'django_ledger:logout' %}" method="POST">
+                        {% csrf_token %}
+                        <button id="djl-el=logout-button-nav" class="button is-small is-danger is-outlined"
+                            type="submit">
+                            <span class="icon">
+                                <iconify-icon icon="carbon:logout"></iconify-icon>
+                            </span>
+                            <span>{% trans 'Logout' %}</span>
+                        </button>
+                    </form>
+                </div>
+                <div class="navbar-item">{% feedback_button %}</div>
+                <div class="navbar-item">v{% current_version %}</div>
+            </div>
+        </div>
+    </div>
+
+</nav>
+
+<script>
+    // Navbar burger toggle for mobile
+    document.addEventListener('DOMContentLoaded', () => {
+        const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+
+        $navbarBurgers.forEach(el => {
+            el.addEventListener('click', () => {
+                const target = el.dataset.target;
+                const $target = document.getElementById(target);
+                el.classList.toggle('is-active');
+                $target.classList.toggle('is-active');
+            });
+        });
+    });
+</script>

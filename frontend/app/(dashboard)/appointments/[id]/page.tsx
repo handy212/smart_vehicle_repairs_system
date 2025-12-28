@@ -13,6 +13,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 export default function AppointmentDetailPage() {
   const params = useParams();
@@ -159,35 +160,39 @@ export default function AppointmentDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="secondary" onClick={() => router.back()}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <Link href="/appointments" className="hover:text-blue-600 transition-colors">Appointments</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">#{appointment.appointment_number}</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Appointment Details</h1>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm" onClick={() => router.back()} className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+            <ArrowLeft className="w-3.5 h-3.5 mr-2" />
             Back
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Appointment #{appointment.appointment_number}
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {appointment.customer_name || "Customer"}
-            </p>
-          </div>
+          <PermissionGuard permission="edit_appointments">
+            <Link href={`/appointments/${appointmentId}/edit`}>
+              <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                <Edit className="w-3.5 h-3.5 mr-2" />
+                Edit Appointment
+              </Button>
+            </Link>
+          </PermissionGuard>
         </div>
-        <Link href={`/appointments/${appointmentId}/edit`}>
-          <Button>
-            <Edit className="w-4 h-4 mr-2" />
-            Edit Appointment
-          </Button>
-        </Link>
       </div>
 
       {/* Status and Priority Badges */}
       <div className="flex items-center space-x-2">
-        <Badge variant={getStatusVariant(appointment.status) as any} className="text-sm px-3 py-1">
+        <Badge variant={getStatusVariant(appointment.status) as any} className="text-xs px-2.5 py-0.5 font-medium border shadow-none">
           {appointment.status?.replace("_", " ") || appointment.status}
         </Badge>
-        <Badge variant={getPriorityVariant(appointment.priority) as any} className="text-sm px-3 py-1">
+        <Badge variant="outline" className="text-xs px-2.5 py-0.5 font-medium border shadow-none bg-transparent">
           {appointment.priority} Priority
         </Badge>
       </div>
@@ -333,7 +338,7 @@ export default function AppointmentDetailPage() {
               {appointment.status !== "completed" && appointment.status !== "cancelled" && (
                 <Button
                   className="w-full"
-                 variant="secondary"
+                  variant="secondary"
                   onClick={() => setShowCancelDialog(true)}
                   disabled={cancelMutation.isPending}
                 >
@@ -397,7 +402,7 @@ export default function AppointmentDetailPage() {
           </div>
           <DialogFooter>
             <Button
-             variant="secondary"
+              variant="secondary"
               onClick={() => {
                 setShowCancelDialog(false);
                 setCancelReason("");

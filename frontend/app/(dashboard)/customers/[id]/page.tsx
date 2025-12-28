@@ -27,6 +27,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { DocumentList } from "@/components/documents/DocumentList";
 
 const noteSchema = z.object({
   note: z.string().min(1, "Note is required"),
@@ -374,6 +375,7 @@ export default function CustomerDetailPage() {
             History ({invoices.length + estimates.length + workOrders.length + appointments.length})
           </TabsTrigger>
           <TabsTrigger value="subscriptions">Subscriptions ({subscriptions.length})</TabsTrigger>
+          <TabsTrigger value="docs">Documents</TabsTrigger>
           <TabsTrigger value="notes">Notes ({notes.length})</TabsTrigger>
         </TabsList>
 
@@ -828,6 +830,11 @@ export default function CustomerDetailPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="docs" className="mt-6">
+          <DocumentList customerId={customer.id} />
         </TabsContent>
 
         {/* Vehicles Tab */}

@@ -1,0 +1,156 @@
+{% extends 'printing/base/document_base.html' %}
+
+{% block title %}Invoice {{ document.invoice_number }}{% endblock %}
+
+{% block document_type %}
+{% if document.status == 'proforma' %}Proforma Invoice{% else %}Invoice{% endif %}
+{% endblock %}
+
+{% block document_number %}{{ document.invoice_number }}{% endblock %}
+
+{% block document_meta %}
+<div>Date: {{ document.invoice_date|date:"F d, Y" }}</div>
+<div>Due: {{ document.due_date|date:"F d, Y" }}</div>
+<div>Status: <span class="font-bold uppercase">{{ document.get_status_display }}</span></div>
+{% endblock %}
+
+{% block content %}
+<!-- Top Section: Customer & Vehicle -->
+<div class="grid-2-col mb-8">
+    <!-- Customer Info -->
+    <div class="col-1-2">
+        <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Bill To</div>
+        {% with customer=document.customer %}
+        {% include 'printing/base/components/customer_info.html' %}
+        {% endwith %}
+    </div>
+
+    <!-- Vehicle & Work Order Info -->
+    <div class="col-1-2">
+        {% if document.vehicle %}
+        <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Vehicle Details</div>
+        <div class="info-card">
+            <div class="info-item border-b mb-2 pb-2">
+                <div class="info-label">Vehicle</div>
+                <div class="info-value font-bold">
+                    {{ document.vehicle.year }} {{ document.vehicle.make }} {{ document.vehicle.model }}
+                </div>
+            </div>
+            {% if document.vehicle.vin %}
+            <div class="info-item">
+                <div class="info-label">VIN</div>
+                <div class="info-value">{{ document.vehicle.vin }}</div>
+            </div>
+            {% endif %}
+            {% if document.vehicle.license_plate %}
+            <div class="info-item">
+                <div class="info-label">License</div>
+                <div class="info-value">{{ document.vehicle.license_plate }}</div>
+            </div>
+            {% endif %}
+            {% if document.vehicle.mileage %}
+            <div class="info-item">
+                <div class="info-label">Mileage</div>
+                <div class="info-value">{{ document.vehicle.mileage|floatformat:0 }} miles</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if document.work_order %}
+        <div class="mt-4">
+            <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Work Order</div>
+            <div class="info-card p-2">
+                <div class="flex justify-between">
+                    <span class="font-bold text-gray-700">WO #: {{ document.work_order.work_order_number }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Description -->
+{% if document.description %}
+<div class="mb-6">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Service Description</div>
+    <p class="text-sm text-gray-700 leading-relaxed">{{ document.description|linebreaks }}</p>
+</div>
+{% endif %}
+
+<!-- Line Items -->
+<div class="mb-6">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Services & Parts</div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th style="width: 10%;">Type</th>
+                <th style="width: 45%;">Description</th>
+                <th style="width: 12%; text-align: center;">Qty</th>
+                <th style="width: 15%; text-align: right;">Price</th>
+                <th style="width: 18%; text-align: right;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if document.line_items.all %}
+            {% for item in document.line_items.all %}
+            <tr>
+                <td class="capitalize">{{ item.item_type|title }}</td>
+                <td>
+                    <div class="font-medium text-gray-900">{{ item.description }}</div>
+                    {% if item.part_name %}
+                    <div class="row-notes">Part: {{ item.part_name }}</div>
+                    {% endif %}
+                    {% if item.part_number %}
+                    <div class="row-notes">Part #: {{ item.part_number }}</div>
+                    {% endif %}
+                    {% if item.notes %}
+                    <div class="row-notes">{{ item.notes }}</div>
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if item.item_type == 'labor' and item.labor_hours %}
+                    {{ item.labor_hours|floatformat:1 }} hrs
+                    {% else %}
+                    {{ item.quantity|floatformat:2 }}
+                    {% endif %}
+                </td>
+                <td class="text-right">
+                    {% if item.item_type == 'labor' and item.labor_rate %}
+                    ${{ item.labor_rate|floatformat:2 }}/hr
+                    {% else %}
+                    ${{ item.unit_price|floatformat:2 }}
+                    {% endif %}
+                </td>
+                <td class="text-right font-medium">${{ item.total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="5" class="text-center text-gray-400 py-4">No line items</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Financial Summary -->
+{% include 'printing/base/components/financial_summary.html' %}
+
+<!-- Footer Section: Notes & Terms -->
+<div class="clear-both mt-8">
+    {% if document.customer_notes %}
+    <div class="notes-box mb-4">
+        <div class="font-bold mb-1">Notes:</div>
+        {{ document.customer_notes|linebreaks }}
+    </div>
+    {% endif %}
+
+    {% if document.payment_terms %}
+    <div class="text-sm text-gray-500">
+        <span class="font-semibold">Payment Terms:</span> {{ document.payment_terms }}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

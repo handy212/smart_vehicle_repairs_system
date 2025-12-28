@@ -12,6 +12,7 @@ import { ImportDialog } from "@/components/ui/import-dialog";
 import { downloadVehicleTemplate } from "@/lib/utils/import-templates";
 import { exportVehiclesForImport } from "@/lib/utils/export-templates";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
@@ -25,8 +26,18 @@ import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { ColumnVisibility, ColumnConfig } from "@/components/ui/column-visibility";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils/cn";
 
 export default function VehiclesPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -39,8 +50,6 @@ export default function VehiclesPage() {
   );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
@@ -178,11 +187,11 @@ export default function VehiclesPage() {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
         : undefined;
-      
+
       // Build year range filters
       const yearFrom = advancedFilters.year_from ? parseInt(advancedFilters.year_from) : undefined;
       const yearTo = advancedFilters.year_to ? parseInt(advancedFilters.year_to) : undefined;
-      
+
       return vehiclesApi.list({
         page,
         search: debouncedSearch || undefined,
@@ -318,12 +327,15 @@ export default function VehiclesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex justify-between items-center pt-2">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Vehicles</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Manage vehicle database and service history
-          </p>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Vehicles</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Vehicles</h1>
         </div>
         <div className="flex items-center space-x-2">
           <ColumnVisibility
@@ -332,72 +344,36 @@ export default function VehiclesPage() {
             onVisibilityChange={setVisibleColumns}
             title="Vehicle Table Columns"
           />
-          <div className="relative">
-            <Button
-             variant="secondary"
-              onClick={() => setShowActionsMenu(!showActionsMenu)}
-              className="dark:border-gray-700 dark:text-gray-200"
-            >
-              Actions
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
-            {showActionsMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowActionsMenu(false)}
-                />
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                  <div className="py-1">
-                    <PermissionGuard permission="import_vehicles">
-                      <button
-                        onClick={() => {
-                          setShowImportDialog(true);
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Import CSV
-                      </button>
-                    </PermissionGuard>
-                    <PermissionGuard permission="export_vehicles">
-                      <button
-                        onClick={() => {
-                          handleExport();
-                          setShowActionsMenu(false);
-                        }}
-                        disabled={!data?.results || data.results.length === 0}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        Export CSV
-                      </button>
-                    </PermissionGuard>
-                    <PermissionGuard permission="export_vehicles">
-                      <button
-                        onClick={() => {
-                          if (data?.results) {
-                            exportVehiclesForImport(data.results);
-                          }
-                          setShowActionsMenu(false);
-                        }}
-                        disabled={!data?.results || data.results.length === 0}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        Export for Import
-                      </button>
-                    </PermissionGuard>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+                Actions
+                <ChevronDown className="w-3.5 h-3.5 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <PermissionGuard permission="import_vehicles">
+                <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import CSV
+                </DropdownMenuItem>
+              </PermissionGuard>
+              <PermissionGuard permission="export_vehicles">
+                <DropdownMenuItem onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { if (data?.results) exportVehiclesForImport(data.results); }} disabled={!data?.results || data.results.length === 0}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export for Import
+                </DropdownMenuItem>
+              </PermissionGuard>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <PermissionGuard permission="create_vehicles">
             <Link href="/vehicles/new">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
+              <Button size="sm" className="h-9">
+                <Plus className="w-3.5 h-3.5 mr-2" />
                 Add Vehicle
               </Button>
             </Link>
@@ -409,8 +385,8 @@ export default function VehiclesPage() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Search */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
             <Input
               type="text"
               placeholder="Search vehicles..."
@@ -419,7 +395,7 @@ export default function VehiclesPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 h-9"
+              className="pl-9 h-9 text-sm bg-white dark:bg-gray-900 w-64 focus:w-80 transition-all duration-300"
             />
           </div>
 
@@ -484,11 +460,11 @@ export default function VehiclesPage() {
               const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
               if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
               if (key.includes("_to")) return null;
-              
+
               const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
                 ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
                 : String(value);
-              
+
               const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
 
               return (
@@ -525,10 +501,10 @@ export default function VehiclesPage() {
       />
 
       {/* Vehicles Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            All Vehicles ({data?.count || 0})
+      <Card className="border-t shadow-sm dark:bg-gray-800 dark:border-gray-700">
+        <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
+          <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            All Vehicles <span className="text-muted-foreground font-normal ml-1">({data?.count || 0})</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -630,9 +606,9 @@ export default function VehiclesPage() {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                   {data.results.map((vehicle) => (
-                    <tr key={vehicle.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150">
+                    <tr key={vehicle.id} className="group hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-150 cursor-pointer" onDoubleClick={() => router.push(`/vehicles/${vehicle.id}`)}>
                       {visibleColumns.has("checkbox") && (
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={bulkSelection.isSelected(vehicle.id)}
@@ -695,83 +671,51 @@ export default function VehiclesPage() {
                       )}
                       {visibleColumns.has("actions") && (
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="relative flex justify-end">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setActionMenuOpen(actionMenuOpen === vehicle.id ? null : vehicle.id)}
-                              className="h-8 w-8 p-0 dark:hover:bg-gray-700"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                            {actionMenuOpen === vehicle.id && (
-                              <>
-                                <div
-                                  className="fixed inset-0 z-10"
-                                  onClick={() => setActionMenuOpen(null)}
-                                />
-                                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                                  <div className="py-1">
-                                    <Link
-                                      href={`/vehicles/${vehicle.id}`}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                      onClick={() => setActionMenuOpen(null)}
-                                    >
-                                      <Eye className="w-4 h-4" />
-                                      View Details
-                                    </Link>
-                                    <Link
-                                      href={`/vehicles/${vehicle.id}/edit`}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                      onClick={() => setActionMenuOpen(null)}
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                      Edit Vehicle
-                                    </Link>
-                                    <Link
-                                      href={`/vehicles/${vehicle.id}/history`}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                      onClick={() => setActionMenuOpen(null)}
-                                    >
-                                      <History className="w-4 h-4" />
-                                      View Service History
-                                    </Link>
-                                    <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                    <Link
-                                      href={`/workorders/new?vehicle=${vehicle.id}`}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                      onClick={() => setActionMenuOpen(null)}
-                                    >
-                                      <Wrench className="w-4 h-4" />
-                                      Create Work Order
-                                    </Link>
-                                    <Link
-                                      href={`/appointments/new?vehicle=${vehicle.id}`}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                      onClick={() => setActionMenuOpen(null)}
-                                    >
-                                      <Calendar className="w-4 h-4" />
-                                      Schedule Appointment
-                                    </Link>
-                                    <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                    <button
-                                      onClick={() => {
-                                        if (window.confirm(`Are you sure you want to delete vehicle "${vehicle.make} ${vehicle.model} ${vehicle.year}" (${vehicle.vin})? This action cannot be undone.`)) {
-                                          handleDelete(vehicle);
-                                        }
-                                        setActionMenuOpen(null);
-                                      }}
-                                      disabled={deleteMutation.isPending}
-                                      className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                      Delete Vehicle
-                                    </button>
-                                  </div>
-                                </div>
-                              </>
-                            )}
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/vehicles/${vehicle.id}`} className="flex items-center">
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Details
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/vehicles/${vehicle.id}/edit`} className="flex items-center">
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Vehicle
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/vehicles/${vehicle.id}/history`} className="flex items-center">
+                                  <History className="w-4 h-4 mr-2" />
+                                  Service History
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem asChild>
+                                <Link href={`/workorders/new?vehicle=${vehicle.id}`} className="flex items-center">
+                                  <Wrench className="w-4 h-4 mr-2" />
+                                  Create Work Order
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link href={`/appointments/new?vehicle=${vehicle.id}`} className="flex items-center">
+                                  <Calendar className="w-4 h-4 mr-2" />
+                                  Schedule Appointment
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => { if (window.confirm(`Delete vehicle "${vehicle.make} ${vehicle.model}" (${vehicle.vin})?`)) handleDelete(vehicle); }} disabled={deleteMutation.isPending} className="text-red-600 dark:text-red-400">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete Vehicle
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       )}
                     </tr>
@@ -784,7 +728,7 @@ export default function VehiclesPage() {
               <Car className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
               <p className="text-gray-500 dark:text-gray-400">No vehicles found.</p>
               <Link href="/vehicles/new">
-                <Button className="mt-4"variant="secondary">
+                <Button className="mt-4" variant="secondary">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Your First Vehicle
                 </Button>
@@ -800,7 +744,7 @@ export default function VehiclesPage() {
               </div>
               <div className="flex space-x-2">
                 <Button
-                 variant="secondary"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!data.previous}
@@ -808,7 +752,7 @@ export default function VehiclesPage() {
                   Previous
                 </Button>
                 <Button
-                 variant="secondary"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!data.next}

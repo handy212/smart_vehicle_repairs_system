@@ -621,17 +621,21 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Invoice
         fields = [
+            'id', 'invoice_number',
             'customer', 'vehicle', 'work_order', 'estimate',
             'invoice_date', 'due_date',
             'description', 'notes', 'customer_notes', 'terms',
             'discount_percentage', 'discount_reason',
             'shop_supplies_fee', 'environmental_fee',
+            'status',
             'line_items'  # For standalone invoices without work order
         ]
+        read_only_fields = ['id', 'invoice_number']
         extra_kwargs = {
             'customer': {'required': False},
             'vehicle': {'required': False},
             'work_order': {'required': False},
+            'status': {'required': False},
         }
     
     def validate(self, data):

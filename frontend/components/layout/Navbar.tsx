@@ -1,18 +1,20 @@
 "use client";
 
 import { useAuthStore } from "@/store/authStore";
-import { Bell, User, LogOut, Search, ChevronDown, Settings, Car, Menu, X } from "lucide-react";
+import { Bell, User, LogOut, Search, ChevronDown, Settings, Car, Menu, X, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api/auth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { notificationsApi } from "@/lib/api/notifications";
+import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
+import { UserMenu } from "@/components/layout/UserMenu";
 import Link from "next/link";
 import { useState, useEffect, useRef, ChangeEvent, useMemo, useCallback } from "react";
 import { searchApi, SearchResult } from "@/lib/api/search";
 import { cn } from "@/lib/utils/cn";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Select } from "@/components/ui/select";
 import { branchesApi, adminApi, type Branch, type SystemSetting } from "@/lib/api/admin";
 import { useBranchStore } from "@/store/branchStore";
@@ -21,19 +23,19 @@ import { useTheme, setSystemThemeMode } from "@/lib/hooks/useTheme";
 interface NavbarProps {
   onMenuToggle?: () => void;
   isSidebarOpen?: boolean;
+  onToggleCollapse?: () => void;
+  isSidebarCollapsed?: boolean;
 }
 
-export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
+export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSidebarCollapsed }: NavbarProps) {
   const { user, logout, isAuthenticated } = useAuthStore();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const userMenuRef = useRef<HTMLDivElement>(null);
   const { activeBranchId, activeBranch, setBranch } = useBranchStore();
   const previousBranchIdRef = useRef<number | null>(null);
   const hasInitializedBranchRef = useRef(false);
@@ -103,22 +105,17 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
   const logoToUse = useMemo(() => {
     const isDark = resolvedTheme === "dark" || theme === "dark";
     if (isDark && branding.logoDarkPath) {
-      const result = {
+      return {
         path: branding.logoDarkPath,
         cacheKey: branding.logoDarkUpdatedAt ? new Date(branding.logoDarkUpdatedAt).getTime() : Date.now(),
       };
-      console.log('🌙 Using dark logo:', result);
-      return result;
     }
     if (branding.logoPath) {
-      const result = {
+      return {
         path: branding.logoPath,
         cacheKey: branding.logoUpdatedAt ? new Date(branding.logoUpdatedAt).getTime() : Date.now(),
       };
-      console.log('☀️ Using light logo:', result);
-      return result;
     }
-    console.log('⚠️ No logo found in branding settings, using fallback icon. LogoPath:', branding.logoPath, 'LogoDarkPath:', branding.logoDarkPath);
     return null;
   }, [branding.logoPath, branding.logoDarkPath, branding.logoUpdatedAt, branding.logoDarkUpdatedAt, resolvedTheme, theme]);
 
@@ -146,16 +143,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
     [logoToUse, getMediaUrl]
   );
 
-  const hasAccessToken =
-    typeof window !== "undefined" && !!localStorage.getItem("access_token");
 
-  const { data: unreadCountData } = useQuery({
-    queryKey: ["notifications", "unread-count"],
-    queryFn: () => notificationsApi.unreadCount(),
-    enabled: isAuthenticated && hasAccessToken,
-    refetchOnWindowFocus: false,
-    refetchInterval: 30000, // Refetch every 30 seconds
-  });
 
   const {
     data: accessibleBranchesData,
@@ -234,8 +222,6 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
   const currentBranchId =
     activeBranchId ?? (sortedBranches.length ? sortedBranches[0].id : null);
 
-  const unreadCount = unreadCountData?.unread_count || 0;
-
   // Search functionality
   useEffect(() => {
     const handleSearch = async () => {
@@ -261,14 +247,11 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  // Close search results and user menu when clicking outside
+  // Close search results when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowSearchResults(false);
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setShowUserMenu(false);
       }
     };
 
@@ -285,11 +268,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
     }
   };
 
-  const handleLogout = () => {
-    authApi.logout();
-    logout();
-    router.push("/login");
-  };
+
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm backdrop-blur-sm bg-white/95 dark:bg-gray-900/95 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-900/80">
@@ -309,6 +288,22 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
                 <Menu className="w-6 h-6" />
               )}
             </button>
+
+            {/* Desktop Sidebar Toggle */}
+            {onToggleCollapse && (
+              <button
+                onClick={onToggleCollapse}
+                className="hidden lg:block p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
+              >
+                {isSidebarCollapsed ? (
+                  <PanelLeftOpen className="w-5 h-5" />
+                ) : (
+                  <PanelLeftClose className="w-5 h-5" />
+                )}
+              </button>
+            )}
 
             <Link href="/dashboard" className="flex items-center space-x-2 group">
               {logoSrc ? (
@@ -385,6 +380,9 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
                 )}
               </div>
             </Link>
+
+            {/* Breadcrumbs */}
+            <Breadcrumbs />
           </div>
 
           {/* Global Search - Centered (Hidden on mobile, shown when toggled) */}
@@ -516,94 +514,10 @@ export function Navbar({ onMenuToggle, isSidebarOpen }: NavbarProps) {
             <ThemeToggle />
 
             {/* Notifications */}
-            <Link href="/notifications">
-              <button
-                className={cn(
-                  "relative p-2.5 rounded-lg transition-all",
-                  "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",
-                  "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-                  unreadCount > 0 && "text-blue-600 dark:text-blue-400"
-                )}
-                title={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
-              >
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 flex items-center justify-center min-w-[20px] h-[20px] px-1.5 text-xs font-semibold text-white bg-red-500 dark:bg-red-600 rounded-full ring-2 ring-white dark:ring-gray-900">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                )}
-              </button>
-            </Link>
+            <NotificationDropdown />
 
             {/* User Menu */}
-            <div className="relative" ref={userMenuRef}>
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className={cn(
-                  "flex items-center space-x-2 px-3 py-2 rounded-lg transition-all",
-                  "hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-                  showUserMenu && "bg-gray-100 dark:bg-gray-800"
-                )}
-              >
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white font-semibold shadow-sm">
-                  {user?.first_name?.[0] || user?.email?.[0] || "U"}
-                </div>
-                <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {user?.first_name} {user?.last_name}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role}</p>
-                </div>
-                <ChevronDown
-                  className={cn(
-                    "hidden md:block w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform",
-                    showUserMenu && "transform rotate-180"
-                  )}
-                />
-              </button>
-
-              {/* User Dropdown Menu */}
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50 animate-in fade-in-0 zoom-in-95">
-                  <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
-                      {user?.first_name} {user?.last_name}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{user?.email}</p>
-                    <span className="inline-block mt-1.5 text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-medium capitalize">
-                      {user?.role}
-                    </span>
-                  </div>
-                  <Link
-                    href="/admin/profile"
-                    onClick={() => setShowUserMenu(false)}
-                    className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <User className="w-4 h-4 mr-3 text-gray-400 dark:text-gray-500" />
-                    Profile Settings
-                  </Link>
-                  <Link
-                    href="/admin"
-                    onClick={() => setShowUserMenu(false)}
-                    className="flex items-center px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <Settings className="w-4 h-4 mr-3 text-gray-400 dark:text-gray-500" />
-                    Administration
-                  </Link>
-                  <div className="border-t border-gray-100 dark:border-gray-700 my-2" />
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      handleLogout();
-                    }}
-                    className="w-full flex items-center px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left"
-                  >
-                    <LogOut className="w-4 h-4 mr-3" />
-                    Sign Out
-                  </button>
-                </div>
-              )}
-            </div>
+            <UserMenu />
           </div>
         </div>
 

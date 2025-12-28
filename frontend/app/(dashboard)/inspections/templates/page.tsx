@@ -10,10 +10,14 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function InspectionTemplatesPage() {
-  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
-  
   const { data, isLoading } = useQuery({
     queryKey: ["inspection-templates", "list"],
     queryFn: () => inspectionsApi.templates.list({ page: 1 }),
@@ -31,33 +35,35 @@ export default function InspectionTemplatesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <Link href="/inspections" className="hover:text-blue-600 transition-colors">Inspections</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Templates</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Inspection Templates</h1>
+        </div>
+        <div className="flex items-center gap-2">
           <Link href="/inspections">
-            <Button variant="secondary" size="icon">
-              <ArrowLeft className="w-4 h-4" />
+            <Button variant="outline" size="sm" className="h-9">
+              <ArrowLeft className="w-3.5 h-3.5 mr-2" />
+              Back
             </Button>
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Inspection Templates</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Manage inspection templates and categories
-            </p>
-          </div>
+          <Link href="/inspections/templates/new">
+            <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+              <Plus className="w-3.5 h-3.5 mr-2" />
+              New Template
+            </Button>
+          </Link>
         </div>
-        <Link href="/inspections/templates/new">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            New Template
-          </Button>
-        </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Templates ({data?.count || 0})</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <CardContent className="p-0">
           {templates.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="mx-auto h-12 w-12 text-gray-400" />
@@ -67,94 +73,78 @@ export default function InspectionTemplatesPage() {
               </p>
               <div className="mt-6">
                 <Link href="/inspections/templates/new">
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
+                  <Button size="sm">
+                    <Plus className="w-3.5 h-3.5 mr-2" />
                     New Template
                   </Button>
                 </Link>
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-hidden rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Categories</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created By</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableRow className="bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-50/50">
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Name</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Description</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Categories</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Created By</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Created</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {templates.map((template) => (
-                    <TableRow key={template.id}>
-                      <TableCell className="font-medium">
+                    <TableRow key={template.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50">
+                      <TableCell className="font-medium text-sm text-gray-900 dark:text-gray-100 py-2.5">
                         {template.name}
                         {template.is_default && (
-                          <Badge className="ml-2 bg-blue-100 text-blue-800">Default</Badge>
+                          <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200 text-[10px] px-1.5 py-0">Default</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-gray-600">
+                      <TableCell className="text-gray-500 text-xs py-2.5 max-w-[200px] truncate">
                         {template.description || "-"}
                       </TableCell>
-                      <TableCell>{template.category_count || 0}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-sm text-gray-700 dark:text-gray-300 py-2.5">{template.category_count || 0}</TableCell>
+                      <TableCell className="py-2.5">
                         <Badge
-                          className={
-                            template.is_active
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }
+                          variant="outline"
+                          className={`text-[10px] px-2 py-0.5 font-medium border shadow-none ${template.is_active
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : "bg-gray-50 text-gray-600 border-gray-200"
+                            }`}
                         >
                           {template.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{template.created_by_name || "N/A"}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-xs text-gray-600 dark:text-gray-400 py-2.5">{template.created_by_name || "N/A"}</TableCell>
+                      <TableCell className="text-xs text-gray-600 dark:text-gray-400 py-2.5">
                         {format(new Date(template.created_at), "MMM dd, yyyy")}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="relative flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setActionMenuOpen(actionMenuOpen === template.id ? null : template.id)}
-                            className="h-8 w-8 p-0 dark:hover:bg-gray-700"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                          {actionMenuOpen === template.id && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-10"
-                                onClick={() => setActionMenuOpen(null)}
-                              />
-                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                                <div className="py-1">
-                                  <Link
-                                    href={`/inspections/templates/${template.id}`}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    onClick={() => setActionMenuOpen(null)}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                    View Template
-                                  </Link>
-                                  <Link
-                                    href={`/inspections/templates/${template.id}/edit`}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    onClick={() => setActionMenuOpen(null)}
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                    Edit Template
-                                  </Link>
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
+                      <TableCell className="text-right py-2.5">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-7 w-7 p-0 hover:bg-gray-100">
+                              <span className="sr-only">Open menu</span>
+                              <MoreVertical className="h-3.5 w-3.5 text-gray-500" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-[160px]">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/inspections/templates/${template.id}`} className="cursor-pointer">
+                                <Eye className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                                View
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/inspections/templates/${template.id}/edit`} className="cursor-pointer">
+                                <Edit className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                                Edit
+                              </Link>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}

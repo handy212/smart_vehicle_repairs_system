@@ -115,13 +115,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Till Management", href: "/billing/tills" },
     { name: "Refunds", href: "/billing/refunds" },
   ],
-  accounting: [
-    { name: "Dashboard", href: "/accounting" },
-    { name: "Chart of Accounts", href: "/accounting/accounts" },
-    { name: "Journal Entries", href: "/accounting/journal-entries" },
-    { name: "General Ledger", href: "/accounting/general-ledger" },
-    { name: "Reports", href: "/accounting/reports" },
-  ],
+
   admin: [
     { name: "Dashboard", href: "/admin" },
     { name: "Users", href: "/admin/users" },
@@ -153,12 +147,7 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
     };
   }
 
-  if (pathname.startsWith("/accounting")) {
-    return {
-      items: subNavConfig.accounting,
-      title: "Accounting",
-    };
-  }
+
 
   if (pathname.startsWith("/admin")) {
     return {

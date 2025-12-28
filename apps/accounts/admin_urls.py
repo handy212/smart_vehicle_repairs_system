@@ -13,10 +13,10 @@ urlpatterns = [
     # System Settings
     path('settings/', admin_views.system_settings, name='settings'),
     path('settings/<int:setting_id>/delete/', admin_views.delete_setting, name='delete_setting'),
-    path('settings/bulk-update/', admin_views.settings_bulk_update, name='settings_bulk_update'),
-    path('settings/upload-branding/', admin_views.upload_branding, name='upload_branding'),
-    path('settings/test-email/', admin_views.test_email, name='test_email'),
-    path('settings/test-sms/', admin_views.test_sms, name='test_sms'),
+
+
+
+
     
     # User Management
     path('users/', admin_views.user_management, name='user_management'),
@@ -32,14 +32,14 @@ urlpatterns = [
     # Backup & Restore
     path('backup/', admin_views.backup_restore, name='backup_restore'),
     path('backup/<int:backup_id>/download/', admin_views.download_backup, name='download_backup'),
-    path('backup/<int:backup_id>/restore/', admin_views.restore_backup, name='restore_backup'),
+
     path('backup/<int:backup_id>/delete/', admin_views.delete_backup, name='delete_backup'),
-    path('backup/<int:backup_id>/details/', admin_views.backup_details, name='backup_details'),
+
     
     # Email Templates
-    path('email-templates/', admin_views.email_templates, name='email_templates'),
+
     
     # SMS Templates
-    path('sms-templates/', admin_views.sms_templates, name='sms_templates'),
+
     
 ]

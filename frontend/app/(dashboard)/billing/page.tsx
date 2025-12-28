@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Plus, Search, Receipt, DollarSign, Trash2, Download, CheckCircle2, AlertCircle, X, MoreVertical, Eye, Edit, Copy, Mail, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -39,6 +40,7 @@ export default function BillingPage() {
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const router = useRouter();
   const { hasPermission } = usePermissions();
 
   // Advanced filter options
@@ -49,6 +51,7 @@ export default function BillingPage() {
       type: "select",
       options: [
         { value: "draft", label: "Draft" },
+        { value: "proforma", label: "Proforma" },
         { value: "sent", label: "Sent" },
         { value: "viewed", label: "Viewed" },
         { value: "partial", label: "Partial" },
@@ -92,6 +95,13 @@ export default function BillingPage() {
       value: "overdue",
       filters: {
         status: "overdue",
+      },
+    },
+    {
+      label: "Proforma",
+      value: "proforma",
+      filters: {
+        status: "proforma",
       },
     },
   ];
@@ -299,6 +309,8 @@ export default function BillingPage() {
         return "warning";
       case "overdue":
         return "danger";
+      case "proforma":
+        return "secondary";
       default:
         return "default";
     }
@@ -315,23 +327,26 @@ export default function BillingPage() {
     .reduce((sum, inv) => sum + parseFloat(inv.balance_due || "0"), 0) || 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 min-h-screen">
+      <div className="flex items-center justify-between pt-2">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Billing & Invoicing</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manage invoices and payments
-          </p>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Billing</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Billing & Invoicing</h1>
         </div>
         <div className="flex items-center space-x-2">
           <div className="relative">
             <Button
-             variant="secondary"
+              variant="outline"
+              size="sm"
               onClick={() => setShowActionsMenu(!showActionsMenu)}
-              className="dark:border-gray-700 dark:text-gray-200"
+              className="h-9 dark:border-gray-700 dark:text-gray-200"
             >
               Actions
-              <ChevronDown className="w-4 h-4 ml-2" />
+              <ChevronDown className="w-3.5 h-3.5 ml-2" />
             </Button>
             {showActionsMenu && (
               <>
@@ -360,175 +375,180 @@ export default function BillingPage() {
             )}
           </div>
           <PermissionGuard permission="create_invoices">
-            <Link href="/billing/invoices/new">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                New Invoice
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/billing/invoices/new?type=proforma">
+                <Button variant="outline" size="sm" className="h-9">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                  New Proforma
+                </Button>
+              </Link>
+              <Link href="/billing/invoices/new">
+                <Button size="sm" className="h-9">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                  New Invoice
+                </Button>
+              </Link>
+            </div>
           </PermissionGuard>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Invoices</p>
-                <p className="text-2xl font-bold text-gray-900">{totalInvoices}</p>
-              </div>
-              <Receipt className="w-8 h-8 text-blue-500" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="shadow-none border-none bg-gray-50/50">
+          <CardContent className="p-4 flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Invoices</span>
+            <div className="flex items-end justify-between">
+              <span className="text-xl font-bold text-gray-900">{totalInvoices}</span>
+              <Receipt className="w-5 h-5 text-gray-400 mb-0.5" />
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Amount</p>
-                <p className="text-2xl font-bold text-gray-900">${totalAmount.toFixed(2)}</p>
-              </div>
-              <DollarSign className="w-8 h-8 text-green-500" />
+        <Card className="shadow-none border-none bg-gray-50/50">
+          <CardContent className="p-4 flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Revenue</span>
+            <div className="flex items-end justify-between">
+              <span className="text-xl font-bold text-gray-900">${totalAmount.toFixed(2)}</span>
+              <DollarSign className="w-5 h-5 text-gray-400 mb-0.5" />
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Paid</p>
-                <p className="text-2xl font-bold text-green-600">${paidAmount.toFixed(2)}</p>
-              </div>
-              <DollarSign className="w-8 h-8 text-green-500" />
+        <Card className="shadow-none border-none bg-gray-50/50">
+          <CardContent className="p-4 flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid</span>
+            <div className="flex items-end justify-between">
+              <span className="text-xl font-bold text-green-600">${paidAmount.toFixed(2)}</span>
+              <CheckCircle2 className="w-5 h-5 text-green-500/50 mb-0.5" />
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Outstanding</p>
-                <p className="text-2xl font-bold text-red-600">${outstandingAmount.toFixed(2)}</p>
-              </div>
-              <DollarSign className="w-8 h-8 text-red-500" />
+        <Card className="shadow-none border-none bg-gray-50/50">
+          <CardContent className="p-4 flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Outstanding</span>
+            <div className="flex items-end justify-between">
+              <span className="text-xl font-bold text-red-600">${outstandingAmount.toFixed(2)}</span>
+              <AlertCircle className="w-5 h-5 text-red-500/50 mb-0.5" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Compact Filter Bar */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              type="text"
-              placeholder="Search invoices..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="pl-9 h-9"
-            />
-          </div>
-
-          {/* Advanced Filters Button */}
-          <AdvancedFilters
-            filters={filterOptions}
-            quickFilters={quickFilters}
-            activeFilters={advancedFilters}
-            onFiltersChange={(filters) => {
-              setAdvancedFilters(filters);
-              setPage(1);
-            }}
-            onClear={() => {
-              setAdvancedFilters({});
-              setStatusFilter("");
-              setStartDate("");
-              setEndDate("");
-            }}
-            title="Advanced Invoice Filters"
-          />
-
-          {/* Clear Filters */}
-          {(search || Object.keys(advancedFilters).length > 0) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSearch("");
-                setAdvancedFilters({});
-                setStatusFilter("");
-                setStartDate("");
-                setEndDate("");
-                setPage(1);
-              }}
-              className="h-9"
-            >
-              <X className="w-4 h-4 mr-1" />
-              Clear
-            </Button>
-          )}
-        </div>
-
-        {/* Active Filter Badges */}
-        {(search || Object.keys(advancedFilters).length > 0) && (
-          <div className="flex flex-wrap items-center gap-2">
-            {search && (
-              <Badge variant="secondary" className="flex items-center gap-1.5">
-                <span className="text-xs">Search: {search}</span>
-                <button
-                  onClick={() => {
-                    setSearch("");
+      <Card className="border-none shadow-sm bg-gray-50/50">
+        <CardContent className="p-3">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                <Input
+                  type="text"
+                  placeholder="Search invoices..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
                     setPage(1);
                   }}
-                  className="hover:text-red-600"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            )}
-            {Object.entries(advancedFilters).map(([key, value]) => {
-              if (!value || (typeof value === 'string' && value === '')) return null;
-              const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
-              if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
-              if (key.includes("_to")) return null;
-              
-              const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
-                ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
-                : String(value);
-              
-              const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
+                  className="pl-9 h-8 text-sm bg-white dark:bg-gray-900 w-64 focus:w-80 transition-all duration-300"
+                />
+              </div>
 
-              return (
-                <Badge key={key} variant="secondary" className="flex items-center gap-1.5">
-                  <span className="text-xs">{displayLabel}: {displayValue}</span>
-                  <button
-                    onClick={() => {
-                      const newFilters = { ...advancedFilters };
-                      if (key.includes("_from")) {
-                        delete newFilters[key];
-                        delete newFilters[key.replace("_from", "_to")];
-                      } else {
-                        delete newFilters[key];
-                      }
-                      setAdvancedFilters(newFilters);
-                      setPage(1);
-                    }}
-                    className="hover:text-red-600"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              );
-            })}
+              {/* Advanced Filters Button */}
+              <AdvancedFilters
+                filters={filterOptions}
+                quickFilters={quickFilters}
+                activeFilters={advancedFilters}
+                onFiltersChange={(filters) => {
+                  setAdvancedFilters(filters);
+                  setPage(1);
+                }}
+                onClear={() => {
+                  setAdvancedFilters({});
+                  setStatusFilter("");
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                title="Advanced Invoice Filters"
+              />
+
+              {/* Clear Filters */}
+              {(search || Object.keys(advancedFilters).length > 0) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearch("");
+                    setAdvancedFilters({});
+                    setStatusFilter("");
+                    setStartDate("");
+                    setEndDate("");
+                    setPage(1);
+                  }}
+                  className="h-8 text-gray-500 hover:text-red-600"
+                >
+                  <X className="w-3.5 h-3.5 mr-1" />
+                  Clear
+                </Button>
+              )}
+            </div>
+
+
+            {/* Active Filter Badges */}
+            {(search || Object.keys(advancedFilters).length > 0) && (
+              <div className="flex flex-wrap items-center gap-2">
+                {search && (
+                  <Badge variant="secondary" className="flex items-center gap-1.5">
+                    <span className="text-xs">Search: {search}</span>
+                    <button
+                      onClick={() => {
+                        setSearch("");
+                        setPage(1);
+                      }}
+                      className="hover:text-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {Object.entries(advancedFilters).map(([key, value]) => {
+                  if (!value || (typeof value === 'string' && value === '')) return null;
+                  const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
+                  if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
+                  if (key.includes("_to")) return null;
+
+                  const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
+                    ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
+                    : String(value);
+
+                  const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
+
+                  return (
+                    <Badge key={key} variant="secondary" className="flex items-center gap-1.5">
+                      <span className="text-xs">{displayLabel}: {displayValue}</span>
+                      <button
+                        onClick={() => {
+                          const newFilters = { ...advancedFilters };
+                          if (key.includes("_from")) {
+                            delete newFilters[key];
+                            delete newFilters[key.replace("_from", "_to")];
+                          } else {
+                            delete newFilters[key];
+                          }
+                          setAdvancedFilters(newFilters);
+                          setPage(1);
+                        }}
+                        className="hover:text-red-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Bulk Action Toolbar */}
       <BulkActionToolbar
@@ -542,21 +562,21 @@ export default function BillingPage() {
       />
 
       {/* Invoices Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            All Invoices ({data?.count || 0})
+      <Card className="border-t shadow-sm">
+        <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+          <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            All Invoices <span className="text-muted-foreground font-normal ml-1">({data?.count || 0})</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading ? (
             <TableSkeleton rows={8} columns={10} />
           ) : data?.results && data.results.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>
+                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
+                    <TableHead className="w-[40px] px-4">
                       <input
                         type="checkbox"
                         checked={bulkSelection.isAllSelected}
@@ -564,139 +584,107 @@ export default function BillingPage() {
                           if (input) input.indeterminate = bulkSelection.isIndeterminate;
                         }}
                         onChange={bulkSelection.toggleSelectAll}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                     </TableHead>
-                    <SortableHeader
-                      field="invoice_number"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                    >
-                      Invoice #
-                    </SortableHeader>
-                    <SortableHeader
-                      field="customer__user__last_name"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                    >
-                      Customer
-                    </SortableHeader>
-                    <SortableHeader
-                      field="invoice_date"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                    >
-                      Date
-                    </SortableHeader>
-                    <SortableHeader
-                      field="due_date"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                    >
-                      Due Date
-                    </SortableHeader>
-                    <SortableHeader
-                      field="total"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                    >
-                      Total
-                    </SortableHeader>
-                    <SortableHeader
-                      field="amount_paid"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                    >
-                      Paid
-                    </SortableHeader>
-                    <SortableHeader
-                      field="balance_due"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                    >
-                      Balance
-                    </SortableHeader>
-                    <SortableHeader
-                      field="status"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                    >
-                      Status
-                    </SortableHeader>
-                    <TableHead>Accounting</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Invoice #</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Customer</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Dates</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Amount</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Balance</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-center">Sync</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.results.map((invoice) => (
-                    <TableRow key={invoice.id} className="transition-colors duration-150 hover:bg-gray-50">
-                      <TableCell>
+                    <TableRow
+                      key={invoice.id}
+                      className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0 data-[state=selected]:bg-blue-50/30 cursor-pointer"
+                      onDoubleClick={() => router.push(`/billing/invoices/${invoice.id}`)}
+                    >
+                      <TableCell className="px-4 py-2">
                         <input
                           type="checkbox"
                           checked={bulkSelection.isSelected(invoice.id)}
                           onChange={() => bulkSelection.toggleSelection(invoice.id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
+                      <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700">
                         {invoice.invoice_number || "-"}
                       </TableCell>
-                      <TableCell>{invoice.customer_name || "N/A"}</TableCell>
-                      <TableCell>
-                        {invoice.invoice_date
-                          ? format(new Date(invoice.invoice_date), "MMM dd, yyyy")
-                          : "-"}
+                      <TableCell className="px-4 py-2">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-gray-900">{invoice.customer_name || "N/A"}</span>
+                          {/* Potentially add small metadata here if available like email */}
+                        </div>
                       </TableCell>
-                      <TableCell>
-                        {invoice.due_date
-                          ? format(new Date(invoice.due_date), "MMM dd, yyyy")
-                          : "-"}
+                      <TableCell className="px-4 py-2">
+                        <div className="flex flex-col text-xs text-gray-500">
+                          <span>inv: {invoice.invoice_date ? format(new Date(invoice.invoice_date), "MMM dd, yyyy") : "-"}</span>
+                          <span className={invoice.status === 'overdue' ? 'text-red-500 font-medium' : ''}>
+                            due: {invoice.due_date ? format(new Date(invoice.due_date), "MMM dd, yyyy") : "-"}
+                          </span>
+                        </div>
                       </TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell className="px-4 py-2 text-right font-medium text-sm text-gray-700">
                         ${parseFloat(invoice.total || "0").toFixed(2)}
                       </TableCell>
-                      <TableCell>
-                        ${parseFloat(invoice.amount_paid || "0").toFixed(2)}
+                      <TableCell className="px-4 py-2 text-right font-semibold text-sm">
+                        <span className={parseFloat(invoice.balance_due || "0") > 0 ? "text-red-600" : "text-green-600"}>
+                          ${parseFloat(invoice.balance_due || "0").toFixed(2)}
+                        </span>
                       </TableCell>
-                      <TableCell className="font-semibold">
-                        ${parseFloat(invoice.balance_due || "0").toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusVariant(invoice.status) as any}>
+                      <TableCell className="px-4 py-2">
+                        <Badge variant={getStatusVariant(invoice.status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
                           {invoice.status?.replace("_", " ") || invoice.status}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-4 py-2 text-center">
                         {invoice.ledger_invoice ? (
-                          <div className="flex items-center space-x-1 text-green-600">
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span className="text-xs">Synced</span>
+                          <div className="inline-flex justify-center" title="Synced to Ledger">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
                           </div>
                         ) : (
-                          <div className="flex items-center space-x-1 text-gray-400">
-                            <AlertCircle className="w-4 h-4" />
-                            <span className="text-xs">Not Synced</span>
+                          <div className="inline-flex justify-center" title="Not Synced">
+                            <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const button = e.currentTarget;
-                            const rect = button.getBoundingClientRect();
-                            setMenuPosition({
-                              top: rect.bottom + 4,
-                              left: rect.right - 192, // 192px = w-48 (48 * 4)
-                            });
-                            setOpenMenuId(openMenuId === invoice.id ? null : invoice.id);
-                          }}
-                          className="h-8 w-8 p-0"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
+                      <TableCell className="px-4 py-2 text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Link href={`/billing/invoices/${invoice.id}`}>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-blue-600">
+                              <Eye className="w-3.5 h-3.5" />
+                            </Button>
+                          </Link>
+                          {invoice.status === 'draft' && (
+                            <Link href={`/billing/invoices/${invoice.id}/edit`}>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-green-600">
+                                <Edit className="w-3.5 h-3.5" />
+                              </Button>
+                            </Link>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const button = e.currentTarget;
+                              const rect = button.getBoundingClientRect();
+                              setMenuPosition({
+                                top: rect.bottom + 4,
+                                left: rect.right - 192,
+                              });
+                              setOpenMenuId(openMenuId === invoice.id ? null : invoice.id);
+                            }}
+                            className="h-7 w-7 p-0 text-gray-500 hover:bg-gray-100"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -705,37 +693,39 @@ export default function BillingPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Receipt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No invoices found.</p>
+              <Receipt className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-sm">No invoices found matching your criteria.</p>
               <Link href="/billing/invoices/new">
-                <Button className="mt-4"variant="secondary">
-                  <Plus className="w-4 h-4 mr-2" />
+                <Button variant="outline" size="sm" className="mt-4">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
                   Create First Invoice
                 </Button>
               </Link>
             </div>
           )}
 
-          {/* Pagination */}
+          {/* Pagination Compact */}
           {data && data.count > 0 && (
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Showing page {page} of {Math.ceil(data.count / 10)}
+            <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50/30">
+              <div className="text-xs text-muted-foreground">
+                Page {page} of {Math.ceil(data.count / 10)}
               </div>
-              <div className="flex space-x-2">
+              <div className="flex gap-2">
                 <Button
-                 variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!data.previous}
+                  className="h-7 text-xs"
                 >
                   Previous
                 </Button>
                 <Button
-                 variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!data.next}
+                  className="h-7 text-xs"
                 >
                   Next
                 </Button>
@@ -765,7 +755,7 @@ export default function BillingPage() {
             {(() => {
               const invoice = data.results.find((i: any) => i.id === openMenuId);
               if (!invoice) return null;
-              
+
               return (
                 <div className="py-1">
                   <Link
@@ -860,7 +850,7 @@ export default function BillingPage() {
           <DialogFooter>
             <Button
               type="button"
-             variant="secondary"
+              variant="secondary"
               onClick={() => setShowStatusDialog(false)}
             >
               Cancel

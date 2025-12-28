@@ -119,7 +119,7 @@ export default function NewWorkOrderPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [showActiveWorkOrderDialog, setShowActiveWorkOrderDialog] = useState(false);
   const [activeWorkOrderBranch, setActiveWorkOrderBranch] = useState<string | null>(null);
-  
+
   // Repeat visit detection
   const [repeatVisitMatches, setRepeatVisitMatches] = useState<Array<{
     work_order_id: number;
@@ -171,7 +171,7 @@ export default function NewWorkOrderPage() {
       setSelectedCustomer(customer);
       setValue("vehicle", undefined as any); // Reset vehicle when customer changes
       setValue("odometer_in", 0); // Reset odometer when vehicle changes
-      
+
       // Find and store selected customer data
       const customerData = customersData?.results?.find((c) => c.id === customer);
       if (customerData) {
@@ -204,13 +204,13 @@ export default function NewWorkOrderPage() {
   // Pre-fill from appointment if available
   useEffect(() => {
     if (appointment && !customer) {
-      const customerId = typeof appointment.customer === 'object' && appointment.customer !== null 
-        ? appointment.customer.id 
+      const customerId = typeof appointment.customer === 'object' && appointment.customer !== null
+        ? appointment.customer.id
         : appointment.customer;
-      const vehicleId = typeof appointment.vehicle === 'object' && appointment.vehicle !== null 
-        ? appointment.vehicle.id 
+      const vehicleId = typeof appointment.vehicle === 'object' && appointment.vehicle !== null
+        ? appointment.vehicle.id
         : appointment.vehicle;
-      
+
       setValue("customer", customerId);
       setValue("vehicle", vehicleId);
       setValue("appointment", appointment.id);
@@ -247,7 +247,7 @@ export default function NewWorkOrderPage() {
             vehicle,
             customer_concerns: customerConcerns,
           });
-          
+
           if (result.has_repeat && result.matches.length > 0) {
             setRepeatVisitMatches(result.matches);
             setShowRepeatVisitDialog(true);
@@ -285,56 +285,56 @@ export default function NewWorkOrderPage() {
       console.log(">>> Error object:", error);
       console.log(">>> Error response data:", error?.response?.data);
       setServerError(null);
-      
+
       // Extract error data from response
       const errorData = error?.response?.data;
-      
+
       if (!errorData) {
         setServerError("An unexpected error occurred. Please try again.");
         return;
       }
-      
+
       // Extract error message from various possible locations
       let errorMessage = '';
-      
+
       if (errorData.non_field_errors) {
         errorMessage = Array.isArray(errorData.non_field_errors)
           ? errorData.non_field_errors[0]
           : errorData.non_field_errors;
       } else if (errorData.detail) {
-        errorMessage = typeof errorData.detail === 'string' 
-          ? errorData.detail 
+        errorMessage = typeof errorData.detail === 'string'
+          ? errorData.detail
           : (Array.isArray(errorData.detail) ? errorData.detail[0] : String(errorData.detail));
       } else if (typeof errorData === 'string') {
         errorMessage = errorData;
       }
-      
+
       // Check if this is an active work order error
       if (errorMessage && errorMessage.toLowerCase().includes('active work order')) {
         // Extract branch name from error message
         // Format: "This vehicle has an active work order (WO-123) at Branch Name. A new..."
         const branchMatch = errorMessage.match(/at ([^.]+)\./);
         const branchName = branchMatch ? branchMatch[1].trim() : 'another branch';
-        
+
         setActiveWorkOrderBranch(branchName);
         setShowActiveWorkOrderDialog(true);
         return;
       }
-      
+
       // Handle field-level errors
       Object.keys(errorData).forEach((field) => {
         if (field !== 'non_field_errors' && field !== 'detail') {
-          const fieldError = Array.isArray(errorData[field]) 
-            ? errorData[field][0] 
+          const fieldError = Array.isArray(errorData[field])
+            ? errorData[field][0]
             : String(errorData[field]);
-          
-          setError(field as keyof WorkOrderFormData, { 
-            type: "server", 
-            message: fieldError 
+
+          setError(field as keyof WorkOrderFormData, {
+            type: "server",
+            message: fieldError
           });
         }
       });
-      
+
       // Set general error message
       if (errorMessage) {
         setServerError(errorMessage);
@@ -352,13 +352,13 @@ export default function NewWorkOrderPage() {
       odometer_in: data.odometer_in ?? 0,
       customer_concerns: data.customer_concerns || "", // Ensure it's not undefined
     };
-    
+
     // Add warranty rework fields if applicable
     if (isWarrantyRework && selectedRelatedWorkOrder) {
       submitData.is_warranty_rework = true;
       submitData.related_work_order = selectedRelatedWorkOrder;
     }
-    
+
     try {
       await createMutation.mutateAsync(submitData);
     } catch (error: any) {
@@ -370,16 +370,16 @@ export default function NewWorkOrderPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Link href="/workorders">
-          <Button variant="secondary">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-        </Link>
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">New JobCard</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Create a New JobCard</p>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <Link href="/workorders" className="hover:text-blue-600 transition-colors">Work Orders</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">New</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">New Work Order</h1>
         </div>
       </div>
 
@@ -412,7 +412,7 @@ export default function NewWorkOrderPage() {
               <span>Active Work Order Detected</span>
             </DialogTitle>
             <DialogDescription className="pt-4">
-              The selected vehicle has an open work order at <strong>{activeWorkOrderBranch || 'another branch'}</strong>. 
+              The selected vehicle has an open work order at <strong>{activeWorkOrderBranch || 'another branch'}</strong>.
               Please close it before creating a new one.
             </DialogDescription>
           </DialogHeader>
@@ -436,7 +436,7 @@ export default function NewWorkOrderPage() {
               This vehicle was recently serviced for a similar issue. This may indicate a warranty/rework case.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             {repeatVisitMatches.length > 0 && (
               <div className="space-y-3">
@@ -487,7 +487,7 @@ export default function NewWorkOrderPage() {
                 ))}
               </div>
             )}
-            
+
             <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
@@ -505,10 +505,10 @@ export default function NewWorkOrderPage() {
               </p>
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button 
-             variant="secondary" 
+            <Button
+              variant="secondary"
               onClick={() => {
                 setShowRepeatVisitDialog(false);
                 setIsWarrantyRework(false);
@@ -535,163 +535,163 @@ export default function NewWorkOrderPage() {
                 <CardDescription>Select customer and vehicle</CardDescription>
               </CardHeader>
 
-  <CardContent className="space-y-6">
-    {/* Grid layout — 1 column on mobile, 2 columns on md+ */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      
-      {/* Customer */}
-      <div className="space-y-3">
-        <div>
-          <label
-            htmlFor="customer"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-          >
-            Customer *
-          </label>
+              <CardContent className="space-y-6">
+                {/* Grid layout — 1 column on mobile, 2 columns on md+ */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          <Select
-            id="customer"
-            {...register("customer", { valueAsNumber: true })}
-            className={`w-full ${errors.customer ? "border-red-500" : ""}`}
-            onChange={(e) => {
-              const val = parseInt(e.target.value);
-              setValue("customer", val);
-              setSelectedCustomer(val);
-              
-              // Update selected customer data
-              const customerData = customersData?.results?.find((c) => c.id === val);
-              if (customerData) {
-                setSelectedCustomerData({
-                  id: customerData.id,
-                  full_name: customerData.full_name,
-                  email: customerData.email,
-                  phone: customerData.phone,
-                  customer_type: customerData.customer_type,
-                  customer_number: customerData.customer_number,
-                });
-              } else {
-                setSelectedCustomerData(null);
-              }
-            }}
-          >
-            <option value="">Select a customer</option>
-            {customersData?.results?.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.full_name || `${customer.user?.first_name || ''} ${customer.user?.last_name || ''}`.trim() || 'Unknown'}
-              </option>
-            ))}
-          </Select>
+                  {/* Customer */}
+                  <div className="space-y-3">
+                    <div>
+                      <label
+                        htmlFor="customer"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                      >
+                        Customer *
+                      </label>
 
-          {errors.customer && (
-            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-              {errors.customer.message}
-            </p>
-          )}
-        </div>
+                      <Select
+                        id="customer"
+                        {...register("customer", { valueAsNumber: true })}
+                        className={`w-full ${errors.customer ? "border-red-500" : ""}`}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setValue("customer", val);
+                          setSelectedCustomer(val);
 
-        {/* Customer Info Display */}
-        {selectedCustomerData && (
-          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
-            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Customer Information
-            </div>
-            <div className="space-y-2 text-sm">
-              {selectedCustomerData.phone && (
-                <div className="flex items-start">
-                  <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Phone:</span>
-                  <span className="text-gray-900 dark:text-gray-100">{selectedCustomerData.phone}</span>
+                          // Update selected customer data
+                          const customerData = customersData?.results?.find((c) => c.id === val);
+                          if (customerData) {
+                            setSelectedCustomerData({
+                              id: customerData.id,
+                              full_name: customerData.full_name,
+                              email: customerData.email,
+                              phone: customerData.phone,
+                              customer_type: customerData.customer_type,
+                              customer_number: customerData.customer_number,
+                            });
+                          } else {
+                            setSelectedCustomerData(null);
+                          }
+                        }}
+                      >
+                        <option value="">Select a customer</option>
+                        {customersData?.results?.map((customer) => (
+                          <option key={customer.id} value={customer.id}>
+                            {customer.full_name || `${customer.user?.first_name || ''} ${customer.user?.last_name || ''}`.trim() || 'Unknown'}
+                          </option>
+                        ))}
+                      </Select>
+
+                      {errors.customer && (
+                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                          {errors.customer.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Customer Info Display */}
+                    {selectedCustomerData && (
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                          Customer Information
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          {selectedCustomerData.phone && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Phone:</span>
+                              <span className="text-gray-900 dark:text-gray-100">{selectedCustomerData.phone}</span>
+                            </div>
+                          )}
+                          {selectedCustomerData.email && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Email:</span>
+                              <span className="text-gray-900 dark:text-gray-100 break-words">{selectedCustomerData.email}</span>
+                            </div>
+                          )}
+                          {selectedCustomerData.customer_type && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Type:</span>
+                              <span className="text-gray-900 dark:text-gray-100 capitalize">
+                                {selectedCustomerData.customer_type.replace('_', ' ')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Vehicle */}
+                  <div className="space-y-3">
+                    <div>
+                      <label
+                        htmlFor="vehicle"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                      >
+                        Vehicle *
+                      </label>
+
+                      <Select
+                        id="vehicle"
+                        {...register("vehicle", { valueAsNumber: true })}
+                        className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}
+                        disabled={!selectedCustomer || !vehiclesData?.results?.length}
+                      >
+                        <option value="">
+                          {!selectedCustomer
+                            ? "Select a customer first"
+                            : !vehiclesData?.results?.length
+                              ? "No vehicles found"
+                              : "Select a vehicle"}
+                        </option>
+
+                        {vehiclesData?.results?.map((vehicle) => (
+                          <option key={vehicle.id} value={vehicle.id}>
+                            {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
+                          </option>
+                        ))}
+                      </Select>
+
+                      {errors.vehicle && (
+                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                          {errors.vehicle.message}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Vehicle Info Display */}
+                    {selectedVehicle && (
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
+                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                          Vehicle Info
+                        </div>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-start">
+                            <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">Make/Model:</span>
+                            <span className="text-gray-900 dark:text-gray-100">
+                              {selectedVehicle.make} {selectedVehicle.model} {selectedVehicle.year}
+                            </span>
+                          </div>
+                          {selectedVehicle.license_plate && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">License:</span>
+                              <span className="text-gray-900 dark:text-gray-100">{selectedVehicle.license_plate}</span>
+                            </div>
+                          )}
+                          {selectedVehicle.vin && (
+                            <div className="flex items-start">
+                              <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">VIN:</span>
+                              <span className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">{selectedVehicle.vin}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
-              )}
-              {selectedCustomerData.email && (
-                <div className="flex items-start">
-                  <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Email:</span>
-                  <span className="text-gray-900 dark:text-gray-100 break-words">{selectedCustomerData.email}</span>
-                </div>
-              )}
-              {selectedCustomerData.customer_type && (
-                <div className="flex items-start">
-                  <span className="font-medium text-gray-700 dark:text-gray-300 w-20 flex-shrink-0">Type:</span>
-                  <span className="text-gray-900 dark:text-gray-100 capitalize">
-                    {selectedCustomerData.customer_type.replace('_', ' ')}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Vehicle */}
-      <div className="space-y-3">
-        <div>
-          <label
-            htmlFor="vehicle"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-          >
-            Vehicle *
-          </label>
-
-          <Select
-            id="vehicle"
-            {...register("vehicle", { valueAsNumber: true })}
-            className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}
-            disabled={!selectedCustomer || !vehiclesData?.results?.length}
-          >
-            <option value="">
-              {!selectedCustomer
-                ? "Select a customer first"
-                : !vehiclesData?.results?.length
-                ? "No vehicles found"
-                : "Select a vehicle"}
-            </option>
-
-            {vehiclesData?.results?.map((vehicle) => (
-              <option key={vehicle.id} value={vehicle.id}>
-                {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
-              </option>
-            ))}
-          </Select>
-
-          {errors.vehicle && (
-            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-              {errors.vehicle.message}
-            </p>
-          )}
-        </div>
-
-        {/* Vehicle Info Display */}
-        {selectedVehicle && (
-          <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 space-y-2">
-            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-              Vehicle Info
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-start">
-                <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">Make/Model:</span>
-                <span className="text-gray-900 dark:text-gray-100">
-                  {selectedVehicle.make} {selectedVehicle.model} {selectedVehicle.year}
-                </span>
-              </div>
-              {selectedVehicle.license_plate && (
-                <div className="flex items-start">
-                  <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">License:</span>
-                  <span className="text-gray-900 dark:text-gray-100">{selectedVehicle.license_plate}</span>
-                </div>
-              )}
-              {selectedVehicle.vin && (
-                <div className="flex items-start">
-                  <span className="font-medium text-gray-700 dark:text-gray-300 w-24 flex-shrink-0">VIN:</span>
-                  <span className="text-gray-900 dark:text-gray-100 font-mono text-xs break-all">{selectedVehicle.vin}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-    </div>
-  </CardContent>
-</Card>
+              </CardContent>
+            </Card>
 
 
             {/* Work Order Details */}
@@ -730,16 +730,16 @@ export default function NewWorkOrderPage() {
                             <input
                               type="checkbox"
                               checked={selectedConcerns.includes(concern.value)}
-                      onChange={(e) => {
+                              onChange={(e) => {
                                 const isChecked = e.target.checked;
                                 let updatedConcerns: string[];
-                                
+
                                 if (isChecked) {
                                   if (concern.value === "Other (describe below)") {
                                     // Clear other selections when "Other" is selected
                                     updatedConcerns = [concern.value];
-                            setValue("customer_concerns", "");
-                          } else {
+                                    setValue("customer_concerns", "");
+                                  } else {
                                     // Add to selection, but remove "Other" if it was selected
                                     updatedConcerns = selectedConcerns
                                       .filter(c => c !== "Other (describe below)")
@@ -748,23 +748,23 @@ export default function NewWorkOrderPage() {
                                 } else {
                                   // Remove from selection
                                   updatedConcerns = selectedConcerns.filter(c => c !== concern.value);
-                          }
-                                
+                                }
+
                                 setSelectedConcerns(updatedConcerns);
-                                
+
                                 // Update textarea with selected concerns (excluding "Other")
                                 const concernsToAdd = updatedConcerns.filter(c => c !== "Other (describe below)");
                                 if (concernsToAdd.length > 0) {
                                   setValue("customer_concerns", concernsToAdd.join("\n"));
                                 } else {
                                   setValue("customer_concerns", "");
-                        }
-                      }}
+                                }
+                              }}
                               className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                             />
                             <span className="text-sm text-gray-700 dark:text-gray-300">{concern.label}</span>
                           </label>
-                      ))}
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -819,7 +819,7 @@ export default function NewWorkOrderPage() {
                   {isSubmitting ? "Creating..." : "Create JobCard"}
                 </Button>
                 <Link href="/workorders">
-                  <Button type="button"variant="secondary" className="w-full">
+                  <Button type="button" variant="secondary" className="w-full">
                     Cancel
                   </Button>
                 </Link>

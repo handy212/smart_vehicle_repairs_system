@@ -229,6 +229,11 @@ export const billingApi = {
       await apiClient.post(`/billing/invoices/${id}/send/`);
     },
 
+    convertToInvoice: async (id: number): Promise<Invoice> => {
+      const response = await apiClient.post(`/billing/invoices/${id}/convert_to_invoice/`);
+      return response.data.invoice || response.data;
+    },
+
     overdue: async (): Promise<Invoice[]> => {
       const response = await apiClient.get("/billing/invoices/overdue/");
       return response.data.results || response.data;

@@ -36,17 +36,22 @@ export default function TillDashboardPage() {
     const hasOpenTill = currentTill && currentTill.id;
 
     return (
-        <div className="p-8 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
+        <div className="space-y-4 min-h-screen">
+            <div className="flex items-center justify-between pt-2">
                 <div>
-                    <h1 className="text-3xl font-bold">Till Management</h1>
-                    <p className="text-muted-foreground mt-1">Cash register operations</p>
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+                        <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+                        <span>/</span>
+                        <Link href="/billing" className="hover:text-blue-600 transition-colors">Billing</Link>
+                        <span>/</span>
+                        <span className="text-gray-900 dark:text-gray-100 font-medium">Till Management</span>
+                    </div>
+                    <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Till Management</h1>
                 </div>
                 {!hasOpenTill && (
                     <Link href="/billing/tills/open">
-                        <Button size="lg">
-                            <Plus className="mr-2 h-5 w-5" />
+                        <Button size="sm" className="h-9">
+                            <Plus className="mr-1.5 h-3.5 w-3.5" />
                             Open Till
                         </Button>
                     </Link>
@@ -93,19 +98,19 @@ export default function TillDashboardPage() {
                     </CardContent>
                 </Card>
             ) : (
-                <Card className="border-l-4 border-l-gray-300">
-                    <CardContent className="pt-6 pb-6">
+                <Card className="shadow-none border-none bg-gray-50/50 dark:bg-gray-800/50">
+                    <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <AlertCircle className="h-8 w-8 text-gray-400" />
+                                <AlertCircle className="h-5 w-5 text-gray-400" />
                                 <div>
-                                    <p className="font-semibold text-lg">No Open Till</p>
-                                    <p className="text-sm text-muted-foreground">Open a till to start processing cash transactions</p>
+                                    <p className="font-semibold text-gray-900 dark:text-gray-100">No Open Till</p>
+                                    <p className="text-xs text-muted-foreground">Open a till to start processing cash transactions</p>
                                 </div>
                             </div>
                             <Link href="/billing/tills/open">
-                                <Button>
-                                    <Plus className="mr-2 h-4 w-4" />
+                                <Button size="sm" className="h-8">
+                                    <Plus className="mr-1.5 h-3.5 w-3.5" />
                                     Open Till Now
                                 </Button>
                             </Link>

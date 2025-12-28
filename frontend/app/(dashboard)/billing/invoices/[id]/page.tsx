@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { ArrowLeft, Edit, Download, Mail, DollarSign, Calendar, User, Printer, ExternalLink, CheckCircle2, ChevronDown, MoreVertical, Receipt } from "lucide-react";
+import { ArrowLeft, Edit, Download, Mail, DollarSign, Calendar, User, Printer, ExternalLink, CheckCircle2, ChevronDown, MoreVertical, Receipt, FileCheck } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,6 +16,7 @@ import RecordPaymentDialog from "./components/RecordPaymentDialog";
 import ProcessRefundDialog from "./components/ProcessRefundDialog";
 import { useBranchStore } from "@/store/branchStore";
 import { useToast } from "@/lib/hooks/useToast";
+import { usePrint } from "@/lib/hooks/usePrint";
 import { Undo2 } from "lucide-react";
 
 export default function InvoiceDetailPage() {
@@ -28,6 +29,7 @@ export default function InvoiceDetailPage() {
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { downloadPDF, isDownloading } = usePrint();
 
   const { data: invoice, isLoading, error } = useQuery({
     queryKey: ["invoice", invoiceId],
@@ -93,6 +95,27 @@ export default function InvoiceDetailPage() {
     },
   });
 
+  const convertToInvoiceMutation = useMutation({
+    mutationFn: async () => {
+      return billingApi.invoices.convertToInvoice(invoiceId);
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast({
+        title: "Success",
+        description: `Proforma converted to invoice ${data.invoice_number} successfully`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to convert proforma. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value;
     if (newStatus && newStatus !== localStatus) {
@@ -102,43 +125,6 @@ export default function InvoiceDetailPage() {
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleDownloadPDF = async () => {
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/billing/invoices/${invoiceId}/pdf/`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          'X-Branch-ID': useBranchStore.getState().activeBranchId?.toString() || '',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `Failed to generate PDF: ${response.status} ${response.statusText}`);
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `invoice_${invoice?.invoice_number || invoiceId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to download PDF. Please try again.';
-      alert(errorMessage);
-      console.error('PDF download error:', error);
-    }
-  };
-
-  const handleSendEmail = () => {
-    if (confirm("Send this invoice to the customer via email?")) {
-      sendEmailMutation.mutate();
-    }
   };
 
   if (isLoading) {
@@ -270,17 +256,24 @@ export default function InvoiceDetailPage() {
                     </button>
                     <button
                       onClick={() => {
-                        handleDownloadPDF();
+                        downloadPDF({
+                          documentType: 'invoice',
+                          documentId: invoiceId,
+                          documentNumber: invoice.invoice_number
+                        });
                         setShowActionsMenu(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      disabled={isDownloading}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Download className="w-4 h-4" />
-                      Download PDF
+                      {isDownloading ? 'Generating...' : 'Download PDF'}
                     </button>
                     <button
                       onClick={() => {
-                        handleSendEmail();
+                        if (confirm("Send this invoice to the customer via email?")) {
+                          sendEmailMutation.mutate();
+                        }
                         setShowActionsMenu(false);
                       }}
                       disabled={sendEmailMutation.isPending}
@@ -289,6 +282,25 @@ export default function InvoiceDetailPage() {
                       <Mail className="w-4 h-4" />
                       {sendEmailMutation.isPending ? "Sending..." : "Send Email"}
                     </button>
+                    {/* Only show Convert to Invoice for proforma invoices */}
+                    {invoice.status === 'proforma' && (
+                      <>
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                        <button
+                          onClick={() => {
+                            if (confirm("Convert this proforma to a standard invoice? This will assign a new invoice number.")) {
+                              convertToInvoiceMutation.mutate();
+                            }
+                            setShowActionsMenu(false);
+                          }}
+                          disabled={convertToInvoiceMutation.isPending}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <FileCheck className="w-4 h-4" />
+                          {convertToInvoiceMutation.isPending ? "Converting..." : "Convert to Invoice"}
+                        </button>
+                      </>
+                    )}
                     {/* Only show Record Payment if invoice is not fully paid */}
                     {invoice.status !== 'paid' && parseFloat(invoice.balance_due || "0") > 0 && (
                       <>
@@ -511,16 +523,34 @@ export default function InvoiceDetailPage() {
                               </Badge>
                             </div>
                           )}
-                          {payment.status === 'completed' && (parseFloat(payment.amount) - parseFloat(payment.refund_amount || "0")) > 0 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="mt-3 h-8 text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
-                              onClick={() => setSelectedPaymentForRefund(payment)}
-                            >
-                              <Undo2 className="h-3.5 w-3.5" />
-                              Issue Refund
-                            </Button>
+                          {payment.status === 'completed' && (
+                            <div className="flex gap-2 mt-3">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 gap-1"
+                                onClick={() => downloadPDF({
+                                  documentType: 'receipt',
+                                  documentId: payment.id,
+                                  documentNumber: payment.payment_number
+                                })}
+                                disabled={isDownloading}
+                              >
+                                <Printer className="h-3.5 w-3.5" />
+                                Receipt
+                              </Button>
+                              {(parseFloat(payment.amount) - parseFloat(payment.refund_amount || "0")) > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
+                                  onClick={() => setSelectedPaymentForRefund(payment)}
+                                >
+                                  <Undo2 className="h-3.5 w-3.5" />
+                                  Issue Refund
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>

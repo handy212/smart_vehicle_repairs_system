@@ -145,7 +145,7 @@ export default function TillDetailPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
-                            {till.cash_counts.map((count) => (
+                            {till.cash_counts.map((count: any) => (
                                 <div key={count.id} className="flex items-center justify-between p-3 border rounded-lg">
                                     <div className="flex items-center gap-4">
                                         <span className="font-semibold">${parseFloat(count.denomination).toFixed(2)}</span>
@@ -158,7 +158,7 @@ export default function TillDetailPage() {
                             <div className="border-t pt-3 flex justify-between items-center">
                                 <span className="font-semibold">Total Counted:</span>
                                 <span className="text-2xl font-bold">
-                                    ${till.cash_counts.reduce((sum, c) => sum + parseFloat(c.total), 0).toLocaleString()}
+                                    ${till.cash_counts.reduce((sum: number, c: any) => sum + parseFloat(c.total), 0).toLocaleString()}
                                 </span>
                             </div>
                         </div>

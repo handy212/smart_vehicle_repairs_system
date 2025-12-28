@@ -323,8 +323,12 @@ class AccountingService:
         if not entity:
             return None
         
-        # Calculate total parts cost
-        parts_cost = work_order.actual_parts_cost or Decimal('0')
+        # Calculate total parts cost (COGS)
+        # Note: actual_parts_cost on WorkOrder is the selling price/revenue. 
+        # For COGS, we need the sum of (quantity * unit_cost) from parts.
+        from django.db.models import Sum
+        parts_cost = work_order.parts.aggregate(total=Sum('total_cost'))['total'] or Decimal('0')
+        
         if parts_cost <= 0:
             return None  # No parts cost to post
         

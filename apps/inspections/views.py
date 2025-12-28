@@ -686,6 +686,14 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
             }
         })
 
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Generate PDF for inspection report"""
+        from apps.core.services.print_service import generate_inspection_pdf
+        
+        inspection = self.get_object()
+        return generate_inspection_pdf(inspection)
+
 
 class InspectionResultViewSet(viewsets.ModelViewSet):
     """

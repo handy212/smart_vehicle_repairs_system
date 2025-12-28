@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Plus, Search, Wrench, LayoutGrid, Trash2, Download, X, ChevronDown, MoreVertical, Eye, Edit, FileText, Printer, Calendar } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -24,6 +25,14 @@ import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/adva
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function WorkOrdersPage() {
   const [search, setSearch] = useState("");
@@ -36,10 +45,10 @@ export default function WorkOrdersPage() {
   const [newStatus, setNewStatus] = useState<string>("in_progress");
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const router = useRouter();
   const { hasPermission } = usePermissions();
 
   // Advanced filter options
@@ -301,59 +310,49 @@ export default function WorkOrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center pt-2">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Work Orders</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Manage work orders and service jobs
-          </p>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Work Orders</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Work Orders</h1>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="relative">
-            <Button
-             variant="secondary"
-              onClick={() => setShowActionsMenu(!showActionsMenu)}
-              className="dark:border-gray-700 dark:text-gray-200"
-            >
-              Actions
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
-            {showActionsMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowActionsMenu(false)}
-                />
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                  <div className="py-1">
-                    <PermissionGuard permission="export_workorders">
-                      <button
-                        onClick={() => {
-                          handleExport();
-                          setShowActionsMenu(false);
-                        }}
-                        disabled={!data?.results || data.results.length === 0}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        Export CSV
-                      </button>
-                    </PermissionGuard>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+              >
+                Actions
+                <ChevronDown className="w-3.5 h-3.5 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <PermissionGuard permission="export_workorders">
+                <DropdownMenuItem
+                  onClick={() => handleExport()}
+                  disabled={!data?.results || data.results.length === 0}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </DropdownMenuItem>
+              </PermissionGuard>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Link href="/workorders/kanban">
-            <Button variant="secondary">
-              <LayoutGrid className="w-4 h-4 mr-2" />
-              Kanban View
+            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+              <LayoutGrid className="w-3.5 h-3.5 mr-2" />
+              Kanban
             </Button>
           </Link>
           <PermissionGuard permission="create_workorders">
             <Link href="/workorders/new">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
+              <Button size="sm" className="h-9">
+                <Plus className="w-3.5 h-3.5 mr-2" />
                 New Work Order
               </Button>
             </Link>
@@ -365,8 +364,8 @@ export default function WorkOrdersPage() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Search */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
             <Input
               type="text"
               placeholder="Search work orders..."
@@ -375,7 +374,7 @@ export default function WorkOrdersPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 h-9"
+              className="pl-9 h-8 text-sm bg-white dark:bg-gray-900 w-64 focus:w-80 transition-all duration-300"
             />
           </div>
 
@@ -440,11 +439,11 @@ export default function WorkOrdersPage() {
               const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
               if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
               if (key.includes("_to")) return null;
-              
+
               const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
                 ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
                 : String(value);
-              
+
               const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
 
               return (
@@ -496,8 +495,8 @@ export default function WorkOrdersPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>
+                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100 dark:border-gray-800">
+                    <TableHead className="w-[40px] px-4">
                       <input
                         type="checkbox"
                         checked={bulkSelection.isAllSelected}
@@ -505,13 +504,14 @@ export default function WorkOrdersPage() {
                           if (input) input.indeterminate = bulkSelection.isIndeterminate;
                         }}
                         onChange={bulkSelection.toggleSelectAll}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                     </TableHead>
                     <SortableHeader
                       field="work_order_number"
                       sortConfig={sortConfig}
                       onSort={handleSort}
+                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
                     >
                       Work Order #
                     </SortableHeader>
@@ -519,14 +519,16 @@ export default function WorkOrdersPage() {
                       field="customer__user__last_name"
                       sortConfig={sortConfig}
                       onSort={handleSort}
+                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
                     >
                       Customer
                     </SortableHeader>
-                    <TableHead>Vehicle</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Vehicle</TableHead>
                     <SortableHeader
                       field="priority"
                       sortConfig={sortConfig}
                       onSort={handleSort}
+                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
                     >
                       Priority
                     </SortableHeader>
@@ -534,6 +536,7 @@ export default function WorkOrdersPage() {
                       field="status"
                       sortConfig={sortConfig}
                       onSort={handleSort}
+                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
                     >
                       Status
                     </SortableHeader>
@@ -541,6 +544,7 @@ export default function WorkOrdersPage() {
                       field="estimated_total"
                       sortConfig={sortConfig}
                       onSort={handleSort}
+                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
                     >
                       Total Cost
                     </SortableHeader>
@@ -548,21 +552,27 @@ export default function WorkOrdersPage() {
                       field="created_at"
                       sortConfig={sortConfig}
                       onSort={handleSort}
+                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
                     >
                       Created
                     </SortableHeader>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.results.map((workorder) => (
-                    <TableRow key={workorder.id} className="transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <TableRow
+                      key={workorder.id}
+                      className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 dark:border-gray-800 cursor-pointer"
+                      onDoubleClick={() => router.push(`/workorders/${workorder.id}`)}
+                    >
                       <TableCell>
                         <input
                           type="checkbox"
                           checked={bulkSelection.isSelected(workorder.id)}
                           onChange={() => bulkSelection.toggleSelection(workorder.id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
                       </TableCell>
                       <TableCell className="font-mono text-sm text-gray-900 dark:text-gray-100">
@@ -571,12 +581,12 @@ export default function WorkOrdersPage() {
                       <TableCell className="text-gray-900 dark:text-gray-100">{workorder.customer_name || "N/A"}</TableCell>
                       <TableCell className="text-gray-900 dark:text-gray-100">{workorder.vehicle_info || "N/A"}</TableCell>
                       <TableCell>
-                        <Badge variant={getPriorityVariant(workorder.priority) as any}>
+                        <Badge variant={getPriorityVariant(workorder.priority) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
                           {workorder.priority || "-"}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getStatusVariant(workorder.status) as any}>
+                        <Badge variant={getStatusVariant(workorder.status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
                           {workorder.status?.replace("_", " ") || workorder.status || "-"}
                         </Badge>
                       </TableCell>
@@ -589,78 +599,55 @@ export default function WorkOrdersPage() {
                           : "-"}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="relative flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setActionMenuOpen(actionMenuOpen === workorder.id ? null : workorder.id)}
-                            className="h-8 w-8 p-0 dark:hover:bg-gray-700"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                          {actionMenuOpen === workorder.id && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-10"
-                                onClick={() => setActionMenuOpen(null)}
-                              />
-                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                                <div className="py-1">
-                                  <Link
-                                    href={`/workorders/${workorder.id}`}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    onClick={() => setActionMenuOpen(null)}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                    View Details
-                                  </Link>
-                                  <Link
-                                    href={`/workorders/${workorder.id}/edit`}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    onClick={() => setActionMenuOpen(null)}
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                    Edit Work Order
-                                  </Link>
-                                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                  <Link
-                                    href={`/workorders/${workorder.id}/print`}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    onClick={() => setActionMenuOpen(null)}
-                                    target="_blank"
-                                  >
-                                    <Printer className="w-4 h-4" />
-                                    Print Job Card
-                                  </Link>
-                                  <Link
-                                    href={`/workorders/${workorder.id}/diagnosis`}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    onClick={() => setActionMenuOpen(null)}
-                                  >
-                                    <FileText className="w-4 h-4" />
-                                    View Diagnosis
-                                  </Link>
-                                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                    <PermissionGuard permission="delete_workorders">
-                                      <button
-                                        onClick={() => {
-                                          if (window.confirm(`Are you sure you want to delete work order "${workorder.work_order_number}"? This action cannot be undone.`)) {
-                                            handleDelete(workorder);
-                                          }
-                                          setActionMenuOpen(null);
-                                        }}
-                                        disabled={deleteMutation.isPending}
-                                        className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete Work Order
-                                      </button>
-                                    </PermissionGuard>
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 dark:hover:bg-gray-700 data-[state=open]:bg-gray-100 dark:data-[state=open]:bg-gray-800"
+                            >
+                              <span className="sr-only">Open menu</span>
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => router.push(`/workorders/${workorder.id}`)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <PermissionGuard permission="edit_workorders">
+                              <DropdownMenuItem onClick={() => router.push(`/workorders/${workorder.id}/edit`)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Work Order
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => window.open(`/workorders/${workorder.id}/print`, '_blank')}>
+                              <Printer className="mr-2 h-4 w-4" />
+                              Print Job Card
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/workorders/${workorder.id}/diagnosis`)}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              View Diagnosis
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <PermissionGuard permission="delete_workorders">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  if (window.confirm(`Are you sure you want to delete work order "${workorder.work_order_number}"? This action cannot be undone.`)) {
+                                    handleDelete(workorder);
+                                  }
+                                }}
+                                className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20"
+                                disabled={deleteMutation.isPending}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete Work Order
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -672,7 +659,7 @@ export default function WorkOrdersPage() {
               <Wrench className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
               <p className="text-gray-500 dark:text-gray-400">No work orders found.</p>
               <Link href="/workorders/new">
-                <Button className="mt-4"variant="secondary">
+                <Button className="mt-4" variant="secondary">
                   <Plus className="w-4 h-4 mr-2" />
                   Create First Work Order
                 </Button>
@@ -688,7 +675,7 @@ export default function WorkOrdersPage() {
               </div>
               <div className="flex space-x-2">
                 <Button
-                 variant="secondary"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!data.previous}
@@ -696,7 +683,7 @@ export default function WorkOrdersPage() {
                   Previous
                 </Button>
                 <Button
-                 variant="secondary"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!data.next}
@@ -732,7 +719,7 @@ export default function WorkOrdersPage() {
           <DialogFooter>
             <Button
               type="button"
-             variant="secondary"
+              variant="secondary"
               onClick={() => setShowStatusDialog(false)}
             >
               Cancel

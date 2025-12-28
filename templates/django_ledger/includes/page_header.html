@@ -1,0 +1,52 @@
+{% load static %}
+{% load i18n %}
+{% load django_ledger %}
+
+{% if not header_style %}
+<section class="hero is-primary is-bold is-small">
+    <div class="hero-body">
+        <div class="container">
+            <div class="columns is-mobile is-vcentered">
+                {% if header_subtitle_icon %}
+                <div class="column is-narrow">
+                    <span class="icon is-large">
+                        {% icon header_subtitle_icon 48 %}
+                    </span>
+                </div>
+                {% endif %}
+                <div class="column">
+                    <h1 class="title is-2 has-text-weight-bold">{{ header_title }}</h1>
+                    {% if header_subtitle %}
+                    <h2 class="subtitle is-5 has-text-weight-light mt-2">{{ header_subtitle }}</h2>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% else %}
+<section class="hero is-light is-bold is-hidden-mobile is-hidden-tablet">
+    <div class="hero-body">
+        <div class="container">
+            <div class="columns is-centered">
+                <div class="column is-narrow has-text-centered">
+                    <div class="icon-text">
+                        <span class="icon is-large">
+                            <iconify-icon icon="carbon:car" width="64" class="has-text-primary"></iconify-icon>
+                        </span>
+                        <span class="title is-3 ml-3 text-gradient">Smart Vehicle Repairs</span>
+                    </div>
+                    <p class="subtitle is-6 mt-2">Accounting Module</p>
+                </div>
+            </div>
+            {% if header_title %}
+            <div class="columns is-centered mt-4">
+                <div class="column is-12 has-text-centered">
+                    <h1 class="title is-size-1 has-text-weight-light">{{ header_title }}</h1>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endif %}

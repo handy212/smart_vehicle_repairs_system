@@ -13,8 +13,10 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 import os
 from pathlib import Path
+import json
 
-from .admin_models import SystemSettings, AuditLog, SystemBackup, EmailTemplate, SMSTemplate
+from auditlog.models import LogEntry
+from .admin_models import SystemSettings, SystemBackup, EmailTemplate, SMSTemplate
 from .permission_models import Role, Permission
 from .models import User
 from .serializers import UserSerializer
@@ -72,7 +74,18 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         clear_setting_cache(instance.key)
     
     def perform_update(self, serializer):
-        serializer.save(updated_by=self.request.user)
+        # old_value = serializer.instance.value # Auditlog handles this
+        updated_instance = serializer.save(updated_by=self.request.user)
+        
+        # Clear cache handled by save but good to ensure
+        from .settings_utils import clear_setting_cache
+        clear_setting_cache(updated_instance.key)
+            
+    def perform_destroy(self, instance):
+        key = instance.key
+        instance.delete()
+        from .settings_utils import clear_setting_cache
+        clear_setting_cache(key)
     
     @action(detail=False, methods=['get'])
     def by_category(self, request):
@@ -203,6 +216,9 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
                 try:
                     from .settings_utils import clear_setting_cache
                     setting = SystemSettings.objects.get(id=setting_id)
+                    
+                    # old_value = setting.value
+                    
                     setting.value = setting_data.get('value', setting.value)
                     setting.description = setting_data.get('description', setting.description)
                     setting.is_active = setting_data.get('is_active', setting.is_active)
@@ -210,6 +226,7 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
                     setting.save()
                     clear_setting_cache(setting.key)
                     updated.append(setting.id)
+                    
                 except SystemSettings.DoesNotExist:
                     pass
         
@@ -280,6 +297,8 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         
         # Update setting value with relative path
         relative_path = f"branding/{filename}"
+        
+        # old_value = setting.value
         setting.value = relative_path
         setting.updated_by = request.user
         setting.save()
@@ -305,39 +324,79 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     """
     permission_classes = [IsAdmin]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['action', 'model_name', 'user']
-    search_fields = ['object_repr', 'model_name', 'user__email', 'user__username']
+    filterset_fields = []
+    search_fields = ['object_repr', 'actor__email', 'actor__username', 'remote_addr']
     ordering_fields = ['timestamp', 'action']
     ordering = ['-timestamp']
     
     def get_queryset(self):
-        return AuditLog.objects.select_related('user').all()
+        # Use LogEntry from django-auditlog
+        queryset = LogEntry.objects.select_related('actor', 'content_type').all()
+        
+        # Handle manual date filtering
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
+        
+        if date_from:
+            queryset = queryset.filter(timestamp__gte=date_from)
+        if date_to:
+            # Add time to include the end date fully
+            queryset = queryset.filter(timestamp__lte=date_to + ' 23:59:59')
+            
+        return queryset
     
     def get_serializer_class(self):
         from .admin_serializers import AuditLogSerializer
         return AuditLogSerializer
     
+    def filter_queryset(self, queryset):
+        # Handle custom filters for action which is int in LogEntry
+        queryset = super().filter_queryset(queryset)
+        
+        # Filter by model name (content_type__model)
+        model_name = self.request.query_params.get('model_name')
+        if model_name:
+            queryset = queryset.filter(content_type__model__iexact=model_name)
+            
+        # Filter by user (mapped to actor)
+        user = self.request.query_params.get('user')
+        if user:
+            queryset = queryset.filter(actor_id=user)
+            
+        # Filter by action (string to int mapping)
+        action = self.request.query_params.get('action')
+        if action:
+            action_map = {'create': 0, 'update': 1, 'delete': 2}
+            # Handle standard names and potential int values
+            if action.lower() in action_map:
+                queryset = queryset.filter(action=action_map[action.lower()])
+            elif action.isdigit():
+                queryset = queryset.filter(action=int(action))
+            
+        return queryset
+
     @action(detail=False, methods=['get'])
     def stats(self, request):
         """Get audit log statistics"""
         logs = self.get_queryset()
         
-        # Filter by date range if provided
-        date_from = request.query_params.get('date_from')
-        date_to = request.query_params.get('date_to')
-        if date_from:
-            logs = logs.filter(timestamp__gte=date_from)
-        if date_to:
-            logs = logs.filter(timestamp__lte=date_to)
-        
         total = logs.count()
         by_action = logs.values('action').annotate(count=Count('id')).order_by('-count')
-        by_user = logs.values('user__email', 'user__username').annotate(count=Count('id')).order_by('-count')[:10]
-        by_model = logs.values('model_name').annotate(count=Count('id')).order_by('-count')[:10]
+        by_user = logs.values('actor__email', 'actor__username').annotate(count=Count('id')).order_by('-count')[:10]
+        by_model = logs.values('content_type__model').annotate(count=Count('id')).order_by('-count')[:10]
         
+        # Map actions to readable strings for the stats
+        action_map = {0: 'create', 1: 'update', 2: 'delete'}
+        formatted_actions = []
+        for item in by_action:
+             formatted_actions.append({
+                 'action': action_map.get(item['action'], str(item['action'])),
+                 'count': item['count']
+             })
+
         return Response({
             'total': total,
-            'by_action': list(by_action),
+            'by_action': formatted_actions,
             'top_users': list(by_user),
             'top_models': list(by_model),
         })
@@ -345,34 +404,13 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'])
     def import_history(self, request):
         """Get import history (filtered audit logs for import actions)"""
-        logs = self.get_queryset().filter(action='import')
+        # Auditlog doesn't natively have 'import' action type (only 0,1,2).
+        # We might need to filter by specific method if we can, or rely on 
+        # API logs if we extended the model.
+        # For now, return empty or filter by creation of specific objects if known
         
-        # Filter by model if provided
-        model_name = request.query_params.get('model_name')
-        if model_name:
-            logs = logs.filter(model_name=model_name)
-        
-        # Filter by date range if provided
-        date_from = request.query_params.get('date_from')
-        date_to = request.query_params.get('date_to')
-        if date_from:
-            logs = logs.filter(timestamp__gte=date_from)
-        if date_to:
-            logs = logs.filter(timestamp__lte=date_to)
-        
-        # Filter by user if provided
-        user_id = request.query_params.get('user')
-        if user_id:
-            logs = logs.filter(user_id=user_id)
-        
-        # Paginate
-        page = self.paginate_queryset(logs)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        
-        serializer = self.get_serializer(logs, many=True)
-        return Response(serializer.data)
+        # Returning empty to prevent error until custom action types are implemented
+        return Response([])
 
 
 class SystemBackupViewSet(viewsets.ModelViewSet):
@@ -393,7 +431,16 @@ class SystemBackupViewSet(viewsets.ModelViewSet):
         return SystemBackupSerializer
     
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        instance = serializer.save(created_by=self.request.user)
+        # Auditlog handles creation logging
+        
+    def perform_destroy(self, instance):
+        # Delete file
+        if instance.file_path and os.path.exists(instance.file_path):
+            os.remove(instance.file_path)
+            
+        instance.delete()
+        # Auditlog handles deletion logging
     
     @action(detail=True, methods=['post'])
     def download(self, request, pk=None):
@@ -404,6 +451,7 @@ class SystemBackupViewSet(viewsets.ModelViewSet):
                 {'error': 'Backup not available for download'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+            
         # In a real implementation, this would return the file
         return Response({
             'file_path': backup.file_path,
@@ -420,6 +468,7 @@ class SystemBackupViewSet(viewsets.ModelViewSet):
                 {'error': 'Backup not completed'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
         # In a real implementation, this would trigger restore
         return Response({
             'message': 'Restore initiated',
@@ -445,8 +494,14 @@ class EmailTemplateViewSet(viewsets.ModelViewSet):
         from .admin_serializers import EmailTemplateSerializer
         return EmailTemplateSerializer
     
+    def perform_create(self, serializer):
+        instance = serializer.save(updated_by=self.request.user)
+    
     def perform_update(self, serializer):
-        serializer.save(updated_by=self.request.user)
+        updated_instance = serializer.save(updated_by=self.request.user)
+            
+    def perform_destroy(self, instance):
+        instance.delete()
 
 
 class SMSTemplateViewSet(viewsets.ModelViewSet):
@@ -467,6 +522,15 @@ class SMSTemplateViewSet(viewsets.ModelViewSet):
         from .admin_serializers import SMSTemplateSerializer
         return SMSTemplateSerializer
 
+    def perform_create(self, serializer):
+        instance = serializer.save()
+
+    def perform_update(self, serializer):
+        updated_instance = serializer.save()
+
+    def perform_destroy(self, instance):
+        instance.delete()
+
 
 @api_view(['GET'])
 @permission_classes([IsAdmin])
@@ -477,7 +541,7 @@ def admin_dashboard_stats(request):
     total_settings = SystemSettings.objects.count()
     
     # Recent audit logs
-    recent_logs = AuditLog.objects.select_related('user').order_by('-timestamp')[:10]
+    recent_logs = LogEntry.objects.select_related('actor', 'content_type').order_by('-timestamp')[:10]
     
     # Users by role
     user_by_role = User.objects.values('role').annotate(count=Count('id'))
@@ -518,10 +582,18 @@ class RoleViewSet(viewsets.ModelViewSet):
         return RoleSerializer
     
     def perform_create(self, serializer):
-        serializer.save()
+        instance = serializer.save()
     
     def perform_update(self, serializer):
-        serializer.save()
+        updated_instance = serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.is_system:
+             return Response(
+                {'error': 'Cannot delete system roles'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        instance.delete()
     
     @action(detail=True, methods=['get'])
     def permissions(self, request, pk=None):
@@ -536,7 +608,9 @@ class RoleViewSet(viewsets.ModelViewSet):
         """Assign permissions to a role"""
         role = self.get_object()
         permission_ids = request.data.get('permission_ids', [])
+        
         role.permissions.set(permission_ids)
+            
         return Response({'detail': 'Permissions updated successfully'})
 
 
@@ -557,4 +631,3 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     def get_serializer_class(self):
         from .admin_serializers import PermissionSerializer
         return PermissionSerializer
-

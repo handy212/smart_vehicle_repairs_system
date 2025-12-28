@@ -11,15 +11,27 @@ interface TabsContextValue {
 const TabsContext = React.createContext<TabsContextValue | undefined>(undefined);
 
 interface TabsProps {
-  value: string;
-  onValueChange: (value: string) => void;
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
   children: React.ReactNode;
   className?: string;
 }
 
-export function Tabs({ value, onValueChange, children, className }: TabsProps) {
+export function Tabs({ value: propValue, defaultValue, onValueChange, children, className }: TabsProps) {
+  const [value, setValue] = React.useState(defaultValue || "");
+
+  const currentValue = propValue !== undefined ? propValue : value;
+
+  const handleValueChange = (newValue: string) => {
+    if (propValue === undefined) {
+      setValue(newValue);
+    }
+    onValueChange?.(newValue);
+  };
+
   return (
-    <TabsContext.Provider value={{ value, onValueChange }}>
+    <TabsContext.Provider value={{ value: currentValue, onValueChange: handleValueChange }}>
       <div className={cn("w-full", className)}>{children}</div>
     </TabsContext.Provider>
   );
@@ -43,13 +55,11 @@ export function TabsList({ children, className }: TabsListProps) {
   );
 }
 
-interface TabsTriggerProps {
+interface TabsTriggerProps extends React.ComponentPropsWithoutRef<"button"> {
   value: string;
-  children: React.ReactNode;
-  className?: string;
 }
 
-export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
+export function TabsTrigger({ value, children, className, ...props }: TabsTriggerProps) {
   const context = React.useContext(TabsContext);
   if (!context) {
     throw new Error("TabsTrigger must be used within Tabs");
@@ -68,6 +78,7 @@ export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
           : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100",
         className
       )}
+      {...props}
     >
       {children}
     </button>

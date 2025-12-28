@@ -76,6 +76,11 @@ class Branch(models.Model):
         default=1,
         help_text="Next sequential number for invoices"
     )
+    next_proforma_number = models.PositiveIntegerField(
+        _('next proforma number'),
+        default=1,
+        help_text="Next sequential number for proforma invoices"
+    )
     next_diagnosis_number = models.PositiveIntegerField(
         _('next diagnosis number'),
         default=1,
@@ -150,6 +155,13 @@ class Branch(models.Model):
         self.next_invoice_number += 1
         self.save(update_fields=['next_invoice_number'])
         return f"{self.code}-INV{current:06d}"
+    
+    def get_next_proforma_number(self):
+        """Get and increment the next proforma invoice number for this branch"""
+        current = self.next_proforma_number
+        self.next_proforma_number += 1
+        self.save(update_fields=['next_proforma_number'])
+        return f"{self.code}-PRO{current:06d}"
     
     def get_next_diagnosis_number(self):
         """Get and increment the next diagnosis number for this branch"""

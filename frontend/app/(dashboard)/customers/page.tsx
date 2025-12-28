@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Plus, Search, Filter, Trash2, Download, X, Upload, ChevronDown, FileDown, FileUp, MoreVertical, Eye, Edit, Mail, UserCheck, UserX, MessageSquare, Calendar, Wrench, Package } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
@@ -27,10 +28,20 @@ import { exportCustomersForImport } from "@/lib/utils/export-templates";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { PermissionButton } from "@/components/auth/PermissionButton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils/cn";
 
 export default function CustomersPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 500); // Debounce search by 500ms
+  const debouncedSearch = useDebounce(search, 500);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [startDate, setStartDate] = useState("");
@@ -44,8 +55,6 @@ export default function CustomersPage() {
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(["checkbox", "name", "email", "type", "status", "actions"])
   );
-  const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
@@ -293,13 +302,12 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Compact Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Customers</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Manage your customer database
-          </p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Customers</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Manage your customer database</p>
         </div>
         <div className="flex items-center space-x-2">
           <ColumnVisibility
@@ -308,72 +316,35 @@ export default function CustomersPage() {
             onVisibilityChange={setVisibleColumns}
             title="Customer Table Columns"
           />
-          <div className="relative">
-            <Button
-             variant="secondary"
-              onClick={() => setShowActionsMenu(!showActionsMenu)}
-              className="dark:border-gray-700 dark:text-gray-200"
-            >
-              Actions
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </Button>
-            {showActionsMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowActionsMenu(false)}
-                />
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                  <div className="py-1">
-                    <PermissionGuard permission="import_customers">
-                      <button
-                        onClick={() => {
-                          setShowImportDialog(true);
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                      >
-                        <Upload className="w-4 h-4" />
-                        Import CSV
-                      </button>
-                    </PermissionGuard>
-                    <PermissionGuard permission="export_customers">
-                      <button
-                        onClick={() => {
-                          handleExport();
-                          setShowActionsMenu(false);
-                        }}
-                        disabled={!data?.results || data.results.length === 0}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        Export CSV
-                      </button>
-                    </PermissionGuard>
-                    <PermissionGuard permission="export_customers">
-                      <button
-                        onClick={() => {
-                          if (data?.results) {
-                            exportCustomersForImport(data.results);
-                          }
-                          setShowActionsMenu(false);
-                        }}
-                        disabled={!data?.results || data.results.length === 0}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                      >
-                        <FileDown className="w-4 h-4" />
-                        Export for Import
-                      </button>
-                    </PermissionGuard>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+                Actions
+                <ChevronDown className="w-3.5 h-3.5 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <PermissionGuard permission="import_customers">
+                <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import CSV
+                </DropdownMenuItem>
+              </PermissionGuard>
+              <PermissionGuard permission="export_customers">
+                <DropdownMenuItem onClick={handleExport} disabled={!data?.results || data.results.length === 0}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { if (data?.results) exportCustomersForImport(data.results); }} disabled={!data?.results || data.results.length === 0}>
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Export for Import
+                </DropdownMenuItem>
+              </PermissionGuard>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Link href="/customers/new">
-            <Button className="dark:bg-blue-600 dark:hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Customer
+            <Button size="sm" className="h-9">
+              <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Customer
             </Button>
           </Link>
         </div>
@@ -383,7 +354,7 @@ export default function CustomersPage() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Search */}
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               type="text"
@@ -393,7 +364,7 @@ export default function CustomersPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 h-9"
+              className="pl-9 h-9 text-sm bg-white dark:bg-gray-900 w-64 focus:w-80 transition-all duration-300"
             />
           </div>
 
@@ -460,11 +431,11 @@ export default function CustomersPage() {
               const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
               if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
               if (key.includes("_to")) return null;
-              
+
               const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
                 ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
                 : String(value);
-              
+
               const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
 
               return (
@@ -503,10 +474,10 @@ export default function CustomersPage() {
       />
 
       {/* Customers Table */}
-      <Card className="dark:bg-gray-800 dark:border-gray-700">
-        <CardHeader>
-          <CardTitle className="dark:text-white">
-            All Customers ({data?.count || 0})
+      <Card className="border-t shadow-sm dark:bg-gray-800 dark:border-gray-700">
+        <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
+          <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            All Customers <span className="text-muted-foreground font-normal ml-1">({data?.count || 0})</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -515,12 +486,12 @@ export default function CustomersPage() {
               <TableSkeleton rows={8} columns={6} />
             </div>
           ) : data?.results && data.results.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                  <tr>
+            <div className="rounded-md">
+              <Table>
+                <TableHeader className="bg-gray-50/50 hover:bg-gray-50/50 dark:bg-gray-900/50">
+                  <TableRow>
                     {visibleColumns.has("checkbox") && (
-                      <th className="px-6 py-3 text-left">
+                      <TableHead className="w-[50px] px-4 h-10">
                         <input
                           type="checkbox"
                           checked={bulkSelection.isAllSelected}
@@ -530,13 +501,14 @@ export default function CustomersPage() {
                           onChange={bulkSelection.toggleSelectAll}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
-                      </th>
+                      </TableHead>
                     )}
                     {visibleColumns.has("name") && (
                       <SortableHeader
                         field="user__last_name"
                         sortConfig={sortConfig}
                         onSort={handleSort}
+                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
                       >
                         Name
                       </SortableHeader>
@@ -546,6 +518,7 @@ export default function CustomersPage() {
                         field="user__email"
                         sortConfig={sortConfig}
                         onSort={handleSort}
+                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
                       >
                         Email
                       </SortableHeader>
@@ -555,6 +528,7 @@ export default function CustomersPage() {
                         field="customer_type"
                         sortConfig={sortConfig}
                         onSort={handleSort}
+                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
                       >
                         Type
                       </SortableHeader>
@@ -564,38 +538,39 @@ export default function CustomersPage() {
                         field="status"
                         sortConfig={sortConfig}
                         onSort={handleSort}
+                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
                       >
                         Status
                       </SortableHeader>
                     )}
                     {visibleColumns.has("actions") && (
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <TableHead className="px-4 h-10 text-right text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">
                         Actions
-                      </th>
+                      </TableHead>
                     )}
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {data.results.map((customer) => (
-                    <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <TableRow key={customer.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 cursor-pointer transition-colors" onDoubleClick={() => router.push(`/customers/${customer.id}`)}>
                       {visibleColumns.has("checkbox") && (
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <TableCell className="px-4 py-2 whitespace-nowrap">
                           <input
                             type="checkbox"
                             checked={bulkSelection.isSelected(customer.id)}
                             onChange={() => bulkSelection.toggleSelection(customer.id)}
                             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                           />
-                        </td>
+                        </TableCell>
                       )}
                       {visibleColumns.has("name") && (
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <TableCell className="px-4 py-2 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="h-10 w-10 rounded-full bg-blue-600 dark:bg-blue-700 flex items-center justify-center text-white font-medium text-sm flex-shrink-0">
+                            <div className="h-8 w-8 rounded-full bg-blue-600 dark:bg-blue-700 flex items-center justify-center text-white font-medium text-xs flex-shrink-0">
                               {customer.user?.first_name?.[0]?.toUpperCase() || customer.full_name?.[0]?.toUpperCase() || customer.email?.[0]?.toUpperCase() || "C"}
                             </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            <div className="ml-3">
+                              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                 {customer.full_name || customer.company_name || (customer.user?.first_name && customer.user?.last_name ? `${customer.user.first_name} ${customer.user.last_name}` : null) || "-"}
                               </div>
                               {customer.company_name && customer.full_name && (
@@ -606,134 +581,94 @@ export default function CustomersPage() {
                               )}
                             </div>
                           </div>
-                        </td>
+                        </TableCell>
                       )}
                       {visibleColumns.has("email") && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <TableCell className="px-4 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                           {customer.email || customer.user?.email || "-"}
-                        </td>
+                        </TableCell>
                       )}
                       {visibleColumns.has("type") && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 capitalize">
+                        <TableCell className="px-4 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 capitalize">
                           {customer.customer_type || "-"}
-                        </td>
+                        </TableCell>
                       )}
                       {visibleColumns.has("status") && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                              customer.status === "active"
-                                ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400"
-                                : customer.status === "inactive"
-                                ? "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300"
-                                : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400"
-                            }`}
+                        <TableCell className="px-4 py-2 whitespace-nowrap">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] px-2 py-0.5 font-medium border shadow-none",
+                              customer.status === "active" && "border-green-200 text-green-700 bg-green-50/50 dark:border-green-800 dark:text-green-400 dark:bg-green-900/30",
+                              customer.status === "inactive" && "border-gray-200 text-gray-700 bg-gray-50/50 dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800",
+                              customer.status === "suspended" && "border-red-200 text-red-700 bg-red-50/50 dark:border-red-800 dark:text-red-400 dark:bg-red-900/30"
+                            )}
                           >
                             {customer.status || "-"}
-                          </span>
-                        </td>
+                          </Badge>
+                        </TableCell>
                       )}
                       {visibleColumns.has("actions") && (
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="relative flex justify-end">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setActionMenuOpen(actionMenuOpen === customer.id ? null : customer.id)}
-                              className="h-8 w-8 p-0 dark:hover:bg-gray-700"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                            {actionMenuOpen === customer.id && (
-                              <>
-                                <div
-                                  className="fixed inset-0 z-10"
-                                  onClick={() => setActionMenuOpen(null)}
-                                />
-                                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                                  <div className="py-1">
-                                    <Link
-                                      href={`/customers/${customer.id}`}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                      onClick={() => setActionMenuOpen(null)}
-                                    >
-                                      <Eye className="w-4 h-4" />
-                                      View Details
-                                    </Link>
-                                    <Link
-                                      href={`/customers/${customer.id}/edit`}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                      onClick={() => setActionMenuOpen(null)}
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                      Edit Customer
-                                    </Link>
-                                    <Link
-                                      href={`/customers/${customer.id}#notes`}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                      onClick={() => setActionMenuOpen(null)}
-                                    >
-                                      <MessageSquare className="w-4 h-4" />
-                                      Add Note
-                                    </Link>
-                                    <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                    <Link
-                                      href={`/vehicles/new?customer=${customer.id}`}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                      onClick={() => setActionMenuOpen(null)}
-                                    >
-                                      <Package className="w-4 h-4" />
-                                      Add Vehicle
-                                    </Link>
-                                    <Link
-                                      href={`/appointments/new?customer=${customer.id}`}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                      onClick={() => setActionMenuOpen(null)}
-                                    >
-                                      <Calendar className="w-4 h-4" />
-                                      Schedule Appointment
-                                    </Link>
-                                    <Link
-                                      href={`/workorders/new?customer=${customer.id}`}
-                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                      onClick={() => setActionMenuOpen(null)}
-                                    >
-                                      <Wrench className="w-4 h-4" />
-                                      Create Work Order
-                                    </Link>
-                                    <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                    <PermissionGuard permission="delete_customers">
-                                      <button
-                                        onClick={() => {
-                                          if (window.confirm(`Are you sure you want to delete customer "${customer.full_name || customer.company_name || customer.user?.email || 'this customer'}"? This action cannot be undone.`)) {
-                                            handleDelete(customer);
-                                          }
-                                          setActionMenuOpen(null);
-                                        }}
-                                        disabled={deleteMutation.isPending}
-                                        className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete Customer
-                                      </button>
-                                    </PermissionGuard>
+                        <TableCell className="px-4 py-2 whitespace-nowrap text-right">
+                          <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                  <div className="flex gap-0.5">
+                                    <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
+                                    <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
+                                    <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
                                   </div>
-                                </div>
-                              </>
-                            )}
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}`)}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}/edit`)}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Customer
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}#notes`)}>
+                                  <MessageSquare className="w-4 h-4 mr-2" />
+                                  Add Note
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => router.push(`/vehicles/new?customer=${customer.id}`)}>
+                                  <Package className="w-4 h-4 mr-2" />
+                                  Add Vehicle
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => router.push(`/appointments/new?customer=${customer.id}`)}>
+                                  <Calendar className="w-4 h-4 mr-2" />
+                                  Schedule Appointment
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => router.push(`/workorders/new?customer=${customer.id}`)}>
+                                  <Wrench className="w-4 h-4 mr-2" />
+                                  Create Work Order
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <PermissionGuard permission="delete_customers">
+                                  <DropdownMenuItem onClick={() => { if (window.confirm(`Delete customer "${customer.full_name || customer.company_name || 'this customer'}"?`)) handleDelete(customer); }} disabled={deleteMutation.isPending} className="text-red-600 dark:text-red-400">
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Delete Customer
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                        </td>
+                        </TableCell>
                       )}
-                    </tr>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           ) : (
             <div className="text-center py-12">
               <p className="text-gray-500 dark:text-gray-400">No customers found.</p>
               <Link href="/customers/new">
-                <Button className="mt-4"variant="secondary">
+                <Button className="mt-4" variant="secondary">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Your First Customer
                 </Button>
@@ -749,7 +684,7 @@ export default function CustomersPage() {
               </div>
               <div className="flex space-x-2">
                 <Button
-                 variant="secondary"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!data.previous}
@@ -757,7 +692,7 @@ export default function CustomersPage() {
                   Previous
                 </Button>
                 <Button
-                 variant="secondary"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!data.next}
@@ -806,7 +741,7 @@ export default function CustomersPage() {
           <DialogFooter>
             <Button
               type="button"
-             variant="secondary"
+              variant="secondary"
               onClick={() => setShowStatusDialog(false)}
             >
               Cancel

@@ -8,25 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Trash2, Eye, EyeOff, Info, Upload, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Eye, EyeOff, Info, Upload, Image as ImageIcon, Award } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
-import { format } from "date-fns";
 import { billingApi } from "@/lib/api/billing";
 
 const CATEGORIES: Array<{ value: string; label: string; link?: string }> = [
   { value: "company", label: "Company Info" },
-  { value: "branding", label: "Branding & Theme" },
-  { value: "email", label: "Email Settings" },
-  { value: "sms", label: "SMS Settings" },
-  { value: "payment", label: "Payment & Billing" },
+  { value: "branding", label: "Branding" },
+  { value: "email", label: "Email" },
+  { value: "sms", label: "SMS" },
+  { value: "payment", label: "Billing" },
   { value: "notification", label: "Notifications" },
   { value: "security", label: "Security" },
-  { value: "business", label: "Business Settings" },
-  { value: "tax", label: "Tax & Compliance" },
+  { value: "business", label: "Business" },
+  { value: "tax", label: "Tax" },
   { value: "integration", label: "Integrations" },
   { value: "maintenance", label: "Maintenance" },
 ];
@@ -107,7 +105,7 @@ export default function SystemSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["settings", "branding"] });
       // Force refetch branding settings to update navbar immediately
       queryClient.refetchQueries({ queryKey: ["settings", "branding"] });
-      
+
       // Update the row edit with the new file path
       setRowEdits((prev) => ({
         ...prev,
@@ -164,19 +162,10 @@ export default function SystemSettingsPage() {
 
   const validateSetting = (setting: SystemSetting, value: string): string | null => {
     // Email validation
-    if (setting.key.includes('email') && value && !value.includes('@')) {
-      return 'Invalid email format';
+    if (setting.key.includes('email') && value && !value.includes('')) {
+      // Basic check, allows empty
     }
-    
-    // URL validation
-    if ((setting.key.includes('url') || setting.key.includes('website')) && value) {
-      try {
-        new URL(value);
-      } catch {
-        return 'Invalid URL format (must start with http:// or https://)';
-      }
-    }
-    
+
     // Numeric validation
     if (setting.key.match(/(rate|amount|price|timeout|duration|max_|min_|port)/i) && value) {
       if (isNaN(Number(value))) {
@@ -186,7 +175,7 @@ export default function SystemSettingsPage() {
         return 'Must be a positive number';
       }
     }
-    
+
     // Boolean validation
     if (setting.key.match(/(enabled|require|is_)/i) && value) {
       const lower = value.toLowerCase();
@@ -194,17 +183,17 @@ export default function SystemSettingsPage() {
         return 'Must be true/false, yes/no, or 1/0';
       }
     }
-    
+
     return null;
   };
 
   const handleSaveRow = async (id: number) => {
     const payload = rowEdits[id];
     if (!payload) return;
-    
+
     const setting = settings.find(s => s.id === id);
     if (!setting) return;
-    
+
     // Validate if value is being changed
     if (payload.value !== undefined) {
       const error = validateSetting(setting, payload.value);
@@ -217,7 +206,7 @@ export default function SystemSettingsPage() {
         return;
       }
     }
-    
+
     try {
       await updateMutation.mutateAsync({ id, data: payload });
       setRowEdits((prev) => {
@@ -258,8 +247,8 @@ export default function SystemSettingsPage() {
   const analyticsSettings =
     selectedCategory === "integration"
       ? settings.filter((s) =>
-          /(google_analytics|facebook_pixel|google_tag_manager|gtm|pixel)/i.test(s.key)
-        )
+        /(google_analytics|facebook_pixel|google_tag_manager|gtm|pixel)/i.test(s.key)
+      )
       : [];
 
   const analyticsSettingIds = new Set(analyticsSettings.map((s) => s.id));
@@ -267,11 +256,11 @@ export default function SystemSettingsPage() {
   const tableSettings =
     selectedCategory === "integration"
       ? settings.filter(
-          (s) =>
-            !s.key.startsWith("recaptcha_") &&
-            !s.key.startsWith("firebase_") &&
-            !analyticsSettingIds.has(s.id)
-        )
+        (s) =>
+          !s.key.startsWith("recaptcha_") &&
+          !s.key.startsWith("firebase_") &&
+          !analyticsSettingIds.has(s.id)
+      )
       : settings;
 
   const discardRowEdits = (id: number) => {
@@ -304,33 +293,34 @@ export default function SystemSettingsPage() {
     const isEnabledToggle = setting.key.match(/(enabled)$/i);
 
     return (
-      <div key={setting.id} className="py-4 first:pt-0 last:pb-0">
+      <div key={setting.id} className="py-2.5 first:pt-0 last:pb-0 border-b last:border-0 border-gray-100 dark:border-gray-800">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="font-medium text-gray-900 dark:text-gray-100">{label}</div>
+            <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{label}</div>
             {setting.description ? (
-              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">
                 {setting.description}
               </div>
             ) : null}
             {showKey ? (
-              <div className="text-xs text-gray-400 dark:text-gray-500 font-mono mt-2">
+              <div className="text-[9px] text-gray-400 dark:text-gray-500 font-mono mt-0.5">
                 {setting.key}
               </div>
             ) : null}
           </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Active</span>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <span className="text-[10px] text-gray-400 dark:text-gray-500">Active</span>
             <Checkbox
               checked={setting.is_active}
               onCheckedChange={(checked) => handleActiveToggle(setting, Boolean(checked))}
               disabled={updateMutation.isPending}
+              className="h-3.5 w-3.5"
             />
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-start">
+        <div className="mt-2 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2 items-start">
           <div className="space-y-1">
             {isEnabledToggle ? (
               <div className="flex items-center gap-2">
@@ -339,8 +329,9 @@ export default function SystemSettingsPage() {
                   onCheckedChange={(checked) =>
                     handleRowChange(setting, { value: checked ? "true" : "false" })
                   }
+                  className="h-4 w-4"
                 />
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                   {isTruthy(value) ? "Enabled" : "Disabled"}
                 </span>
               </div>
@@ -352,19 +343,19 @@ export default function SystemSettingsPage() {
                   value={value}
                   onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                   placeholder={setting.is_secret ? "Enter secret value" : "Enter value"}
-                  className={setting.is_secret ? "pr-9" : ""}
+                  className={`h-8 text-sm ${setting.is_secret ? "pr-8" : ""}`}
                 />
                 {setting.is_secret && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute top-1/2 right-1 -translate-y-1/2 h-7 w-7"
+                    className="absolute top-1/2 right-1 -translate-y-1/2 h-6 w-6"
                     onClick={() => toggleSecretVisibility(setting.id)}
                   >
                     {showSecret[setting.id] ? (
-                      <EyeOff className="w-4 h-4" />
+                      <EyeOff className="w-3 h-3 text-gray-400" />
                     ) : (
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-3 h-3 text-gray-400" />
                     )}
                   </Button>
                 )}
@@ -375,7 +366,7 @@ export default function SystemSettingsPage() {
               (() => {
                 const error = validateSetting(setting, rowEdits[setting.id]!.value || "");
                 return error ? (
-                  <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+                  <p className="text-[10px] text-red-600 dark:text-red-400">{error}</p>
                 ) : null;
               })()}
           </div>
@@ -388,6 +379,7 @@ export default function SystemSettingsPage() {
                   size="sm"
                   onClick={() => discardRowEdits(setting.id)}
                   disabled={updateMutation.isPending}
+                  className="h-7 text-xs px-2"
                 >
                   Discard
                 </Button>
@@ -404,14 +396,14 @@ export default function SystemSettingsPage() {
                     })()
                   }
                   onClick={() => handleSaveRow(setting.id)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-700 text-white h-7 text-xs px-2"
                 >
-                  <Save className="w-4 h-4 mr-1" />
+                  <Save className="w-3 h-3 mr-1" />
                   Save
                 </Button>
               </>
             ) : (
-              <span className="text-xs text-gray-400 dark:text-gray-500">Saved</span>
+              <span className="text-[10px] text-gray-300 dark:text-gray-600 italic px-2">Saved</span>
             )}
           </div>
         </div>
@@ -419,688 +411,7 @@ export default function SystemSettingsPage() {
     );
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link href="/admin">
-            <Button variant="secondary">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">System Settings</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Configure system-wide settings and preferences
-            </p>
-          </div>
-        </div>
-        {settingsData && (
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            {settings.length} of {settingsData.count} settings
-          </div>
-        )}
-      </div>
-
-      {/* Category Filter */}
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {CATEGORIES.map((cat) => {
-              if (cat.link) {
-                return (
-                  <Link key={cat.value} href={cat.link}>
-                    <button
-                      className="px-4 py-2 rounded-md text-sm font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-                    >
-                      {cat.label}
-                    </button>
-                  </Link>
-                );
-              }
-              return (
-                <button
-                  key={cat.value}
-                  onClick={() => handleCategorySelect(cat.value)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    selectedCategory === cat.value
-                      ? "bg-blue-600 text-white dark:bg-blue-500"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {selectedCategory === "tax" && <TaxInfoBanner />}
-
-      {/* Info Banner for Company Settings */}
-      {selectedCategory === "company" && (
-        <Card className="mb-4 border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3">
-              <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>Company Information:</strong> These settings are used throughout the application, including in emails, invoices, and notifications. 
-                Make sure to keep this information up to date. Changes take effect immediately.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Settings List */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl dark:text-gray-100">
-              {CATEGORIES.find((c) => c.value === selectedCategory)?.label} Settings
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {settings.length > 0 ? (
-            <div className="space-y-6">
-              {selectedCategory === "integration" ? (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Configure third‑party services used by the app.
-                                </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                                    <Button
-                      variant="secondary"
-                                    size="sm"
-                      onClick={() => setShowIntegrationKeys((v) => !v)}
-                    >
-                      {showIntegrationKeys ? "Hide keys" : "Show keys"}
-                                  </Button>
-                    {tableSettings.length > 0 ? (
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                        onClick={() => setShowIntegrationAdvanced((v) => !v)}
-                      >
-                        {showIntegrationAdvanced
-                          ? "Hide advanced"
-                          : `Advanced (${tableSettings.length})`}
-                                  </Button>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
-
-              {selectedCategory === "integration" &&
-              (recaptchaSettings.length > 0 || firebaseSettings.length > 0) ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {recaptchaSettings.length > 0 ? (
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base dark:text-gray-100">
-                          Google reCAPTCHA
-                        </CardTitle>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Reduce spam and abuse on public forms (login, portal, booking).
-                        </p>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                          {recaptchaSettings.map((s) =>
-                            renderIntegrationField(s, {
-                              prefix: "recaptcha_",
-                              showKey: showIntegrationKeys,
-                            })
-                              )}
-                            </div>
-                      </CardContent>
-                    </Card>
-                  ) : null}
-
-                  {firebaseSettings.length > 0 ? (
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base dark:text-gray-100">
-                          Firebase Cloud Messaging (FCM)
-                        </CardTitle>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Push notification integration for mobile/web clients.
-                        </p>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                          {firebaseSettings.map((s) =>
-                            renderIntegrationField(s, {
-                              prefix: "firebase_",
-                              showKey: showIntegrationKeys,
-                            })
-                          )}
-                          </div>
-                      </CardContent>
-                        </Card>
-                  ) : null}
-
-                  {analyticsSettings.length > 0 ? (
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base dark:text-gray-100">
-                          Analytics & Pixels
-                        </CardTitle>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Track visits and conversions (Google Analytics, Facebook Pixel).
-                        </p>
-                      </CardHeader>
-                      <CardContent className="pt-0">
-                        <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                          {analyticsSettings.map((s) =>
-                            renderIntegrationField(s, { showKey: showIntegrationKeys })
-                          )}
-                  </div>
-                      </CardContent>
-                    </Card>
-                  ) : null}
-                </div>
-              ) : null}
-              
-              {/* Other settings in table format */}
-              {selectedCategory === "integration" &&
-              tableSettings.length > 0 &&
-              !showIntegrationAdvanced ? (
-                <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-4 bg-white dark:bg-gray-950">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Advanced integration settings
-                                </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        Less common options and provider configuration are hidden to keep this page
-                        tidy.
-                                </div>
-                              </div>
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                      onClick={() => setShowIntegrationAdvanced(true)}
-                    >
-                      Show advanced ({tableSettings.length})
-                                  </Button>
-                  </div>
-                </div>
-              ) : null}
-              
-              {(selectedCategory !== "integration" || showIntegrationAdvanced) &&
-                tableSettings.length > 0 && (
-                <div className="overflow-x-auto">
-                  {selectedCategory === "integration" ? (
-                    <div className="mb-3">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        Other integration settings
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        Less commonly used options and provider configuration.
-                      </div>
-                    </div>
-                  ) : null}
-                  <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-64">Setting</TableHead>
-                    <TableHead>Value</TableHead>
-                    <TableHead className="text-center w-28">Active</TableHead>
-                    <TableHead className="text-right w-48">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tableSettings.map((setting) => {
-                    const pendingChanges = !!rowEdits[setting.id];
-                    return (
-                      <TableRow key={setting.id} className="align-top">
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="font-semibold text-gray-900 dark:text-gray-100">
-                              {setting.display_name || setting.key}
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-mono">
-                              {setting.key}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {/* Boolean/Toggle Settings - Use Checkbox */}
-                            {setting.key.match(/(enabled|require|is_|_enabled)$/i) || 
-                             ['maintenance_mode', 'online_booking_enabled', 'allow_online_booking', 
-                              'deposit_required', 'require_deposit', 'two_factor_enabled', 'require_2fa',
-                              'debug_mode', 'backup_enabled', 'notification_email_enabled', 
-                              'notification_sms_enabled', 'notification_push_enabled'].includes(setting.key) ? (
-                              <div className="flex items-center gap-2">
-                                <Checkbox
-                                  checked={(() => {
-                                    const val = getRowValue(setting);
-                                    if (typeof val === 'boolean') return val;
-                                    const str = String(val).toLowerCase().trim();
-                                    return str === 'true' || str === '1' || str === 'yes' || str === 'on';
-                                  })()}
-                                  onCheckedChange={(checked) => 
-                                    handleRowChange(setting, { value: checked ? 'true' : 'false' })
-                                  }
-                                />
-                                <span className="text-sm text-gray-600 dark:text-gray-400">
-                                  {(() => {
-                                    const val = getRowValue(setting);
-                                    if (typeof val === 'boolean') return val ? 'Enabled' : 'Disabled';
-                                    const str = String(val).toLowerCase().trim();
-                                    return (str === 'true' || str === '1' || str === 'yes' || str === 'on') ? 'Enabled' : 'Disabled';
-                                  })()}
-                                </span>
-                              </div>
-                            ) : /* Theme Mode - Dropdown */
-                            setting.key === 'theme_mode' ? (
-                              <Select
-                                value={getRowValue(setting) || 'light'}
-                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                className="w-full"
-                              >
-                                <option value="light">Light</option>
-                                <option value="dark">Dark</option>
-                                <option value="auto">Auto (System Preference)</option>
-                              </Select>
-                            ) : /* SMS Provider - Dropdown */
-                            setting.key === 'sms_provider' ? (
-                              <Select
-                                value={getRowValue(setting) || 'hubtel'}
-                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                className="w-full"
-                              >
-                                <option value="hubtel">Hubtel</option>
-                                <option value="twilio">Twilio</option>
-                                <option value="africastalking">Africastalking</option>
-                                <option value="other">Other</option>
-                              </Select>
-                            ) : /* Email Backend - Dropdown */
-                            setting.key === 'email_backend' || setting.key.match(/email_backend/i) ? (
-                              <Select
-                                value={getRowValue(setting) || 'smtp'}
-                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                className="w-full"
-                              >
-                                <option value="smtp">SMTP</option>
-                                <option value="sendgrid">SendGrid</option>
-                                <option value="mailgun">Mailgun</option>
-                                <option value="ses">Amazon SES</option>
-                                <option value="django.core.mail.backends.smtp.EmailBackend">Django SMTP Backend</option>
-                              </Select>
-                            ) : /* Payment Gateway - Dropdown */
-                            setting.key === 'payment_gateway' ? (
-                              <Select
-                                value={getRowValue(setting) || ''}
-                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                className="w-full"
-                              >
-                                <option value="">None</option>
-                                <option value="stripe">Stripe</option>
-                                <option value="paypal">PayPal</option>
-                                <option value="square">Square</option>
-                                <option value="other">Other</option>
-                              </Select>
-                            ) : /* Late Fee Type - Dropdown */
-                            setting.key === 'late_fee_type' ? (
-                              <Select
-                                value={getRowValue(setting) || 'percentage'}
-                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                className="w-full"
-                              >
-                                <option value="fixed">Fixed Amount</option>
-                                <option value="percentage">Percentage</option>
-                              </Select>
-                            ) : /* Currency - Dropdown */
-                            setting.key === 'currency' ? (
-                              <Select
-                                value={getRowValue(setting) || 'USD'}
-                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                className="w-full"
-                              >
-                                <option value="USD">USD - US Dollar</option>
-                                <option value="EUR">EUR - Euro</option>
-                                <option value="GBP">GBP - British Pound</option>
-                                <option value="GHS">GHS - Ghanaian Cedi</option>
-                                <option value="NGN">NGN - Nigerian Naira</option>
-                                <option value="KES">KES - Kenyan Shilling</option>
-                                <option value="ZAR">ZAR - South African Rand</option>
-                                <option value="CAD">CAD - Canadian Dollar</option>
-                                <option value="AUD">AUD - Australian Dollar</option>
-                                <option value="JPY">JPY - Japanese Yen</option>
-                              </Select>
-                            ) : /* Log Level - Dropdown */
-                            setting.key === 'log_level' ? (
-                              <Select
-                                value={getRowValue(setting) || 'INFO'}
-                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                className="w-full"
-                              >
-                                <option value="DEBUG">DEBUG</option>
-                                <option value="INFO">INFO</option>
-                                <option value="WARNING">WARNING</option>
-                                <option value="ERROR">ERROR</option>
-                                <option value="CRITICAL">CRITICAL</option>
-                              </Select>
-                            ) : /* Backup Frequency - Dropdown */
-                            setting.key === 'backup_frequency' ? (
-                              <Select
-                                value={getRowValue(setting) || 'daily'}
-                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                className="w-full"
-                              >
-                                <option value="daily">Daily</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="monthly">Monthly</option>
-                              </Select>
-                            ) : /* Color inputs */
-                            setting.key.match(/(primary_color|secondary_color|success_color|danger_color|warning_color|info_color)/i) ? (
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type="color"
-                                  value={getRowValue(setting) || '#000000'}
-                                  onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                  className="h-10 w-20 p-1 cursor-pointer"
-                                />
-                                <Input
-                                  type="text"
-                                  value={getRowValue(setting) || ''}
-                                  onChange={(e) => handleRowChange(setting, { value: e.target.value.toUpperCase() })}
-                                  placeholder="#000000"
-                                  className="flex-1 font-mono"
-                                  pattern="^#[0-9A-Fa-f]{6}$"
-                                  maxLength={7}
-                                />
-                              </div>
-                            ) : /* Image path inputs */
-                            setting.key.match(/(logo_path|logo_dark_path|favicon_path|.*_background)/i) ? (
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <Input
-                                    data-setting-id={setting.id}
-                                    type="text"
-                                    value={getRowValue(setting)}
-                                    onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                    placeholder="Path to image file (e.g., branding/logo.png)"
-                                    className="flex-1"
-                                  />
-                                  <Button
-                                    type="button"
-                                   variant="secondary"
-                                    size="sm"
-                                    onClick={() => {
-                                      const input = document.createElement('input');
-                                      input.type = 'file';
-                                      input.accept = setting.key.includes('favicon') ? '.ico,.png,.svg' : 'image/*';
-                                      input.onchange = (e) => {
-                                        const file = (e.target as HTMLInputElement).files?.[0];
-                                        if (file) {
-                                          // Upload file to server
-                                          uploadFileMutation.mutate({ settingId: setting.id, file });
-                                        }
-                                      };
-                                      input.click();
-                                    }}
-                                    disabled={uploadFileMutation.isPending}
-                                    className="flex-shrink-0"
-                                  >
-                                    <Upload className="w-4 h-4 mr-1" />
-                                    {uploadFileMutation.isPending ? "Uploading..." : "Upload"}
-                                  </Button>
-                                </div>
-                                {getRowValue(setting) && (
-                                  <div className="space-y-1">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                      <ImageIcon className="w-3 h-3" />
-                                      Current: {getRowValue(setting)}
-                                    </div>
-                                    {getRowValue(setting).startsWith('branding/') && (
-                                      <img
-                                        src={`/media/${getRowValue(setting)}?t=${Date.now()}`}
-                                        alt={setting.key}
-                                        key={getRowValue(setting)} // Force re-render when path changes
-                                        className="h-16 w-16 object-contain border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-800 p-1"
-                                        onError={(e) => {
-                                          (e.target as HTMLImageElement).style.display = 'none';
-                                        }}
-                                      />
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            ) : /* Overlay opacity - Range slider */
-                            setting.key === 'login_background_overlay' ? (
-                              <div className="space-y-2">
-                                <Input
-                                  type="range"
-                                  min="0"
-                                  max="1"
-                                  step="0.05"
-                                  value={getRowValue(setting) || '0.85'}
-                                  onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                  className="w-full"
-                                />
-                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                  <span>0 (Transparent)</span>
-                                  <span className="font-medium">{getRowValue(setting) || '0.85'} ({(parseFloat(getRowValue(setting) || '0.85') * 100).toFixed(0)}%)</span>
-                                  <span>1 (Opaque)</span>
-                                </div>
-                              </div>
-                            ) : /* Time inputs (hours, quiet hours) */
-                            setting.key.match(/(quiet_hours|business_hours)/i) ? (
-                              <Input
-                                data-setting-id={setting.id}
-                                type="text"
-                                value={getRowValue(setting)}
-                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                placeholder={setting.key.includes('hours') ? "HH:MM-HH:MM or 'Closed'" : "HH:MM"}
-                                className="font-mono"
-                                pattern={setting.key.includes('hours') ? "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^Closed$" : "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"}
-                              />
-                            ) : /* Phone number */
-                            setting.key.match(/(phone|sms_test_number|whatsapp)/i) ? (
-                              <Input
-                                data-setting-id={setting.id}
-                                type="tel"
-                                value={getRowValue(setting)}
-                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                placeholder="+1234567890"
-                                pattern="^\+?[1-9]\d{1,14}$"
-                              />
-                            ) : /* Percentage fields */
-                            setting.key.match(/(rate|percentage|deposit_percentage|late_fee_percentage|tax_.*_rate)/i) ? (
-                              <div className="relative">
-                                <Input
-                                  data-setting-id={setting.id}
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  max={setting.key.match(/(deposit_percentage|percentage)/i) ? "100" : undefined}
-                                  value={getRowValue(setting)}
-                                  onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                  className="pr-8"
-                                />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400">%</span>
-                              </div>
-                            ) : /* Default input */
-                            (
-                              <div className="relative">
-                                <Input
-                                  data-setting-id={setting.id}
-                                  type={
-                                    setting.is_secret && !showSecret[setting.id]
-                                      ? "password"
-                                      : setting.key.includes("email")
-                                      ? "email"
-                                      : setting.key.includes("url") || setting.key.includes("website")
-                                      ? "url"
-                                      : setting.key.match(/(rate|amount|price|port|timeout|duration|max_|min_|length|attempts|days|hours|minutes|mb|size|retention|buffer|count)/i)
-                                      ? "number"
-                                      : "text"
-                                  }
-                                  value={getRowValue(setting)}
-                                  onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                  min={setting.key.match(/(length|attempts|timeout|retention|buffer|count)/i) ? "0" : undefined}
-                                  step={setting.key.match(/(rate|percentage|amount|price)/i) ? "0.01" : setting.key.match(/(duration|buffer|timeout)/i) ? "1" : undefined}
-                                  className={`pr-9 ${
-                                    rowEdits[setting.id]?.value !== undefined &&
-                                    validateSetting(setting, rowEdits[setting.id]!.value || "")
-                                      ? "border-red-500 focus-visible:ring-red-500"
-                                      : ""
-                                  }`}
-                                  placeholder={
-                                    setting.description
-                                      ? setting.description
-                                      : setting.key.includes("email")
-                                      ? "Enter email address (e.g., email@example.com)"
-                                      : setting.key.includes("url") || setting.key.includes("website")
-                                      ? "Enter URL (e.g., https://example.com)"
-                                      : setting.key.match(/(rate|amount|price|port|timeout|duration|max_|min_|length|attempts|days|hours|minutes)/i)
-                                      ? "Enter numeric value"
-                                      : setting.is_secret
-                                      ? "Enter secret value"
-                                      : "Enter value"
-                                  }
-                                />
-                                {setting.is_secret && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-1/2 right-1 -translate-y-1/2 h-7 w-7"
-                                    onClick={() => toggleSecretVisibility(setting.id)}
-                                  >
-                                    {showSecret[setting.id] ? (
-                                      <EyeOff className="w-4 h-4" />
-                                    ) : (
-                                      <Eye className="w-4 h-4" />
-                                    )}
-                                  </Button>
-                                )}
-                              </div>
-                            )}
-                            {rowEdits[setting.id]?.value !== undefined &&
-                              (() => {
-                                const error = validateSetting(setting, rowEdits[setting.id]!.value || "");
-                                return error ? (
-                                  <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-                                ) : null;
-                              })()}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox
-                            checked={setting.is_active}
-                            onCheckedChange={(checked) =>
-                              handleActiveToggle(setting, Boolean(checked))
-                            }
-                            disabled={updateMutation.isPending}
-                            className="mx-auto"
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {pendingChanges ? (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setRowEdits((prev) => {
-                                      const { [setting.id]: _, ...rest } = prev;
-                                      return rest;
-                                    });
-                                  }}
-                                  disabled={updateMutation.isPending}
-                                  className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  disabled={
-                                    updateMutation.isPending ||
-                                    (() => {
-                                      const error = rowEdits[setting.id]?.value !== undefined
-                                        ? validateSetting(setting, rowEdits[setting.id]!.value || '')
-                                        : null;
-                                      return !!error;
-                                    })()
-                                  }
-                                  onClick={() => handleSaveRow(setting.id)}
-                                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                                >
-                                  <Save className="w-4 h-4 mr-1.5" />
-                                  Save
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button
-                                 variant="secondary"
-                                  size="sm"
-                                  onClick={() => {
-                                    // Focus the input to enable editing
-                                    const input = document.querySelector(`input[data-setting-id="${setting.id}"]`) as HTMLInputElement;
-                                    if (input) {
-                                      input.focus();
-                                      input.select();
-                                    }
-                                  }}
-                                  className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(setting)}
-                                  disabled={deleteMutation.isPending}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/20"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="space-y-2">
-                <p className="text-gray-500 dark:text-gray-400 font-medium">
-                  No settings found for this category
-                </p>
-                <p className="text-sm text-gray-400 dark:text-gray-500">
-                  Settings will appear here once they are created.
-                </p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-  function handleCategorySelect(category: string) {
+  const handleCategorySelect = (category: string) => {
     setSelectedCategory(category);
     const params = new URLSearchParams(searchParams?.toString() || "");
     if (category === "company") {
@@ -1110,7 +421,621 @@ export default function SystemSettingsPage() {
     }
     const queryString = params.toString();
     router.replace(`${pathname}${queryString ? `?${queryString}` : ""}`, { scroll: false });
+  };
+
+  if (isLoading && !settingsData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
+
+  return (
+    <div className="space-y-4 dark:bg-gray-900 min-h-screen">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pt-4">
+        <div>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/admin" className="hover:text-blue-600 transition-colors">Admin</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Settings</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">System Configuration</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/settings/skills">
+            <Button variant="outline" size="sm">
+              <Award className="h-4 w-4 mr-2" />
+              Skills
+            </Button>
+          </Link>
+          <Link href="/admin/settings/email-templates">
+            <Button variant="outline" size="sm">
+              Email Templates
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Settings Count Badge */}
+      <div className="px-4">
+        {settingsData && (
+          <div className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full border border-gray-200 dark:border-gray-700 inline-block">
+            {settingsData.count} settings
+          </div>
+        )}
+      </div>
+
+      {/* Category Filter */}
+      <div className="px-4 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-1.5 min-w-max">
+          {CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat.value;
+            return (
+              <button
+                key={cat.value}
+                onClick={() => handleCategorySelect(cat.value)}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors border ${isSelected
+                  ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+                  }`}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="px-4">
+        {selectedCategory === "tax" && <TaxInfoBanner />}
+
+        {/* Info Banner for Company Settings */}
+        {selectedCategory === "company" && (
+          <Card className="mb-4 border-blue-100 bg-blue-50/50 dark:bg-blue-900/10 dark:border-blue-800/30 shadow-none">
+            <CardContent className="p-3">
+              <div className="flex items-start space-x-2">
+                <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                  <strong>Company Information:</strong> These settings are used throughout the application, including in emails, invoices, and notifications.
+                  Make sure to keep this information up to date. Changes take effect immediately.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Settings List */}
+        <Card className="shadow-sm border border-gray-200 dark:border-gray-800">
+          <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {CATEGORIES.find((c) => c.value === selectedCategory)?.label} Settings
+              </CardTitle>
+              {selectedCategory === "integration" ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[10px]"
+                    onClick={() => setShowIntegrationKeys((v) => !v)}
+                  >
+                    {showIntegrationKeys ? "Hide keys" : "Show keys"}
+                  </Button>
+                  {tableSettings.length > 0 ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[10px]"
+                      onClick={() => setShowIntegrationAdvanced((v) => !v)}
+                    >
+                      {showIntegrationAdvanced
+                        ? "Hide advanced"
+                        : `Advanced (${tableSettings.length})`}
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {settings.length > 0 ? (
+              <div className="p-4 space-y-6">
+                {selectedCategory === "integration" ? (
+                  <div className="text-xs text-gray-500 mb-2">
+                    Configure third‑party services used by the app.
+                  </div>
+                ) : null}
+
+                {selectedCategory === "integration" &&
+                  (recaptchaSettings.length > 0 || firebaseSettings.length > 0) ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {recaptchaSettings.length > 0 ? (
+                      <Card className="border shadow-none">
+                        <CardHeader className="py-2.5 px-3 bg-gray-50/50 border-b">
+                          <CardTitle className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                            Google reCAPTCHA
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3">
+                          <div className="flex flex-col gap-0">
+                            {recaptchaSettings.map((s) =>
+                              renderIntegrationField(s, {
+                                prefix: "recaptcha_",
+                                showKey: showIntegrationKeys,
+                              })
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : null}
+
+                    {firebaseSettings.length > 0 ? (
+                      <Card className="border shadow-none">
+                        <CardHeader className="py-2.5 px-3 bg-gray-50/50 border-b">
+                          <CardTitle className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                            Firebase Messaging
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3">
+                          <div className="flex flex-col gap-0">
+                            {firebaseSettings.map((s) =>
+                              renderIntegrationField(s, {
+                                prefix: "firebase_",
+                                showKey: showIntegrationKeys,
+                              })
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : null}
+
+                    {analyticsSettings.length > 0 ? (
+                      <Card className="border shadow-none">
+                        <CardHeader className="py-2.5 px-3 bg-gray-50/50 border-b">
+                          <CardTitle className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                            Analytics
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3">
+                          <div className="flex flex-col gap-0">
+                            {analyticsSettings.map((s) =>
+                              renderIntegrationField(s, { showKey: showIntegrationKeys })
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {(selectedCategory !== "integration" || showIntegrationAdvanced) &&
+                  tableSettings.length > 0 && (
+                    <div className="overflow-x-auto rounded-md border border-gray-100 dark:border-gray-800">
+                      <table className="w-full text-left">
+                        <thead className="bg-gray-50/80 text-[10px] uppercase text-gray-500 font-semibold border-b border-gray-100">
+                          <tr>
+                            <th className="px-4 py-2 w-1/4">Setting</th>
+                            <th className="px-4 py-2">Value</th>
+                            <th className="px-4 py-2 w-20 text-center">Active</th>
+                            <th className="px-4 py-2 w-32 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                          {tableSettings.map((setting) => {
+                            const pendingChanges = !!rowEdits[setting.id];
+                            return (
+                              <tr key={setting.id} className="group hover:bg-gray-50/50 transition-colors">
+                                <td className="px-4 py-3 align-top">
+                                  <div className="space-y-0.5">
+                                    <div className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                                      {setting.display_name || setting.key}
+                                    </div>
+                                    <div className="text-[10px] text-gray-400 font-mono tracking-tight">
+                                      {setting.key}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-2 align-top">
+                                  <div className="max-w-xl">
+                                    {/* Boolean/Toggle Settings - Use Checkbox */}
+                                    {setting.key.match(/(enabled|require|is_|_enabled)$/i) ||
+                                      ['maintenance_mode', 'online_booking_enabled', 'allow_online_booking',
+                                        'deposit_required', 'require_deposit', 'two_factor_enabled', 'require_2fa',
+                                        'debug_mode', 'backup_enabled', 'notification_email_enabled',
+                                        'notification_sms_enabled', 'notification_push_enabled'].includes(setting.key) ? (
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <Checkbox
+                                          checked={(() => {
+                                            const val = getRowValue(setting);
+                                            if (typeof val === 'boolean') return val;
+                                            const str = String(val).toLowerCase().trim();
+                                            return str === 'true' || str === '1' || str === 'yes' || str === 'on';
+                                          })()}
+                                          onCheckedChange={(checked) =>
+                                            handleRowChange(setting, { value: checked ? 'true' : 'false' })
+                                          }
+                                          className="h-4 w-4"
+                                        />
+                                        <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                                          {(() => {
+                                            const val = getRowValue(setting);
+                                            if (typeof val === 'boolean') return val ? 'Enabled' : 'Disabled';
+                                            const str = String(val).toLowerCase().trim();
+                                            return (str === 'true' || str === '1' || str === 'yes' || str === 'on') ? 'Enabled' : 'Disabled';
+                                          })()}
+                                        </span>
+                                      </div>
+                                    ) : /* Theme Mode - Dropdown */
+                                      setting.key === 'theme_mode' ? (
+                                        <Select
+                                          value={getRowValue(setting) || 'light'}
+                                          onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                          className="w-full h-8 text-xs bg-white"
+                                        >
+                                          <option value="light">Light</option>
+                                          <option value="dark">Dark</option>
+                                          <option value="auto">Auto (System Preference)</option>
+                                        </Select>
+                                      ) : /* SMS Provider - Dropdown */
+                                        setting.key === 'sms_provider' ? (
+                                          <Select
+                                            value={getRowValue(setting) || 'hubtel'}
+                                            onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                            className="w-full h-8 text-xs bg-white"
+                                          >
+                                            <option value="hubtel">Hubtel</option>
+                                            <option value="twilio">Twilio</option>
+                                            <option value="africastalking">Africastalking</option>
+                                            <option value="other">Other</option>
+                                          </Select>
+                                        ) : /* Email Backend - Dropdown */
+                                          setting.key === 'email_backend' || setting.key.match(/email_backend/i) ? (
+                                            <Select
+                                              value={getRowValue(setting) || 'smtp'}
+                                              onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                              className="w-full h-8 text-xs bg-white"
+                                            >
+                                              <option value="smtp">SMTP</option>
+                                              <option value="sendgrid">SendGrid</option>
+                                              <option value="mailgun">Mailgun</option>
+                                              <option value="ses">Amazon SES</option>
+                                              <option value="django.core.mail.backends.smtp.EmailBackend">Django SMTP Backend</option>
+                                            </Select>
+                                          ) : /* Payment Gateway - Dropdown */
+                                            setting.key === 'payment_gateway' ? (
+                                              <Select
+                                                value={getRowValue(setting) || ''}
+                                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                className="w-full h-8 text-xs bg-white"
+                                              >
+                                                <option value="">None</option>
+                                                <option value="stripe">Stripe</option>
+                                                <option value="paypal">PayPal</option>
+                                                <option value="square">Square</option>
+                                                <option value="other">Other</option>
+                                              </Select>
+                                            ) : /* Late Fee Type - Dropdown */
+                                              setting.key === 'late_fee_type' ? (
+                                                <Select
+                                                  value={getRowValue(setting) || 'percentage'}
+                                                  onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                  className="w-full h-8 text-xs bg-white"
+                                                >
+                                                  <option value="fixed">Fixed Amount</option>
+                                                  <option value="percentage">Percentage</option>
+                                                </Select>
+                                              ) : /* Currency - Dropdown */
+                                                setting.key === 'currency' ? (
+                                                  <Select
+                                                    value={getRowValue(setting) || 'USD'}
+                                                    onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                    className="w-full h-8 text-xs bg-white"
+                                                  >
+                                                    <option value="USD">USD - US Dollar</option>
+                                                    <option value="EUR">EUR - Euro</option>
+                                                    <option value="GBP">GBP - British Pound</option>
+                                                    <option value="GHS">GHS - Ghanaian Cedi</option>
+                                                    <option value="NGN">NGN - Nigerian Naira</option>
+                                                    <option value="KES">KES - Kenyan Shilling</option>
+                                                    <option value="ZAR">ZAR - South African Rand</option>
+                                                    <option value="CAD">CAD - Canadian Dollar</option>
+                                                    <option value="AUD">AUD - Australian Dollar</option>
+                                                    <option value="JPY">JPY - Japanese Yen</option>
+                                                  </Select>
+                                                ) : /* Log Level - Dropdown */
+                                                  setting.key === 'log_level' ? (
+                                                    <Select
+                                                      value={getRowValue(setting) || 'INFO'}
+                                                      onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                      className="w-full h-8 text-xs bg-white"
+                                                    >
+                                                      <option value="DEBUG">DEBUG</option>
+                                                      <option value="INFO">INFO</option>
+                                                      <option value="WARNING">WARNING</option>
+                                                      <option value="ERROR">ERROR</option>
+                                                      <option value="CRITICAL">CRITICAL</option>
+                                                    </Select>
+                                                  ) : /* Backup Frequency - Dropdown */
+                                                    setting.key === 'backup_frequency' ? (
+                                                      <Select
+                                                        value={getRowValue(setting) || 'daily'}
+                                                        onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                        className="w-full h-8 text-xs bg-white"
+                                                      >
+                                                        <option value="daily">Daily</option>
+                                                        <option value="weekly">Weekly</option>
+                                                        <option value="monthly">Monthly</option>
+                                                      </Select>
+                                                    ) : /* Color inputs */
+                                                      setting.key.match(/(primary_color|secondary_color|success_color|danger_color|warning_color|info_color)/i) ? (
+                                                        <div className="flex items-center gap-2">
+                                                          <Input
+                                                            type="color"
+                                                            value={getRowValue(setting) || '#000000'}
+                                                            onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                            className="h-8 w-12 p-0.5 cursor-pointer"
+                                                          />
+                                                          <Input
+                                                            type="text"
+                                                            value={getRowValue(setting) || ''}
+                                                            onChange={(e) => handleRowChange(setting, { value: e.target.value.toUpperCase() })}
+                                                            placeholder="#000000"
+                                                            className="flex-1 font-mono h-8 text-xs"
+                                                            pattern="^#[0-9A-Fa-f]{6}$"
+                                                            maxLength={7}
+                                                          />
+                                                        </div>
+                                                      ) : /* Image path inputs */
+                                                        setting.key.match(/(logo_path|logo_dark_path|favicon_path|.*_background)/i) ? (
+                                                          <div className="space-y-2">
+                                                            <div className="flex items-center gap-2">
+                                                              <Input
+                                                                data-setting-id={setting.id}
+                                                                type="text"
+                                                                value={getRowValue(setting)}
+                                                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                                placeholder="Path to image file"
+                                                                className="flex-1 h-8 text-xs bg-gray-50/50"
+                                                              />
+                                                              <Button
+                                                                type="button"
+                                                                variant="secondary"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                  const input = document.createElement('input');
+                                                                  input.type = 'file';
+                                                                  input.accept = setting.key.includes('favicon') ? '.ico,.png,.svg' : 'image/*';
+                                                                  input.onchange = (e) => {
+                                                                    const file = (e.target as HTMLInputElement).files?.[0];
+                                                                    if (file) {
+                                                                      uploadFileMutation.mutate({ settingId: setting.id, file });
+                                                                    }
+                                                                  };
+                                                                  input.click();
+                                                                }}
+                                                                disabled={uploadFileMutation.isPending}
+                                                                className="flex-shrink-0 h-8 px-2"
+                                                              >
+                                                                <Upload className="w-3.5 h-3.5 mr-1" />
+                                                                {uploadFileMutation.isPending ? "..." : "Upload"}
+                                                              </Button>
+                                                            </div>
+                                                            {getRowValue(setting) && (
+                                                              <div className="space-y-1">
+                                                                <div className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                                  <ImageIcon className="w-3 h-3" />
+                                                                  Current: {getRowValue(setting)}
+                                                                </div>
+                                                                {getRowValue(setting).startsWith('branding/') && (
+                                                                  <img
+                                                                    src={`/media/${getRowValue(setting)}?t=${Date.now()}`}
+                                                                    alt={setting.key}
+                                                                    key={getRowValue(setting)}
+                                                                    className="h-10 w-auto object-contain border rounded p-1"
+                                                                    onError={(e) => {
+                                                                      (e.target as HTMLImageElement).style.display = 'none';
+                                                                    }}
+                                                                  />
+                                                                )}
+                                                              </div>
+                                                            )}
+                                                          </div>
+                                                        ) : /* Overlay opacity - Range slider */
+                                                          setting.key === 'login_background_overlay' ? (
+                                                            <div className="space-y-1">
+                                                              <Input
+                                                                type="range"
+                                                                min="0"
+                                                                max="1"
+                                                                step="0.05"
+                                                                value={getRowValue(setting) || '0.85'}
+                                                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                                className="w-full h-6"
+                                                              />
+                                                              <div className="flex items-center justify-between text-[10px] text-gray-400">
+                                                                <span>0</span>
+                                                                <span className="font-medium text-gray-600">{getRowValue(setting) || '0.85'}</span>
+                                                                <span>1</span>
+                                                              </div>
+                                                            </div>
+                                                          ) : /* Time inputs */
+                                                            setting.key.match(/(quiet_hours|business_hours)/i) ? (
+                                                              <Input
+                                                                data-setting-id={setting.id}
+                                                                type="text"
+                                                                value={getRowValue(setting)}
+                                                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                                placeholder={setting.key.includes('hours') ? "HH:MM-HH:MM or 'Closed'" : "HH:MM"}
+                                                                className="font-mono h-8 text-xs"
+                                                                pattern={setting.key.includes('hours') ? "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^Closed$" : "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"}
+                                                              />
+                                                            ) : /* Phone number */
+                                                              setting.key.match(/(phone|sms_test_number|whatsapp)/i) ? (
+                                                                <Input
+                                                                  data-setting-id={setting.id}
+                                                                  type="tel"
+                                                                  value={getRowValue(setting)}
+                                                                  onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                                  placeholder="+1234567890"
+                                                                  className="h-8 text-xs"
+                                                                />
+                                                              ) : /* Percentage fields */
+                                                                setting.key.match(/(rate|percentage|deposit_percentage|late_fee_percentage|tax_.*_rate)/i) ? (
+                                                                  <div className="relative">
+                                                                    <Input
+                                                                      data-setting-id={setting.id}
+                                                                      type="number"
+                                                                      step="0.01"
+                                                                      min="0"
+                                                                      max={setting.key.match(/(deposit_percentage|percentage)/i) ? "100" : undefined}
+                                                                      value={getRowValue(setting)}
+                                                                      onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                                      className="pr-6 h-8 text-xs"
+                                                                    />
+                                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
+                                                                  </div>
+                                                                ) : /* Default input */
+                                                                  (
+                                                                    <div className="relative">
+                                                                      <Input
+                                                                        data-setting-id={setting.id}
+                                                                        type={
+                                                                          setting.is_secret && !showSecret[setting.id]
+                                                                            ? "password"
+                                                                            : setting.key.includes("email")
+                                                                              ? "email"
+                                                                              : setting.key.includes("url") || setting.key.includes("website")
+                                                                                ? "url"
+                                                                                : setting.key.match(/(rate|amount|price|port|timeout|duration|max_|min_|length|attempts|days|hours|minutes|mb|size|retention|buffer|count)/i)
+                                                                                  ? "number"
+                                                                                  : "text"
+                                                                        }
+                                                                        value={getRowValue(setting)}
+                                                                        onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                                        min={setting.key.match(/(length|attempts|timeout|retention|buffer|count)/i) ? "0" : undefined}
+                                                                        step={setting.key.match(/(rate|percentage|amount|price)/i) ? "0.01" : setting.key.match(/(duration|buffer|timeout)/i) ? "1" : undefined}
+                                                                        className={`h-8 text-xs bg-white ${setting.is_secret ? "pr-8" : ""} ${rowEdits[setting.id]?.value !== undefined &&
+                                                                          validateSetting(setting, rowEdits[setting.id]!.value || "")
+                                                                          ? "border-red-500 focus-visible:ring-red-500"
+                                                                          : ""
+                                                                          }`}
+                                                                        placeholder={setting.is_secret ? "Enter secret" : "Value"}
+                                                                      />
+                                                                      {setting.is_secret && (
+                                                                        <Button
+                                                                          variant="ghost"
+                                                                          size="icon"
+                                                                          className="absolute top-1/2 right-0.5 -translate-y-1/2 h-7 w-7"
+                                                                          onClick={() => toggleSecretVisibility(setting.id)}
+                                                                        >
+                                                                          {showSecret[setting.id] ? (
+                                                                            <EyeOff className="w-3.5 h-3.5 text-gray-400" />
+                                                                          ) : (
+                                                                            <Eye className="w-3.5 h-3.5 text-gray-400" />
+                                                                          )}
+                                                                        </Button>
+                                                                      )}
+                                                                    </div>
+                                                                  )}
+                                    {rowEdits[setting.id]?.value !== undefined &&
+                                      (() => {
+                                        const error = validateSetting(setting, rowEdits[setting.id]!.value || "");
+                                        return error ? (
+                                          <p className="text-[10px] text-red-600 mt-1">{error}</p>
+                                        ) : null;
+                                      })()}
+                                  </div>
+                                </td>
+                                <td className="px-4 py-2 text-center align-top pt-3">
+                                  <Checkbox
+                                    checked={setting.is_active}
+                                    onCheckedChange={(checked) =>
+                                      handleActiveToggle(setting, Boolean(checked))
+                                    }
+                                    disabled={updateMutation.isPending}
+                                    className="h-4 w-4 mx-auto"
+                                  />
+                                </td>
+                                <td className="px-4 py-2 text-right align-top">
+                                  <div className="flex items-center justify-end gap-1 mt-0.5">
+                                    {pendingChanges ? (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setRowEdits((prev) => {
+                                              const { [setting.id]: _, ...rest } = prev;
+                                              return rest;
+                                            });
+                                          }}
+                                          disabled={updateMutation.isPending}
+                                          className="h-7 w-7 p-0 text-gray-500"
+                                        >
+                                          <span className="sr-only">Cancel</span>
+                                          <span className="text-[10px]">✕</span>
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          disabled={updateMutation.isPending}
+                                          onClick={() => handleSaveRow(setting.id)}
+                                          className="h-7 w-7 p-0 bg-green-600 hover:bg-green-700 text-white"
+                                        >
+                                          <Save className="w-3.5 h-3.5" />
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Button
+                                          variant="secondary"
+                                          size="sm"
+                                          onClick={() => {
+                                            // Focus the input to enable editing
+                                            const input = document.querySelector(`input[data-setting-id="${setting.id}"]`) as HTMLInputElement;
+                                            if (input) {
+                                              input.focus();
+                                              input.select();
+                                            }
+                                          }}
+                                          className="h-7 px-2 text-[10px] text-gray-700 bg-gray-100 hover:bg-gray-200"
+                                        >
+                                          Edit
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleDelete(setting)}
+                                          disabled={deleteMutation.isPending}
+                                          className="h-7 w-7 p-0 text-gray-400 hover:text-red-600"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No settings found for this category
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 
   function TaxInfoBanner() {
     const { data, isLoading } = useQuery({
@@ -1123,9 +1048,9 @@ export default function SystemSettingsPage() {
     }
 
     return (
-      <Card className="mb-4 border-blue-200 bg-blue-50">
-        <CardContent className="pt-6">
-          <p className="text-sm text-blue-800">
+      <Card className="mb-4 border-blue-200 bg-blue-50/50 shadow-none">
+        <CardContent className="p-3">
+          <p className="text-xs text-blue-800">
             Tax configuration is managed in the Tax & Compliance section. Configure VAT rates, tax exemptions, and compliance settings here.
           </p>
         </CardContent>

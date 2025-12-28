@@ -70,10 +70,10 @@ export default function TechnicianRoadsideDashboard() {
         <div className="space-y-6 pb-20">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100">Technician Portal</h1>
-                    <p className="text-sm text-gray-500">Your assigned roadside assistance calls.</p>
+                    <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Technician Portal</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Your assigned roadside assistance calls</p>
                 </div>
-                <Badge variant="info" className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 uppercase font-black text-[10px] tracking-widest">
+                <Badge variant="info" className="text-[10px] px-2 py-0.5 font-medium border shadow-none uppercase tracking-wider">
                     Live Updates
                 </Badge>
             </div>
@@ -105,7 +105,7 @@ export default function TechnicianRoadsideDashboard() {
                 <div className="relative z-10">
                     <h3 className="text-lg font-black mb-1">Safety First!</h3>
                     <p className="text-white/80 text-sm mb-4">Always wear your high-visibility vest and set up warning triangles immediately upon arrival.</p>
-                    <Button variant="outline" size="sm" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+                    <Button variant="outline" size="sm" className="h-9 bg-white/10 border-white/20 text-white hover:bg-white/20">
                         Safety Checklist
                     </Button>
                 </div>
@@ -143,7 +143,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
             <CardHeader className="pb-3 flex flex-row items-start justify-between">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="info" className="text-[10px] h-5">{request.status_display}</Badge>
+                        <Badge variant="info" className="text-[10px] px-2 py-0.5 border shadow-none font-medium">{request.status_display}</Badge>
                         <span className="text-[10px] font-bold text-muted-foreground tracking-tighter uppercase">{request.request_number}</span>
                     </div>
                     <CardTitle className="text-xl font-black">{request.service_type_display}</CardTitle>

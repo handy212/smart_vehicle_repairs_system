@@ -73,14 +73,14 @@ export default function EditAppointmentPage() {
       const appointmentDate = appointment.appointment_date
         ? new Date(appointment.appointment_date).toISOString().split("T")[0]
         : "";
-      
-      const customerId = typeof appointment.customer === 'object' && appointment.customer !== null 
-        ? appointment.customer.id 
+
+      const customerId = typeof appointment.customer === 'object' && appointment.customer !== null
+        ? appointment.customer.id
         : appointment.customer || 0;
-      const vehicleId = typeof appointment.vehicle === 'object' && appointment.vehicle !== null 
-        ? appointment.vehicle.id 
+      const vehicleId = typeof appointment.vehicle === 'object' && appointment.vehicle !== null
+        ? appointment.vehicle.id
         : appointment.vehicle || 0;
-      
+
       reset({
         customer: customerId,
         vehicle: vehicleId,
@@ -149,17 +149,25 @@ export default function EditAppointmentPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <Link href="/appointments" className="hover:text-blue-600 transition-colors">Appointments</Link>
+            <span>/</span>
+            <Link href={`/appointments/${appointmentId}`} className="hover:text-blue-600 transition-colors">#{appointmentId}</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Edit</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Edit Appointment</h1>
+        </div>
         <Link href={`/appointments/${appointmentId}`}>
-          <Button variant="secondary">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+          <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+            <ArrowLeft className="w-3.5 h-3.5 mr-2" />
+            Cancel
           </Button>
         </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Edit Appointment</h1>
-          <p className="text-sm text-gray-500 mt-1">Update appointment information</p>
-        </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -188,15 +196,15 @@ export default function EditAppointmentPage() {
                   >
                     <option value="">Select a customer</option>
                     {customersData?.results?.map((customer) => {
-                      const displayName = customer.full_name || 
-                        customer.company_name || 
-                        (customer.user?.first_name && customer.user?.last_name 
-                          ? `${customer.user.first_name} ${customer.user.last_name}` 
+                      const displayName = customer.full_name ||
+                        customer.company_name ||
+                        (customer.user?.first_name && customer.user?.last_name
+                          ? `${customer.user.first_name} ${customer.user.last_name}`
                           : customer.user?.email || customer.customer_number);
                       return (
-                      <option key={customer.id} value={customer.id}>
+                        <option key={customer.id} value={customer.id}>
                           {displayName}
-                      </option>
+                        </option>
                       );
                     })}
                   </Select>
@@ -219,8 +227,8 @@ export default function EditAppointmentPage() {
                       {!selectedCustomer
                         ? "Select a customer first"
                         : !vehiclesData?.results?.length
-                        ? "No vehicles found"
-                        : "Select a vehicle"}
+                          ? "No vehicles found"
+                          : "Select a vehicle"}
                     </option>
                     {vehiclesData?.results?.map((vehicle) => (
                       <option key={vehicle.id} value={vehicle.id}>
@@ -342,7 +350,7 @@ export default function EditAppointmentPage() {
                   {isSubmitting ? "Saving..." : "Save Changes"}
                 </Button>
                 <Link href={`/appointments/${appointmentId}`}>
-                  <Button type="button"variant="secondary" className="w-full">
+                  <Button type="button" variant="secondary" className="w-full">
                     Cancel
                   </Button>
                 </Link>

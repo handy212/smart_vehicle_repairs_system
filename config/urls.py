@@ -92,6 +92,8 @@ urlpatterns = [
     path('api/documents/', include(('apps.documents.urls', 'api_documents'))),
     path('api/subscriptions/', include(('apps.subscriptions.urls', 'api_subscriptions'))),
     path('api/roadside/', include(('apps.roadside.urls', 'api_roadside'))),
+    path('api/fixed-assets/', include(('apps.fixed_assets.urls', 'api_fixed_assets'))),  # Fixed Assets API
+    path('api/technicians/', include(('apps.technicians.urls', 'api_technicians'))),  # Technician Management
     
     # Frontend app routes (namespaced)
     path('branches/', include('apps.branches.frontend_urls', namespace='branches')),

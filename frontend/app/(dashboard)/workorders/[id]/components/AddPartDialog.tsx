@@ -11,12 +11,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { AxiosError } from "axios";
+import InventoryPartSearch from "./InventoryPartSearch";
+import { Part } from "@/lib/api/inventory";
 
 const partSchema = z.object({
+  inventory_part: z.number().optional(), // Phase 4 Integration
   part_number: z.string().min(1, "Part number is required"),
   part_name: z.string().min(1, "Part name is required"),
   description: z.string().optional(),
-  quantity: z.number().min(1, "Quantity must be at least 1"),
+  quantity: z.number().min(0.01, "Quantity must be greater than 0"),
   unit_cost: z.number().min(0, "Unit cost must be 0 or greater"),
   markup_percentage: z.number().min(0).optional(),
 });
@@ -40,6 +43,7 @@ export default function AddPartDialog({ workOrderId, open, onClose, onSuccess }:
     reset,
     setError,
     watch,
+    setValue,
   } = useForm<PartFormData>({
     resolver: zodResolver(partSchema),
     defaultValues: {
@@ -96,13 +100,56 @@ export default function AddPartDialog({ workOrderId, open, onClose, onSuccess }:
     await createMutation.mutateAsync(data);
   };
 
+  const handleInventorySelect = (part: Part) => {
+    setValue("inventory_part", part.id);
+    setValue("part_number", part.part_number);
+    setValue("part_name", part.name);
+    setValue("description", part.description || "");
+
+    // Cost logic:
+    // If we have cost_price, use it.
+    // If we have selling_price, try to deduce markup?
+    // Or simpler: Use cost_price for 'unit_cost', and calculate markup to hit 'selling_price'.
+
+    const costPrice = parseFloat(part.cost_price || "0");
+    const sellingPrice = parseFloat(part.selling_price || "0");
+
+    setValue("unit_cost", costPrice);
+
+    if (costPrice > 0 && sellingPrice > costPrice) {
+      const calculatedMarkup = ((sellingPrice - costPrice) / costPrice) * 100;
+      // Round to 1 decimal
+      setValue("markup_percentage", Math.round(calculatedMarkup * 10) / 10);
+    } else {
+      setValue("markup_percentage", 0);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add Part</DialogTitle>
         </DialogHeader>
+        <div className="px-6 pb-2">
+          <div className="bg-blue-50 border border-blue-100 p-4 rounded-md mb-4">
+            <label className="block text-sm font-medium text-blue-900 mb-2">Search Inventory</label>
+            <InventoryPartSearch onSelect={handleInventorySelect} />
+            <p className="text-xs text-blue-700 mt-2">
+              Searching inventory will auto-fill the part details below. You can still edit them manually.
+            </p>
+          </div>
+
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-gray-200"></div>
+            <span className="flex-shrink-0 mx-4 text-gray-400 text-xs">OR ENTER MANUALLY</span>
+            <div className="flex-grow border-t border-gray-200"></div>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6">
+          <input type="hidden" {...register("inventory_part", { valueAsNumber: true })} />
+
           <div className="space-y-4">
             {serverError && (
               <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded text-sm">
@@ -168,7 +215,7 @@ export default function AddPartDialog({ workOrderId, open, onClose, onSuccess }:
               </div>
               <div>
                 <label htmlFor="unit_cost" className="block text-sm font-medium text-gray-700 mb-2">
-                  Unit Cost *
+                  Unit Cost (Buy Price) *
                 </label>
                 <Input
                   id="unit_cost"
@@ -197,14 +244,14 @@ export default function AddPartDialog({ workOrderId, open, onClose, onSuccess }:
 
             <div className="bg-gray-50 p-3 rounded">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">Total Cost:</span>
+                <span className="text-sm font-medium text-gray-700">Total Price (To Customer):</span>
                 <span className="text-lg font-bold text-gray-900">${totalCost.toFixed(2)}</span>
               </div>
             </div>
           </div>
         </form>
         <DialogFooter>
-          <Button type="button"variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>

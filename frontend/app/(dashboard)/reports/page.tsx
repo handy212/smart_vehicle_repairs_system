@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { reportingApi } from "@/lib/api/reporting";
+import { billingApi } from "@/lib/api/billing";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ import { useState, useMemo } from "react";
 import { format, subDays, startOfMonth } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
-import { 
+import {
   BarChart,
   Bar,
   LineChart,
@@ -26,6 +27,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import Link from "next/link";
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
@@ -119,6 +121,20 @@ export default function ReportsPage() {
     enabled: activeTab === "vehicles",
   });
 
+  // Controls/Audit Reports
+  const { data: recentInvoices } = useQuery({
+    queryKey: ["invoices", "recent", "controls"],
+    queryFn: () => billingApi.invoices.list({ page: 1 }),
+    enabled: activeTab === "controls",
+  });
+
+  const discountedInvoices = useMemo(() => {
+    return recentInvoices?.results?.filter(inv =>
+      (parseFloat(inv.discount_amount || "0") > 0) ||
+      (parseFloat(inv.discount_percentage || "0") > 0)
+    ) || [];
+  }, [recentInvoices]);
+
   // Memoized date range calculations
   const dateRangeOptions = useMemo(
     () => [
@@ -162,7 +178,7 @@ export default function ReportsPage() {
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <Button
-           variant="secondary"
+            variant="secondary"
             onClick={() => setShowFilters(!showFilters)}
             className="sm:hidden"
             size="sm"
@@ -171,9 +187,8 @@ export default function ReportsPage() {
             Filters
           </Button>
           <div
-            className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-2 ${
-              showFilters ? "flex" : "hidden sm:flex"
-            }`}
+            className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-2 ${showFilters ? "flex" : "hidden sm:flex"
+              }`}
           >
             <Input
               type="date"
@@ -205,7 +220,7 @@ export default function ReportsPage() {
             {dateRangeOptions.map((option) => (
               <Button
                 key={option.label}
-               variant="secondary"
+                variant="secondary"
                 size="sm"
                 onClick={() => handleQuickDateRange(option.days)}
                 className="text-xs h-8"
@@ -302,6 +317,9 @@ export default function ReportsPage() {
           </TabsTrigger>
           <TabsTrigger value="vehicles" className="text-xs sm:text-sm">
             Vehicles
+          </TabsTrigger>
+          <TabsTrigger value="controls" className="text-xs sm:text-sm">
+            Controls
           </TabsTrigger>
         </TabsList>
 
@@ -1059,6 +1077,58 @@ export default function ReportsPage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="controls" className="space-y-4 sm:space-y-6">
+          <Card className="border-gray-200 dark:border-gray-800">
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="text-base sm:text-lg">Discounts & Overrides Analysis</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 sm:p-6">
+              <div className="overflow-x-auto -mx-2 sm:mx-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs sm:text-sm">Invoice #</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Date</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Subtotal</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Discount</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Reason</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Total</TableHead>
+                      <TableHead className="text-xs sm:text-sm">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {discountedInvoices.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                          No invoices with discounts found recently.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      discountedInvoices.map((inv) => (
+                        <TableRow key={inv.id}>
+                          <TableCell className="font-mono text-xs sm:text-sm">{inv.invoice_number}</TableCell>
+                          <TableCell className="text-xs sm:text-sm">{format(new Date(inv.invoice_date), "MMM dd, yyyy")}</TableCell>
+                          <TableCell className="text-xs sm:text-sm">${parseFloat(inv.subtotal || "0").toFixed(2)}</TableCell>
+                          <TableCell className="text-xs sm:text-sm font-bold text-orange-600">
+                            {inv.discount_percentage ? `${inv.discount_percentage}%` : `$${parseFloat(inv.discount_amount || "0").toFixed(2)}`}
+                          </TableCell>
+                          <TableCell className="text-xs sm:text-sm italic">{inv.discount_reason || "-"}</TableCell>
+                          <TableCell className="text-xs sm:text-sm font-bold">${parseFloat(inv.total).toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Link href={`/billing/invoices/${inv.id}`} target="_blank">
+                              <Button variant="ghost" size="sm">View</Button>
+                            </Link>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

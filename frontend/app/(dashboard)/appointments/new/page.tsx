@@ -107,25 +107,25 @@ export default function NewAppointmentPage() {
       await createMutation.mutateAsync(data);
     } catch (error) {
       console.error("Error creating appointment:", error);
-      
+
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
         const handledFields = new Set<string>();
-        
+
         // Handle field-level errors
         Object.keys(errorData).forEach((field) => {
           if (field !== 'non_field_errors' && field !== 'detail') {
-            const fieldError = Array.isArray(errorData[field]) 
-              ? errorData[field][0] 
+            const fieldError = Array.isArray(errorData[field])
+              ? errorData[field][0]
               : errorData[field];
-            setError(field as keyof AppointmentFormData, { 
-              type: "server", 
-              message: fieldError 
+            setError(field as keyof AppointmentFormData, {
+              type: "server",
+              message: fieldError
             });
             handledFields.add(field);
           }
         });
-        
+
         // Handle non-field errors
         if (errorData.non_field_errors) {
           const nonFieldError = Array.isArray(errorData.non_field_errors)
@@ -154,16 +154,16 @@ export default function NewAppointmentPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Link href="/appointments">
-          <Button variant="secondary">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-        </Link>
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">New Appointment</h1>
-          <p className="text-sm text-gray-500 mt-1">Schedule a new appointment</p>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <Link href="/appointments" className="hover:text-blue-600 transition-colors">Appointments</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">New</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">New Appointment</h1>
         </div>
       </div>
 
@@ -204,15 +204,15 @@ export default function NewAppointmentPage() {
                   >
                     <option value="">Select a customer</option>
                     {customersData?.results?.map((customer) => {
-                      const displayName = customer.full_name || 
-                        customer.company_name || 
-                        (customer.user?.first_name && customer.user?.last_name 
-                          ? `${customer.user.first_name} ${customer.user.last_name}` 
+                      const displayName = customer.full_name ||
+                        customer.company_name ||
+                        (customer.user?.first_name && customer.user?.last_name
+                          ? `${customer.user.first_name} ${customer.user.last_name}`
                           : customer.user?.email || customer.customer_number);
                       return (
-                      <option key={customer.id} value={customer.id}>
+                        <option key={customer.id} value={customer.id}>
                           {displayName}
-                      </option>
+                        </option>
                       );
                     })}
                   </Select>
@@ -235,8 +235,8 @@ export default function NewAppointmentPage() {
                       {!selectedCustomer
                         ? "Select a customer first"
                         : !vehiclesData?.results?.length
-                        ? "No vehicles found"
-                        : "Select a vehicle"}
+                          ? "No vehicles found"
+                          : "Select a vehicle"}
                     </option>
                     {vehiclesData?.results?.map((vehicle) => (
                       <option key={vehicle.id} value={vehicle.id}>
@@ -283,7 +283,7 @@ export default function NewAppointmentPage() {
                       type="time"
                       {...register("appointment_time")}
                       className={errors.appointment_time ? "border-red-500" : ""}
-                    min={minTimeForSelectedDate}
+                      min={minTimeForSelectedDate}
                     />
                     {errors.appointment_time && (
                       <p className="mt-1 text-sm text-red-600">{errors.appointment_time.message}</p>
@@ -360,7 +360,7 @@ export default function NewAppointmentPage() {
                   {isSubmitting ? "Creating..." : "Create Appointment"}
                 </Button>
                 <Link href="/appointments">
-                  <Button type="button"variant="secondary" className="w-full">
+                  <Button type="button" variant="secondary" className="w-full">
                     Cancel
                   </Button>
                 </Link>

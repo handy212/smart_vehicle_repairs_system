@@ -218,21 +218,24 @@ export default function NewRoadsideRequestDashboardPage() {
     ];
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 pb-12">
-            <div className="flex items-center gap-4">
-                <Link href="/roadside">
-                    <Button variant="ghost" size="sm">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back to Requests
-                    </Button>
-                </Link>
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">New Roadside Request</h1>
-                    <p className="text-sm text-gray-500">Log a new breakdown assistance request.</p>
+        <div className="max-w-4xl mx-auto space-y-6 pb-12">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                    <Link href="/roadside">
+                        <Button variant="secondary">
+                            <ArrowLeft className="w-4 h-4 mr-2" />
+                            Back
+                        </Button>
+                    </Link>
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">New Roadside Request</h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Log a new breakdown assistance request</p>
+                    </div>
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 {serverError && (
                     <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-4 rounded-lg flex items-start gap-2">
                         <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
@@ -240,19 +243,19 @@ export default function NewRoadsideRequestDashboardPage() {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     {/* Left Column - Main Details */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="lg:col-span-2 space-y-4">
                         {/* Customer & Vehicle Selection */}
-                        <Card className="overflow-hidden border-none shadow-premium-sm bg-white dark:bg-gray-900">
-                            <CardHeader className="bg-gray-50/50 dark:bg-gray-800/50 border-b">
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <UserIcon className="w-5 h-5 text-blue-600" />
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <UserIcon className="w-4 h-4" />
                                     Customer & Vehicle
                                 </CardTitle>
-                                <CardDescription>Select the customer and the vehicle needing assistance</CardDescription>
+                                <CardDescription className="text-xs">Select the customer and the vehicle needing assistance</CardDescription>
                             </CardHeader>
-                            <CardContent className="p-6 space-y-6">
+                            <CardContent className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-3">
                                         <Label htmlFor="customer_search" className="font-semibold">Search Customer *</Label>
@@ -390,15 +393,15 @@ export default function NewRoadsideRequestDashboardPage() {
                         </Card>
 
                         {/* Location Details */}
-                        <Card className="overflow-hidden border-none shadow-premium-sm bg-white dark:bg-gray-900">
-                            <CardHeader className="bg-gray-50/50 dark:bg-gray-800/50 border-b">
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <MapIcon className="w-5 h-5 text-green-600" />
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <MapIcon className="w-4 h-4" />
                                     Location Information
                                 </CardTitle>
-                                <CardDescription>Where did the breakdown happen?</CardDescription>
+                                <CardDescription className="text-xs">Where did the breakdown happen?</CardDescription>
                             </CardHeader>
-                            <CardContent className="p-6 space-y-6">
+                            <CardContent className="space-y-4">
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                         <Label htmlFor="breakdown_location" className="font-semibold">Breakdown Location *</Label>
@@ -460,15 +463,15 @@ export default function NewRoadsideRequestDashboardPage() {
                     </div>
 
                     {/* Right Column - Service & Summary */}
-                    <div className="space-y-6">
-                        <Card className="overflow-hidden border-none shadow-premium-sm bg-white dark:bg-gray-900 border-l-4 border-l-blue-600">
-                            <CardHeader className="bg-gray-50/50 dark:bg-gray-800/50 border-b">
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <Truck className="w-5 h-5 text-blue-600" />
+                    <div className="space-y-3">
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm flex items-center gap-2">
+                                    <Truck className="w-4 h-4" />
                                     Service Configuration
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent className="p-6 space-y-5">
+                            <CardContent className="space-y-3">
                                 <div className="space-y-3">
                                     <Label htmlFor="service_type" className="font-semibold">Service Type *</Label>
                                     <select
@@ -566,10 +569,11 @@ export default function NewRoadsideRequestDashboardPage() {
                             </CardContent>
                         </Card>
 
-                        <div className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-2">
                             <Button
                                 type="submit"
-                                className="w-full h-12 text-md font-bold shadow-premium transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                className="w-full"
+                                size="lg"
                                 disabled={isSubmitting}
                             >
                                 {isSubmitting ? (
@@ -584,7 +588,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                 )}
                             </Button>
                             <Link href="/roadside" className="w-full">
-                                <Button variant="ghost" type="button" className="w-full text-gray-500">Cancel and Back</Button>
+                                <Button variant="secondary" type="button" className="w-full">Cancel</Button>
                             </Link>
                         </div>
                     </div>

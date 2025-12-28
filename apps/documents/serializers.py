@@ -98,6 +98,7 @@ class DocumentListSerializer(serializers.ModelSerializer):
     
     category_name = serializers.CharField(source='category.name', read_only=True)
     uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)
+    uploaded_by_email = serializers.CharField(source='uploaded_by.email', read_only=True)
     file_size_display = serializers.ReadOnlyField()
     is_image = serializers.ReadOnlyField()
     is_pdf = serializers.ReadOnlyField()
@@ -125,6 +126,7 @@ class DocumentListSerializer(serializers.ModelSerializer):
             'is_pdf',
             'uploaded_by',
             'uploaded_by_name',
+            'uploaded_by_email',
             'uploaded_at',
             'access_count',
             'last_accessed_at'

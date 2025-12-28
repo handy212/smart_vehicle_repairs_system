@@ -123,51 +123,7 @@ class SystemSettings(models.Model):
             )
 
 
-class AuditLog(models.Model):
-    """
-    Audit logging for system actions
-    """
-    ACTION_CHOICES = (
-        ('create', 'Create'),
-        ('update', 'Update'),
-        ('delete', 'Delete'),
-        ('login', 'Login'),
-        ('logout', 'Logout'),
-        ('view', 'View'),
-        ('export', 'Export'),
-        ('import', 'Import'),
-        ('settings_change', 'Settings Change'),
-        ('role_change', 'Role Change'),
-        ('permission_change', 'Permission Change'),
-    )
-    
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
-    action = models.CharField(_('action'), max_length=50, choices=ACTION_CHOICES)
-    model_name = models.CharField(_('model name'), max_length=100, blank=True)
-    object_id = models.CharField(_('object ID'), max_length=100, blank=True)
-    object_repr = models.CharField(_('object representation'), max_length=200, blank=True)
-    changes = models.JSONField(_('changes'), default=dict, blank=True)
-    ip_address = models.GenericIPAddressField(_('IP address'), null=True, blank=True)
-    user_agent = models.TextField(_('user agent'), blank=True)
-    timestamp = models.DateTimeField(_('timestamp'), auto_now_add=True, db_index=True)
-    
-    class Meta:
-        verbose_name = _('audit log')
-        verbose_name_plural = _('audit logs')
-        ordering = ['-timestamp']
-        indexes = [
-            models.Index(fields=['-timestamp', 'user']),
-            models.Index(fields=['action', '-timestamp']),
-        ]
-    
-    def __str__(self):
-        return f"{self.user} - {self.action} - {self.timestamp}"
-    
-    def get_changes_display(self):
-        """Format changes for display"""
-        if not self.changes:
-            return "No changes"
-        return json.dumps(self.changes, indent=2)
+
 
 
 class SystemBackup(models.Model):

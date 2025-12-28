@@ -107,7 +107,7 @@ export default function NewInspectionPage() {
     onError: (error) => {
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
-        
+
         // Check for active work order at another branch error
         let errorMessage = '';
         if (errorData.non_field_errors) {
@@ -119,7 +119,7 @@ export default function NewInspectionPage() {
         } else if (typeof errorData === 'string') {
           errorMessage = errorData;
         }
-        
+
         // Check if this is the active work order error
         if (errorMessage && errorMessage.includes('has an active work order') && errorMessage.includes('at')) {
           // Extract branch name from error message
@@ -130,7 +130,7 @@ export default function NewInspectionPage() {
           setShowActiveWorkOrderDialog(true);
           return;
         }
-        
+
         // Handle field-level errors
         Object.keys(errorData).forEach((field) => {
           if (field !== "non_field_errors" && field !== "detail") {
@@ -143,7 +143,7 @@ export default function NewInspectionPage() {
             });
           }
         });
-        
+
         // Handle other errors
         if (errorMessage) {
           setServerError(errorMessage);
@@ -166,17 +166,16 @@ export default function NewInspectionPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Link href="/inspections">
-          <Button variant="secondary" size="icon">
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-        </Link>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">New Inspection</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Create a new vehicle inspection
-          </p>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <span>/</span>
+            <Link href="/inspections" className="hover:text-blue-600 transition-colors">Inspections</Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">New</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">New Inspection</h1>
         </div>
       </div>
 
@@ -199,7 +198,7 @@ export default function NewInspectionPage() {
               <span>Active Work Order Detected</span>
             </DialogTitle>
             <DialogDescription className="pt-4">
-              The selected vehicle has an open work order at <strong>{activeWorkOrderBranch}</strong>. 
+              The selected vehicle has an open work order at <strong>{activeWorkOrderBranch}</strong>.
               Please close it before creating a new one.
             </DialogDescription>
           </DialogHeader>
@@ -212,99 +211,103 @@ export default function NewInspectionPage() {
       </Dialog>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Inspection Details</CardTitle>
-            <CardDescription>
-              Select the vehicle and template for this inspection
+        <Card className="shadow-sm border-gray-200 dark:border-gray-800">
+          <CardHeader className="pb-4 border-b bg-gray-50/50 dark:bg-gray-800/50">
+            <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Inspection Details</CardTitle>
+            <CardDescription className="text-sm text-gray-500">
+              Select the vehicle and template to initialize the inspection.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <label htmlFor="vehicle" className="block text-sm font-medium text-gray-700 mb-1">
-                Vehicle <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="vehicle"
-                {...register("vehicle", { valueAsNumber: true })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              >
-                <option value="">Select a vehicle</option>
-                {vehicles.map((vehicle) => (
-                  <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.license_plate}
-                  </option>
-                ))}
-              </select>
-              {errors.vehicle && (
-                <p className="text-red-500 text-xs mt-1">{errors.vehicle.message}</p>
-              )}
-            </div>
+          <CardContent className="pt-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label htmlFor="vehicle" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Vehicle <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="vehicle"
+                  {...register("vehicle", { valueAsNumber: true })}
+                  className="w-full h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select a vehicle</option>
+                  {vehicles.map((vehicle) => (
+                    <option key={vehicle.id} value={vehicle.id}>
+                      {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.license_plate}
+                    </option>
+                  ))}
+                </select>
+                {errors.vehicle && (
+                  <p className="text-red-500 text-xs mt-1">{errors.vehicle.message}</p>
+                )}
+              </div>
 
-            <div>
-              <label htmlFor="template" className="block text-sm font-medium text-gray-700 mb-1">
-                Template <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="template"
-                {...register("template", { valueAsNumber: true })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              >
-                <option value="">Select a template</option>
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
-                    {template.is_default && " (Default)"}
-                  </option>
-                ))}
-              </select>
-              {errors.template && (
-                <p className="text-red-500 text-xs mt-1">{errors.template.message}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                Don't see a template?{" "}
-                <Link href="/inspections/templates" className="text-blue-600 hover:underline">
-                  Manage templates
-                </Link>
-              </p>
-            </div>
-
-            <div>
-              <label htmlFor="work_order" className="block text-sm font-medium text-gray-700 mb-1">
-                Work Order (Optional)
-              </label>
-              <Input
-                id="work_order"
-                type="number"
-                {...register("work_order", { valueAsNumber: true })}
-                placeholder="Work order ID"
-              />
-              {errors.work_order && (
-                <p className="text-red-500 text-xs mt-1">{errors.work_order.message}</p>
-              )}
-              {workOrder && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Linked to work order: {(workOrder as any).wo_number || workOrder.id}
+              <div className="space-y-2">
+                <label htmlFor="template" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Template <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="template"
+                  {...register("template", { valueAsNumber: true })}
+                  className="w-full h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select a template</option>
+                  {templates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}
+                      {template.is_default && " (Default)"}
+                    </option>
+                  ))}
+                </select>
+                {errors.template && (
+                  <p className="text-red-500 text-xs mt-1">{errors.template.message}</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  Don't see a template?{" "}
+                  <Link href="/inspections/templates" className="text-blue-600 hover:underline">
+                    Manage templates
+                  </Link>
                 </p>
-              )}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="work_order" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Work Order (Optional)
+                </label>
+                <Input
+                  id="work_order"
+                  type="number"
+                  {...register("work_order", { valueAsNumber: true })}
+                  placeholder="Work order ID"
+                  className="h-9"
+                />
+                {errors.work_order && (
+                  <p className="text-red-500 text-xs mt-1">{errors.work_order.message}</p>
+                )}
+                {workOrder && (
+                  <p className="text-xs text-gray-500">
+                    Linked to work order: {(workOrder as any).wo_number || workOrder.id}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="inspection_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Inspection Date <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  id="inspection_date"
+                  type="datetime-local"
+                  {...register("inspection_date")}
+                  className="h-9"
+                />
+                {errors.inspection_date && (
+                  <p className="text-red-500 text-xs mt-1">{errors.inspection_date.message}</p>
+                )}
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="inspection_date" className="block text-sm font-medium text-gray-700 mb-1">
-                Inspection Date <span className="text-red-500">*</span>
-              </label>
-              <Input
-                id="inspection_date"
-                type="datetime-local"
-                {...register("inspection_date")}
-              />
-              {errors.inspection_date && (
-                <p className="text-red-500 text-xs mt-1">{errors.inspection_date.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label htmlFor="odometer_reading" className="block text-sm font-medium text-gray-700 mb-1">
+            <div className="space-y-2">
+              <label htmlFor="odometer_reading" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Odometer Reading (Optional)
               </label>
               <Input
@@ -313,14 +316,15 @@ export default function NewInspectionPage() {
                 {...register("odometer_reading", { valueAsNumber: true })}
                 placeholder="Current mileage"
                 min={0}
+                className="h-9 max-w-md"
               />
               {errors.odometer_reading && (
                 <p className="text-red-500 text-xs mt-1">{errors.odometer_reading.message}</p>
               )}
             </div>
 
-            <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+            <div className="space-y-2">
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Notes (Optional)
               </label>
               <Textarea
@@ -328,19 +332,20 @@ export default function NewInspectionPage() {
                 {...register("notes")}
                 placeholder="Additional notes about this inspection"
                 rows={3}
+                className="resize-none"
               />
               {errors.notes && (
                 <p className="text-red-500 text-xs mt-1">{errors.notes.message}</p>
               )}
             </div>
 
-            <div className="flex justify-end space-x-2 pt-4">
+            <div className="flex justify-end space-x-3 pt-6 border-t">
               <Link href="/inspections">
-                <Button type="button"variant="secondary">
+                <Button type="button" variant="outline" className="h-9">
                   Cancel
                 </Button>
               </Link>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
                 {isSubmitting ? "Creating..." : "Create Inspection"}
               </Button>
             </div>

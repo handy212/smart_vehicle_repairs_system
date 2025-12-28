@@ -8,17 +8,23 @@ import { diagnosisApi, Diagnosis, DiagnosticCode, DiagnosticTest, DiagnosisPhoto
 import { workordersApi } from "@/lib/api/workorders";
 import { inventoryApi } from "@/lib/api/inventory";
 import { billingApi } from "@/lib/api/billing";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
 import { useToast } from "@/lib/hooks/useToast";
 import {
@@ -40,6 +46,8 @@ import {
   Trash2,
   X,
   Search,
+  ArrowRight,
+  ChevronRight,
   RefreshCw,
   Receipt,
   Package,
@@ -47,6 +55,7 @@ import {
   Pause,
   PlayCircle,
   CheckCircle2,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -76,7 +85,7 @@ export default function DiagnosisPage() {
         console.log("Fetching diagnosis for work order:", workOrderId);
         let existing = await diagnosisApi.getByWorkOrder(workOrderId);
         console.log("Existing diagnosis:", existing);
-        
+
         if (!existing && workOrder) {
           // Auto-create diagnosis if it doesn't exist
           console.log("No diagnosis found, creating new one...");
@@ -92,7 +101,7 @@ export default function DiagnosisPage() {
             throw error;
           }
         }
-        
+
         // If diagnosis exists but has no customer_complaint, update it from work order
         if (existing && !existing.customer_complaint && workOrder?.customer_concerns) {
           try {
@@ -103,7 +112,7 @@ export default function DiagnosisPage() {
             console.error("Failed to update customer complaint:", error);
           }
         }
-        
+
         return existing;
       } catch (error: any) {
         console.error("Error in diagnosis query:", error);
@@ -148,10 +157,10 @@ export default function DiagnosisPage() {
       return diagnosisApi.start(diagnosis.id);
     },
     onSuccess: () => {
-      toast({ 
-        title: "Diagnosis started", 
+      toast({
+        title: "Diagnosis started",
         description: "Diagnosis workflow has been started.",
-        variant: "default" 
+        variant: "default"
       });
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
     },
@@ -170,10 +179,10 @@ export default function DiagnosisPage() {
       return diagnosisApi.pause(diagnosis.id, reason);
     },
     onSuccess: () => {
-      toast({ 
-        title: "Diagnosis paused", 
+      toast({
+        title: "Diagnosis paused",
         description: "Diagnosis has been paused. Time has been logged.",
-        variant: "default" 
+        variant: "default"
       });
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
     },
@@ -192,10 +201,10 @@ export default function DiagnosisPage() {
       return diagnosisApi.resume(diagnosis.id);
     },
     onSuccess: () => {
-      toast({ 
-        title: "Diagnosis resumed", 
+      toast({
+        title: "Diagnosis resumed",
         description: "Diagnosis has been resumed. Time tracking continues.",
-        variant: "default" 
+        variant: "default"
       });
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
     },
@@ -217,7 +226,7 @@ export default function DiagnosisPage() {
     onSuccess: (response) => {
       const workOrderUpdate = response.work_order;
       let message = "Diagnosis completed successfully.";
-      
+
       if (workOrderUpdate) {
         if (workOrderUpdate.requires_approval) {
           message += ` Work order is now awaiting customer approval.`;
@@ -225,18 +234,18 @@ export default function DiagnosisPage() {
           message += ` Work order has been approved and ready to proceed.`;
         }
       }
-      
-      toast({ 
-        title: "Diagnosis completed", 
+
+      toast({
+        title: "Diagnosis completed",
         description: message,
-        variant: "default" 
+        variant: "default"
       });
-      
+
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
       queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
       queryClient.invalidateQueries({ queryKey: ["diagnosis"] });
-      
+
       // Redirect to work order page to see updated status
       router.push(`/workorders/${workOrderId}`);
     },
@@ -354,31 +363,39 @@ export default function DiagnosisPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center space-x-4 flex-1">
-          <Link href={`/workorders/${workOrderId}`}>
-            <Button variant="secondary" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Work Order
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Diagnosis</h1>
-            <p className="text-sm text-gray-500">
-              Work Order #{workOrder.work_order_number}
-            </p>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">
+              Dashboard
+            </Link>
+            <span>/</span>
+            <Link href={`/workorders`} className="hover:text-blue-600 transition-colors">
+              Work Orders
+            </Link>
+            <span>/</span>
+            <Link href={`/workorders/${workOrderId}`} className="hover:text-blue-600 transition-colors">
+              #{workOrderId}
+            </Link>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Diagnosis</span>
           </div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+            Diagnosis & Repair Recommendations
+          </h1>
         </div>
-        <div className="flex items-center space-x-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Workflow Action Buttons */}
           {diagnosis.status === "not_started" && (
             <Button
               onClick={() => startDiagnosisMutation.mutate()}
               disabled={startDiagnosisMutation.isPending}
               size="sm"
+              className="h-9"
               variant="default"
             >
-              <Play className="w-4 h-4 mr-2" />
+              <Play className="w-3.5 h-3.5 mr-2" />
               {startDiagnosisMutation.isPending ? "Starting..." : "Start Diagnosis"}
             </Button>
           )}
@@ -388,18 +405,19 @@ export default function DiagnosisPage() {
                 onClick={() => setShowPauseDialog(true)}
                 disabled={pauseDiagnosisMutation.isPending}
                 size="sm"
-                variant="secondary"
+                className="h-9"
+                variant="outline"
               >
-                <Pause className="w-4 h-4 mr-2" />
+                <Pause className="w-3.5 h-3.5 mr-2" />
                 Pause
               </Button>
               <Button
                 onClick={() => completeDiagnosisMutation.mutate()}
                 disabled={completeDiagnosisMutation.isPending}
                 size="sm"
-                variant="default"
+                className="h-9 bg-green-600 hover:bg-green-700 text-white"
               >
-                <CheckCircle className="w-4 h-4 mr-2" />
+                <CheckCircle className="w-3.5 h-3.5 mr-2" />
                 {completeDiagnosisMutation.isPending ? "Completing..." : "Complete"}
               </Button>
             </>
@@ -410,75 +428,72 @@ export default function DiagnosisPage() {
                 onClick={() => resumeDiagnosisMutation.mutate()}
                 disabled={resumeDiagnosisMutation.isPending}
                 size="sm"
+                className="h-9"
                 variant="default"
               >
-                <PlayCircle className="w-4 h-4 mr-2" />
+                <PlayCircle className="w-3.5 h-3.5 mr-2" />
                 {resumeDiagnosisMutation.isPending ? "Resuming..." : "Resume"}
               </Button>
               <Button
                 onClick={() => completeDiagnosisMutation.mutate()}
                 disabled={completeDiagnosisMutation.isPending}
                 size="sm"
-                variant="default"
+                className="h-9 bg-green-600 hover:bg-green-700 text-white"
               >
-                <CheckCircle className="w-4 h-4 mr-2" />
+                <CheckCircle className="w-3.5 h-3.5 mr-2" />
                 {completeDiagnosisMutation.isPending ? "Completing..." : "Complete"}
               </Button>
             </>
           )}
           {diagnosis.status === "completed" && (
-            <Badge variant="default" className="text-sm px-3 py-1">
-              <CheckCircle2 className="w-4 h-4 mr-1" />
+            <Button variant="outline" size="sm" className="h-9 cursor-default bg-green-50 text-green-700 border-green-200 hover:bg-green-50">
+              <CheckCircle2 className="w-3.5 h-3.5 mr-2" />
               Completed
-            </Badge>
+            </Button>
           )}
         </div>
       </div>
 
-      {/* Workflow Status & Info */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center space-x-3">
+      {/* Workflow Status & Info Banner */}
+      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
               <Badge
-                variant={statusConfig.color as any}
-                className="text-sm px-3 py-1"
+                variant="outline"
+                className={`text-sm py-1 px-3 ${diagnosis.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                  diagnosis.status === 'paused' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                    diagnosis.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
+                      'bg-gray-100 text-gray-700 border-gray-200'
+                  }`}
               >
-                <StatusIcon className="w-4 h-4 mr-1" />
+                <StatusIcon className="w-3.5 h-3.5 mr-1.5" />
                 {statusConfig.label}
               </Badge>
-              {diagnosis.technician_name && (
-                <span className="text-sm text-gray-500">
-                  Technician: {diagnosis.technician_name}
-                </span>
-              )}
-              {diagnosis.diagnostic_time_formatted && (
-                <span className="text-sm text-gray-500">
-                  Time: {diagnosis.diagnostic_time_formatted}
-                </span>
-              )}
+
+              <div className="flex items-center gap-4 text-sm text-gray-500">
+                {diagnosis.technician_name && (
+                  <div className="flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" />
+                    <span>{diagnosis.technician_name}</span>
+                  </div>
+                )}
+                {diagnosis.diagnostic_time_formatted && (
+                  <div className="flex items-center gap-1.5 border-l pl-4 border-gray-200 dark:border-gray-700">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span className="font-mono">{diagnosis.diagnostic_time_formatted}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            {/* Workflow Stages Indicator */}
-            <div className="flex items-center space-x-2 text-xs text-gray-500">
-              <div className={`flex items-center ${diagnosis.status === "not_started" || diagnosis.status === "in_progress" || diagnosis.status === "paused" || diagnosis.status === "completed" ? "text-blue-600 font-medium" : ""}`}>
-                <div className={`w-2 h-2 rounded-full mr-1 ${diagnosis.status !== "not_started" ? "bg-blue-600" : "bg-gray-300"}`} />
-                Start
-              </div>
-              <div className="w-4 h-px bg-gray-300" />
-              <div className={`flex items-center ${diagnosis.status === "in_progress" || diagnosis.status === "paused" || diagnosis.status === "completed" ? "text-blue-600 font-medium" : ""}`}>
-                <div className={`w-2 h-2 rounded-full mr-1 ${diagnosis.status === "in_progress" || diagnosis.status === "paused" || diagnosis.status === "completed" ? "bg-blue-600" : "bg-gray-300"}`} />
-                In Progress
-              </div>
-              <div className="w-4 h-px bg-gray-300" />
-              <div className={`flex items-center ${diagnosis.status === "paused" ? "text-orange-600 font-medium" : diagnosis.status === "completed" ? "text-blue-600 font-medium" : ""}`}>
-                <div className={`w-2 h-2 rounded-full mr-1 ${diagnosis.status === "paused" ? "bg-orange-600" : diagnosis.status === "completed" ? "bg-blue-600" : "bg-gray-300"}`} />
-                Paused
-              </div>
-              <div className="w-4 h-px bg-gray-300" />
-              <div className={`flex items-center ${diagnosis.status === "completed" ? "text-green-600 font-medium" : ""}`}>
-                <div className={`w-2 h-2 rounded-full mr-1 ${diagnosis.status === "completed" ? "bg-green-600" : "bg-gray-300"}`} />
-                Completed
-              </div>
+
+            {/* Compact Workflow Stages */}
+            <div className="flex items-center gap-1 text-[10px] uppercase font-semibold tracking-wider text-gray-400">
+              <span className={diagnosis.status !== 'not_started' ? "text-blue-600" : ""}>Start</span>
+              <span className="mx-1">→</span>
+              <span className={['in_progress', 'paused', 'completed'].includes(diagnosis.status) ? "text-blue-600" : ""}>In Progress</span>
+              <span className="mx-1">→</span>
+              <span className={diagnosis.status === 'completed' ? "text-green-600" : ""}>Done</span>
             </div>
           </div>
         </CardContent>
@@ -504,7 +519,7 @@ export default function DiagnosisPage() {
           </div>
           <DialogFooter>
             <Button
-              variant="secondary"
+              variant="ghost"
               onClick={() => {
                 setShowPauseDialog(false);
                 setPauseReason("");
@@ -527,70 +542,122 @@ export default function DiagnosisPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Quick Stats Bar */}
+      {/* Quick Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <Code className="w-5 h-5 text-blue-600" />
-          <div>
-            <div className="text-2xl font-bold text-blue-900">{codesCount}</div>
-            <div className="text-xs text-blue-700">Codes</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-          <TestTube className="w-5 h-5 text-purple-600" />
-          <div>
-            <div className="text-2xl font-bold text-purple-900">{testsCount}</div>
-            <div className="text-xs text-purple-700">Tests</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-          <Camera className="w-5 h-5 text-orange-600" />
-          <div>
-            <div className="text-2xl font-bold text-orange-900">{photosCount}</div>
-            <div className="text-xs text-orange-700">Photos</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-          <Wrench className="w-5 h-5 text-indigo-600" />
-          <div>
-            <div className="text-2xl font-bold text-indigo-900">{recommendationsCount}</div>
-            <div className="text-xs text-indigo-700">Recommendations</div>
-          </div>
-        </div>
+        <Card className="border-none shadow-sm bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+          <CardContent className="p-4 flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Diagnostic Codes</span>
+            <div className="flex items-end justify-between">
+              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{codesCount}</span>
+              <Code className="w-4 h-4 text-blue-500 mb-1" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+          <CardContent className="p-4 flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tests Run</span>
+            <div className="flex items-end justify-between">
+              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{testsCount}</span>
+              <TestTube className="w-4 h-4 text-purple-500 mb-1" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+          <CardContent className="p-4 flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Photos</span>
+            <div className="flex items-end justify-between">
+              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{photosCount}</span>
+              <Camera className="w-4 h-4 text-orange-500 mb-1" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+          <CardContent className="p-4 flex flex-col gap-1">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Recommendations</span>
+            <div className="flex items-end justify-between">
+              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{recommendationsCount}</span>
+              <Wrench className="w-4 h-4 text-indigo-500 mb-1" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Tabs */}
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-8 h-auto p-1">
-          <TabsTrigger value="complaint" className="text-xs">
-            <MessageSquare className="w-3 h-3 mr-1.5" />
-            Complaint
-          </TabsTrigger>
-          <TabsTrigger value="codes" className="text-xs">
-            <Code className="w-3 h-3 mr-1.5" />
-            Codes <span className="ml-1">({codesCount})</span>
-          </TabsTrigger>
-          <TabsTrigger value="tests" className="text-xs">
-            <TestTube className="w-3 h-3 mr-1.5" />
-            Tests <span className="ml-1">({testsCount})</span>
-          </TabsTrigger>
-          <TabsTrigger value="photos" className="text-xs">
-            <Camera className="w-3 h-3 mr-1.5" />
-            Photos <span className="ml-1">({photosCount})</span>
-          </TabsTrigger>
-          <TabsTrigger value="parts" className="text-xs">
-            <Package className="w-3 h-3 mr-1.5" />
-            Estimate
-          </TabsTrigger>
-          <TabsTrigger value="recommendations" className="text-xs">
-            <Wrench className="w-3 h-3 mr-1.5" />
-            Recs <span className="ml-1">({recommendationsCount})</span>
-          </TabsTrigger>
-          <TabsTrigger value="summary" className="text-xs">
-            <FileText className="w-3 h-3 mr-1.5" />
-            Summary
-          </TabsTrigger>
-        </TabsList>
+        <div className="border-b border-gray-200 dark:border-gray-800 mb-6">
+          <TabsList className="flex w-full h-auto p-0 bg-transparent gap-6">
+            <TabsTrigger
+              value="complaint"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Complaint
+            </TabsTrigger>
+            <TabsTrigger
+              value="codes"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+            >
+              <Code className="w-4 h-4 mr-2" />
+              Codes
+              {codesCount > 0 && (
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px] min-w-5 justify-center">
+                  {codesCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="tests"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+            >
+              <TestTube className="w-4 h-4 mr-2" />
+              Tests
+              {testsCount > 0 && (
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px] min-w-5 justify-center">
+                  {testsCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="photos"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+            >
+              <Camera className="w-4 h-4 mr-2" />
+              Photos
+              {photosCount > 0 && (
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px] min-w-5 justify-center">
+                  {photosCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="parts"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+            >
+              <Package className="w-4 h-4 mr-2" />
+              Estimate
+            </TabsTrigger>
+            <TabsTrigger
+              value="recommendations"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+            >
+              <Wrench className="w-4 h-4 mr-2" />
+              Recs
+              {recommendationsCount > 0 && (
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-[10px] min-w-5 justify-center">
+                  {recommendationsCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="summary"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Summary
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Complaint Tab */}
         <TabsContent value="complaint" className="mt-6">
@@ -663,8 +730,8 @@ export default function DiagnosisPage() {
 
         {/* Summary Tab */}
         <TabsContent value="summary" className="mt-6">
-          <SummaryTab 
-            diagnosis={diagnosis} 
+          <SummaryTab
+            diagnosis={diagnosis}
             workOrder={workOrder}
             onUpdate={(data) => updateDiagnosisMutation.mutate(data)}
             isUpdating={updateDiagnosisMutation.isPending}
@@ -767,34 +834,38 @@ function ComplaintTab({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Customer Complaint</CardTitle>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <CardHeader className="pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Customer Complaint</CardTitle>
+          <CardDescription className="text-xs">What the customer reported</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <Textarea
-            className="min-h-32"
-            value={customerComplaint}
-            onChange={(e) => setCustomerComplaint(e.target.value)}
-            placeholder="What the customer reported..."
-            disabled={isDisabled}
-          />
-          <Button onClick={handleSave} disabled={isUpdating || isDisabled} size="sm" className="w-full">
-            {isUpdating ? "Saving..." : "Save"}
-          </Button>
+        <CardContent className="pt-4">
+          <div className="space-y-4">
+            <Textarea
+              className="min-h-[150px] bg-white dark:bg-gray-900 resize-none focus-visible:ring-1"
+              value={customerComplaint}
+              onChange={(e) => setCustomerComplaint(e.target.value)}
+              placeholder="Enter details about the customer's complaint..."
+              disabled={isDisabled}
+            />
+            <Button onClick={handleSave} disabled={isUpdating || isDisabled} size="sm" className="w-full h-9">
+              {isUpdating ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Initial Observations</CardTitle>
+      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <CardHeader className="pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+          <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Initial Observations</CardTitle>
+          <CardDescription className="text-xs">Technician's initial visual check</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="pt-4">
           <Textarea
-            className="min-h-32"
+            className="min-h-[150px] bg-white dark:bg-gray-900 resize-none focus-visible:ring-1"
             value={initialObservations}
             onChange={(e) => setInitialObservations(e.target.value)}
-            placeholder="Visual observations during intake..."
+            placeholder="Record any visual observations or notes..."
             disabled={isDisabled}
           />
         </CardContent>
@@ -876,15 +947,18 @@ function TestsTab({
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-lg">Diagnostic Tests</CardTitle>
-          <Button onClick={() => setShowAddDialog(true)} size="sm" disabled={isDisabled}>
-            <Plus className="w-4 h-4 mr-2" />
+      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+          <div className="space-y-1">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Diagnostic Tests</CardTitle>
+            <CardDescription className="text-xs">Tests performed on the vehicle</CardDescription>
+          </div>
+          <Button onClick={() => setShowAddDialog(true)} size="sm" className="h-8" disabled={isDisabled}>
+            <Plus className="w-3.5 h-3.5 mr-2" />
             Add Test
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -897,71 +971,89 @@ function TestsTab({
             <div className="text-center py-12 text-gray-500">
               <TestTube className="w-12 h-12 mx-auto mb-2 text-gray-400" />
               <p className="text-sm">No tests recorded yet.</p>
-              <Button onClick={() => setShowAddDialog(true)} variant="secondary" size="sm" className="mt-4" disabled={isDisabled}>
+              <Button onClick={() => setShowAddDialog(true)} variant="outline" size="sm" className="mt-4" disabled={isDisabled}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add First Test
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {tests.map((test) => (
                 <div
                   key={test.id}
-                  className="p-3 border rounded-lg hover:shadow-sm transition-shadow space-y-2"
+                  className="group p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-lg hover:shadow-md transition-all duration-200"
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{test.test_name}</p>
-                      <p className="text-xs text-gray-500">{test.category_display || test.category}</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal text-gray-500">
+                          {test.category_display || test.category}
+                        </Badge>
+                        {test.performed_at && (
+                          <span className="text-[10px] text-gray-400">
+                            {format(new Date(test.performed_at), "MMM d, HH:mm")}
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-semibold text-sm truncate text-gray-900 dark:text-gray-100">{test.test_name}</p>
                     </div>
                     <div className="flex items-center gap-1 ml-2 shrink-0">
                       <Badge
                         variant={
                           test.status === "pass"
-                            ? "default"
+                            ? "default" // Map to success in UI
                             : test.status === "fail"
-                            ? "danger"
-                            : "secondary"
+                              ? "danger"
+                              : "secondary"
                         }
-                        className="text-xs"
+                        className={`text-xs capitalize ${test.status === 'pass' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : ''}`}
                       >
                         {test.status_display || test.status}
                       </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0"
-                        onClick={() => setEditingTest(test)}
-                        disabled={isDisabled}
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0"
-                        onClick={() => {
-                          if (confirm("Delete this test?")) {
-                            deleteMutation.mutate(test.id);
-                          }
-                        }}
-                        disabled={isDisabled}
-                      >
-                        <Trash2 className="w-3 h-3 text-red-500" />
-                      </Button>
                     </div>
                   </div>
-                  {test.test_procedure && (
-                    <p className="text-xs text-gray-600 line-clamp-1">{test.test_procedure}</p>
-                  )}
-                  {test.actual_result && (
-                    <p className="text-xs text-gray-700 line-clamp-2">{test.actual_result}</p>
-                  )}
-                  {test.performed_at && (
-                    <p className="text-xs text-gray-500">
-                      {format(new Date(test.performed_at), "MMM d, yyyy HH:mm")}
-                    </p>
-                  )}
+
+                  <div className="space-y-2 mb-3">
+                    {test.test_procedure && (
+                      <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                        <span className="font-medium text-gray-700 block mb-0.5">Procedure:</span>
+                        <p className="line-clamp-2">{test.test_procedure}</p>
+                      </div>
+                    )}
+                    {test.actual_result && (
+                      <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                        <span className="font-medium text-gray-700 block mb-0.5">Result:</span>
+                        <p className="line-clamp-2">{test.actual_result}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-gray-500 hover:text-blue-600"
+                      onClick={() => setEditingTest(test)}
+                      disabled={isDisabled}
+                    >
+                      <Edit className="w-3.5 h-3.5 mr-1.5" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-gray-500 hover:text-red-600"
+                      onClick={() => {
+                        if (confirm("Delete this test?")) {
+                          deleteMutation.mutate(test.id);
+                        }
+                      }}
+                      disabled={isDisabled}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1075,7 +1167,7 @@ function TestDialog({
     try {
       // Mark template as used
       await diagnosisApi.testProcedureLibrary.use(template.id);
-      
+
       // Populate form with template data
       setFormData({
         test_name: template.name || formData.test_name,
@@ -1112,72 +1204,84 @@ function TestDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{test ? "Edit Diagnostic Test" : "Add Diagnostic Test"}</DialogTitle>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 bg-white dark:bg-gray-900">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
+            {test ? "Edit Diagnostic Test" : "Add Diagnostic Test"}
+          </DialogTitle>
+          <DialogDescription>
+            {test ? "Modify the test details and results." : "Record a new diagnostic test and its results."}
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="px-6 pb-6">
-          <div className="space-y-6">
+
+        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+          <div className="flex-1 overflow-y-auto p-6 pt-2 space-y-6">
             {/* Template Selection */}
             {!test && (
-              <div className="border rounded-lg p-4 bg-blue-50/50">
-                <Label className="text-sm font-medium mb-2 block">Search Templates</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="Search test procedure templates..."
-                      value={templateSearchQuery || formData.test_name}
-                      onChange={(e) => {
-                        setTemplateSearchQuery(e.target.value);
-                        if (!templateSearchQuery) {
-                          setFormData({ ...formData, test_name: e.target.value });
-                        }
-                      }}
-                      className="pl-8"
-                    />
-                  </div>
+              <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-lg p-4">
+                <Label className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2 block">
+                  Quick Start from Template
+                </Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 text-blue-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search test procedure library..."
+                    value={templateSearchQuery || formData.test_name}
+                    onChange={(e) => {
+                      setTemplateSearchQuery(e.target.value);
+                      if (!templateSearchQuery) {
+                        setFormData({ ...formData, test_name: e.target.value });
+                      }
+                    }}
+                    className="pl-9 border-blue-200 focus-visible:ring-blue-500 bg-white dark:bg-gray-900"
+                  />
+                  {isSearchingTemplates && (
+                    <div className="absolute right-3 top-2.5">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    </div>
+                  )}
                 </div>
                 {templateResults.length > 0 && (
-                  <div className="mt-2 border rounded-lg bg-white max-h-48 overflow-y-auto">
-                    <div className="p-2 text-xs font-medium text-gray-600 border-b">
-                      Matching templates from library:
+                  <div className="mt-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 shadow-sm overflow-hidden z-10 relative">
+                    <div className="p-2 text-xs font-semibold text-gray-500 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
+                      Recommended Templates
                     </div>
-                    {templateResults.map((template: any) => (
-                      <button
-                        key={template.id}
-                        type="button"
-                        onClick={() => handleSelectTemplate(template)}
-                        className="w-full text-left p-2 hover:bg-blue-50 border-b last:border-b-0 transition-colors"
-                      >
-                        <div className="font-semibold text-sm">{template.name}</div>
-                        <div className="text-xs text-gray-600 line-clamp-1">
-                          {template.description || template.test_procedure}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          Category: {template.category_display || template.category}
-                          {template.tools_needed && ` • Tools: ${template.tools_needed}`}
-                        </div>
-                      </button>
-                    ))}
+                    <div className="max-h-48 overflow-y-auto">
+                      {templateResults.map((template: any) => (
+                        <button
+                          key={template.id}
+                          type="button"
+                          onClick={() => handleSelectTemplate(template)}
+                          className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-50 dark:border-gray-800 last:border-b-0 transition-colors group"
+                        >
+                          <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-300">
+                            {template.name}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1 line-clamp-1">
+                            {template.description || template.test_procedure}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
             )}
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="test_name">Test Name *</Label>
+                <Label htmlFor="test_name" className="text-sm font-medium">Test Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="test_name"
                   value={formData.test_name}
                   onChange={(e) => setFormData({ ...formData, test_name: e.target.value })}
                   placeholder="e.g., Battery Voltage Test"
                   required
+                  className="h-9"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="category">Category *</Label>
+                <Label htmlFor="category" className="text-sm font-medium">Category <span className="text-red-500">*</span></Label>
                 <Select
                   id="category"
                   value={formData.category}
@@ -1186,6 +1290,7 @@ function TestDialog({
                     setTemplateResults([]);
                   }}
                   required
+                  className="h-9"
                 >
                   <option value="electrical">Electrical</option>
                   <option value="mechanical">Mechanical</option>
@@ -1201,56 +1306,61 @@ function TestDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="test_procedure">Test Procedure</Label>
+              <Label htmlFor="test_procedure" className="text-sm font-medium">Test Procedure</Label>
               <Textarea
                 id="test_procedure"
                 value={formData.test_procedure}
                 onChange={(e) => setFormData({ ...formData, test_procedure: e.target.value })}
                 placeholder="Step-by-step procedure..."
                 rows={4}
+                className="resize-none min-h-[100px]"
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="expected_result">Expected Result</Label>
+                <Label htmlFor="expected_result" className="text-sm font-medium">Expected Result</Label>
                 <Textarea
                   id="expected_result"
                   value={formData.expected_result}
                   onChange={(e) => setFormData({ ...formData, expected_result: e.target.value })}
-                  placeholder="What should happen..."
+                  placeholder="What is the expected outcome?"
                   rows={2}
+                  className="resize-none"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="actual_result">Actual Result</Label>
+                <Label htmlFor="actual_result" className="text-sm font-medium">Actual Result</Label>
                 <Textarea
                   id="actual_result"
                   value={formData.actual_result}
                   onChange={(e) => setFormData({ ...formData, actual_result: e.target.value })}
-                  placeholder="What actually happened..."
+                  placeholder="What was the actual outcome?"
                   rows={2}
+                  className="resize-none"
                 />
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="tools_used">Tools Used</Label>
+                <Label htmlFor="tools_used" className="text-sm font-medium">Tools Used</Label>
                 <Input
                   id="tools_used"
                   value={formData.tools_used}
                   onChange={(e) => setFormData({ ...formData, tools_used: e.target.value })}
                   placeholder="e.g., Multimeter, Scanner"
+                  className="h-9"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
+                <Label htmlFor="status" className="text-sm font-medium">Status <span className="text-red-500">*</span></Label>
                 <Select
                   id="status"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                   required
+                  className="h-9"
                 >
                   <option value="pass">Pass</option>
                   <option value="fail">Fail</option>
@@ -1260,14 +1370,14 @@ function TestDialog({
             </div>
           </div>
 
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 mt-auto">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white">
               {isLoading ? "Saving..." : test ? "Update Test" : "Add Test"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
@@ -1292,7 +1402,7 @@ function RecommendationsTab({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingRecommendation, setEditingRecommendation] = useState<any>(null);
   const [selectedRecommendations, setSelectedRecommendations] = useState<Set<number>>(new Set());
-  
+
   // Load line items from localStorage to check for linked items
   const [lineItems, setLineItems] = React.useState<any[]>([]);
   React.useEffect(() => {
@@ -1310,7 +1420,7 @@ function RecommendationsTab({
         setLineItems([]);
       }
     };
-    
+
     loadLineItems();
     // Check for updates periodically (since storage event doesn't fire in same tab)
     const interval = setInterval(loadLineItems, 1000);
@@ -1452,11 +1562,11 @@ function RecommendationsTab({
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <div>
-            <CardTitle className="text-lg">Repair Recommendations</CardTitle>
-            <CardDescription className="mt-1">
+      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+          <div className="space-y-1">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Repair Recommendations</CardTitle>
+            <CardDescription className="text-xs">
               {recommendations.length} total • {approvedRecommendations.length} approved • {convertedRecommendations.length} converted to tasks
             </CardDescription>
           </div>
@@ -1469,11 +1579,11 @@ function RecommendationsTab({
                     approved: true,
                   })}
                   size="sm"
-                  variant="default"
+                  className="h-8 bg-green-600 hover:bg-green-700 text-white"
                   disabled={approveMutation.isPending}
                 >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Approve Selected ({selectedRecommendations.size})
+                  <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                  Approve ({selectedRecommendations.size})
                 </Button>
                 <Button
                   onClick={() => approveMutation.mutate({
@@ -1481,11 +1591,12 @@ function RecommendationsTab({
                     approved: false,
                   })}
                   size="sm"
-                  variant="secondary"
+                  variant="outline"
+                  className="h-8 text-red-600 border-red-200 hover:bg-red-50"
                   disabled={approveMutation.isPending}
                 >
-                  <X className="w-4 h-4 mr-2" />
-                  Decline Selected
+                  <X className="w-3.5 h-3.5 mr-1.5" />
+                  Decline
                 </Button>
               </>
             )}
@@ -1493,66 +1604,69 @@ function RecommendationsTab({
               <Button
                 onClick={() => convertToTasksMutation.mutate(undefined)}
                 size="sm"
+                className="h-8"
                 variant="default"
                 disabled={convertToTasksMutation.isPending || convertedRecommendations.length === approvedRecommendations.length}
               >
-                <ListChecks className="w-4 h-4 mr-2" />
+                <ListChecks className="w-3.5 h-3.5 mr-1.5" />
                 Convert to Tasks
               </Button>
             )}
-            <Button onClick={() => setShowAddDialog(true)} size="sm" disabled={isDisabled}>
-              <Plus className="w-4 h-4 mr-2" />
+            <Button onClick={() => setShowAddDialog(true)} size="sm" className="h-8" disabled={isDisabled}>
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
               Add
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           {recommendations.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {/* Unapproved Recommendations */}
               {unapprovedRecommendations.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <h3 className="font-medium text-sm text-gray-700">Pending Approval ({unapprovedRecommendations.length})</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+                    <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Pending Approval ({unapprovedRecommendations.length})</h3>
                     <div className="flex items-center gap-2">
                       <Checkbox
                         checked={selectedRecommendations.size === unapprovedRecommendations.length && unapprovedRecommendations.length > 0}
                         onCheckedChange={handleSelectAll}
+                        className="h-4 w-4"
                       />
                       <span className="text-xs text-gray-500">Select All</span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {unapprovedRecommendations.map((rec: any) => (
                       <div
                         key={rec.id}
-                        className={`p-3 border rounded-lg hover:shadow-sm transition-shadow space-y-2 ${
-                          selectedRecommendations.has(rec.id) ? "border-blue-500 bg-blue-50/50" : ""
-                        }`}
+                        className={`group p-4 bg-white dark:bg-gray-900 border rounded-lg transition-all duration-200 hover:shadow-md ${selectedRecommendations.has(rec.id) ? "border-blue-500 ring-1 ring-blue-500 bg-blue-50/10" : "border-gray-100 dark:border-gray-800"
+                          }`}
                       >
-                        <div className="flex items-start gap-2">
+                        <div className="flex items-start gap-3">
                           <Checkbox
                             checked={selectedRecommendations.has(rec.id)}
                             onCheckedChange={() => handleToggleSelection(rec.id)}
-                            className="mt-1"
+                            className="mt-1 h-4 w-4"
                           />
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0 space-y-3">
+                            <div className="flex items-start justify-between">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant="default" className="text-xs">
+                                <Badge variant={rec.priority === 'critical' ? 'danger' : rec.priority === 'necessary' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0 h-5 font-medium capitalize">
                                   {rec.priority_display || rec.priority}
                                 </Badge>
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal text-gray-500 capitalize">
                                   {rec.recommendation_type_display || rec.recommendation_type}
                                 </Badge>
                               </div>
                               {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                                <span className="text-base font-bold">
+                                <span className="text-sm font-bold text-gray-900 dark:text-gray-100 font-mono">
                                   ${Number(rec.estimated_total_cost).toFixed(2)}
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-gray-700 mb-2 line-clamp-2">{rec.description}</p>
+
+                            <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2 leading-relaxed">{rec.description}</p>
+
                             {/* Parts and Labor Details */}
                             {(() => {
                               // Check for linked line items from Estimate tab
@@ -1567,94 +1681,69 @@ function RecommendationsTab({
                                 return sum + ((item.quantity || 0) * (item.unit_price || 0));
                               }, 0);
                               const linkedLaborHours = linkedLabor.reduce((sum: number, item: any) => sum + (item.labor_hours || item.quantity || 0), 0);
-                              
-                              const hasOldData = (rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0) || 
-                                                 (rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0);
+
+                              const hasOldData = (rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0) ||
+                                (rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0);
                               const hasLinkedData = linkedItems.length > 0;
-                              
+
                               if (hasOldData || hasLinkedData) {
                                 return (
-                                  <div className="text-xs text-gray-600 space-y-1 pt-2 border-t border-gray-200">
+                                  <div className="text-xs bg-gray-50 dark:bg-gray-800/50 rounded p-2 text-gray-600 dark:text-gray-400 space-y-1">
                                     {/* Old parts_needed data */}
                                     {rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
-                                      <div className="flex items-center gap-1">
-                                        <Package className="w-3 h-3" />
-                                        <span>{rec.parts_needed.length} part(s) - ${Number(rec.estimated_parts_cost || 0).toFixed(2)}</span>
+                                      <div className="flex items-center gap-1.5">
+                                        <Package className="w-3 h-3 text-gray-400" />
+                                        <span>{rec.parts_needed.length} part(s) • ${Number(rec.estimated_parts_cost || 0).toFixed(2)}</span>
                                       </div>
                                     )}
                                     {/* Linked parts from Estimate tab */}
                                     {linkedParts.length > 0 && (
-                                      <div className="flex items-center gap-1">
-                                        <Package className="w-3 h-3" />
-                                        <span>{linkedParts.length} part(s) from estimate - ${linkedPartsTotal.toFixed(2)}</span>
+                                      <div className="flex items-center gap-1.5">
+                                        <Package className="w-3 h-3 text-gray-400" />
+                                        <span>{linkedParts.length} part(s) • ${linkedPartsTotal.toFixed(2)}</span>
                                       </div>
                                     )}
                                     {/* Old labor data */}
                                     {rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0 && (
-                                      <div className="flex items-center gap-1">
-                                        <Clock className="w-3 h-3" />
-                                        <span>{parseFloat(rec.estimated_labor_hours).toFixed(1)}h labor - ${Number(rec.estimated_labor_cost || 0).toFixed(2)}</span>
+                                      <div className="flex items-center gap-1.5">
+                                        <Clock className="w-3 h-3 text-gray-400" />
+                                        <span>{parseFloat(rec.estimated_labor_hours).toFixed(1)}h • ${Number(rec.estimated_labor_cost || 0).toFixed(2)}</span>
                                       </div>
                                     )}
                                     {/* Linked labor from Estimate tab */}
                                     {linkedLabor.length > 0 && (
-                                      <div className="flex items-center gap-1">
-                                        <Clock className="w-3 h-3" />
-                                        <span>{linkedLaborHours.toFixed(1)}h labor from estimate - ${linkedLaborTotal.toFixed(2)}</span>
+                                      <div className="flex items-center gap-1.5">
+                                        <Clock className="w-3 h-3 text-gray-400" />
+                                        <span>{linkedLaborHours.toFixed(1)}h • ${linkedLaborTotal.toFixed(2)}</span>
                                       </div>
                                     )}
                                   </div>
                                 );
                               } else {
                                 return (
-                                  <p className="text-xs text-gray-500 italic pt-2 border-t border-gray-200">No estimate details</p>
+                                  <div className="text-xs text-gray-400 italic px-2">No estimate details added</div>
                                 );
                               }
                             })()}
-                            <div className="flex gap-2 pt-1 flex-wrap">
+
+                            <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Button
                                 size="sm"
-                                variant="default"
-                                className="h-7 text-xs"
-                                onClick={() => approveMutation.mutate({
-                                  recommendationIds: [rec.id],
-                                  approved: true,
-                                })}
-                                disabled={approveMutation.isPending}
-                              >
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                className="h-7 text-xs"
-                                onClick={() => approveMutation.mutate({
-                                  recommendationIds: [rec.id],
-                                  approved: false,
-                                })}
-                                disabled={approveMutation.isPending}
-                              >
-                                <X className="w-3 h-3 mr-1" />
-                                Decline
-                              </Button>
-                              <Button
-                                size="sm"
-                               variant="secondary"
-                                className="h-7 text-xs"
+                                variant="ghost"
+                                className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                 onClick={() => {
                                   setEditingRecommendation(rec);
                                   setShowAddDialog(true);
                                 }}
                                 disabled={rec.customer_approved || !!rec.converted_to_task_id || isDisabled}
                               >
-                                <Edit className="w-3 h-3 mr-1" />
+                                <Edit className="w-3.5 h-3.5 mr-1" />
                                 Edit
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
                                 onClick={() => {
                                   if (confirm(`Delete recommendation: "${rec.description}"?`)) {
                                     deleteMutation.mutate(rec.id);
@@ -1662,7 +1751,7 @@ function RecommendationsTab({
                                 }}
                                 disabled={deleteMutation.isPending || !!rec.converted_to_task_id || isDisabled}
                               >
-                                <Trash2 className="w-3 h-3 mr-1" />
+                                <Trash2 className="w-3.5 h-3.5 mr-1" />
                                 Delete
                               </Button>
                             </div>
@@ -1676,81 +1765,70 @@ function RecommendationsTab({
 
               {/* Approved but not converted */}
               {approvedRecommendations.filter((r: any) => !r.converted_to_task_id).length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="font-medium text-sm text-gray-700 border-b pb-2">
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-gray-800 pb-2">
                     Approved - Ready to Convert ({approvedRecommendations.filter((r: any) => !r.converted_to_task_id).length})
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {approvedRecommendations
                       .filter((r: any) => !r.converted_to_task_id)
                       .map((rec: any) => (
-                        <div key={rec.id} className="p-3 border border-green-200 bg-green-50/50 rounded-lg space-y-2">
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant="default" className="text-xs bg-green-600">
-                                  {rec.priority_display || rec.priority}
-                                </Badge>
-                                <Badge variant="secondary" className="text-xs">
-                                  {rec.recommendation_type_display || rec.recommendation_type}
-                                </Badge>
-                                <Badge variant="success" className="text-xs">
-                                  ✓ Approved
-                                </Badge>
-                              </div>
-                              {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                                <span className="text-base font-bold">
-                                  ${Number(rec.estimated_total_cost).toFixed(2)}
-                                </span>
-                              )}
+                        <div key={rec.id} className="p-4 bg-green-50/30 border border-green-100 dark:border-green-900/30 rounded-lg space-y-3">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant={rec.priority === 'critical' ? 'danger' : rec.priority === 'necessary' ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0 h-5 font-medium capitalize">
+                                {rec.priority_display || rec.priority}
+                              </Badge>
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal text-gray-500 bg-white">
+                                {rec.recommendation_type_display || rec.recommendation_type}
+                              </Badge>
+                              <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5 bg-green-600 hover:bg-green-700 border-transparent text-white">
+                                ✓ Approved
+                              </Badge>
                             </div>
-                          <p className="text-sm text-gray-700 mb-2 line-clamp-2">{rec.description}</p>
+                            {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
+                              <span className="text-sm font-bold text-gray-900 font-mono">
+                                ${Number(rec.estimated_total_cost).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="text-sm text-gray-700 line-clamp-2">{rec.description}</p>
+
                           {/* Parts and Labor Details */}
-                          {(rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0) || 
-                           (rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0) ? (
-                            <div className="text-xs text-gray-600 space-y-1 pt-2 border-t border-gray-200">
+                          {(rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0) ||
+                            (rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0) ? (
+                            <div className="text-xs bg-white/50 rounded p-2 text-gray-600 space-y-1 border border-green-100/50">
                               {rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
-                                <div className="flex items-center gap-1">
-                                  <Package className="w-3 h-3" />
-                                  <span>{rec.parts_needed.length} part(s) - ${Number(rec.estimated_parts_cost || 0).toFixed(2)}</span>
+                                <div className="flex items-center gap-1.5">
+                                  <Package className="w-3 h-3 text-green-600/70" />
+                                  <span>{rec.parts_needed.length} part(s) • ${Number(rec.estimated_parts_cost || 0).toFixed(2)}</span>
                                 </div>
                               )}
                               {rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0 && (
-                                <div className="flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  <span>{parseFloat(rec.estimated_labor_hours).toFixed(1)}h labor - ${Number(rec.estimated_labor_cost || 0).toFixed(2)}</span>
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className="w-3 h-3 text-green-600/70" />
+                                  <span>{parseFloat(rec.estimated_labor_hours).toFixed(1)}h • ${Number(rec.estimated_labor_cost || 0).toFixed(2)}</span>
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <p className="text-xs text-gray-500 italic pt-2 border-t border-gray-200">No parts or labor estimates</p>
+                            <div className="text-xs text-gray-400 italic px-2">No estimate details</div>
                           )}
-                          <div className="flex gap-2 pt-2">
+
+                          <div className="flex justify-end pt-2 border-t border-green-100/50">
                             <Button
                               size="sm"
-                             variant="secondary"
-                              className="h-7 text-xs"
+                              variant="ghost"
+                              className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                               onClick={() => {
                                 setEditingRecommendation(rec);
                                 setShowAddDialog(true);
                               }}
                               disabled={!!rec.converted_to_task_id || isDisabled}
                             >
-                              <Edit className="w-3 h-3 mr-1" />
+                              <Edit className="w-3.5 h-3.5 mr-1" />
                               Edit
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => {
-                                if (confirm(`Delete recommendation: "${rec.description}"?`)) {
-                                  deleteMutation.mutate(rec.id);
-                                }
-                              }}
-                              disabled={deleteMutation.isPending || !!rec.converted_to_task_id || isDisabled}
-                            >
-                              <Trash2 className="w-3 h-3 mr-1" />
-                              Delete
                             </Button>
                           </div>
                         </div>
@@ -1761,90 +1839,37 @@ function RecommendationsTab({
 
               {/* Converted to Tasks */}
               {convertedRecommendations.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="font-medium text-sm text-gray-700 border-b pb-2">
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 border-b border-gray-100 dark:border-gray-800 pb-2">
                     Converted to Tasks ({convertedRecommendations.length})
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {convertedRecommendations.map((rec: any) => (
-                      <div key={rec.id} className="p-3 border border-blue-200 bg-blue-50/50 rounded-lg space-y-2">
+                      <div key={rec.id} className="p-4 bg-gray-50 border border-gray-200 dark:bg-gray-800 dark:border-gray-700 rounded-lg space-y-3 opacity-75">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="default" className="text-xs">
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 font-normal">
                               {rec.priority_display || rec.priority}
                             </Badge>
-                            <Badge variant="secondary" className="text-xs">
-                              {rec.recommendation_type_display || rec.recommendation_type}
-                            </Badge>
-                            <Badge variant="info" className="text-xs">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 font-normal bg-white dark:bg-gray-900">
                               ✓ Task Created
                             </Badge>
                           </div>
                           {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
-                            <span className="text-base font-bold">
+                            <span className="text-sm font-bold text-gray-500 font-mono">
                               ${Number(rec.estimated_total_cost).toFixed(2)}
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-700 mb-2 line-clamp-2">{rec.description}</p>
-                        {/* Parts and Labor Details */}
-                        {(() => {
-                          // Check for linked line items from Estimate tab
-                          const linkedItems = lineItems.filter((item: any) => item.recommendation_id === rec.id);
-                          const linkedParts = linkedItems.filter((item: any) => item.item_type === 'part');
-                          const linkedLabor = linkedItems.filter((item: any) => item.item_type === 'labor');
-                          const linkedPartsTotal = linkedParts.reduce((sum: number, item: any) => sum + ((item.quantity || 0) * (item.unit_price || 0)), 0);
-                          const linkedLaborTotal = linkedLabor.reduce((sum: number, item: any) => {
-                            if (item.labor_hours && item.labor_rate) {
-                              return sum + (item.labor_hours * item.labor_rate);
-                            }
-                            return sum + ((item.quantity || 0) * (item.unit_price || 0));
-                          }, 0);
-                          const linkedLaborHours = linkedLabor.reduce((sum: number, item: any) => sum + (item.labor_hours || item.quantity || 0), 0);
-                          
-                          const hasOldData = (rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0) || 
-                                             (rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0);
-                          const hasLinkedData = linkedItems.length > 0;
-                          
-                          if (hasOldData || hasLinkedData) {
-                            return (
-                              <div className="text-xs text-gray-600 space-y-1 pt-2 border-t border-gray-200">
-                                {rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0 && (
-                                  <div className="flex items-center gap-1">
-                                    <Package className="w-3 h-3" />
-                                    <span>{rec.parts_needed.length} part(s) - ${Number(rec.estimated_parts_cost || 0).toFixed(2)}</span>
-                                  </div>
-                                )}
-                                {linkedParts.length > 0 && (
-                                  <div className="flex items-center gap-1">
-                                    <Package className="w-3 h-3" />
-                                    <span>{linkedParts.length} part(s) from estimate - ${linkedPartsTotal.toFixed(2)}</span>
-                                  </div>
-                                )}
-                                {rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0 && (
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    <span>{parseFloat(rec.estimated_labor_hours).toFixed(1)}h labor - ${Number(rec.estimated_labor_cost || 0).toFixed(2)}</span>
-                                  </div>
-                                )}
-                                {linkedLabor.length > 0 && (
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    <span>{linkedLaborHours.toFixed(1)}h labor from estimate - ${linkedLaborTotal.toFixed(2)}</span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          } else {
-                            return (
-                              <p className="text-xs text-gray-500 italic pt-2 border-t border-gray-200">No parts or labor estimates</p>
-                            );
-                          }
-                        })()}
+                        <p className="text-sm text-gray-600 line-clamp-2">{rec.description}</p>
+
                         {rec.converted_to_task_id && (
-                          <Link href={`/workorders/${workOrderId}`} className="text-xs text-blue-600 hover:underline">
-                            View Task #{rec.converted_to_task_id}
-                          </Link>
+                          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                            <Link href={`/workorders/${workOrderId}`} className="flex items-center text-xs font-medium text-blue-600 hover:underline">
+                              <span>View Task #{rec.converted_to_task_id}</span>
+                              <ArrowRight className="w-3 h-3 ml-1" />
+                            </Link>
+                          </div>
                         )}
                       </div>
                     ))}
@@ -1853,10 +1878,12 @@ function RecommendationsTab({
               )}
             </div>
           ) : (
-            <div className="text-center py-12 text-gray-500">
-              <Wrench className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-              <Button onClick={() => setShowAddDialog(true)} variant="secondary" size="sm" className="mt-4">
-                <Plus className="w-4 h-4 mr-2" />
+            <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+              <Wrench className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">No recommendations yet</h3>
+              <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto">Add repair recommendations to suggest parts and labor services for this diagnosis.</p>
+              <Button onClick={() => setShowAddDialog(true)} variant="outline" size="sm" className="h-8">
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Add First Recommendation
               </Button>
             </div>
@@ -1902,7 +1929,6 @@ function RecommendationDialog({
     recommendation_type: "repair" | "replace" | "service" | "adjust" | "clean" | "inspect";
     description: string;
     priority: "critical" | "necessary" | "recommended" | "advisory";
-    order?: number;
   }) => void;
   recommendation?: any;
   isLoading: boolean;
@@ -1943,24 +1969,29 @@ function RecommendationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{recommendation ? "Edit Repair Recommendation" : "Add Repair Recommendation"}</DialogTitle>
-          <DialogDescription>
-            {recommendation ? "Update the recommendation details below." : "Add parts and labor estimates to help create accurate estimates."}
+      <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 gap-0 p-0 border border-gray-100 dark:border-gray-800 shadow-xl sm:rounded-xl">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
+            {recommendation ? "Edit Recommendation" : "Add Recommendation"}
+          </DialogTitle>
+          <DialogDescription className="text-sm text-gray-500">
+            {recommendation ? "Update the details below." : "Add a new repair recommendation for this vehicle."}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="px-6 pb-6">
-          <div className="space-y-6">
-            {/* Basic Information */}
-            <div className="grid gap-4 md:grid-cols-2">
+
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          <div className="p-6 pt-4 space-y-5">
+            <div className="grid gap-5 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="recommendation_type">Recommendation Type *</Label>
+                <Label htmlFor="recommendation_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Type <span className="text-red-500">*</span>
+                </Label>
                 <Select
                   id="recommendation_type"
                   value={formData.recommendation_type}
                   onChange={(e) => setFormData({ ...formData, recommendation_type: e.target.value as any })}
                   required
+                  className="h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
                 >
                   <option value="repair">Repair</option>
                   <option value="replace">Replace</option>
@@ -1971,12 +2002,15 @@ function RecommendationDialog({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="priority">Priority *</Label>
+                <Label htmlFor="priority" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Priority <span className="text-red-500">*</span>
+                </Label>
                 <Select
                   id="priority"
                   value={formData.priority}
                   onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
                   required
+                  className="h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
                 >
                   <option value="critical">Critical</option>
                   <option value="necessary">Necessary</option>
@@ -1987,30 +2021,40 @@ function RecommendationDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
+              <Label htmlFor="description" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Description <span className="text-red-500">*</span>
+              </Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe what needs to be done..."
+                placeholder="Describe the recommended repair or service..."
+                className="min-h-[120px] resize-none bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:ring-1 focus:ring-blue-500"
                 required
-                rows={3}
               />
             </div>
 
-            {/* Parts and labor moved to Estimate tab */}
+            <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-lg p-3 flex gap-3">
+              <div className="shrink-0 mt-0.5">
+                <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-0.5">Parts & Labor</h4>
+                <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                  You can add detailed parts and labor estimates to this recommendation in the <strong>Estimate Tab</strong> after creating it.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+          <div className="flex items-center justify-end gap-3 p-6 pt-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 rounded-b-xl">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="hover:bg-gray-200/50">
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading 
-                ? (recommendation ? "Updating..." : "Adding...") 
-                : (recommendation ? "Update Recommendation" : "Add Recommendation")}
+            <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[100px]">
+              {isLoading ? "Saving..." : recommendation ? "Update" : "Add Recommendation"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
@@ -2030,7 +2074,7 @@ function PhotosTab({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
-  
+
   const { data: photos = [], isLoading, error } = useQuery({
     queryKey: ["diagnosis-photos", diagnosisId],
     queryFn: () => diagnosisApi.photos.list({ diagnosis: diagnosisId }),
@@ -2059,75 +2103,106 @@ function PhotosTab({
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-lg">Diagnosis Photos</CardTitle>
+      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+          <div className="space-y-1">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-700">Visual Evidence</CardTitle>
+            <CardDescription className="text-xs">
+              {photos.length} photo{photos.length !== 1 ? "s" : ""} uploaded for this diagnosis
+            </CardDescription>
+          </div>
           <div className="flex items-center space-x-2">
-            <Button onClick={() => setShowAddDialog(true)} size="sm" disabled={isDisabled}>
-              <Plus className="w-4 h-4 mr-2" />
+            <Button onClick={() => setShowAddDialog(true)} size="sm" className="h-8" disabled={isDisabled}>
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
               Add Photo
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
             </div>
           ) : error ? (
-            <p className="text-sm text-red-600">
+            <div className="p-4 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-center">
               Failed to load photos. Please try again.
-            </p>
+            </div>
           ) : photos.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Camera className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-              <p>No photos uploaded yet.</p>
+            <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+              <Camera className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">No photos yet</h3>
+              <p className="text-xs text-gray-500 mb-4 max-w-sm mx-auto">Upload photos to document vehicle condition, evidence, or parts.</p>
               <Button
-                variant="secondary"
-                className="mt-4"
+                variant="outline"
+                size="sm"
+                className="h-8"
                 onClick={() => setShowAddDialog(true)}
                 disabled={isDisabled}
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Upload Your First Photo
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                Upload Photo
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {photos.map((photo) => (
                 <div
                   key={photo.id}
-                  className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-900 hover:shadow-md transition-shadow"
+                  className="group relative border border-gray-100 dark:border-gray-800 rounded-lg overflow-hidden bg-white dark:bg-gray-900 hover:shadow-lg transition-all duration-200"
                 >
-                  {photo.photo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={photo.photo_url}
-                      alt={photo.caption || "Diagnosis photo"}
-                      className="w-full h-48 object-cover cursor-pointer"
-                      onClick={() => window.open(photo.photo_url, '_blank')}
-                    />
-                  ) : (
-                    <div className="h-48 flex items-center justify-center bg-gray-200 text-gray-500">
-                      No preview available
+                  <div className="aspect-square relative overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    {photo.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={photo.photo_url}
+                        alt={photo.caption || "Diagnosis photo"}
+                        className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                        onClick={() => window.open(photo.photo_url, '_blank')}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <Camera className="w-8 h-8 opacity-20" />
+                      </div>
+                    )}
+                    {/* Overlay Gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+                    {/* Actions */}
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="h-7 w-7 rounded-full shadow-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Delete this photo?")) {
+                            deleteMutation.mutate(photo.id);
+                          }
+                        }}
+                        disabled={isDisabled}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </div>
-                  )}
-                  <div className="p-2 relative group">
-                    <p className="text-xs font-medium truncate">{photo.caption || "Untitled"}</p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm("Delete this photo?")) {
-                          deleteMutation.mutate(photo.id);
-                        }
-                      }}
-                      disabled={isDisabled}
-                    >
-                      <Trash2 className="w-3 h-3 text-red-500" />
-                    </Button>
+
+                    {/* Badge */}
+                    {photo.photo_type && (
+                      <div className="absolute top-2 left-2">
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 bg-white/90 dark:bg-black/90 backdrop-blur-sm shadow-sm capitalize">
+                          {photo.photo_type.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                    )}
+
+                  </div>
+
+                  <div className="p-3">
+                    <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate" title={photo.caption || "Untitled"}>
+                      {photo.caption || <span className="text-gray-400 italic">No caption</span>}
+                    </p>
+                    <p className="text-[10px] text-gray-500 mt-1">
+                      {new Date(photo.created_at).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -2254,15 +2329,18 @@ function PhotoUploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Upload Diagnosis Photo</DialogTitle>
+      <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 gap-0 p-0 border border-gray-100 dark:border-gray-800 shadow-xl sm:rounded-xl">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">Upload Diagnosis Photo</DialogTitle>
+          <DialogDescription className="text-sm text-gray-500">
+            Add photos to document findings, evidence, or repair verification.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="px-6 pb-6">
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          <div className="p-6 pt-4 space-y-5">
             {/* File Upload */}
             <div className="space-y-2">
-              <Label htmlFor="photo">Photo *</Label>
+              <Label htmlFor="photo" className="text-sm font-medium text-gray-700 dark:text-gray-300">Photo <span className="text-red-500">*</span></Label>
               <input
                 id="photo"
                 type="file"
@@ -2272,90 +2350,101 @@ function PhotoUploadDialog({
                 required
               />
               <div
-                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors"
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 group ${preview ? "border-blue-200 bg-blue-50/10" : "border-gray-200 hover:border-blue-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-blue-500 dark:hover:bg-gray-800"}`}
                 onClick={() => document.getElementById("photo")?.click()}
               >
                 {preview ? (
                   <div className="space-y-4">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={preview}
-                      alt="Preview"
-                      className="max-h-48 mx-auto rounded-lg"
-                    />
-                    <p className="text-sm text-gray-600">{selectedFile?.name}</p>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedFile(null);
-                        setPreview(null);
-                      }}
-                    >
-                      Change Photo
-                    </Button>
+                    <div className="relative inline-block rounded-lg overflow-hidden shadow-sm">
+                      <img
+                        src={preview}
+                        alt="Preview"
+                        className="max-h-64 mx-auto object-contain"
+                      />
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">{selectedFile?.name}</span>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFile(null);
+                          setPreview(null);
+                        }}
+                      >
+                        Change
+                      </Button>
+                    </div>
                   </div>
                 ) : (
-                  <div>
-                    <Camera className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                    <div className="cursor-pointer">
-                      <span className="text-blue-600 hover:text-blue-700">
-                        Click to upload
-                      </span>
-                      <span className="text-gray-500"> or drag and drop</span>
+                  <div className="py-4">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                      <Camera className="w-8 h-8 text-blue-500 dark:text-blue-400" />
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      PNG, JPG, GIF up to 10MB
-                    </p>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        PNG, JPG, GIF up to 10MB
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Caption */}
-            <div className="space-y-2">
-              <Label htmlFor="caption">Caption</Label>
-              <Input
-                id="caption"
-                value={formData.caption}
-                onChange={(e) => setFormData({ ...formData, caption: e.target.value })}
-                placeholder="Describe what this photo shows..."
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Caption */}
+              <div className="space-y-2">
+                <Label htmlFor="caption" className="text-sm font-medium text-gray-700 dark:text-gray-300">Caption</Label>
+                <Input
+                  id="caption"
+                  value={formData.caption}
+                  onChange={(e) => setFormData({ ...formData, caption: e.target.value })}
+                  placeholder="Describe what this photo shows..."
+                  className="h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Photo Type */}
+              <div className="space-y-2">
+                <Label htmlFor="photo_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">Photo Type <span className="text-red-500">*</span></Label>
+                <Select
+                  id="photo_type"
+                  value={formData.photo_type}
+                  onChange={(e) =>
+                    setFormData({ ...formData, photo_type: e.target.value as any })
+                  }
+                  required
+                  className="h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+                >
+                  <option value="problem">Problem</option>
+                  <option value="evidence">Evidence</option>
+                  <option value="component">Component</option>
+                  <option value="before">Before Repair</option>
+                  <option value="after">After Repair</option>
+                  <option value="damage">Damage</option>
+                  <option value="test_result">Test Result</option>
+                  <option value="other">Other</option>
+                </Select>
+              </div>
             </div>
 
-            {/* Photo Type */}
-            <div className="space-y-2">
-              <Label htmlFor="photo_type">Photo Type *</Label>
-              <Select
-                id="photo_type"
-                value={formData.photo_type}
-                onChange={(e) =>
-                  setFormData({ ...formData, photo_type: e.target.value as any })
-                }
-                required
-              >
-                <option value="problem">Problem</option>
-                <option value="evidence">Evidence</option>
-                <option value="component">Component</option>
-                <option value="before">Before</option>
-                <option value="after">After</option>
-                <option value="damage">Damage</option>
-                <option value="test_result">Test Result</option>
-                <option value="other">Other</option>
-              </Select>
-            </div>
           </div>
 
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="secondary" onClick={handleClose}>
+          <div className="flex items-center justify-end gap-3 p-6 pt-2 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 rounded-b-xl">
+            <Button type="button" variant="ghost" onClick={handleClose} className="hover:bg-gray-200/50">
               Cancel
             </Button>
-            <Button type="submit" disabled={createMutation.isPending || !selectedFile}>
+            <Button type="submit" disabled={createMutation.isPending || !selectedFile} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[100px]">
               {createMutation.isPending ? "Uploading..." : "Upload Photo"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
@@ -2378,7 +2467,7 @@ function PartsTab({
   const queryClient = useQueryClient();
   const router = useRouter();
   const [showCreateEstimateDialog, setShowCreateEstimateDialog] = useState(false);
-  
+
   // Line items type
   type LineItem = {
     item_type: "labor" | "part" | "fee" | "sublet" | "other";
@@ -2395,7 +2484,7 @@ function PartsTab({
     is_taxable: boolean;
     notes?: string;
   };
-  
+
   // Load line items from localStorage on mount
   const loadLineItemsFromStorage = (): LineItem[] => {
     try {
@@ -2409,7 +2498,7 @@ function PartsTab({
     }
     return [];
   };
-  
+
   // Save line items to localStorage
   const saveLineItemsToStorage = (items: LineItem[]) => {
     try {
@@ -2419,14 +2508,14 @@ function PartsTab({
       console.error("Failed to save line items to storage:", error);
     }
   };
-  
+
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [itemsLoadedFromStorage, setItemsLoadedFromStorage] = React.useState(false);
-  
+
   // Check if an estimate already exists for this work order (declared early for use in useEffect)
   // Since Estimate has OneToOne relationship with WorkOrder, check workOrder.estimate
   const hasExistingEstimate = !!(workOrder?.estimate);
-  
+
   // Load line items from localStorage when component mounts or diagnosis ID changes
   React.useEffect(() => {
     const stored = loadLineItemsFromStorage();
@@ -2446,7 +2535,7 @@ function PartsTab({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [diagnosis.id]);
-  
+
   // Save line items to localStorage whenever they change (but only after initial load)
   // BUT: Don't clear if an estimate exists (preserve line items after estimate creation)
   React.useEffect(() => {
@@ -2485,7 +2574,7 @@ function PartsTab({
   // Allow creating estimate when diagnosis is in progress OR completed
   // But prevent if estimate already exists
   const canCreateEstimate = (diagnosis.status === "in_progress" || diagnosis.status === "completed") && !hasExistingEstimate;
-  
+
   // Line items editing should be disabled when diagnosis is not active
   // Use isDisabled for line items, but allow Create Estimate button when completed
   const canEditLineItems = isDisabled ? false : diagnosis.status === "in_progress";
@@ -2529,7 +2618,7 @@ function PartsTab({
   const taxableSubtotal = lineItems
     .filter(item => item.is_taxable)
     .reduce((sum, item) => sum + calculateLineItemTotal(item), 0);
-  
+
   const taxSummary = computeGhanaTaxBreakdown({
     taxableTotal: taxableSubtotal,
     subtotal,
@@ -2544,13 +2633,13 @@ function PartsTab({
       if (!workOrder) {
         throw new Error("Work order data not available");
       }
-      
+
       const customerId = typeof workOrder.customer === 'object' ? workOrder.customer.id : workOrder.customer;
-      const vehicleId = workOrder.vehicle 
+      const vehicleId = workOrder.vehicle
         ? (typeof workOrder.vehicle === 'object' ? workOrder.vehicle.id : workOrder.vehicle)
         : undefined;
       const workOrderId = workOrder.id;
-      
+
       // Validate line items
       if (lineItems.length === 0) {
         throw new Error("At least one line item is required");
@@ -2585,7 +2674,7 @@ function PartsTab({
           description: item.description.trim(),
           is_taxable: item.is_taxable ?? true,
         };
-        
+
         if (item.item_type === 'labor') {
           lineItem.labor_hours = item.labor_hours || 1;
           lineItem.labor_rate = (item.labor_rate || 0).toString();
@@ -2595,11 +2684,11 @@ function PartsTab({
           lineItem.quantity = item.quantity && item.quantity > 0 ? item.quantity : 1;
           lineItem.unit_price = (item.unit_price || 0).toString();
         }
-        
+
         if (item.part) lineItem.part = item.part;
         if (item.part_number) lineItem.part_number = item.part_number;
         if (item.notes) lineItem.notes = item.notes;
-        
+
         return lineItem;
       });
 
@@ -2611,7 +2700,7 @@ function PartsTab({
       // Create estimate directly with line items, including work_order link
       const estimateData: any = {
         customer: customerId,
-        title: vehicleYear && vehicleMake && vehicleModel 
+        title: vehicleYear && vehicleMake && vehicleModel
           ? `Repair Estimate - ${vehicleYear} ${vehicleMake} ${vehicleModel}`
           : `Repair Estimate - Work Order #${workOrder.work_order_number || workOrderId}`,
         description: diagnosis.root_cause || diagnosis.customer_complaint || "Repair estimate based on diagnosis",
@@ -2621,12 +2710,12 @@ function PartsTab({
         customer_notes: '',
         line_items: lineItemsForApi,
       };
-      
+
       // Only include vehicle if it exists (optional field)
       if (vehicleId !== undefined && vehicleId !== null) {
         estimateData.vehicle = vehicleId;
       }
-      
+
       // Only include work_order if it exists
       if (workOrderId !== undefined && workOrderId !== null) {
         estimateData.work_order = workOrderId;
@@ -2635,17 +2724,17 @@ function PartsTab({
       console.log("Creating estimate with data:", estimateData);
       const estimate = await billingApi.estimates.create(estimateData);
       console.log("Estimate created, response:", estimate);
-      
+
       // Parts should now be automatically synced to work order during estimate creation
-      
+
       return estimate;
     },
     onSuccess: (response) => {
       console.log("onSuccess called with response:", response);
-      
+
       const estimateId = response?.id;
       const estimateNumber = response?.estimate_number;
-      
+
       // Keep line items visible after estimate creation (read-only) so users can see what was used
       // Save line items to localStorage before any refresh happens
       // This ensures they persist even if component remounts
@@ -2658,32 +2747,32 @@ function PartsTab({
       } catch (error) {
         console.error("Failed to save line items after estimate creation:", error);
       }
-      
+
       // Invalidate work order query to refresh estimated_total and parts
       const woId = workOrder?.id;
       if (woId) {
         queryClient.invalidateQueries({ queryKey: ["workorder", woId] });
         queryClient.invalidateQueries({ queryKey: ["workorder-parts", woId] });
-        
+
         // Also refresh diagnosis data in case it needs updating
         queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", woId] });
       }
-      
+
       toast({
         title: "Estimate created successfully",
-        description: estimateNumber 
+        description: estimateNumber
           ? `Estimate ${estimateNumber} has been created. Parts and totals have been synced to the work order.`
           : "Estimate has been created. Parts and totals have been synced to the work order.",
         variant: "default",
       });
-      
+
       setShowCreateEstimateDialog(false);
-      
+
       // Refresh the parent component's data if callback exists
       if (onRefresh) {
         onRefresh();
       }
-      
+
       if (estimateId) {
         console.log("Redirecting to estimate edit page:", estimateId);
         // Delay redirect slightly to allow query invalidation to complete
@@ -2702,13 +2791,13 @@ function PartsTab({
     onError: (error: any) => {
       console.error("Estimate creation error:", error);
       console.error("Error response data:", error.response?.data);
-      
+
       // Try to extract detailed validation errors from Django REST Framework response
       let errorMessage = "Failed to create estimate. Please try again.";
-      
+
       if (error.response?.data) {
         const data = error.response.data;
-        
+
         // Handle Django REST Framework validation errors
         if (data.detail) {
           errorMessage = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
@@ -2742,7 +2831,7 @@ function PartsTab({
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast({
         title: "Failed to create estimate",
         description: errorMessage,
@@ -2754,21 +2843,21 @@ function PartsTab({
   // Helper: Get recommendations for quick-add
   const recommendations = diagnosis.repair_recommendations || [];
   const approvedRecommendations = recommendations.filter((r: any) => r.customer_approved);
-  
+
   // Auto-populate from recommendations on mount if no line items (and not loaded from storage)
   React.useEffect(() => {
     // Only auto-populate if items have been loaded from storage and are still empty
     // This prevents auto-populating when items were restored from localStorage
     if (!itemsLoadedFromStorage) return; // Wait for storage load to complete
-    
+
     if (lineItems.length === 0 && approvedRecommendations.length > 0) {
       const shouldAutoPopulate = confirm(
         `You have ${approvedRecommendations.length} approved recommendation(s). Would you like to auto-populate the estimate line items?`
       );
-      
+
       if (shouldAutoPopulate) {
         const newLineItems: typeof lineItems = [];
-        
+
         approvedRecommendations.forEach((rec: any) => {
           // Add parts from parts_needed
           if (rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0) {
@@ -2786,14 +2875,14 @@ function PartsTab({
               });
             });
           }
-          
+
           // Add labor if estimated_labor_hours exists
           if (rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0) {
             const laborHours = parseFloat(rec.estimated_labor_hours);
             const laborRate = rec.estimated_labor_cost && laborHours > 0
               ? parseFloat(rec.estimated_labor_cost) / laborHours
               : 75; // Default rate
-            
+
             newLineItems.push({
               item_type: "labor" as const,
               description: rec.description,
@@ -2808,7 +2897,7 @@ function PartsTab({
             });
           }
         });
-        
+
         if (newLineItems.length > 0) {
           setLineItems(newLineItems);
           toast({
@@ -2827,18 +2916,18 @@ function PartsTab({
         <div className="lg:col-span-4 space-y-6">
           {/* Recommendations Helper (disabled in Estimate tab) */}
           {false && recommendations.length > 0 && (
-            <Card className="border-blue-200 bg-blue-50/50">
-              <CardHeader className="pb-3">
+            <Card className="border-none shadow-sm bg-blue-50/50 dark:bg-blue-900/10">
+              <CardHeader className="pb-3 border-b border-blue-100 dark:border-blue-800">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Wrench className="w-5 h-5" />
+                  <div className="space-y-1">
+                    <CardTitle className="text-base flex items-center gap-2 text-blue-900 dark:text-blue-100">
+                      <Wrench className="w-4 h-4" />
                       Repair Recommendations
                     </CardTitle>
-                    <CardDescription className="mt-1">
+                    <CardDescription className="text-xs text-blue-700 dark:text-blue-300">
                       Select recommendations to add parts and labor to the estimate
                       {approvedRecommendations.length > 0 && (
-                        <Badge variant="secondary" className="ml-2">
+                        <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800 border-none">
                           {approvedRecommendations.length} approved
                         </Badge>
                       )}
@@ -2849,9 +2938,10 @@ function PartsTab({
                       type="button"
                       variant="default"
                       size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 h-8 text-xs"
                       onClick={() => {
                         const newLineItems: typeof lineItems = [];
-                        
+
                         approvedRecommendations.forEach((rec: any) => {
                           // Add parts
                           if (rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0) {
@@ -2869,28 +2959,28 @@ function PartsTab({
                               });
                             });
                           }
-                          
+
                           // Add labor
                           if (rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0) {
                             const laborHours = parseFloat(rec.estimated_labor_hours);
                             const laborRate = rec.estimated_labor_cost && laborHours > 0
                               ? parseFloat(rec.estimated_labor_cost) / laborHours
                               : 75;
-                            
+
                             newLineItems.push({
                               item_type: "labor" as const,
                               description: rec.description,
                               labor_hours: laborHours,
                               labor_rate: laborRate,
-                                  quantity: laborHours,
-                                  unit_price: laborRate,
-                                  recommendation_id: rec.id,
-                                  is_taxable: true,
-                                  notes: `From: ${rec.description}`,
+                              quantity: laborHours,
+                              unit_price: laborRate,
+                              recommendation_id: rec.id,
+                              is_taxable: true,
+                              notes: `From: ${rec.description}`,
                             });
                           }
                         });
-                        
+
                         if (newLineItems.length > 0) {
                           setLineItems(newLineItems);
                           toast({
@@ -2919,20 +3009,19 @@ function PartsTab({
                     const hasParts = rec.parts_needed && Array.isArray(rec.parts_needed) && rec.parts_needed.length > 0;
                     const hasLabor = rec.estimated_labor_hours && parseFloat(rec.estimated_labor_hours) > 0;
                     const isApproved = rec.customer_approved;
-                    const totalPartsCost = hasParts 
+                    const totalPartsCost = hasParts
                       ? rec.parts_needed.reduce((sum: number, part: any) => sum + (parseFloat(part.unit_cost || '0') * (part.quantity || 1)), 0)
                       : 0;
                     const totalLaborCost = hasLabor && rec.estimated_labor_cost ? parseFloat(rec.estimated_labor_cost) : 0;
                     const totalCost = totalPartsCost + totalLaborCost;
-                    
+
                     return (
-                      <div 
-                        key={rec.id} 
-                        className={`p-4 bg-white rounded-lg border-2 transition-all ${
-                          isApproved 
-                            ? 'border-green-300 bg-green-50/50 hover:border-green-400' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                      <div
+                        key={rec.id}
+                        className={`p-4 bg-white rounded-lg border-2 transition-all ${isApproved
+                          ? 'border-green-300 bg-green-50/50 hover:border-green-400'
+                          : 'border-gray-200 hover:border-gray-300'
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
@@ -2955,7 +3044,7 @@ function PartsTab({
                                 </Badge>
                               )}
                             </div>
-                            
+
                             {(hasParts || hasLabor) && (
                               <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-gray-200">
                                 {hasParts && (
@@ -2982,7 +3071,7 @@ function PartsTab({
                                     </div>
                                   </div>
                                 )}
-                                
+
                                 {hasLabor && (
                                   <div>
                                     <p className="text-xs font-medium text-gray-500 mb-1">Labor</p>
@@ -2998,7 +3087,7 @@ function PartsTab({
                                     </div>
                                   </div>
                                 )}
-                                
+
                                 {(hasParts && hasLabor) && (
                                   <div className="col-span-2 pt-2 border-t border-gray-200">
                                     <div className="flex items-center justify-between">
@@ -3009,12 +3098,12 @@ function PartsTab({
                                 )}
                               </div>
                             )}
-                            
+
                             {!hasParts && !hasLabor && (
                               <p className="text-sm text-gray-500 italic mt-2">No parts or labor estimates specified</p>
                             )}
                           </div>
-                          
+
                           <div className="flex flex-col gap-2 flex-shrink-0">
                             {hasParts && (
                               <Button
@@ -3091,7 +3180,7 @@ function PartsTab({
                                 size="sm"
                                 onClick={() => {
                                   const newItems: typeof lineItems = [];
-                                  
+
                                   if (hasParts) {
                                     rec.parts_needed.forEach((part: any) => {
                                       newItems.push({
@@ -3107,7 +3196,7 @@ function PartsTab({
                                       });
                                     });
                                   }
-                                  
+
                                   if (hasLabor) {
                                     const laborHours = parseFloat(rec.estimated_labor_hours);
                                     const laborRate = rec.estimated_labor_cost && laborHours > 0
@@ -3125,7 +3214,7 @@ function PartsTab({
                                       notes: `From: ${rec.description}`,
                                     });
                                   }
-                                  
+
                                   setLineItems([...lineItems, ...newItems]);
                                   toast({
                                     title: "All items added",
@@ -3364,12 +3453,12 @@ function PartsTab({
                                 // Preserve existing notes if they contain part info, otherwise update
                                 const existingNotes = item.notes || "";
                                 const hasPartInfo = existingNotes.includes("From inventory:") || existingNotes.includes("From recommendation:");
-                                const newNotes = recId 
-                                  ? (hasPartInfo 
-                                      ? `${existingNotes} | Linked to: ${selectedRec?.description || ""}`
-                                      : `Linked to: ${selectedRec?.description || ""}`)
+                                const newNotes = recId
+                                  ? (hasPartInfo
+                                    ? `${existingNotes} | Linked to: ${selectedRec?.description || ""}`
+                                    : `Linked to: ${selectedRec?.description || ""}`)
                                   : (hasPartInfo ? existingNotes : "");
-                                
+
                                 updateLineItemFields(index, {
                                   recommendation_id: recId,
                                   notes: newNotes || "",
@@ -3381,8 +3470,8 @@ function PartsTab({
                               <option value="">None</option>
                               {recommendations.map((rec: any) => (
                                 <option key={rec.id} value={String(rec.id)}>
-                                  {rec.description.length > 40 
-                                    ? `${rec.description.substring(0, 40)}...` 
+                                  {rec.description.length > 40
+                                    ? `${rec.description.substring(0, 40)}...`
                                     : rec.description}
                                 </option>
                               ))}
@@ -3607,7 +3696,7 @@ function PartsTab({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 if (lineItems.length === 0) {
                   toast({
                     title: "No line items",
@@ -3640,14 +3729,14 @@ function PartsTab({
 }
 
 // Summary Tab Component
-function SummaryTab({ 
-  diagnosis, 
+function SummaryTab({
+  diagnosis,
   workOrder,
   onUpdate,
   isUpdating,
   isDisabled = false,
-}: { 
-  diagnosis: Diagnosis; 
+}: {
+  diagnosis: Diagnosis;
   workOrder: any;
   onUpdate: (data: Partial<Diagnosis>) => void;
   isUpdating: boolean;
@@ -3670,25 +3759,25 @@ function SummaryTab({
     if (!diagnosis.time_logs || !Array.isArray(diagnosis.time_logs) || diagnosis.time_logs.length === 0) {
       return null;
     }
-    
+
     // Calculate total active time: sum periods from "started" or "resumed" to "paused" or "completed"
     // Sort logs by started_at to process chronologically
-    const sortedLogs = [...diagnosis.time_logs].sort((a: any, b: any) => 
+    const sortedLogs = [...diagnosis.time_logs].sort((a: any, b: any) =>
       new Date(a.started_at).getTime() - new Date(b.started_at).getTime()
     );
-    
+
     let totalMilliseconds = 0;
     let activeStartTime: Date | null = null;
-    
+
     for (const log of sortedLogs) {
       const logTime = new Date(log.started_at);
       const stage = log.stage;
-      
+
       // Start tracking active time when diagnosis starts or resumes
       if ((stage === 'started' || stage === 'resumed') && !activeStartTime) {
         activeStartTime = logTime;
       }
-      
+
       // End tracking active time when paused or completed (and calculate duration)
       if ((stage === 'paused' || stage === 'completed') && activeStartTime && log.ended_at) {
         const endTime = new Date(log.ended_at);
@@ -3698,25 +3787,25 @@ function SummaryTab({
         }
         activeStartTime = null; // Reset for next active period
       }
-      
+
       // Also handle duration_hours if available (backup calculation)
-      if (log.duration_hours !== null && log.duration_hours !== undefined && 
-          (stage === 'paused' || stage === 'completed')) {
-        const hours = typeof log.duration_hours === 'string' 
-          ? parseFloat(log.duration_hours) 
+      if (log.duration_hours !== null && log.duration_hours !== undefined &&
+        (stage === 'paused' || stage === 'completed')) {
+        const hours = typeof log.duration_hours === 'string'
+          ? parseFloat(log.duration_hours)
           : Number(log.duration_hours);
         if (!isNaN(hours) && hours > 0) {
           // Use duration_hours as backup/verification
           const msFromDuration = hours * 60 * 60 * 1000;
           // Prefer duration_hours if it's significantly different (means backend calculated it)
-          if (Math.abs(msFromDuration - (log.ended_at && log.started_at ? 
-              new Date(log.ended_at).getTime() - new Date(log.started_at).getTime() : 0)) < 1000) {
+          if (Math.abs(msFromDuration - (log.ended_at && log.started_at ?
+            new Date(log.ended_at).getTime() - new Date(log.started_at).getTime() : 0)) < 1000) {
             // duration_hours matches calculated, use it
           }
         }
       }
     }
-    
+
     // Handle case where diagnosis is still active (started/resumed but not paused/completed)
     // Only count ongoing time if diagnosis is NOT completed
     if (activeStartTime && diagnosis.status !== "completed") {
@@ -3726,14 +3815,14 @@ function SummaryTab({
         totalMilliseconds += duration;
       }
     }
-    
+
     // Convert milliseconds to hours
     const totalHours = totalMilliseconds / (1000 * 60 * 60);
-    
+
     if (totalHours === 0 || isNaN(totalHours)) {
       return null;
     }
-    
+
     // Format as hours and minutes if less than a day
     if (totalHours < 24) {
       const hours = Math.floor(totalHours);
@@ -3743,7 +3832,7 @@ function SummaryTab({
       }
       return `${hours}h ${minutes}m`;
     }
-    
+
     // Format as days and hours if more than a day
     const days = Math.floor(totalHours / 24);
     const remainingHours = Math.floor(totalHours % 24);
@@ -3754,53 +3843,68 @@ function SummaryTab({
   }, [diagnosis.time_logs, diagnosis.status]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Overview</CardTitle>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+        <CardHeader className="pb-3 border-b bg-gray-50/50 dark:bg-gray-800/50">
+          <CardTitle className="text-base font-semibold">Overview</CardTitle>
+          <CardDescription>Key metrics for this diagnosis</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <Clock className="w-5 h-5 mx-auto mb-1 text-gray-400" />
-              <p className="text-xs text-gray-500 mb-1">Time Spent</p>
-              <p className="font-semibold">
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-3 gap-6">
+            <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
+              <div className="p-2 mb-3 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                <Clock className="w-5 h-5" />
+              </div>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Time Spent</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 {totalTimeSpent || "-"}
               </p>
             </div>
-            <div className="text-center">
-              <DollarSign className="w-5 h-5 mx-auto mb-1 text-gray-400" />
-              <p className="text-xs text-gray-500 mb-1">Estimate Total</p>
-              <p className="font-semibold">
-                {diagnosis.total_estimated_cost && Number(diagnosis.total_estimated_cost) > 0 
+            <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
+              <div className="p-2 mb-3 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400">
+                <DollarSign className="w-5 h-5" />
+              </div>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Estimate Total</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                {diagnosis.total_estimated_cost && Number(diagnosis.total_estimated_cost) > 0
                   ? `$${Number(diagnosis.total_estimated_cost).toFixed(2)}`
                   : "-"}
               </p>
             </div>
-            <div className="text-center">
-              <Wrench className="w-5 h-5 mx-auto mb-1 text-gray-400" />
-              <p className="text-xs text-gray-500 mb-1">Items</p>
-              <p className="font-semibold">{diagnosis.repair_recommendations?.length || 0}</p>
+            <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
+              <div className="p-2 mb-3 rounded-full bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400">
+                <Wrench className="w-5 h-5" />
+              </div>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Items</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{diagnosis.repair_recommendations?.length || 0}</p>
             </div>
           </div>
         </CardContent>
       </Card>
-      
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Diagnostic Notes</CardTitle>
+
+      <Card className="border-none shadow-sm h-full flex flex-col">
+        <CardHeader className="pb-3 border-b">
+          <CardTitle className="text-base font-semibold">Diagnostic Notes</CardTitle>
+          <CardDescription>Detailed findings and observations</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="flex-1 pt-4 space-y-4 flex flex-col">
           <Textarea
-            className="min-h-48"
+            className="flex-1 min-h-[200px] resize-none bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-800 focus:bg-white dark:focus:bg-gray-950 transition-colors"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Enter diagnostic notes..."
+            placeholder="Enter detailed diagnostic notes here..."
             disabled={isDisabled}
           />
-          <Button onClick={handleSave} disabled={isUpdating || isDisabled} size="sm">
-            {isUpdating ? "Saving..." : "Save"}
-          </Button>
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSave}
+              disabled={isUpdating || isDisabled}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 min-w-[100px]"
+            >
+              {isUpdating ? "Saving..." : "Save Notes"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
