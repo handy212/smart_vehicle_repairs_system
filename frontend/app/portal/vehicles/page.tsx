@@ -31,8 +31,7 @@ export default function MyVehiclesPage() {
   return (
     <div>
       <PortalPageHeader
-        title="My Vehicles"
-        description="View and manage your registered vehicles"
+        title="Vehicles"
         action={
           <Link href="/portal/vehicles/new">
             <Button size="sm" className="gap-2">

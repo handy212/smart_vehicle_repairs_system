@@ -12,6 +12,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!frontend/lib/
 lib64/
 parts/
 sdist/
@@ -33,7 +34,7 @@ db.sqlite3
 # Django
 *.log
 local_settings.py
-/static/
+!/static/
 /staticfiles/
 /media/
 *.pot

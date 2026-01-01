@@ -65,7 +65,6 @@ export default function MyInvoicesPage() {
     <div>
       <PortalPageHeader
         title="My Invoices"
-        description="View and pay your service invoices"
       />
 
       {/* Compact Stats */}

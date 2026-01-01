@@ -61,11 +61,8 @@ export default function PortalHomePage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-            Welcome back, {user?.first_name || "Customer"}
+            Welcome, {user?.first_name || "Customer"}
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Here's what's happening with your vehicles today.
-          </p>
         </div>
         <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 px-3 py-1 rounded-full border border-gray-100 dark:border-gray-800">
           {format(new Date(), "EEEE, MMMM d, yyyy")}

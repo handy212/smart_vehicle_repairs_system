@@ -1,0 +1,41 @@
+import { useQuery } from '@tanstack/react-query';
+import { adminApi } from '@/lib/api/admin';
+
+export const useCurrency = () => {
+    const { data: settings, isLoading } = useQuery({
+        queryKey: ['settings', 'payment'],
+        queryFn: () => adminApi.settings.byCategory('payment'),
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        refetchOnWindowFocus: false,
+    });
+
+    const currencyCode = settings?.find((s) => s.key === 'currency')?.value || 'USD';
+    const currencySymbol = settings?.find((s) => s.key === 'currency_symbol')?.value || '$';
+
+    const formatCurrency = (
+        amount: number | string | null | undefined,
+        options?: Intl.NumberFormatOptions
+    ) => {
+        if (amount === null || amount === undefined) return '';
+        const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+        if (isNaN(num)) return '';
+
+        // Format the number without currency symbol
+        const formattedNumber = new Intl.NumberFormat('en-US', {
+            minimumFractionDigits: options?.minimumFractionDigits ?? 2,
+            maximumFractionDigits: options?.maximumFractionDigits ?? 2,
+            useGrouping: true,
+            ...options,
+        }).format(num);
+
+        // Use the configured currency symbol from settings
+        return `${currencySymbol}${formattedNumber}`;
+    };
+
+    return {
+        currency: currencyCode,
+        currencySymbol,
+        formatCurrency,
+        isLoading,
+    };
+};

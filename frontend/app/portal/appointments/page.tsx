@@ -58,8 +58,7 @@ export default function MyAppointmentsPage() {
   return (
     <div>
       <PortalPageHeader
-        title="My Appointments"
-        description="View and manage your service appointments"
+        title="Appointments"
         action={
           <Link href="/portal/book">
             <Button size="sm" className="gap-2">
