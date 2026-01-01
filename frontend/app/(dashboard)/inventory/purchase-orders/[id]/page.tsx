@@ -13,7 +13,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function PurchaseOrderDetailPage() {
+    const { formatCurrency } = useCurrency();
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -137,265 +139,258 @@ export default function PurchaseOrderDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link href="/inventory/purchase-orders">
-            <Button variant="secondary">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-          </Link>
+      {/* Page Header */}
+      <div className="space-y-4">
+        <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {purchaseOrder.po_number}
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">Purchase Order Details</p>
+            <div className="flex items-center space-x-2 text-sm text-gray-500 mb-1">
+              <Link href="/inventory" className="hover:text-gray-900 transition-colors">Inventory</Link>
+              <span>/</span>
+              <Link href="/inventory/purchase-orders" className="hover:text-gray-900 transition-colors">Purchase Orders</Link>
+              <span>/</span>
+              <span className="text-gray-900 font-medium">{purchaseOrder.po_number}</span>
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Purchase Order Details</h1>
           </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={() => downloadPDF({
-              documentType: 'purchase_order',
-              documentId: id,
-              documentNumber: purchaseOrder.po_number
-            })}
-            disabled={isDownloading}
-          >
-            <Printer className="w-4 h-4 mr-2" />
-            {isDownloading ? 'Printing...' : 'Print PO'}
-          </Button>
-          {purchaseOrder.status === "draft" && (
-            <>
-              <Link href={`/inventory/purchase-orders/${id}/edit`}>
-                <Button variant="secondary">
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
+
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9"
+              onClick={() => downloadPDF({
+                documentType: 'purchase_order',
+                documentId: id,
+                documentNumber: purchaseOrder.po_number
+              })}
+              disabled={isDownloading}
+            >
+              <Printer className="w-4 h-4 mr-2" />
+              {isDownloading ? 'Printing...' : 'Print'}
+            </Button>
+            {purchaseOrder.status === "draft" && (
+              <>
+                <Link href={`/inventory/purchase-orders/${id}/edit`}>
+                  <Button variant="secondary" size="sm" className="h-9">
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                </Link>
+                <Button
+                  size="sm"
+                  className="h-9"
+                  onClick={() => {
+                    if (confirm("Submit this purchase order to the supplier?")) {
+                      submitMutation.mutate();
+                    }
+                  }}
+                  disabled={submitMutation.isPending}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Submit
                 </Button>
-              </Link>
+              </>
+            )}
+            {purchaseOrder.status === "submitted" && (
               <Button
+                size="sm"
+                className="h-9"
                 onClick={() => {
-                  if (confirm("Submit this purchase order to the supplier?")) {
-                    submitMutation.mutate();
+                  if (confirm("Confirm receipt of this purchase order?")) {
+                    confirmMutation.mutate();
                   }
                 }}
-                disabled={submitMutation.isPending}
+                disabled={confirmMutation.isPending}
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Submit
+                Confirm Receipt
               </Button>
-            </>
-          )}
-          {purchaseOrder.status === "submitted" && (
-            <Button
-              onClick={() => {
-                if (confirm("Confirm receipt of this purchase order?")) {
-                  confirmMutation.mutate();
-                }
-              }}
-              disabled={confirmMutation.isPending}
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Confirm
-            </Button>
-          )}
-          {["draft", "submitted", "confirmed"].includes(purchaseOrder.status) && (
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (confirm("Cancel this purchase order?")) {
-                  cancelMutation.mutate();
-                }
-              }}
-              disabled={cancelMutation.isPending}
-            >
-              <XCircle className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-          )}
+            )}
+            {["draft", "submitted", "confirmed"].includes(purchaseOrder.status) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => {
+                  if (confirm("Cancel this purchase order?")) {
+                    cancelMutation.mutate();
+                  }
+                }}
+                disabled={cancelMutation.isPending}
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Cancel
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Summary Widgets */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</label>
+          <div className="flex items-center justify-between">
+            <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              <Badge variant={getStatusVariant(purchaseOrder.status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent m-0 p-0 h-auto">
+                {getStatusLabel(purchaseOrder.status)}
+              </Badge>
+            </span>
+          </div>
+        </div>
+        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Amount</label>
+          <div className="flex items-center justify-between">
+            <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              {purchaseOrder.total ? `${formatCurrency(parseFloat(purchaseOrder.total))}` : "$0.00"}
+            </span>
+          </div>
+        </div>
+        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Supplier</label>
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
+                {supplier?.name || "N/A"}
+              </span>
+              {supplier?.supplier_code && (
+                <span className="text-xs text-gray-400 font-mono">{supplier.supplier_code}</span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="p-4 flex flex-col gap-1 shadow-none border rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
+          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Dates</label>
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-700 dark:text-gray-300">
+              Ord: {purchaseOrder.order_date ? format(new Date(purchaseOrder.order_date), "MMM dd") : "-"}
+            </span>
+            <span className="text-xs text-gray-700 dark:text-gray-300">
+              Exp: {purchaseOrder.expected_delivery_date ? format(new Date(purchaseOrder.expected_delivery_date), "MMM dd") : "-"}
+            </span>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Information */}
+        {/* Items List - Full Width on Mobile, 2 cols on Desktop */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Status and Supplier */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Order Information</CardTitle>
+          <Card className="border-t shadow-sm overflow-hidden">
+            <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+              <CardTitle className="text-sm font-semibold">Items</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Status</label>
-                  <div className="mt-1">
-                    <Badge variant={getStatusVariant(purchaseOrder.status) as any}>
-                      {getStatusLabel(purchaseOrder.status)}
-                    </Badge>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">PO Number</label>
-                  <p className="text-lg font-mono font-medium">{purchaseOrder.po_number}</p>
-                </div>
-              </div>
-
-              {supplier && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Supplier</label>
-                  <p className="text-lg font-medium">{supplier.name}</p>
-                  {supplier.supplier_code && (
-                    <p className="text-sm text-gray-500">Code: {supplier.supplier_code}</p>
-                  )}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Order Date</label>
-                  <p className="text-lg">
-                    {purchaseOrder.order_date
-                      ? format(new Date(purchaseOrder.order_date), "MMM dd, yyyy")
-                      : "-"}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">
-                    Expected Delivery
-                  </label>
-                  <p className="text-lg">
-                    {purchaseOrder.expected_delivery_date
-                      ? format(new Date(purchaseOrder.expected_delivery_date), "MMM dd, yyyy")
-                      : "-"}
-                  </p>
-                </div>
-              </div>
-
-              {purchaseOrder.notes && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Notes</label>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                    {purchaseOrder.notes}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Items */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Items</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {purchaseOrder.items && purchaseOrder.items.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Part Number</TableHead>
-                        <TableHead>Part Name</TableHead>
-                        <TableHead>Quantity</TableHead>
-                        <TableHead>Received</TableHead>
-                        <TableHead>Unit Cost</TableHead>
-                        <TableHead>Total</TableHead>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-gray-50/50">
+                  <TableRow className="border-gray-100">
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Part Details</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Qty</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Received</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Unit Cost</TableHead>
+                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {purchaseOrder.items && purchaseOrder.items.length > 0 ? (
+                    purchaseOrder.items.map((item) => (
+                      <TableRow key={item.id} className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0">
+                        <TableCell className="px-4 py-2">
+                          <div>
+                            <span className="font-mono text-xs font-medium text-gray-700 dark:text-gray-300 block">
+                              {item.part_number || (typeof item.part === 'object' ? item.part.part_number : '-')}
+                            </span>
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                              {item.part_name || (typeof item.part === 'object' ? item.part.name : '-')}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-2 text-right text-sm text-gray-900 font-medium">
+                          {item.quantity_ordered}
+                        </TableCell>
+                        <TableCell className="text-right px-4 py-2 text-sm">
+                          {item.quantity_received || 0} / {item.quantity_ordered}
+                        </TableCell>
+                        <TableCell className="text-right px-4 py-2 text-sm text-gray-600">
+                          {item.unit_cost ? `${formatCurrency(parseFloat(item.unit_cost))}` : "-"}
+                        </TableCell>
+                        <TableCell className="text-right px-4 py-2 text-sm font-bold text-gray-900">
+                          {item.total_cost ? `${formatCurrency(parseFloat(item.total_cost))}` : "-"}
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {purchaseOrder.items.map((item) => {
-                        const part =
-                          typeof item.part === "object" && item.part !== null
-                            ? item.part
-                            : null;
-                        return (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-mono text-sm">
-                              {item.part_number || (part ? part.part_number : "-")}
-                            </TableCell>
-                            <TableCell>
-                              {item.part_name || (part ? part.name : "-")}
-                            </TableCell>
-                            <TableCell>{item.quantity_ordered}</TableCell>
-                            <TableCell>
-                              {item.quantity_received || 0} / {item.quantity_ordered}
-                            </TableCell>
-                            <TableCell>
-                              {item.unit_cost
-                                ? `$${parseFloat(item.unit_cost).toFixed(2)}`
-                                : "-"}
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {item.total_cost
-                                ? `$${parseFloat(item.total_cost).toFixed(2)}`
-                                : "-"}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <p className="text-gray-500 text-center py-4">No items in this order</p>
-              )}
-            </CardContent>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">No items in this order</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </Card>
+
+          {purchaseOrder.notes && (
+            <Card>
+              <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+                <CardTitle className="text-sm font-semibold">Notes</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                  {purchaseOrder.notes}
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
-        {/* Summary */}
+        {/* Sidebar Info */}
         <div className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Financial Summary</CardTitle>
+            <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+              <CardTitle className="text-sm font-semibold">Financial Summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Subtotal</span>
                 <span className="font-medium">
-                  {purchaseOrder.subtotal
-                    ? `$${parseFloat(purchaseOrder.subtotal).toFixed(2)}`
-                    : "$0.00"}
+                  {purchaseOrder.subtotal ? `${formatCurrency(parseFloat(purchaseOrder.subtotal))}` : "$0.00"}
                 </span>
               </div>
               {purchaseOrder.tax && parseFloat(purchaseOrder.tax) > 0 && (
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Tax</span>
                   <span className="font-medium">
-                    ${parseFloat(purchaseOrder.tax).toFixed(2)}
+                    {formatCurrency(parseFloat(purchaseOrder.tax))}
                   </span>
                 </div>
               )}
               {purchaseOrder.shipping && parseFloat(purchaseOrder.shipping) > 0 && (
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
                   <span className="font-medium">
-                    ${parseFloat(purchaseOrder.shipping).toFixed(2)}
+                    {formatCurrency(parseFloat(purchaseOrder.shipping))}
                   </span>
                 </div>
               )}
               <div className="border-t pt-3 flex justify-between">
-                <span className="font-semibold text-lg">Total</span>
-                <span className="font-bold text-lg">
-                  {purchaseOrder.total
-                    ? `$${parseFloat(purchaseOrder.total).toFixed(2)}`
-                    : "$0.00"}
+                <span className="font-semibold text-base">Total</span>
+                <span className="font-bold text-base">
+                  {purchaseOrder.total ? `${formatCurrency(parseFloat(purchaseOrder.total))}` : "$0.00"}
                 </span>
               </div>
             </CardContent>
           </Card>
 
-          {/* Tracking */}
           <Card>
-            <CardHeader>
-              <CardTitle>Tracking</CardTitle>
+            <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+              <CardTitle className="text-sm font-semibold">Tracking</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="p-4 space-y-3">
               {purchaseOrder.created_by_name && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Created By</label>
+                  <label className="text-xs font-medium text-gray-500">Created By</label>
                   <p className="text-sm">{purchaseOrder.created_by_name}</p>
                   {purchaseOrder.created_at && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-400">
                       {format(new Date(purchaseOrder.created_at), "MMM dd, yyyy HH:mm")}
                     </p>
                   )}
@@ -403,16 +398,16 @@ export default function PurchaseOrderDetailPage() {
               )}
               {purchaseOrder.submitted_at && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Submitted</label>
-                  <p className="text-xs text-gray-500">
+                  <label className="text-xs font-medium text-gray-500">Submitted</label>
+                  <p className="text-xs text-gray-400">
                     {format(new Date(purchaseOrder.submitted_at), "MMM dd, yyyy HH:mm")}
                   </p>
                 </div>
               )}
               {purchaseOrder.received_at && (
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Received</label>
-                  <p className="text-xs text-gray-500">
+                  <label className="text-xs font-medium text-gray-500">Received</label>
+                  <p className="text-xs text-gray-400">
                     {format(new Date(purchaseOrder.received_at), "MMM dd, yyyy HH:mm")}
                   </p>
                 </div>

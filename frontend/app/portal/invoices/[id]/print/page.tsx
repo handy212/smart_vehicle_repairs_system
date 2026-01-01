@@ -6,7 +6,9 @@ import { billingApi } from "@/lib/api/billing";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function InvoicePrintPage() {
+    const { formatCurrency } = useCurrency();
   const params = useParams();
   const invoiceId = parseInt(params.id as string);
 
@@ -141,10 +143,10 @@ export default function InvoicePrintPage() {
                 </td>
                 <td className="p-3 text-right text-gray-700">{item.quantity || 1}</td>
                 <td className="p-3 text-right text-gray-700">
-                  ${parseFloat(item.unit_price || item.price || "0").toFixed(2)}
+                  {formatCurrency(parseFloat(item.unit_price || item.price || "0"))}
                 </td>
                 <td className="p-3 text-right font-medium text-gray-900">
-                  ${parseFloat(item.total || item.line_total || "0").toFixed(2)}
+                  {formatCurrency(parseFloat(item.total || item.line_total || "0"))}
                 </td>
               </tr>
             ))}
@@ -157,25 +159,25 @@ export default function InvoicePrintPage() {
         <div className="w-64">
           <div className="flex justify-between py-2 border-b border-gray-200">
             <span className="text-gray-700">Subtotal:</span>
-            <span className="font-medium text-gray-900">${subtotal.toFixed(2)}</span>
+            <span className="font-medium text-gray-900">{formatCurrency(subtotal)}</span>
           </div>
           {tax > 0 && (
             <div className="flex justify-between py-2 border-b border-gray-200">
               <span className="text-gray-700">Tax:</span>
-              <span className="font-medium text-gray-900">${tax.toFixed(2)}</span>
+              <span className="font-medium text-gray-900">{formatCurrency(tax)}</span>
             </div>
           )}
           {amountPaid > 0 && (
             <div className="flex justify-between py-2 border-b border-gray-200">
               <span className="text-gray-700">Amount Paid:</span>
-              <span className="font-medium text-green-600">${amountPaid.toFixed(2)}</span>
+              <span className="font-medium text-green-600">{formatCurrency(amountPaid)}</span>
             </div>
           )}
           <div className="flex justify-between py-3 border-t-2 border-gray-300 mt-2">
             <span className="font-bold text-lg text-gray-900">
               {balanceDue > 0 ? "Balance Due:" : "Total:"}
             </span>
-            <span className="font-bold text-lg text-gray-900">${balanceDue.toFixed(2)}</span>
+            <span className="font-bold text-lg text-gray-900">{formatCurrency(balanceDue)}</span>
           </div>
         </div>
       </div>

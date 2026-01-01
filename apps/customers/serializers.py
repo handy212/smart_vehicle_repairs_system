@@ -217,3 +217,43 @@ class CustomerStatsSerializer(serializers.Serializer):
     last_visit_date = serializers.DateField()
     average_invoice = serializers.DecimalField(max_digits=10, decimal_places=2)
     vehicles_serviced = serializers.IntegerField()
+
+from .models import CustomerContact, CustomerReminder
+
+class CustomerContactSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerContact
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']
+
+class CustomerReminderSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    
+    class Meta:
+        model = CustomerReminder
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at', 'created_by']
+
+
+from .models import CustomerDocument, CustomerContract
+
+class CustomerDocumentSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)
+    extension = serializers.CharField(read_only=True)
+    size = serializers.IntegerField(read_only=True)
+    
+    class Meta:
+        model = CustomerDocument
+        fields = ['id', 'customer', 'name', 'file', 'description', 
+                  'uploaded_by', 'uploaded_by_name', 'is_public', 
+                  'created_at', 'extension', 'size']
+        read_only_fields = ['id', 'uploaded_by', 'created_at', 'extension', 'size']
+
+
+class CustomerContractSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    
+    class Meta:
+        model = CustomerContract
+        fields = '__all__'
+        read_only_fields = ['id', 'created_by', 'created_at', 'updated_at']

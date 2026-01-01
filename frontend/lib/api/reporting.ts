@@ -173,10 +173,31 @@ export interface InventoryValuation {
 }
 
 export interface InventoryTurnover {
-  turnover_rate: number;
-  by_category: Array<{
-    category: string;
-    turnover_rate: number;
+  period: {
+    start_date: string;
+    end_date: string;
+    days: number;
+  };
+  summary: {
+    total_parts: number;
+    fast_moving: number;
+    slow_moving: number;
+  };
+  fast_moving: Array<any>;
+  slow_moving: Array<any>;
+  all_parts: Array<{
+    part: {
+      id: number;
+      part_number: string;
+      name: string;
+      category?: string | null;
+    };
+    metrics: {
+      usage: number;
+      current_stock: number;
+      turnover_rate: number;
+      days_of_stock: number;
+    };
   }>;
 }
 

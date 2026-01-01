@@ -3,8 +3,10 @@ from django.db import transaction
 from decimal import Decimal
 from .models import (
     PartCategory, Supplier, Part, PurchaseOrder, 
-    PurchaseOrderItem, InventoryTransaction
+    PurchaseOrderItem, InventoryTransaction,
+    ServicePackage, ServicePackagePart
 )
+
 from apps.accounts.models import User
 from apps.branches.utils import resolve_branch
 
@@ -268,23 +270,19 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
 
 
 class PurchaseOrderCreateSerializer(serializers.ModelSerializer):
-    items = PurchaseOrderItemCreateSerializer(many=True)
+    items = PurchaseOrderItemCreateSerializer(many=True, required=False)
 
     class Meta:
         model = PurchaseOrder
         fields = [
-            'supplier', 'order_date', 'expected_delivery_date',
+            'id', 'po_number', 'supplier', 'order_date', 'expected_delivery_date',
             'shipping_cost', 'tax_amount', 'notes', 'internal_notes', 'items'
         ]
-
-    def validate_items(self, value):
-        if not value:
-            raise serializers.ValidationError("Purchase order must have at least one item")
-        return value
+        read_only_fields = ['id', 'po_number']
 
     @transaction.atomic
     def create(self, validated_data):
-        items_data = validated_data.pop('items')
+        items_data = validated_data.pop('items', [])
         validated_data['created_by'] = self.context['request'].user
         branch = validated_data.get('branch')
         if not branch:
@@ -373,4 +371,82 @@ class InventoryValueReportSerializer(serializers.Serializer):
     total_parts = serializers.IntegerField()
     total_quantity = serializers.IntegerField()
     total_value = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_value = serializers.DecimalField(max_digits=12, decimal_places=2)
     by_category = serializers.ListField()
+
+
+class ServicePackagePartSerializer(serializers.ModelSerializer):
+    part_name = serializers.ReadOnlyField(source='part.name')
+    part_number = serializers.ReadOnlyField(source='part.part_number')
+    unit_price = serializers.ReadOnlyField(source='part.selling_price')
+    unit = serializers.ReadOnlyField(source='part.unit')
+
+    class Meta:
+        model = ServicePackagePart
+        fields = ['id', 'part', 'part_name', 'part_number', 'quantity', 'unit', 'unit_price', 'notes']
+
+
+class ServicePackageSerializer(serializers.ModelSerializer):
+    parts = ServicePackagePartSerializer(many=True, read_only=True)
+    category_name = serializers.ReadOnlyField(source='category.name')
+    total_parts_cost = serializers.ReadOnlyField()
+
+    class Meta:
+        model = ServicePackage
+        fields = [
+            'id', 'name', 'description', 'category', 'category_name',
+            'estimated_labor_hours', 'parts', 'total_parts_cost',
+            'is_active', 'created_at'
+        ]
+
+
+class ServicePackageCreateSerializer(serializers.ModelSerializer):
+    parts = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False
+    )
+
+    class Meta:
+        model = ServicePackage
+        fields = [
+            'name', 'description', 'category', 
+            'estimated_labor_hours', 'is_active', 'parts'
+        ]
+
+    @transaction.atomic
+    def create(self, validated_data):
+        parts_data = validated_data.pop('parts', [])
+        package = ServicePackage.objects.create(**validated_data)
+        
+        for item in parts_data:
+            ServicePackagePart.objects.create(
+                service_package=package,
+                part_id=item['part_id'],
+                quantity=item.get('quantity', 1),
+                notes=item.get('notes', '')
+            )
+        return package
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        parts_data = validated_data.pop('parts', None)
+        
+        # Update standard fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Update parts if provided
+        if parts_data is not None:
+            instance.parts.all().delete()
+            for item in parts_data:
+                ServicePackagePart.objects.create(
+                    service_package=instance,
+                    part_id=item['part_id'],
+                    quantity=item.get('quantity', 1),
+                    notes=item.get('notes', '')
+                )
+        
+        return instance
+

@@ -225,6 +225,7 @@ class NotificationPreference(models.Model):
     sms_enabled = models.BooleanField(default=False)
     push_enabled = models.BooleanField(default=True)
     in_app_enabled = models.BooleanField(default=True)
+    sound_enabled = models.BooleanField(default=True, help_text="Play sound for in-app notifications")
     
     # Notification type preferences
     appointment_notifications = models.BooleanField(default=True)

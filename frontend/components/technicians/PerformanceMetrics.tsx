@@ -163,7 +163,7 @@ export function PerformanceMetrics({ technicianId }: PerformanceMetricsProps) {
                         value={`${metrics.productivity.avg_completion_days.toFixed(1)} days`}
                         icon={Clock}
                         color="blue"
-                        large
+                    // large
                     />
                     <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-800">
                         <CardContent className="p-6">

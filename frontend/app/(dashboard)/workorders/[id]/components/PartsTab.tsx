@@ -10,13 +10,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, CheckCircle2, Package } from "lucide-react";
 import AddPartDialog from "./AddPartDialog";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 interface PartsTabProps {
   workOrderId: number;
   parts: WorkOrderPart[];
   onRefresh: () => void;
 }
 
-export default function WorkOrderPartsTab({ workOrderId, parts, onRefresh }: PartsTabProps) {
+export default function WorkOrderPartsTab({
+    workOrderId, parts, onRefresh }: PartsTabProps) {
+    const { formatCurrency } = useCurrency();
   const [showAddDialog, setShowAddDialog] = useState(false);
 
   const getStatusVariant = (status: string) => {
@@ -51,7 +54,7 @@ export default function WorkOrderPartsTab({ workOrderId, parts, onRefresh }: Par
             <CardTitle>Parts & Materials</CardTitle>
             <p className="text-sm text-gray-500 mt-1">
               {parts.length > 0 ? (
-                <>Total Cost: ${totalPartsCost.toFixed(2)} • {parts.length} {parts.length === 1 ? 'part' : 'parts'}</>
+                <>Total Cost: {formatCurrency(totalPartsCost)} • {parts.length} {parts.length === 1 ? 'part' : 'parts'}</>
               ) : (
                 <>No parts added yet</>
               )}
@@ -103,9 +106,9 @@ export default function WorkOrderPartsTab({ workOrderId, parts, onRefresh }: Par
                       </div>
                     </TableCell>
                     <TableCell>{part.quantity}</TableCell>
-                    <TableCell>${parseFloat(part.unit_cost || "0").toFixed(2)}</TableCell>
+                    <TableCell>{formatCurrency(parseFloat(part.unit_cost || "0"))}</TableCell>
                     <TableCell className="font-medium">
-                      ${parseFloat(part.total_cost || "0").toFixed(2)}
+                      {formatCurrency(parseFloat(part.total_cost || "0"))}
                     </TableCell>
                     <TableCell>
                       <Badge variant={getStatusVariant(part.status) as any}>

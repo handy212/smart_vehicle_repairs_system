@@ -42,12 +42,7 @@ export function Breadcrumbs() {
 
     return (
         <nav aria-label="Breadcrumb" className="hidden md:flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400 ml-4 pl-4 border-l border-gray-200 dark:border-gray-800 h-6">
-            <Link
-                href="/dashboard"
-                className="flex items-center hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
-            >
-                <Home className="w-4 h-4" />
-            </Link>
+            <span className="font-medium text-gray-400 dark:text-gray-500">System</span>
 
             {items.map((item, index) => (
                 <div key={item.href} className="flex items-center">

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { refundApi } from "@/lib/api/till-refund";
-import axios from "axios";
+import apiClient from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,9 +34,28 @@ export default function CreateRefundPage() {
 
     // Fetch payments, invoices, customers for dropdowns
     useState(() => {
-        axios.get('/api/billing/payments/').then(res => setPayments(res.data.results || []));
-        axios.get('/api/billing/invoices/').then(res => setInvoices(res.data.results || []));
-        axios.get('/api/customers/customers/').then(res => setCustomers(res.data.results || []));
+        // Use apiClient or centralized APIs to ensure auth headers are included
+        const fetchData = async () => {
+            try {
+                // Using apiClient directly for now to match previous endpoints, but safely
+                const [paymentsRes, invoicesRes, customersRes] = await Promise.all([
+                    apiClient.get('/billing/payments/'),
+                    apiClient.get('/billing/invoices/'),
+                    apiClient.get('/customers/customers/')
+                ]);
+                setPayments(paymentsRes.data.results || []);
+                setInvoices(invoicesRes.data.results || []);
+                setCustomers(customersRes.data.results || []);
+            } catch (error) {
+                console.error("Failed to load form data", error);
+                toast({
+                    title: "Error",
+                    description: "Failed to load required data",
+                    variant: "destructive"
+                });
+            }
+        };
+        fetchData();
     });
 
     const createMutation = useMutation({

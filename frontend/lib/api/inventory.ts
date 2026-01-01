@@ -98,6 +98,7 @@ export interface Part {
   preferred_supplier?: number | Supplier;
   preferred_supplier_name?: string;
   quantity_in_stock: number;
+  quantity_on_hand?: number;
   quantity_reserved?: number;
   quantity_on_order?: number;
   available_quantity?: number;
@@ -158,7 +159,46 @@ export interface InventoryTransaction {
   reason?: string;
 }
 
+export interface ServicePackagePart {
+  id: number;
+  part: number;
+  part_name: string;
+  part_number: string;
+  quantity: number;
+  unit: string;
+  unit_price: string;
+  notes: string;
+}
+
+export interface ServicePackage {
+  id: number;
+  name: string;
+  description: string;
+  category: number;
+  category_name: string;
+  estimated_labor_hours: string;
+  parts: ServicePackagePart[];
+  total_parts_cost: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export const inventoryApi = {
+  // Service Packages
+  listPackages: async (params?: {
+    search?: string;
+    category?: number;
+    is_active?: boolean;
+  }): Promise<{ count: number; results: ServicePackage[] }> => {
+    const response = await apiClient.get("/inventory/packages/", { params });
+    return response.data;
+  },
+
+  getPackage: async (id: number): Promise<ServicePackage> => {
+    const response = await apiClient.get(`/inventory/packages/${id}/`);
+    return response.data;
+  },
+
   // Parts
   list: async (params?: {
     page?: number;
@@ -175,6 +215,11 @@ export const inventoryApi = {
 
   get: async (id: number): Promise<Part> => {
     const response = await apiClient.get(`/inventory/parts/${id}/`);
+    return response.data;
+  },
+
+  partsDashboardStats: async () => {
+    const response = await apiClient.get("/inventory/parts/dashboard_stats/");
     return response.data;
   },
 
@@ -237,6 +282,11 @@ export const inventoryApi = {
     return response.data;
   },
 
+  categoriesDashboardStats: async () => {
+    const response = await apiClient.get("/inventory/categories/dashboard_stats/");
+    return response.data;
+  },
+
   createCategory: async (data: Partial<PartCategory>): Promise<PartCategory> => {
     const response = await apiClient.post("/inventory/categories/", data);
     return response.data;
@@ -275,6 +325,11 @@ export const inventoryApi = {
 
   getSupplier: async (id: number): Promise<Supplier> => {
     const response = await apiClient.get(`/inventory/suppliers/${id}/`);
+    return response.data;
+  },
+
+  suppliersDashboardStats: async () => {
+    const response = await apiClient.get("/inventory/suppliers/dashboard_stats/");
     return response.data;
   },
 
@@ -319,6 +374,11 @@ export const inventoryApi = {
     return response.data;
   },
 
+  purchaseOrdersDashboardStats: async () => {
+    const response = await apiClient.get("/inventory/purchase-orders/dashboard_stats/");
+    return response.data;
+  },
+
   createPurchaseOrder: async (data: Partial<PurchaseOrder>): Promise<PurchaseOrder> => {
     const response = await apiClient.post("/inventory/purchase-orders/", data);
     return response.data;
@@ -351,6 +411,10 @@ export const inventoryApi = {
   addPurchaseOrderItem: async (id: number, item: Partial<PurchaseOrderItem>): Promise<PurchaseOrderItem> => {
     const response = await apiClient.post(`/inventory/purchase-orders/${id}/add_item/`, item);
     return response.data;
+  },
+
+  removePurchaseOrderItem: async (poId: number, itemId: number): Promise<void> => {
+    await apiClient.post(`/inventory/purchase-orders/${poId}/remove_item/`, { item_id: itemId });
   },
 
   pendingPurchaseOrders: async (): Promise<PurchaseOrder[]> => {

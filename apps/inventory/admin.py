@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     PartCategory, Supplier, Part, PurchaseOrder,
-    PurchaseOrderItem, InventoryTransaction
+    PurchaseOrderItem, InventoryTransaction,
+    ServicePackage, ServicePackagePart
 )
 
 
@@ -248,3 +249,18 @@ class InventoryTransactionAdmin(admin.ModelAdmin):
     def created_by_name(self, obj):
         return obj.created_by.get_full_name() if obj.created_by else ''
     created_by_name.short_description = 'Created By'
+
+
+class ServicePackagePartInline(admin.TabularInline):
+    model = ServicePackagePart
+    extra = 1
+    autocomplete_fields = ['part']
+
+
+@admin.register(ServicePackage)
+class ServicePackageAdmin(admin.ModelAdmin):
+    list_display = ['name', 'category', 'estimated_labor_hours', 'total_parts_cost', 'is_active']
+    list_filter = ['category', 'is_active']
+    search_fields = ['name', 'description']
+    inlines = [ServicePackagePartInline]
+

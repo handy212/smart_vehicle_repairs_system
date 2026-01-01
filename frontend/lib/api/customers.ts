@@ -19,12 +19,17 @@ export interface Customer {
   customer_type: string;
   business_type?: string;
   tax_id?: string;
-  status: string;
+  vat_number?: string;
+  currency?: string;
+  default_language?: string;
   payment_terms: string;
+  billing_address?: string;
+  shipping_address?: string;
   current_balance: string;
   loyalty_points?: number;
   customer_since: string;
   created_at: string;
+  status: string;
 }
 
 export interface CustomerListResponse {
@@ -49,6 +54,17 @@ export const customersApi = {
     page_size?: number;
   }): Promise<CustomerListResponse> => {
     const response = await apiClient.get("/customers/customers/", { params });
+    return response.data;
+  },
+
+  dashboardStats: async (): Promise<{
+    total_customers: number;
+    active_customers: number;
+    inactive_customers: number;
+    active_contacts: number;
+    inactive_contacts: number;
+  }> => {
+    const response = await apiClient.get("/customers/customers/dashboard_stats/");
     return response.data;
   },
 
@@ -105,16 +121,28 @@ export const customersApi = {
 
   notes: {
     list: async (id: number): Promise<any[]> => {
-      const response = await apiClient.get(`/customers/customers/${id}/notes/`);
+      const response = await apiClient.get(`/customers/customer-notes/`, {
+        params: { customer: id }
+      });
+      return response.data.results || response.data;
+    },
+    create: async (customerId: number, data: { customer?: number; content: string; note_type: string; is_important?: boolean; }): Promise<any> => {
+      const response = await apiClient.post(`/customers/customer-notes/`, {
+        ...data,
+        customer: customerId
+      });
       return response.data;
     },
-    create: async (id: number, data: {
-      note: string;
+    update: async (customerId: number, noteId: number, data: {
+      content: string;
       note_type: string;
       is_important?: boolean;
     }): Promise<any> => {
-      const response = await apiClient.post(`/customers/customers/${id}/add_note/`, data);
+      const response = await apiClient.patch(`/customers/customer-notes/${noteId}/`, data);
       return response.data;
+    },
+    delete: async (customerId: number, noteId: number): Promise<void> => {
+      await apiClient.delete(`/customers/customer-notes/${noteId}/`);
     },
   },
 
@@ -165,6 +193,77 @@ export const customersApi = {
       customer_id: customerId
     });
     return response.data;
+  },
+  contacts: {
+    list: async (customerId: number): Promise<any[]> => {
+      const response = await apiClient.get("/customers/customer-contacts/", {
+        params: { customer: customerId }
+      });
+      return response.data.results || response.data;
+    },
+    create: async (data: any): Promise<any> => {
+      const response = await apiClient.post("/customers/customer-contacts/", data);
+      return response.data;
+    },
+    update: async (id: number, data: any): Promise<any> => {
+      const response = await apiClient.put(`/customers/customer-contacts/${id}/`, data);
+      return response.data;
+    },
+    delete: async (id: number): Promise<void> => {
+      await apiClient.delete(`/customers/customer-contacts/${id}/`);
+    },
+  },
+
+  reminders: {
+    list: async (customerId: number): Promise<any[]> => {
+      const response = await apiClient.get("/customers/customer-reminders/", {
+        params: { customer: customerId }
+      });
+      return response.data.results || response.data;
+    },
+    create: async (data: any): Promise<any> => {
+      const response = await apiClient.post("/customers/customer-reminders/", data);
+      return response.data;
+    },
+    update: async (id: number, data: any): Promise<any> => {
+      const response = await apiClient.put(`/customers/customer-reminders/${id}/`, data);
+      return response.data;
+    },
+    delete: async (id: number): Promise<void> => {
+      await apiClient.delete(`/customers/customer-reminders/${id}/`);
+    },
+  },
+  documents: {
+    list: async (customerId: number): Promise<any[]> => {
+      const response = await apiClient.get("/customers/customer-documents/", {
+        params: { customer: customerId }
+      });
+      return response.data.results || response.data;
+    },
+    create: async (data: FormData): Promise<any> => {
+      const response = await apiClient.post("/customers/customer-documents/", data, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      return response.data;
+    },
+    delete: async (id: number): Promise<void> => {
+      await apiClient.delete(`/customers/customer-documents/${id}/`);
+    },
+  },
+  contracts: {
+    list: async (customerId: number): Promise<any[]> => {
+      const response = await apiClient.get("/customers/customer-contracts/", {
+        params: { customer: customerId }
+      });
+      return response.data.results || response.data;
+    },
+    create: async (data: any): Promise<any> => {
+      const response = await apiClient.post("/customers/customer-contracts/", data);
+      return response.data;
+    },
+    delete: async (id: number): Promise<void> => {
+      await apiClient.delete(`/customers/customer-contracts/${id}/`);
+    },
   },
 };
 

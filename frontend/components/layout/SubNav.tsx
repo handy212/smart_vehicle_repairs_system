@@ -7,9 +7,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
+
 interface SubNavItem {
   name: string;
   href: string;
+  permission?: string;
 }
 
 interface SubNavProps {
@@ -41,7 +44,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
     <aside
       className={cn(
         "fixed top-16 bottom-0 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto z-10 transition-all duration-300",
-        isCollapsed ? "w-12" : "w-56"
+        isCollapsed ? "w-12" : "w-52"
       )}
       style={{ left: `${sidebarLeft}px` }}
     >
@@ -74,7 +77,7 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
             const isSubRoute = pathname?.startsWith(item.href + "/");
             const isActive = isExactMatch || isSubRoute;
 
-            return (
+            const navItem = (
               <Link
                 key={item.name}
                 href={item.href}
@@ -94,6 +97,16 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
                 )}
               </Link>
             );
+
+            if (item.permission) {
+              return (
+                <PermissionGuard key={item.name} permission={item.permission}>
+                  {navItem}
+                </PermissionGuard>
+              );
+            }
+
+            return navItem;
           })}
         </nav>
       </div>
@@ -104,28 +117,32 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
 // Define sub-navigation items for each module
 export const subNavConfig: Record<string, SubNavItem[]> = {
   inventory: [
-    { name: "Parts", href: "/inventory" },
-    { name: "Categories", href: "/inventory/categories" },
-    { name: "Suppliers", href: "/inventory/suppliers" },
-    { name: "Purchase Orders", href: "/inventory/purchase-orders" },
+    { name: "Work Order Requests", href: "/inventory/parts-requests", permission: "view_parts_requests" },
+    { name: "Parts", href: "/inventory", permission: "view_inventory" },
+    { name: "Categories", href: "/inventory/categories", permission: "view_categories" },
+    { name: "Suppliers", href: "/inventory/suppliers", permission: "view_suppliers" },
+    { name: "Purchase Orders", href: "/inventory/purchase-orders", permission: "view_purchase_orders" },
   ],
   billing: [
-    { name: "Invoices", href: "/billing" },
-    { name: "Estimates", href: "/billing/estimates" },
-    { name: "Till Management", href: "/billing/tills" },
-    { name: "Refunds", href: "/billing/refunds" },
+    { name: "Invoices", href: "/billing/invoices", permission: "view_invoices" },
+    // { name: "Invoices", href: "/billing" },
+    { name: "Estimates", href: "/billing/estimates", permission: "view_estimates" },
+    { name: "Credit Notes", href: "/billing/credit-notes", permission: "view_credit_notes" },
+    { name: "Till Management", href: "/billing/tills", permission: "view_tills" },
+    { name: "Refunds", href: "/billing/refunds", permission: "view_refunds" },
+    { name: "Bills", href: "/billing/bills", permission: "view_bills" },
   ],
 
   admin: [
-    { name: "Dashboard", href: "/admin" },
-    { name: "Users", href: "/admin/users" },
-    { name: "Roles", href: "/admin/roles" },
-    { name: "Branches", href: "/admin/branches" },
-    { name: "Backups", href: "/admin/backups" },
-    { name: "Settings", href: "/admin/settings" },
-    { name: "Email Templates", href: "/admin/settings/email-templates" },
-    { name: "Audit Log", href: "/admin/audit-log" },
-    { name: "Import History", href: "/admin/import-history" },
+    { name: "Dashboard", href: "/admin", permission: "view_admin_dashboard" },
+    { name: "Users", href: "/admin/users", permission: "view_users" },
+    { name: "Roles", href: "/admin/roles", permission: "view_roles" },
+    { name: "Branches", href: "/admin/branches", permission: "view_branches" },
+    { name: "Backups", href: "/admin/backups", permission: "view_backups" },
+    { name: "Settings", href: "/admin/settings", permission: "view_settings" },
+    { name: "Email Templates", href: "/admin/settings/email-templates", permission: "view_email_templates" },
+    { name: "Audit Log", href: "/admin/audit-log", permission: "view_audit_log" },
+    { name: "Import History", href: "/admin/import-history", permission: "view_import_history" },
   ],
 };
 

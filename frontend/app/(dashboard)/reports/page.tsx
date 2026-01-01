@@ -29,15 +29,22 @@ import {
 } from "recharts";
 import Link from "next/link";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
+import { RevenueForecastChart } from "@/components/reporting/RevenueForecastChart";
+import { TechnicianProductivityHeatmap } from "@/components/reporting/TechnicianProductivityHeatmap";
+import { InventoryTurnoverChart } from "@/components/reporting/InventoryTurnoverChart";
+
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
 export default function ReportsPage() {
+  const { formatCurrency } = useCurrency();
   const { toast } = useToast();
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const [activeTab, setActiveTab] = useState("financial");
   const [showFilters, setShowFilters] = useState(false);
+  const [showForecast, setShowForecast] = useState(false);
 
   // Dashboard Overview
   const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
@@ -95,6 +102,13 @@ export default function ReportsPage() {
     queryKey: ["reporting", "inventory", "low-stock"],
     queryFn: () => reportingApi.lowStock(),
     staleTime: 5 * 60 * 1000,
+    enabled: activeTab === "inventory",
+  });
+
+  const { data: turnoverData, isLoading: turnoverLoading } = useQuery({
+    queryKey: ["reporting", "inventory", "turnover", startDate, endDate],
+    queryFn: () => reportingApi.inventoryTurnover({ start_date: startDate, end_date: endDate }),
+    staleTime: 10 * 60 * 1000,
     enabled: activeTab === "inventory",
   });
 
@@ -243,7 +257,7 @@ export default function ReportsPage() {
                     Today's Revenue
                   </p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
-                    ${dashboardData.today.revenue.toFixed(2)}
+                    {formatCurrency(dashboardData.today.revenue)}
                   </p>
                 </div>
                 <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-green-500 flex-shrink-0 ml-2" />
@@ -258,7 +272,7 @@ export default function ReportsPage() {
                     This Week
                   </p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
-                    ${dashboardData.week.revenue.toFixed(2)}
+                    {formatCurrency(dashboardData.week.revenue)}
                   </p>
                 </div>
                 <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500 flex-shrink-0 ml-2" />
@@ -273,7 +287,7 @@ export default function ReportsPage() {
                     This Month
                   </p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
-                    ${dashboardData.month.revenue.toFixed(2)}
+                    {formatCurrency(dashboardData.month.revenue)}
                   </p>
                 </div>
                 <Calendar className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500 flex-shrink-0 ml-2" />
@@ -291,7 +305,7 @@ export default function ReportsPage() {
                     {dashboardData.alerts?.overdue_invoices?.count || 0}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    ${(dashboardData.alerts?.overdue_invoices?.total || 0).toFixed(2)}
+                    {formatCurrency((dashboardData.alerts?.overdue_invoices?.total || 0))}
                   </p>
                 </div>
                 <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-500 flex-shrink-0 ml-2" />
@@ -341,7 +355,7 @@ export default function ReportsPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                      ${revenueData.summary.total_invoiced.toFixed(2)}
+                      {formatCurrency(revenueData.summary.total_invoiced)}
                     </p>
                   </CardContent>
                 </Card>
@@ -353,7 +367,7 @@ export default function ReportsPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
-                      ${revenueData.summary.total_paid.toFixed(2)}
+                      {formatCurrency(revenueData.summary.total_paid)}
                     </p>
                   </CardContent>
                 </Card>
@@ -365,7 +379,7 @@ export default function ReportsPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
-                      ${revenueData.summary.total_outstanding.toFixed(2)}
+                      {formatCurrency(revenueData.summary.total_outstanding)}
                     </p>
                   </CardContent>
                 </Card>
@@ -394,7 +408,7 @@ export default function ReportsPage() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-                        ${(revenueData.summary.subscription_revenue || 0).toFixed(2)}
+                        {formatCurrency((revenueData.summary.subscription_revenue || 0))}
                       </p>
                       {revenueData.summary.total_paid > 0 && (
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -411,7 +425,7 @@ export default function ReportsPage() {
                     </CardHeader>
                     <CardContent>
                       <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        ${(revenueData.summary.service_revenue || 0).toFixed(2)}
+                        {formatCurrency((revenueData.summary.service_revenue || 0))}
                       </p>
                       {revenueData.summary.total_paid > 0 && (
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -426,7 +440,17 @@ export default function ReportsPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <Card className="border-gray-200 dark:border-gray-800">
                   <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="text-base sm:text-lg">Revenue by Period</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base sm:text-lg">Revenue Analysis</CardTitle>
+                      <Button
+                        variant={showForecast ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setShowForecast(!showForecast)}
+                        className="text-xs"
+                      >
+                        {showForecast ? "Vew Historical" : "Predict Revenue"}
+                      </Button>
+                    </div>
                     <div className="flex flex-wrap gap-2 mt-2 sm:mt-3">
                       <Button
                         size="sm"
@@ -456,29 +480,33 @@ export default function ReportsPage() {
                   </CardHeader>
                   <CardContent className="px-2 sm:px-6">
                     {revenueData.revenue_by_period.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={revenueData.revenue_by_period}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis
-                            dataKey="period"
-                            tickFormatter={(value) => format(new Date(value), "MMM dd")}
-                            style={{ fontSize: "12px" }}
-                          />
-                          <YAxis style={{ fontSize: "12px" }} />
-                          <Tooltip
-                            formatter={(value: number) => `$${value.toFixed(2)}`}
-                            labelFormatter={(value) => format(new Date(value), "MMM dd, yyyy")}
-                          />
-                          <Legend />
-                          <Line
-                            type="monotone"
-                            dataKey="revenue"
-                            stroke="#3B82F6"
-                            name="Revenue"
-                            strokeWidth={2}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
+                      showForecast ? (
+                        <RevenueForecastChart data={revenueData.revenue_by_period} />
+                      ) : (
+                        <ResponsiveContainer width="100%" height={300}>
+                          <LineChart data={revenueData.revenue_by_period}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="period"
+                              tickFormatter={(value) => format(new Date(value), "MMM dd")}
+                              style={{ fontSize: "12px" }}
+                            />
+                            <YAxis style={{ fontSize: "12px" }} />
+                            <Tooltip
+                              formatter={(value: number) => `${formatCurrency(value)}`}
+                              labelFormatter={(value) => format(new Date(value), "MMM dd, yyyy")}
+                            />
+                            <Legend />
+                            <Line
+                              type="monotone"
+                              dataKey="revenue"
+                              stroke="#3B82F6"
+                              name="Revenue"
+                              strokeWidth={2}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      )
                     ) : (
                       <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
                         No data available
@@ -511,7 +539,7 @@ export default function ReportsPage() {
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                          <Tooltip formatter={(value: number) => `${formatCurrency(value)}`} />
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
@@ -540,7 +568,7 @@ export default function ReportsPage() {
                           style={{ fontSize: "12px" }}
                         />
                         <YAxis style={{ fontSize: "12px" }} />
-                        <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                        <Tooltip formatter={(value: number) => `${formatCurrency(value)}`} />
                         <Legend />
                         <Bar dataKey="revenue" fill="#10B981" name="Revenue" />
                       </BarChart>
@@ -565,13 +593,13 @@ export default function ReportsPage() {
                   <div>
                     <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Revenue</p>
                     <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                      ${profitMarginData.revenue.total.toFixed(2)}
+                      {formatCurrency(profitMarginData.revenue.total)}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Costs</p>
                     <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400">
-                      ${profitMarginData.costs.parts.toFixed(2)}
+                      {formatCurrency(profitMarginData.costs.parts)}
                     </p>
                   </div>
                   <div>
@@ -592,7 +620,7 @@ export default function ReportsPage() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" style={{ fontSize: "12px" }} />
                       <YAxis style={{ fontSize: "12px" }} />
-                      <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                      <Tooltip formatter={(value: number) => `${formatCurrency(value)}`} />
                       <Bar dataKey="value" fill="#3B82F6" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -684,6 +712,7 @@ export default function ReportsPage() {
               <CardContent className="p-0 sm:p-6">
                 <div className="overflow-x-auto -mx-2 sm:mx-0">
                   <Table>
+                    {/* ... existing table ... */}
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-xs sm:text-sm">Technician</TableHead>
@@ -715,6 +744,14 @@ export default function ReportsPage() {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+
+                <div className="mt-8 border-t dark:border-gray-800 pt-8">
+                  <div className="px-4 sm:px-0 mb-4">
+                    <h4 className="text-sm font-bold uppercase tracking-widest text-gray-400">Productivity Heatmap</h4>
+                    <p className="text-xs text-gray-500">Cross-metric performance comparison normalized by peak performance.</p>
+                  </div>
+                  <TechnicianProductivityHeatmap data={technicianPerf.technicians} />
                 </div>
               </CardContent>
             </Card>
@@ -769,6 +806,18 @@ export default function ReportsPage() {
 
         {/* Inventory Reports */}
         <TabsContent value="inventory" className="space-y-4 sm:space-y-6">
+          {turnoverData && (
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="text-base sm:text-lg">Inventory Turnover Rate</CardTitle>
+                <p className="text-xs text-gray-500">How many times your inventory is sold and replaced over a 90-day period.</p>
+              </CardHeader>
+              <CardContent>
+                <InventoryTurnoverChart data={turnoverData.all_parts || []} />
+              </CardContent>
+            </Card>
+          )}
+
           {inventoryValuation && (
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader className="pb-3 sm:pb-6">
@@ -793,7 +842,7 @@ export default function ReportsPage() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="category" style={{ fontSize: "12px" }} />
                         <YAxis style={{ fontSize: "12px" }} />
-                        <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                        <Tooltip formatter={(value: number) => `${formatCurrency(value)}`} />
                         <Legend />
                         <Bar dataKey="value" fill="#8B5CF6" name="Value" />
                       </BarChart>
@@ -1110,12 +1159,12 @@ export default function ReportsPage() {
                         <TableRow key={inv.id}>
                           <TableCell className="font-mono text-xs sm:text-sm">{inv.invoice_number}</TableCell>
                           <TableCell className="text-xs sm:text-sm">{format(new Date(inv.invoice_date), "MMM dd, yyyy")}</TableCell>
-                          <TableCell className="text-xs sm:text-sm">${parseFloat(inv.subtotal || "0").toFixed(2)}</TableCell>
+                          <TableCell className="text-xs sm:text-sm">{formatCurrency(parseFloat(inv.subtotal || "0"))}</TableCell>
                           <TableCell className="text-xs sm:text-sm font-bold text-orange-600">
-                            {inv.discount_percentage ? `${inv.discount_percentage}%` : `$${parseFloat(inv.discount_amount || "0").toFixed(2)}`}
+                            {inv.discount_percentage ? `${inv.discount_percentage}%` : `${formatCurrency(parseFloat(inv.discount_amount || "0"))}`}
                           </TableCell>
                           <TableCell className="text-xs sm:text-sm italic">{inv.discount_reason || "-"}</TableCell>
-                          <TableCell className="text-xs sm:text-sm font-bold">${parseFloat(inv.total).toFixed(2)}</TableCell>
+                          <TableCell className="text-xs sm:text-sm font-bold">{formatCurrency(parseFloat(inv.total))}</TableCell>
                           <TableCell>
                             <Link href={`/billing/invoices/${inv.id}`} target="_blank">
                               <Button variant="ghost" size="sm">View</Button>

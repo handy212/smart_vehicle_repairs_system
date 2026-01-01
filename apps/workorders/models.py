@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.db.models import Max
 from django.core.exceptions import FieldDoesNotExist
@@ -42,6 +43,9 @@ class WorkOrder(models.Model):
     
     # Auto-generated work order number
     work_order_number = models.CharField(max_length=20, unique=True, editable=False, db_index=True)
+    
+    # Secure Access Token
+    access_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     
     # Branch assignment
     branch = models.ForeignKey(
@@ -1289,8 +1293,17 @@ class WorkOrderPart(models.Model):
         help_text="Link to actual inventory part"
     )
     
+    purchase_order_item = models.ForeignKey(
+        'inventory.PurchaseOrderItem',
+        null=True, 
+        blank=True, 
+        on_delete=models.SET_NULL, 
+        related_name='work_order_parts', 
+        help_text='Link to specific PO line item for ordering'
+    )
+    
     # Part Details
-    part_number = models.CharField(max_length=100)
+    part_number = models.CharField(max_length=100, blank=True)
     part_name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     
@@ -1330,13 +1343,15 @@ class WorkOrderPart(models.Model):
     
     # Status
     STATUS_CHOICES = [
+        ('draft', 'Draft (Not Submitted)'),
         ('pending', 'Pending Order'),
         ('ordered', 'Ordered'),
+        ('ready', 'Ready for Install'),
         ('received', 'Received'),
         ('installed', 'Installed'),
         ('returned', 'Returned'),
     ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     
     # Warranty
     warranty_months = models.PositiveIntegerField(default=0, help_text="Warranty period in months")

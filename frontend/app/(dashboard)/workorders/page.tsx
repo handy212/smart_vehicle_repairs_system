@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { Plus, Search, Wrench, LayoutGrid, Trash2, Download, X, ChevronDown, MoreVertical, Eye, Edit, FileText, Printer, Calendar } from "lucide-react";
+import { Plus, Search, Wrench, LayoutGrid, Trash2, Download, X, ChevronDown, MoreVertical, Eye, Edit, FileText, Printer, Calendar, Clock, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -25,6 +25,8 @@ import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/adva
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
+import { StaffStatsGrid } from "@/components/shared/StaffStatsGrid";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,12 +36,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { getStatusVariant } from "@/lib/utils/workorder-status";
+
+import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function WorkOrdersPage() {
+  const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 500); // Debounce search by 500ms
+  const debouncedSearch = useDebounce(search, 500);
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<string>("in_progress");
@@ -51,7 +55,6 @@ export default function WorkOrdersPage() {
   const router = useRouter();
   const { hasPermission } = usePermissions();
 
-  // Advanced filter options
   const filterOptions: FilterOption[] = [
     {
       key: "status",
@@ -122,6 +125,11 @@ export default function WorkOrdersPage() {
     });
     setPage(1);
   };
+
+  const { data: stats } = useQuery({
+    queryKey: ["workorder-stats"],
+    queryFn: () => workordersApi.dashboardStats(),
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["workorders", page, debouncedSearch, advancedFilters, sortConfig],
@@ -252,23 +260,22 @@ export default function WorkOrdersPage() {
     toast({ title: "Success", description: "Work orders exported successfully" });
   };
 
-  if (isLoading && !data) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <div className="h-9 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
-            <div className="h-5 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          </div>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <TableSkeleton rows={8} columns={8} />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const getPriorityVariant = (priority: string) => {
+    switch (priority) {
+      case "urgent":
+        return "danger";
+      case "high":
+        return "warning";
+      case "normal":
+        return "secondary"; // Changed to secondary for cleaner look
+      case "low":
+        return "outline";
+      default:
+        return "secondary";
+    }
+  };
+
+  // No manual StatsGrid definition needed
 
   if (error) {
     return (
@@ -278,94 +285,57 @@ export default function WorkOrdersPage() {
     );
   }
 
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "success";
-      case "in_progress":
-        return "info";
-      case "pending":
-        return "warning";
-      case "cancelled":
-        return "danger";
-      default:
-        return "default";
-    }
-  };
-
-  const getPriorityVariant = (priority: string) => {
-    switch (priority) {
-      case "urgent":
-        return "danger";
-      case "high":
-        return "warning";
-      case "normal":
-        return "default";
-      case "low":
-        return "secondary";
-      default:
-        return "default";
-    }
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center pt-2">
-        <div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
-            <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Work Orders</span>
-          </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Work Orders</h1>
-        </div>
-        <div className="flex items-center space-x-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
-              >
-                Actions
-                <ChevronDown className="w-3.5 h-3.5 ml-2" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <PermissionGuard permission="export_workorders">
-                <DropdownMenuItem
-                  onClick={() => handleExport()}
-                  disabled={!data?.results || data.results.length === 0}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Export CSV
-                </DropdownMenuItem>
-              </PermissionGuard>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Link href="/workorders/kanban">
-            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
-              <LayoutGrid className="w-3.5 h-3.5 mr-2" />
-              Kanban
-            </Button>
-          </Link>
-          <PermissionGuard permission="create_workorders">
-            <Link href="/workorders/new">
-              <Button size="sm" className="h-9">
-                <Plus className="w-3.5 h-3.5 mr-2" />
-                New Work Order
-              </Button>
-            </Link>
-          </PermissionGuard>
-        </div>
-      </div>
+      <StaffPageHeader
+        title="Work Orders"
+        description="Manage service requests and work orders."
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Work Orders" }
+        ]}
+      />
 
-      {/* Compact Filter Bar */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3 flex-wrap">
+      <StaffStatsGrid
+        columns={5}
+        stats={[
+          {
+            title: "Total",
+            value: stats?.total_workorders || 0,
+            icon: Wrench,
+          },
+          {
+            title: "In Progress",
+            value: stats?.in_progress || 0,
+            icon: Clock,
+            trend: { value: "Active", label: "jobs", positive: undefined }
+          },
+          {
+            title: "Pending",
+            value: stats?.pending || 0,
+            icon: AlertCircle,
+            trend: { value: "Waiting", label: "approval/start", positive: false }
+          },
+          {
+            title: "Completed",
+            value: stats?.completed || 0,
+            icon: CheckCircle2,
+            trend: { value: "Done", label: "all time", positive: true }
+          },
+          {
+            title: "Cancelled",
+            value: stats?.cancelled || 0,
+            icon: XCircle,
+          }
+        ]}
+      />
+
+      {/* Unified Toolbar */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-900/50 p-1 rounded-lg">
+        <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+          <div className="relative flex-1 md:flex-none md:w-64">
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               type="text"
               placeholder="Search work orders..."
@@ -374,7 +344,7 @@ export default function WorkOrdersPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-9 h-8 text-sm bg-white dark:bg-gray-900 w-64 focus:w-80 transition-all duration-300"
+              className="pl-9 h-9 text-sm bg-gray-50 dark:bg-gray-800 border-none focus:ring-1 transition-all"
             />
           </div>
 
@@ -390,13 +360,12 @@ export default function WorkOrdersPage() {
             onClear={() => {
               setAdvancedFilters({});
               setStatusFilter("");
-              setStartDate("");
-              setEndDate("");
+              setPage(1);
             }}
-            title="Advanced Work Order Filters"
+            title="Filter"
           />
 
-          {/* Clear Filters */}
+          {/* Clear Filters (Icon only) */}
           {(search || Object.keys(advancedFilters).length > 0) && (
             <Button
               variant="ghost"
@@ -405,51 +374,33 @@ export default function WorkOrdersPage() {
                 setSearch("");
                 setAdvancedFilters({});
                 setStatusFilter("");
-                setStartDate("");
-                setEndDate("");
                 setPage(1);
               }}
-              className="h-9"
+              className="h-9 w-9 p-0 text-gray-500 hover:text-red-600"
+              title="Clear all filters"
             >
-              <X className="w-4 h-4 mr-1" />
-              Clear
+              <X className="w-4 h-4" />
             </Button>
           )}
-        </div>
 
-        {/* Active Filter Badges */}
-        {(search || Object.keys(advancedFilters).length > 0) && (
-          <div className="flex flex-wrap items-center gap-2">
-            {search && (
-              <Badge variant="secondary" className="flex items-center gap-1.5">
-                <span className="text-xs">Search: {search}</span>
-                <button
-                  onClick={() => {
-                    setSearch("");
-                    setPage(1);
-                  }}
-                  className="hover:text-red-600"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            )}
+          {/* Active Filter Badges */}
+          <div className="hidden lg:flex flex-wrap items-center gap-1.5 ml-2">
             {Object.entries(advancedFilters).map(([key, value]) => {
               if (!value || (typeof value === 'string' && value === '')) return null;
               const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
               if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
               if (key.includes("_to")) return null;
 
+              const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
               const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
                 ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
                 : String(value);
 
-              const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
-
               return (
-                <Badge key={key} variant="secondary" className="flex items-center gap-1.5">
-                  <span className="text-xs">{displayLabel}: {displayValue}</span>
-                  <button
+                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-normal">
+                  {displayLabel}: {displayValue}
+                  <X
+                    className="w-3 h-3 cursor-pointer hover:text-red-500"
                     onClick={() => {
                       const newFilters = { ...advancedFilters };
                       if (key.includes("_from")) {
@@ -461,15 +412,49 @@ export default function WorkOrdersPage() {
                       setAdvancedFilters(newFilters);
                       setPage(1);
                     }}
-                    className="hover:text-red-600"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
+                  />
                 </Badge>
               );
             })}
           </div>
-        )}
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9">
+                Actions
+                <ChevronDown className="w-3.5 h-3.5 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <PermissionGuard permission="export_workorders">
+                <DropdownMenuItem
+                  onClick={() => handleExport()}
+                  disabled={!data?.results || data.results.length === 0}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </DropdownMenuItem>
+              </PermissionGuard>
+              <Link href="/workorders/kanban">
+                <DropdownMenuItem>
+                  <LayoutGrid className="w-4 h-4 mr-2" />
+                  Kanban View
+                </DropdownMenuItem>
+              </Link>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <PermissionGuard permission="create_workorders">
+            <Link href="/workorders/new">
+              <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                <Plus className="w-4 h-4 mr-2" />
+                New Work Order
+              </Button>
+            </Link>
+          </PermissionGuard>
+        </div>
       </div>
 
       {/* Bulk Action Toolbar */}
@@ -482,21 +467,18 @@ export default function WorkOrdersPage() {
       />
 
       {/* Work Orders Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            All Work Orders ({data?.count || 0})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className="border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+        <CardContent className="p-0">
           {isLoading ? (
-            <TableSkeleton rows={8} columns={9} />
+            <div className="p-4">
+              <TableSkeleton rows={8} columns={9} />
+            </div>
           ) : data?.results && data.results.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-100 dark:border-gray-800">
-                    <TableHead className="w-[40px] px-4">
+                    <TableHead className="w-[40px] px-4 h-10">
                       <input
                         type="checkbox"
                         checked={bulkSelection.isAllSelected}
@@ -525,20 +507,20 @@ export default function WorkOrdersPage() {
                     </SortableHeader>
                     <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">Vehicle</TableHead>
                     <SortableHeader
-                      field="priority"
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
-                    >
-                      Priority
-                    </SortableHeader>
-                    <SortableHeader
                       field="status"
                       sortConfig={sortConfig}
                       onSort={handleSort}
                       className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
                     >
                       Status
+                    </SortableHeader>
+                    <SortableHeader
+                      field="priority"
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                      className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                    >
+                      Priority
                     </SortableHeader>
                     <SortableHeader
                       field="estimated_total"
@@ -566,7 +548,7 @@ export default function WorkOrdersPage() {
                       className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 dark:border-gray-800 cursor-pointer"
                       onDoubleClick={() => router.push(`/workorders/${workorder.id}`)}
                     >
-                      <TableCell>
+                      <TableCell className="px-4 py-2">
                         <input
                           type="checkbox"
                           checked={bulkSelection.isSelected(workorder.id)}
@@ -575,39 +557,39 @@ export default function WorkOrdersPage() {
                           className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
                       </TableCell>
-                      <TableCell className="font-mono text-sm text-gray-900 dark:text-gray-100">
+                      <TableCell className="px-4 py-2 font-mono text-xs font-medium text-blue-600 dark:text-blue-400">
                         {workorder.work_order_number || "-"}
                       </TableCell>
-                      <TableCell className="text-gray-900 dark:text-gray-100">{workorder.customer_name || "N/A"}</TableCell>
-                      <TableCell className="text-gray-900 dark:text-gray-100">{workorder.vehicle_info || "N/A"}</TableCell>
-                      <TableCell>
-                        <Badge variant={getPriorityVariant(workorder.priority) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
-                          {workorder.priority || "-"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusVariant(workorder.status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
+                      <TableCell className="px-4 py-2 text-xs font-medium text-gray-900 dark:text-gray-100">{workorder.customer_name || "N/A"}</TableCell>
+                      <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-300">{workorder.vehicle_info || "N/A"}</TableCell>
+                      <TableCell className="px-4 py-2">
+                        <Badge variant={getStatusVariant(workorder.status) as any} className="text-[10px] px-2 py-0.5 h-5 capitalize font-medium border shadow-none bg-transparent">
                           {workorder.status?.replace("_", " ") || workorder.status || "-"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-medium text-gray-900 dark:text-gray-100">
-                        {workorder.total_cost ? `$${parseFloat(workorder.total_cost).toFixed(2)}` : "-"}
+                      <TableCell className="px-4 py-2">
+                        <Badge variant={getPriorityVariant(workorder.priority) as any} className="text-[10px] px-2 py-0.5 h-5 capitalize font-medium border shadow-none bg-transparent">
+                          {workorder.priority || "-"}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="text-gray-500 dark:text-gray-400">
+                      <TableCell className="px-4 py-2 font-medium text-xs text-gray-900 dark:text-gray-100">
+                        {workorder.total_cost ? `${formatCurrency(parseFloat(workorder.total_cost))}` : "-"}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
                         {workorder.created_at
                           ? format(new Date(workorder.created_at), "MMM dd, yyyy")
                           : "-"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="px-4 py-2 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 dark:hover:bg-gray-700 data-[state=open]:bg-gray-100 dark:data-[state=open]:bg-gray-800"
+                              className="h-6 w-6 p-0 dark:hover:bg-gray-700 data-[state=open]:bg-gray-100 dark:data-[state=open]:bg-gray-800"
                             >
                               <span className="sr-only">Open menu</span>
-                              <MoreVertical className="w-4 h-4" />
+                              <MoreVertical className="w-3.5 h-3.5 text-gray-500" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-56">
@@ -669,24 +651,26 @@ export default function WorkOrdersPage() {
 
           {/* Pagination */}
           {data && data.count > 0 && (
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-700 dark:text-gray-300">
+            <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <div className="text-xs text-gray-500 dark:text-gray-400">
                 Showing page {page} of {Math.ceil(data.count / 10)}
               </div>
               <div className="flex space-x-2">
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={!data.previous}
+                  className="h-8 text-xs"
                 >
                   Previous
                 </Button>
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!data.next}
+                  className="h-8 text-xs"
                 >
                   Next
                 </Button>

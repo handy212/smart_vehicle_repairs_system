@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Save, Mail, MessageSquare, Bell, Smartphone, Calendar, Wrench, Receipt, CreditCard, FileText, Package, Car } from "lucide-react";
+import { ArrowLeft, Save, Mail, MessageSquare, Bell, Smartphone, Volume2, Calendar, Wrench, Receipt, CreditCard, FileText, Package, Car } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useToast } from "@/lib/hooks/useToast";
@@ -175,6 +175,22 @@ export default function NotificationPreferencesPage() {
                 id="in_app_enabled"
                 checked={mergedData.in_app_enabled ?? true}
                 onCheckedChange={(checked) => handleChange("in_app_enabled", checked === true)}
+              />
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+              <div className="flex items-center space-x-3">
+                <Volume2 className="w-5 h-5 text-gray-400" />
+                <div>
+                  <Label htmlFor="sound_enabled" className="text-sm font-medium text-gray-900 cursor-pointer">
+                    Notification Sounds
+                  </Label>
+                  <p className="text-xs text-gray-500">Play sound when new notifications arrive</p>
+                </div>
+              </div>
+              <Checkbox
+                id="sound_enabled"
+                checked={mergedData.sound_enabled ?? true}
+                onCheckedChange={(checked) => handleChange("sound_enabled", checked === true)}
               />
             </div>
           </CardContent>

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/lib/hooks/useToast";
 import { workOrderNotesApi } from "@/lib/api/workorder-notes";
 import { adminApi } from "@/lib/api/admin";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 import {
   Play,
   Pause,
@@ -42,7 +43,9 @@ interface WorkflowActionsProps {
   inline?: boolean; // If true, render just the primary button inline (for progress indicator)
 }
 
-export default function WorkflowActions({ workOrderId, status, workOrder, onStatusChange, onStartRepairs, inline = false }: WorkflowActionsProps) {
+export default function WorkflowActions({
+    workOrderId, status, workOrder, onStatusChange, onStartRepairs, inline = false }: WorkflowActionsProps) {
+    const { formatCurrency } = useCurrency();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -1105,7 +1108,7 @@ export default function WorkflowActions({ workOrderId, status, workOrder, onStat
                 <span className="text-gray-600 dark:text-gray-400">Estimated Total:</span>
                 <span className={`font-medium ${parseFloat(currentWorkOrder?.estimated_total || '0') > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {parseFloat(currentWorkOrder?.estimated_total || '0') > 0 
-                    ? `✓ $${parseFloat(currentWorkOrder?.estimated_total || '0').toFixed(2)}` 
+                    ? `✓ ${formatCurrency(parseFloat(currentWorkOrder?.estimated_total || '0'))}` 
                     : '✗ $0.00'}
                 </span>
               </div>

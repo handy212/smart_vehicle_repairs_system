@@ -1,0 +1,280 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { refundApi, type Refund } from "@/lib/api/till-refund";
+import { useParams, useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, CheckCircle, XCircle, FileText, User, Calendar, DollarSign, Wallet } from "lucide-react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { useToast } from "@/lib/hooks/useToast";
+import { Separator } from "@/components/ui/separator";
+
+import { useCurrency } from "@/lib/hooks/useCurrency";
+export default function RefundDetailPage() {
+    const { formatCurrency } = useCurrency();
+    const params = useParams();
+    const router = useRouter();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const id = parseInt(params.id as string);
+
+    const { data: refund, isLoading, error } = useQuery({
+        queryKey: ['refund', id],
+        queryFn: () => refundApi.get(id),
+        enabled: !isNaN(id),
+    });
+
+    const approveMutation = useMutation({
+        mutationFn: () => refundApi.approve(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['refund', id] });
+            queryClient.invalidateQueries({ queryKey: ['refunds'] });
+            toast({ title: "Success", description: "Refund approved successfully" });
+        },
+        onError: (err: any) => {
+            toast({
+                title: "Error",
+                description: err.response?.data?.error || "Failed to approve refund",
+                variant: "destructive"
+            });
+        }
+    });
+
+    const rejectMutation = useMutation({
+        mutationFn: () => refundApi.reject(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['refund', id] });
+            queryClient.invalidateQueries({ queryKey: ['refunds'] });
+            toast({ title: "Success", description: "Refund rejected successfully" });
+        },
+        onError: (err: any) => {
+            toast({
+                title: "Error",
+                description: err.response?.data?.error || "Failed to reject refund",
+                variant: "destructive"
+            });
+        }
+    });
+
+    const completeMutation = useMutation({
+        mutationFn: () => refundApi.complete(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['refund', id] });
+            queryClient.invalidateQueries({ queryKey: ['refunds'] });
+            toast({ title: "Success", description: "Refund marked as completed" });
+        },
+        onError: (err: any) => {
+            toast({
+                title: "Error",
+                description: err.response?.data?.error || "Failed to complete refund",
+                variant: "destructive"
+            });
+        }
+    });
+
+    if (isLoading) {
+        return <div className="p-8 flex justify-center">Loading refund details...</div>;
+    }
+
+    if (error || !refund) {
+        return (
+            <div className="p-8 space-y-4">
+                <Button variant="ghost" onClick={() => router.back()}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                </Button>
+                <div className="text-red-500">Error loading refund details or refund not found.</div>
+            </div>
+        );
+    }
+
+    const getStatusVariant = (status: string) => {
+        const variants: Record<string, any> = {
+            pending: 'warning',
+            approved: 'default',
+            completed: 'success',
+            rejected: 'destructive',
+            cancelled: 'secondary',
+        };
+        return variants[status] || 'default';
+    };
+
+    return (
+        <div className="space-y-6 p-8 min-h-screen">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="sm" onClick={() => router.back()}>
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back
+                    </Button>
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold tracking-tight">Refund {refund.refund_number}</h1>
+                            <Badge variant={getStatusVariant(refund.status)}>
+                                {refund.status.toUpperCase()}
+                            </Badge>
+                        </div>
+                        <p className="text-muted-foreground mt-1">
+                            Requested by {refund.requested_by_name} on {format(new Date(refund.requested_at), 'MMMM dd, yyyy')}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                    {refund.status === 'pending' && (
+                        <>
+                            <Button
+                                onClick={() => approveMutation.mutate()}
+                                disabled={approveMutation.isPending}
+                                className="bg-green-600 hover:bg-green-700"
+                            >
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Approve
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={() => rejectMutation.mutate()}
+                                disabled={rejectMutation.isPending}
+                            >
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Reject
+                            </Button>
+                        </>
+                    )}
+                    {refund.status === 'approved' && (
+                        <Button
+                            onClick={() => completeMutation.mutate()}
+                            disabled={completeMutation.isPending}
+                        >
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Mark Completed
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Refund Details */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <DollarSign className="h-5 w-5 text-gray-500" />
+                            Refund Information
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                            <span className="text-sm font-medium text-gray-500">Amount to Refund</span>
+                            <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                                {formatCurrency(parseFloat(refund.amount))}
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <h3 className="text-sm font-medium text-gray-500 mb-1">Method</h3>
+                                <p className="font-medium capitalize flex items-center gap-2">
+                                    <Wallet className="h-4 w-4 text-gray-400" />
+                                    {refund.refund_method.replace('_', ' ')}
+                                </p>
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-medium text-gray-500 mb-1">Reference</h3>
+                                <p className="font-medium">{refund.reference_number || '-'}</p>
+                            </div>
+                        </div>
+
+                        <Separator />
+
+                        <div>
+                            <h3 className="text-sm font-medium text-gray-500 mb-2">Reason</h3>
+                            <p className="text-sm bg-gray-50 dark:bg-gray-800 p-3 rounded-md min-h-[60px]">
+                                {refund.reason}
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Related Information */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-gray-500" />
+                            Related Information
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4 text-gray-400" />
+                                    <span className="text-sm font-medium text-gray-500">Customer</span>
+                                </div>
+                                <Link href={`/customers/${refund.customer}`} className="text-blue-600 hover:underline">
+                                    {refund.customer_name}
+                                </Link>
+                            </div>
+
+                            <Separator />
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-gray-400" />
+                                    <span className="text-sm font-medium text-gray-500">Invoice</span>
+                                </div>
+                                <Link href={`/billing/invoices/${refund.invoice}`} className="text-blue-600 hover:underline">
+                                    View Invoice #{refund.invoice}
+                                </Link>
+                            </div>
+
+                            <Separator />
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-gray-400" />
+                                    <span className="text-sm font-medium text-gray-500">Original Payment</span>
+                                </div>
+                                <Link href={`/billing/payments/${refund.original_payment}`} className="text-blue-600 hover:underline">
+                                    View Payment #{refund.original_payment}
+                                </Link>
+                            </div>
+                        </div>
+
+                        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900">
+                            <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">Audit Trail</h4>
+                            <div className="space-y-2 text-xs">
+                                <div className="flex justify-between">
+                                    <span className="text-blue-700 dark:text-blue-300">Requested</span>
+                                    <span className="text-blue-900 dark:text-blue-100">
+                                        {format(new Date(refund.requested_at), 'MMM dd, HH:mm')} by {refund.requested_by_name}
+                                    </span>
+                                </div>
+                                {refund.approved_at && (
+                                    <div className="flex justify-between">
+                                        <span className="text-blue-700 dark:text-blue-300">Approved</span>
+                                        <span className="text-blue-900 dark:text-blue-100">
+                                            {format(new Date(refund.approved_at), 'MMM dd, HH:mm')} by {refund.approved_by_name}
+                                        </span>
+                                    </div>
+                                )}
+                                {refund.processed_at && (
+                                    <div className="flex justify-between">
+                                        <span className="text-blue-700 dark:text-blue-300">Processed</span>
+                                        <span className="text-blue-900 dark:text-blue-100">
+                                            {format(new Date(refund.processed_at), 'MMM dd, HH:mm')} by {refund.processed_by_name}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
+}

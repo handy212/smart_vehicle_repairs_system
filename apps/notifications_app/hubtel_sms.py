@@ -22,9 +22,14 @@ def _get_hubtel_config():
     api_url = sms_settings.get('hubtel_api_url') or 'https://smsc.hubtel.com/v1/messages/send'
     
     # Check if SMS is enabled in system settings or Django settings
-    sms_enabled = sms_settings.get('sms_enabled', 'false').lower() == 'true'
-    django_enabled = getattr(settings, 'HUBTEL_SMS_ENABLED', False)
-    enabled = sms_enabled or django_enabled
+    # UI Setting takes precedence if set (str 'true' or 'false')
+    sms_enabled_str = sms_settings.get('sms_enabled')
+    
+    if sms_enabled_str and sms_enabled_str in ['true', 'false']:
+         enabled = sms_enabled_str.lower() == 'true'
+    else:
+        # Fallback to django settings if no DB setting exists or it's empty
+        enabled = getattr(settings, 'HUBTEL_SMS_ENABLED', False)
     
     return {
         'client_id': client_id,

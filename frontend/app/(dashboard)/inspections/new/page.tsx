@@ -1,41 +1,16 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { inspectionsApi } from "@/lib/api/inspections";
-import { vehiclesApi } from "@/lib/api/vehicles";
 import { workordersApi } from "@/lib/api/workorders";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { AxiosError } from "axios";
 import { useToast } from "@/lib/hooks/useToast";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-
-const inspectionSchema = z.object({
-  vehicle: z.number().min(1, "Vehicle is required"),
-  template: z.number().min(1, "Template is required"),
-  work_order: z.number().optional(),
-  inspection_date: z.string().min(1, "Inspection date is required"),
-  odometer_reading: z.number().min(0).optional(),
-  notes: z.string().optional(),
-});
-
-type InspectionFormData = z.infer<typeof inspectionSchema>;
+import { InspectionForm, InspectionFormData } from "@/components/inspections/InspectionForm";
 
 export default function NewInspectionPage() {
   const router = useRouter();
@@ -48,50 +23,12 @@ export default function NewInspectionPage() {
   const [showActiveWorkOrderDialog, setShowActiveWorkOrderDialog] = useState(false);
   const [activeWorkOrderBranch, setActiveWorkOrderBranch] = useState<string | null>(null);
 
-  // Fetch templates
-  const { data: templatesData } = useQuery({
-    queryKey: ["inspection-templates", "active"],
-    queryFn: () => inspectionsApi.templates.active(),
-  });
-
-  // Fetch vehicles
-  const { data: vehiclesData } = useQuery({
-    queryKey: ["vehicles", "list"],
-    queryFn: () => vehiclesApi.list({ page: 1 }),
-  });
-
   // Fetch work order if provided
   const { data: workOrder } = useQuery({
     queryKey: ["workorder", workOrderId],
     queryFn: () => workordersApi.get(parseInt(workOrderId!)),
     enabled: !!workOrderId,
   });
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    setValue,
-    setError,
-    watch,
-  } = useForm<InspectionFormData>({
-    resolver: zodResolver(inspectionSchema),
-    defaultValues: {
-      inspection_date: new Date().toISOString().slice(0, 16),
-      vehicle: vehicleId ? parseInt(vehicleId) : undefined,
-      work_order: workOrderId ? parseInt(workOrderId) : undefined,
-    },
-  });
-
-  const selectedVehicle = watch("vehicle");
-
-  // Pre-fill vehicle from work order if available
-  if (workOrder && !selectedVehicle) {
-    const vehicleId = typeof workOrder.vehicle === 'object' ? workOrder.vehicle.id : workOrder.vehicle;
-    if (vehicleId) {
-      setValue("vehicle", vehicleId);
-    }
-  }
 
   const createMutation = useMutation({
     mutationFn: (data: InspectionFormData) => inspectionsApi.create(data),
@@ -122,8 +59,6 @@ export default function NewInspectionPage() {
 
         // Check if this is the active work order error
         if (errorMessage && errorMessage.includes('has an active work order') && errorMessage.includes('at')) {
-          // Extract branch name from error message
-          // Format: "This vehicle has an active work order (WO-123) at Branch Name. A new..."
           const branchMatch = errorMessage.match(/at ([^.]+)\./);
           const branchName = branchMatch ? branchMatch[1].trim() : 'another branch';
           setActiveWorkOrderBranch(branchName);
@@ -131,24 +66,10 @@ export default function NewInspectionPage() {
           return;
         }
 
-        // Handle field-level errors
-        Object.keys(errorData).forEach((field) => {
-          if (field !== "non_field_errors" && field !== "detail") {
-            const fieldError = Array.isArray(errorData[field])
-              ? errorData[field][0]
-              : errorData[field];
-            setError(field as keyof InspectionFormData, {
-              type: "server",
-              message: fieldError,
-            });
-          }
-        });
-
-        // Handle other errors
         if (errorMessage) {
           setServerError(errorMessage);
         } else {
-          setServerError("An error occurred while creating the inspection. Please check the form and try again.");
+          setServerError("An error occurred. Check the form for details.");
         }
       } else {
         setServerError("An unexpected error occurred. Please try again.");
@@ -161,198 +82,41 @@ export default function NewInspectionPage() {
     await createMutation.mutateAsync(data);
   };
 
-  const templates = templatesData || [];
-  const vehicles = vehiclesData?.results || [];
+  const initialData: Partial<InspectionFormData> = {
+    vehicle: vehicleId ? parseInt(vehicleId) : (workOrder ? (typeof workOrder.vehicle === 'object' ? workOrder.vehicle.id : workOrder.vehicle as number) : undefined),
+    work_order: workOrderId ? parseInt(workOrderId) : undefined,
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
-            <span>/</span>
-            <Link href="/inspections" className="hover:text-blue-600 transition-colors">Inspections</Link>
-            <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">New</span>
+    <div className="max-w-3xl mx-auto space-y-8 pb-12">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/inspections">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">New Inspection</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              Create a new vehicle inspection
+            </p>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">New Inspection</h1>
         </div>
       </div>
 
-      {serverError && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2 text-red-800">
-              <AlertCircle className="w-5 h-5" />
-              <p className="font-medium">{serverError}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Dialog open={showActiveWorkOrderDialog} onOpenChange={setShowActiveWorkOrderDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2 text-red-600">
-              <AlertCircle className="w-5 h-5" />
-              <span>Active Work Order Detected</span>
-            </DialogTitle>
-            <DialogDescription className="pt-4">
-              The selected vehicle has an open work order at <strong>{activeWorkOrderBranch}</strong>.
-              Please close it before creating a new one.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setShowActiveWorkOrderDialog(false)}>
-              OK
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <Card className="shadow-sm border-gray-200 dark:border-gray-800">
-          <CardHeader className="pb-4 border-b bg-gray-50/50 dark:bg-gray-800/50">
-            <CardTitle className="text-lg font-semibold text-gray-900 dark:text-gray-100">Inspection Details</CardTitle>
-            <CardDescription className="text-sm text-gray-500">
-              Select the vehicle and template to initialize the inspection.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label htmlFor="vehicle" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Vehicle <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="vehicle"
-                  {...register("vehicle", { valueAsNumber: true })}
-                  className="w-full h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select a vehicle</option>
-                  {vehicles.map((vehicle) => (
-                    <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.license_plate}
-                    </option>
-                  ))}
-                </select>
-                {errors.vehicle && (
-                  <p className="text-red-500 text-xs mt-1">{errors.vehicle.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="template" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Template <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="template"
-                  {...register("template", { valueAsNumber: true })}
-                  className="w-full h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select a template</option>
-                  {templates.map((template) => (
-                    <option key={template.id} value={template.id}>
-                      {template.name}
-                      {template.is_default && " (Default)"}
-                    </option>
-                  ))}
-                </select>
-                {errors.template && (
-                  <p className="text-red-500 text-xs mt-1">{errors.template.message}</p>
-                )}
-                <p className="text-xs text-gray-500">
-                  Don't see a template?{" "}
-                  <Link href="/inspections/templates" className="text-blue-600 hover:underline">
-                    Manage templates
-                  </Link>
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="work_order" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Work Order (Optional)
-                </label>
-                <Input
-                  id="work_order"
-                  type="number"
-                  {...register("work_order", { valueAsNumber: true })}
-                  placeholder="Work order ID"
-                  className="h-9"
-                />
-                {errors.work_order && (
-                  <p className="text-red-500 text-xs mt-1">{errors.work_order.message}</p>
-                )}
-                {workOrder && (
-                  <p className="text-xs text-gray-500">
-                    Linked to work order: {(workOrder as any).wo_number || workOrder.id}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="inspection_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Inspection Date <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  id="inspection_date"
-                  type="datetime-local"
-                  {...register("inspection_date")}
-                  className="h-9"
-                />
-                {errors.inspection_date && (
-                  <p className="text-red-500 text-xs mt-1">{errors.inspection_date.message}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="odometer_reading" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Odometer Reading (Optional)
-              </label>
-              <Input
-                id="odometer_reading"
-                type="number"
-                {...register("odometer_reading", { valueAsNumber: true })}
-                placeholder="Current mileage"
-                min={0}
-                className="h-9 max-w-md"
-              />
-              {errors.odometer_reading && (
-                <p className="text-red-500 text-xs mt-1">{errors.odometer_reading.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Notes (Optional)
-              </label>
-              <Textarea
-                id="notes"
-                {...register("notes")}
-                placeholder="Additional notes about this inspection"
-                rows={3}
-                className="resize-none"
-              />
-              {errors.notes && (
-                <p className="text-red-500 text-xs mt-1">{errors.notes.message}</p>
-              )}
-            </div>
-
-            <div className="flex justify-end space-x-3 pt-6 border-t">
-              <Link href="/inspections">
-                <Button type="button" variant="outline" className="h-9">
-                  Cancel
-                </Button>
-              </Link>
-              <Button type="submit" disabled={isSubmitting} className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-                {isSubmitting ? "Creating..." : "Create Inspection"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </form>
+      <InspectionForm
+        initialData={initialData}
+        onSubmit={onSubmit}
+        isSubmitting={createMutation.isPending}
+        serverError={serverError}
+        onCancel={() => router.push("/inspections")}
+        activeWorkOrderBranch={activeWorkOrderBranch}
+        showActiveWorkOrderDialog={showActiveWorkOrderDialog}
+        setShowActiveWorkOrderDialog={setShowActiveWorkOrderDialog}
+        workOrderData={workOrder}
+      />
     </div>
   );
 }
-

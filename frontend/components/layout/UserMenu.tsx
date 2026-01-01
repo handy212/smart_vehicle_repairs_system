@@ -15,10 +15,53 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authApi } from "@/lib/api/auth";
 import { cn } from "@/lib/utils/cn";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { branchesApi, type Branch } from "@/lib/api/admin";
+import { useBranchStore } from "@/store/branchStore";
+import { Building2, ChevronDown } from "lucide-react";
+import {
+    Select,
+} from "@/components/ui/select";
 
 export function UserMenu() {
     const { user, logout } = useAuthStore();
+    const { activeBranchId, activeBranch, setBranch } = useBranchStore();
     const router = useRouter();
+    const queryClient = useQueryClient();
+
+    const {
+        data: accessibleBranchesData,
+        isLoading: isBranchesLoading,
+    } = useQuery<Branch[]>({
+        queryKey: ["branches", "accessible"],
+        queryFn: () => branchesApi.accessible(),
+        enabled: !!user,
+    });
+
+    const branchOptions = accessibleBranchesData ?? [];
+    const sortedBranches = [...branchOptions].sort((a, b) =>
+        a.name.localeCompare(b.name)
+    );
+    const hasMultipleBranches = sortedBranches.length > 1;
+
+    const currentBranchId = activeBranchId ?? (sortedBranches.length ? sortedBranches[0].id : null);
+
+    const handleBranchChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedId = parseInt(event.target.value, 10);
+        const selectedBranch = sortedBranches.find(
+            (branch) => branch.id === selectedId
+        );
+        if (selectedBranch) {
+            setBranch(selectedBranch);
+            // The Navbar has a logic to reload on branch change, 
+            // but we should probably centralize it or ensure it's handled.
+            // For now, let's trigger the reload if needed.
+            queryClient.clear();
+            if (typeof window !== "undefined") {
+                window.location.reload();
+            }
+        }
+    };
 
     const handleLogout = () => {
         authApi.logout();
@@ -61,6 +104,33 @@ export function UserMenu() {
                 </DropdownMenuLabel>
 
                 <DropdownMenuSeparator />
+
+                {hasMultipleBranches && (
+                    <>
+                        <DropdownMenuLabel className="pb-1">
+                            <div className="flex items-center gap-2">
+                                <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Switch Branch</span>
+                            </div>
+                        </DropdownMenuLabel>
+                        <div className="px-2 pb-2">
+                            <select
+                                value={currentBranchId ? currentBranchId.toString() : ""}
+                                onChange={handleBranchChange}
+                                disabled={isBranchesLoading || sortedBranches.length === 0}
+                                className="w-full h-8 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-lg text-xs px-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer"
+                            >
+                                {sortedBranches.map((branch) => (
+                                    <option key={branch.id} value={branch.id}>
+                                        {branch.name}
+                                        {branch.is_headquarters ? " (HQ)" : ""}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <DropdownMenuSeparator />
+                    </>
+                )}
 
                 <DropdownMenuItem asChild>
                     <Link href="/admin/profile" className="cursor-pointer">

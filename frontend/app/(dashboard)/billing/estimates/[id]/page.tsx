@@ -8,15 +8,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Edit, Mail, FileText, CheckCircle, XCircle, Download, Wrench, Printer, ChevronDown, MoreVertical, AlertCircle } from "lucide-react";
+import { ArrowLeft, Edit, Mail, CheckCircle, XCircle, Download, Wrench, Printer, ChevronDown, MoreVertical, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
+import { cn } from "@/lib/utils/cn";
 import { useBranchStore } from "@/store/branchStore";
 import { usePrint } from "@/lib/hooks/usePrint";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EstimateNotes } from "./components/EstimateNotes";
+import { EstimateReminders } from "./components/EstimateReminders";
+import { EstimateActivityLog } from "./components/EstimateActivityLog";
+import { useAuthStore } from "@/store/authStore";
+import { FileText, Clock, StickyNote, Activity, FileCheck } from "lucide-react";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function EstimateDetailPage() {
+  const { formatCurrency } = useCurrency();
   const params = useParams();
   const router = useRouter();
   const estimateId = parseInt(params.id as string);
@@ -27,6 +36,8 @@ export default function EstimateDetailPage() {
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const { downloadPDF, isDownloading } = usePrint();
+  const [activeTab, setActiveTab] = useState("estimate");
+  const { user: currentUser } = useAuthStore();
 
   const { data: estimate, isLoading, error } = useQuery({
     queryKey: ["estimate", estimateId],
@@ -289,6 +300,15 @@ export default function EstimateDetailPage() {
             </div>
           </div>
           <div className="relative no-print">
+            {estimate.can_be_converted && estimate.status !== "converted" && (
+              <Button
+                onClick={handleConvertToInvoice}
+                disabled={isConverting}
+                className="bg-green-600 hover:bg-green-700 text-white mr-2"
+              >
+                {isConverting ? "Converting..." : "Convert to Invoice"}
+              </Button>
+            )}
             <Button
               variant="secondary"
               onClick={() => setShowActionsMenu(!showActionsMenu)}
@@ -399,301 +419,301 @@ export default function EstimateDetailPage() {
           </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Estimate Details */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Estimate Information */}
+
+        {/* Main Content Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="bg-white dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 rounded-lg w-full justify-start h-auto flex-wrap">
+            <TabsTrigger
+              value="estimate"
+              className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-400 px-4 py-2 h-auto gap-2"
+            >
+              <FileCheck className="w-4 h-4" />
+              Estimate Details
+            </TabsTrigger>
+            <TabsTrigger
+              value="activity"
+              className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-400 px-4 py-2 h-auto gap-2"
+            >
+              <Activity className="w-4 h-4" />
+              Activity Log
+            </TabsTrigger>
+            <TabsTrigger
+              value="reminders"
+              className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-400 px-4 py-2 h-auto gap-2"
+            >
+              <Clock className="w-4 h-4" />
+              Reminders
+            </TabsTrigger>
+            <TabsTrigger
+              value="notes"
+              className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-400 px-4 py-2 h-auto gap-2"
+            >
+              <StickyNote className="w-4 h-4" />
+              Notes
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="estimate" className="space-y-6">
+
+            {/* 1. Header Information (Estimate Details, Dates, etc.) - Full Width */}
             <Card>
-              <CardHeader>
-                <CardTitle>Estimate Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-6">
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Customer / Bill To */}
                   <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Estimate Number</p>
-                    <p className="text-gray-900 font-mono">{estimate.estimate_number}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-2">Status</p>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={getStatusVariant(localStatus || estimate.status) as any}>
-                        {(localStatus || estimate.status)?.replace("_", " ").toUpperCase()}
-                      </Badge>
-                      <select
-                        value={localStatus || estimate.status}
-                        onChange={handleStatusChange}
-                        disabled={statusChangeMutation.isPending}
-                        className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <option value="draft">Draft</option>
-                        <option value="sent">Sent</option>
-                        <option value="viewed">Viewed</option>
-                        <option value="approved">Approved</option>
-                        <option value="declined">Declined</option>
-                        <option value="converted">Converted</option>
-                      </select>
-                      {statusChangeMutation.isPending && (
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Estimate Date</p>
-                    <p className="text-gray-900">
-                      {estimate.estimate_date
-                        ? format(new Date(estimate.estimate_date), "MMMM dd, yyyy")
-                        : "-"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Valid Until</p>
-                    <p className="text-gray-900">
-                      {estimate.valid_until
-                        ? format(new Date(estimate.valid_until), "MMMM dd, yyyy")
-                        : "-"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Customer</p>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Customer</h3>
                     {estimate.customer ? (
-                      <Link
-                        href={`/customers/${typeof estimate.customer === 'object' && estimate.customer !== null ? estimate.customer.id : estimate.customer}`}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
-                      >
+                      <Link href={`/customers/${typeof estimate.customer === 'object' && estimate.customer !== null ? estimate.customer.id : estimate.customer}`} className="text-base font-semibold text-gray-900 hover:text-blue-600 block">
                         {estimate.customer_name || "View Customer"}
                       </Link>
                     ) : (
-                      <p className="text-gray-900">{estimate.customer_name || "-"}</p>
+                      <p className="text-base font-semibold text-gray-900">{estimate.customer_name || "-"}</p>
                     )}
-                    {estimate.customer_email && (
-                      <p className="text-xs text-gray-500 mt-1">{estimate.customer_email}</p>
-                    )}
+                    {estimate.customer_email && <p className="text-sm text-gray-600">{estimate.customer_email}</p>}
+                    {estimate.customer_phone && <p className="text-sm text-gray-600">{estimate.customer_phone}</p>}
+                    {estimate.customer_address && <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{estimate.customer_address}</p>}
                   </div>
-                  {estimate.vehicle && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Vehicle</p>
-                      <Link
-                        href={`/vehicles/${typeof estimate.vehicle === 'object' && estimate.vehicle !== null ? estimate.vehicle.id : estimate.vehicle}`}
-                        className="text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        {estimate.vehicle_display || "View Vehicle"}
-                      </Link>
-                      {estimate.vehicle_vin && (
-                        <p className="text-xs text-gray-500 mt-1">VIN: {estimate.vehicle_vin}</p>
+
+                  {/* Estimate Info */}
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Details</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between md:justify-start md:gap-8">
+                        <span className="text-sm text-gray-500 w-24">Date:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {estimate.estimate_date ? format(new Date(estimate.estimate_date), "MMM dd, yyyy") : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between md:justify-start md:gap-8">
+                        <span className="text-sm text-gray-500 w-24">Valid Until:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {estimate.valid_until ? format(new Date(estimate.valid_until), "MMM dd, yyyy") : "-"}
+                        </span>
+                      </div>
+                      {estimate.sales_agent_name && (
+                        <div className="flex justify-between md:justify-start md:gap-8">
+                          <span className="text-sm text-gray-500 w-24">Sales Agent:</span>
+                          <span className="text-sm font-medium text-gray-900">{estimate.sales_agent_name}</span>
+                        </div>
+                      )}
+                      {estimate.days_until_expiration !== undefined && estimate.status === 'sent' && (
+                        <div className="flex justify-between md:justify-start md:gap-8">
+                          <span className="text-sm text-gray-500 w-24">Expires:</span>
+                          <span className={cn("text-sm font-medium", estimate.days_until_expiration < 0 ? "text-red-600" : "text-gray-900")}>
+                            {estimate.days_until_expiration < 0 ? "Expired" : `${estimate.days_until_expiration} days`}
+                          </span>
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-                {((estimate.title || estimate.description) && (
-                  <div className="border-t pt-4 mt-4 space-y-3">
-                    {estimate.title && (
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">Title</p>
-                        <p className="text-gray-900 text-sm">{estimate.title}</p>
-                      </div>
-                    )}
-                    {estimate.description && (
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">Description</p>
-                        <p className="text-gray-900 text-sm whitespace-pre-wrap">{estimate.description}</p>
-                      </div>
-                    )}
                   </div>
-                ))}
-              </CardContent>
-            </Card>
 
-            {/* Line Items */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Line Items</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {estimate.line_items && estimate.line_items.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Item</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="text-right">Quantity</TableHead>
-                          <TableHead className="text-right">Unit Price</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {estimate.line_items.map((item: any, index: number) => (
-                          <TableRow key={item.id || index}>
-                            <TableCell className="capitalize">{item.item_type?.replace("_", " ")}</TableCell>
-                            <TableCell>{item.description || "-"}</TableCell>
-                            <TableCell className="text-right">
-                              {item.item_type === "labor"
-                                ? `${item.labor_hours || 0}h`
-                                : (item.quantity || "-")}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {item.item_type === "labor"
-                                ? (item.labor_rate ? `$${parseFloat(item.labor_rate).toFixed(2)}/hr` : "-")
-                                : (item.unit_price ? `$${parseFloat(item.unit_price).toFixed(2)}` : "-")}
-                            </TableCell>
-                            <TableCell className="text-right font-medium">
-                              {item.total ? `$${parseFloat(item.total).toFixed(2)}` : "-"}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  {/* Vehicle / Status */}
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Related</h3>
+                    <div className="space-y-2">
+                      {estimate.vehicle && (
+                        <div className="flex flex-col">
+                          <span className="text-sm text-gray-500">Vehicle</span>
+                          <Link href={`/vehicles/${typeof estimate.vehicle === 'object' && estimate.vehicle !== null ? estimate.vehicle.id : estimate.vehicle}`} className="text-sm font-medium text-blue-600 hover:underline">
+                            {estimate.vehicle_display || "View Vehicle"}
+                          </Link>
+                          {estimate.vehicle_vin && <span className="text-xs text-gray-500">VIN: {estimate.vehicle_vin}</span>}
+                        </div>
+                      )}
+
+                      <div className="flex flex-col mt-2">
+                        <span className="text-sm text-gray-500 mb-1">Status</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={getStatusVariant(localStatus || estimate.status) as any}>
+                            {(localStatus || estimate.status)?.replace("_", " ").toUpperCase()}
+                          </Badge>
+                          {/* inline status editor could go here but redundant if we have actions? let's keep the select for quick edits if previously available */}
+                          <select
+                            value={localStatus || estimate.status}
+                            onChange={handleStatusChange}
+                            disabled={statusChangeMutation.isPending}
+                            className="px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          >
+                            <option value="draft">Draft</option>
+                            <option value="sent">Sent</option>
+                            <option value="viewed">Viewed</option>
+                            <option value="approved">Approved</option>
+                            <option value="declined">Declined</option>
+                            <option value="converted">Converted</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-sm text-gray-500">No line items found.</p>
+                </div>
+
+                {(estimate.title || estimate.description || estimate.notes) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t">
+                    {(estimate.title || estimate.description) && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Description</h4>
+                        {estimate.title && <p className="text-sm font-medium text-gray-900 mb-1">{estimate.title}</p>}
+                        {estimate.description && <p className="text-sm text-gray-600 whitespace-pre-wrap">{estimate.description}</p>}
+                      </div>
+                    )}
+                    {estimate.notes && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Notes</h4>
+                        <p className="text-sm text-gray-600 italic whitespace-pre-wrap">{estimate.notes}</p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </CardContent>
             </Card>
-          </div>
 
-          {/* Right Column - Summary & Actions */}
-          <div className="space-y-6">
-            {/* Financial Summary */}
+            {/* 2. Line Items - Full Width */}
             <Card>
-              <CardHeader>
-                <CardTitle>Financial Summary</CardTitle>
+              <CardHeader className="pb-3 border-b">
+                <CardTitle className="text-lg">Line Items</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-gray-50 dark:bg-gray-800/50">
+                      <TableRow className="h-8">
+                        <TableHead className="w-[40%] py-2">Item / Description</TableHead>
+                        <TableHead className="text-right py-2">Qty/Hrs</TableHead>
+                        <TableHead className="text-right py-2">Rate</TableHead>
+                        <TableHead className="text-right py-2">Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {estimate.line_items && estimate.line_items.length > 0 ? (
+                        estimate.line_items.map((item: any, index: number) => (
+                          <TableRow key={item.id || index}>
+                            <TableCell className="align-top py-3">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-gray-900">{item.description}</span>
+                                <span className="text-xs text-gray-500 capitalize mt-0.5">{item.item_type?.replace("_", " ")}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right align-top py-3">
+                              {item.item_type === "labor" ? `${item.labor_hours || 0}h` : (item.quantity || "-")}
+                            </TableCell>
+                            <TableCell className="text-right align-top py-3">
+                              {item.item_type === "labor"
+                                ? (item.labor_rate ? `${formatCurrency(parseFloat(item.labor_rate))}/hr` : "-")
+                                : (item.unit_price ? `${formatCurrency(parseFloat(item.unit_price))}` : "-")}
+                            </TableCell>
+                            <TableCell className="text-right font-medium align-top py-3">
+                              {item.total ? formatCurrency(parseFloat(item.total)) : "-"}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                            No line items found.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 3. Financial Summary - Bottom Right */}
+            <div className="flex justify-end">
+              <div className="w-full md:w-1/3 min-w-[300px] space-y-2 px-4 md:px-0">
                 {estimate.labor_subtotal && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Labor Subtotal</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      ${parseFloat(estimate.labor_subtotal).toFixed(2)}
-                    </span>
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>Labor Subtotal</span>
+                    <span>{formatCurrency(parseFloat(estimate.labor_subtotal))}</span>
                   </div>
                 )}
                 {estimate.parts_subtotal && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Parts Subtotal</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      ${parseFloat(estimate.parts_subtotal).toFixed(2)}
-                    </span>
+                  <div className="flex justify-between text-sm text-gray-500">
+                    <span>Parts Subtotal</span>
+                    <span>{formatCurrency(parseFloat(estimate.parts_subtotal))}</span>
                   </div>
                 )}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Subtotal</span>
-                  <span className="text-gray-900">
-                    ${parseFloat(estimate.subtotal || "0").toFixed(2)}
+
+                <div className="flex items-center justify-between border-t border-dashed pt-2 mt-2">
+                  <span className="font-medium text-gray-600">Subtotal</span>
+                  <span className="text-gray-900 font-medium">
+                    {formatCurrency(parseFloat(estimate.subtotal || "0"))}
                   </span>
                 </div>
 
-                {/* Discount Display */}
-                {parseFloat(estimate.discount_percentage || "0") > 0 && parseFloat(estimate.discount_amount || "0") > 0 && (
-                  <>
-                    <div className="flex items-center justify-between text-red-600">
-                      <span className="text-sm">
-                        Discount ({parseFloat(estimate.discount_percentage || "0").toFixed(1)}%)
-                        {estimate.discount_reason && (
-                          <span className="text-xs text-gray-500 ml-1">- {estimate.discount_reason}</span>
-                        )}
-                      </span>
-                      <span>
-                        -${parseFloat(estimate.discount_amount || "0").toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between font-medium border-t pt-2">
-                      <span className="text-sm text-gray-500">Subtotal after Discount</span>
-                      <span className="text-gray-900">
-                        ${(parseFloat(estimate.subtotal || "0") - parseFloat(estimate.discount_amount || "0")).toFixed(2)}
-                      </span>
-                    </div>
-                  </>
+                {/* Discount */}
+                {parseFloat(estimate.discount_percentage || "0") > 0 && (
+                  <div className="flex justify-between text-sm text-red-600">
+                    <span>
+                      Discount ({parseFloat(estimate.discount_percentage || "0").toFixed(1)}%)
+                      {estimate.discount_reason && <span className="text-xs ml-1">({estimate.discount_reason})</span>}
+                    </span>
+                    <span>
+                      -{formatCurrency(parseFloat(estimate.discount_amount || "0"))}
+                    </span>
+                  </div>
                 )}
 
+                {/* Tax Breakdown */}
                 {hasDetailedTax ? (
-                  <>
+                  <div className="space-y-1 pt-1 opacity-90">
                     {taxBreakdown.nhilAmount > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">NHIL</span>
-                        <span className="text-gray-900">
-                          ${taxBreakdown.nhilAmount.toFixed(2)}
-                        </span>
+                      <div className="flex justify-between text-sm text-gray-500">
+                        <span>NHIL</span>
+                        <span>{formatCurrency(taxBreakdown.nhilAmount)}</span>
                       </div>
                     )}
                     {taxBreakdown.getfundAmount > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">GETFund</span>
-                        <span className="text-gray-900">
-                          ${taxBreakdown.getfundAmount.toFixed(2)}
-                        </span>
+                      <div className="flex justify-between text-sm text-gray-500">
+                        <span>GETFund</span>
+                        <span>{formatCurrency(taxBreakdown.getfundAmount)}</span>
                       </div>
                     )}
                     {taxBreakdown.hrlAmount > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">COVID-19</span>
-                        <span className="text-gray-900">
-                          ${taxBreakdown.hrlAmount.toFixed(2)}
-                        </span>
+                      <div className="flex justify-between text-sm text-gray-500">
+                        <span>COVID-19 HRL</span>
+                        <span>{formatCurrency(taxBreakdown.hrlAmount)}</span>
                       </div>
                     )}
                     {taxBreakdown.vatAmount > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-500">VAT</span>
-                        <span className="text-gray-900">
-                          ${taxBreakdown.vatAmount.toFixed(2)}
-                        </span>
+                      <div className="flex justify-between text-sm text-gray-500">
+                        <span>VAT</span>
+                        <span>{formatCurrency(taxBreakdown.vatAmount)}</span>
                       </div>
                     )}
-                  </>
+                  </div>
                 ) : (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Tax</span>
-                    <span className="text-gray-900">
-                      ${taxBreakdown.totalTax.toFixed(2)}
-                    </span>
-                  </div>
+                  parseAmount(estimate.tax_amount) > 0 && (
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>Tax</span>
+                      <span>{formatCurrency(parseAmount(estimate.tax_amount))}</span>
+                    </div>
+                  )
                 )}
-                <div className="border-t pt-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">Total</span>
-                    <span className="text-lg font-bold text-gray-900">
-                      ${parseFloat(estimate.total || "0").toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Estimate Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Estimate Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {estimate.created_at && (
-                  <div>
-                    <p className="text-xs text-gray-500">Created</p>
-                    <p className="text-sm">
-                      {format(new Date(estimate.created_at), "MMM dd, yyyy 'at' h:mm a")}
-                    </p>
-                  </div>
-                )}
-                {estimate.created_by_name && (
-                  <div>
-                    <p className="text-xs text-gray-500">Created By</p>
-                    <p className="text-sm">{estimate.created_by_name}</p>
-                  </div>
-                )}
-                {estimate.days_until_expiration !== undefined && (
-                  <div>
-                    <p className="text-xs text-gray-500">Days Until Expiration</p>
-                    <p className="text-sm">
-                      {estimate.days_until_expiration > 0
-                        ? `${estimate.days_until_expiration} days`
-                        : "Expired"}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-3 mt-2">
+                  <span>Total</span>
+                  <span className="text-gray-900">{formatCurrency(parseFloat(estimate.total || "0"))}</span>
+                </div>
+
+              </div>
+            </div>
+
+          </TabsContent>
+
+          <TabsContent value="activity">
+            <EstimateActivityLog estimateId={estimateId} />
+          </TabsContent>
+
+          <TabsContent value="reminders">
+            <EstimateReminders estimate={estimate} currentUser={currentUser || { id: 1 }} />
+          </TabsContent>
+
+          <TabsContent value="notes">
+            <EstimateNotes estimate={estimate} />
+          </TabsContent>
+        </Tabs>
 
         {/* Approve Estimate Confirmation Dialog */}
         <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
@@ -716,7 +736,7 @@ export default function EstimateDetailPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Amount:</span>
                         <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          ${parseFloat(estimate.total).toFixed(2)}
+                          {formatCurrency(parseFloat(estimate.total))}
                         </span>
                       </div>
                     </div>

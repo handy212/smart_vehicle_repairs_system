@@ -30,6 +30,7 @@ import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useState } from "react";
 import {
   Dialog,
@@ -48,6 +49,7 @@ export default function RoadsideRequestDetailPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const requestId = parseInt(params.id as string);
+  const { formatCurrency } = useCurrency();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -81,7 +83,7 @@ export default function RoadsideRequestDetailPage() {
   });
 
   const feedbackMutation = useMutation({
-    mutationFn: (data: { customer_feedback: string }) => roadsideApi.partialUpdate(requestId, data),
+    mutationFn: (data: { rating: number; customer_feedback?: string }) => roadsideApi.rate(requestId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal", "roadside", requestId] });
       toast({
@@ -399,7 +401,7 @@ export default function RoadsideRequestDetailPage() {
                     </div>
                     <Button
                       className="w-full bg-blue-600 hover:bg-blue-700 font-bold gap-2"
-                      onClick={() => feedbackMutation.mutate({ customer_feedback: feedback || `Rating: ${rating}/5` })}
+                      onClick={() => feedbackMutation.mutate({ rating, customer_feedback: feedback })}
                       disabled={feedbackMutation.isPending}
                     >
                       <Send className="h-4 w-4" />
@@ -442,7 +444,7 @@ export default function RoadsideRequestDetailPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Charge Amount</p>
                   <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    GH¢{parseFloat(req.charge_amount).toFixed(2)}
+                    {formatCurrency(parseFloat(req.charge_amount))}
                   </p>
                 </div>
               ) : null}

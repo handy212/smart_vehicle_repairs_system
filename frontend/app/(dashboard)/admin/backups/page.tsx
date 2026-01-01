@@ -16,7 +16,9 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function BackupsPage() {
+    const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -256,7 +258,7 @@ export default function BackupsPage() {
                         </TableCell>
                         <TableCell className="px-4 py-2.5 text-xs font-mono text-gray-600 dark:text-gray-400">
                           {backup.file_size_display || backup.file_size
-                            ? backup.file_size_display || `${(backup.file_size! / 1024 / 1024).toFixed(2)} MB`
+                            ? backup.file_size_display || `{formatCurrency((backup.file_size! / 1024 / 1024))} MB`
                             : "-"}
                         </TableCell>
                         <TableCell className="px-4 py-2.5 text-xs text-gray-600 dark:text-gray-400">

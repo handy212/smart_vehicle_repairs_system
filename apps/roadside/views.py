@@ -35,6 +35,27 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
     search_fields = ['request_number', 'customer__user__first_name', 'customer__user__last_name', 'vehicle__license_plate', 'breakdown_location']
     ordering_fields = ['requested_at', 'dispatched_at', 'completed_at', 'status']
     ordering = ['-requested_at']
+
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """
+        Get statistics for roadside dashboard.
+        """
+        # Filter by user role/branch logic
+        queryset = self.get_queryset()
+        
+        # Calculate stats
+        total_requests = queryset.count()
+        active_requests = queryset.filter(status__in=['requested', 'dispatched', 'en_route', 'on_site', 'in_progress']).count()
+        completed_requests = queryset.filter(status='completed').count()
+        covered_by_subscription = queryset.filter(is_covered_by_subscription=True).count()
+        
+        return Response({
+            'total_requests': total_requests,
+            'active_requests': active_requests,
+            'completed_requests': completed_requests,
+            'covered_by_subscription': covered_by_subscription
+        })
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -46,7 +67,9 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             if getattr(self.request.user, "role", None) == "customer":
                 return [IsAuthenticated()]
             return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'create_roadside_requests'])]
-        elif action in ['update', 'partial_update', 'assign_dispatch', 'arrive', 'complete', 'cancel']:
+        elif action == 'cancel':
+             return [IsAuthenticated()]
+        elif action in ['update', 'partial_update', 'assign_dispatch', 'arrive', 'complete']:
             return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'dispatch_roadside'])]
         return [IsAuthenticated()]
     
@@ -411,6 +434,15 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Send notification
+        try:
+            from apps.notifications_app.triggers import notification_triggers
+            notification_triggers.roadside_cancelled(roadside_request)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to send cancellation notification: {e}")
+            
         serializer = self.get_serializer(roadside_request)
         return Response(serializer.data)
     
@@ -469,6 +501,54 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @action(detail=True, methods=['post'])
+    def rate_service(self, request, pk=None):
+        """Rate completed service (Customer only)"""
+        roadside_request = self.get_object()
+        
+        # Verify user is the customer
+        is_customer = False
+        if request.user.role == 'customer':
+            try:
+                if roadside_request.customer == request.user.customer_profile:
+                    is_customer = True
+            except AttributeError:
+                pass
+        
+        if not is_customer and request.user.role not in ['admin', 'manager']: # Allow admins to test
+             return Response(
+                {'error': 'You do not have permission to rate this request'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        rating = request.data.get('rating')
+        feedback = request.data.get('customer_feedback') or request.data.get('feedback')
+        
+        if not rating:
+            return Response(
+                {'error': 'Rating is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        try:
+            rating = int(rating)
+            if not (1 <= rating <= 5):
+                raise ValueError
+        except (ValueError, TypeError):
+             return Response(
+                {'error': 'Rating must be an integer between 1 and 5'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        roadside_request.rating = rating
+        if feedback:
+            roadside_request.customer_feedback = feedback
+        
+        roadside_request.save()
+        
+        serializer = self.get_serializer(roadside_request)
+        return Response(serializer.data)
+
     @action(detail=True, methods=['post'])
     def send_customer_sms(self, request, pk=None):
         """Send SMS to customer for this roadside request"""

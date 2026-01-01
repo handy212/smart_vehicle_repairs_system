@@ -336,3 +336,180 @@ class CustomerNote(models.Model):
 
 
 
+
+class CustomerContact(models.Model):
+    """
+    Additional contacts for a customer (multi-contact support)
+    """
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name='contacts'
+    )
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    job_title = models.CharField(max_length=100, blank=True)
+    is_primary = models.BooleanField(
+        default=False,
+        help_text="Primary contact for this customer"
+    )
+    is_billing = models.BooleanField(
+        default=False,
+        help_text="Billing contact (receives invoices)"
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_primary', 'first_name']
+        verbose_name = 'Customer Contact'
+        verbose_name_plural = 'Customer Contacts'
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} ({self.customer})"
+
+
+class CustomerReminder(models.Model):
+    """
+    Reminders for customer follow-ups
+    """
+    REMINDER_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name='reminders'
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    due_date = models.DateTimeField()
+    status = models.CharField(
+        max_length=20,
+        choices=REMINDER_STATUS_CHOICES,
+        default='pending'
+    )
+    is_system_generated = models.BooleanField(
+        default=False,
+        help_text="Automatically generated reminder"
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_reminders'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['due_date']
+        verbose_name = 'Customer Reminder'
+        verbose_name_plural = 'Customer Reminders'
+
+    def __str__(self):
+        return f"{self.title} - {self.customer}"
+
+
+class CustomerDocument(models.Model):
+    """
+    Documents uploaded for a customer
+    """
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name='documents'
+    )
+    name = models.CharField(max_length=255)
+    file = models.FileField(upload_to='customer_documents/')
+    description = models.TextField(blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='customer_uploaded_documents'
+    )
+    is_public = models.BooleanField(
+        default=False, 
+        help_text="Visible to customer in portal"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Customer Document'
+        verbose_name_plural = 'Customer Documents'
+
+    def __str__(self):
+        return f"{self.name} ({self.customer})"
+        
+    @property
+    def size(self):
+        try:
+            return self.file.size
+        except:
+            return 0
+            
+    @property
+    def extension(self):
+        import os
+        name, extension = os.path.splitext(self.file.name)
+        return extension.lower().replace('.', '')
+
+
+class CustomerContract(models.Model):
+    """
+    Contracts and agreements for a customer
+    """
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('sent', 'Sent'),
+        ('active', 'Active'),
+        ('expired', 'Expired'),
+        ('terminated', 'Terminated'),
+    ]
+
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.CASCADE,
+        related_name='contracts'
+    )
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='draft'
+    )
+    value = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2, 
+        default=0.00
+    )
+    document = models.FileField(upload_to='customer_contracts/', null=True, blank=True)
+    signed_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_contracts'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Customer Contract'
+        verbose_name_plural = 'Customer Contracts'
+
+    def __str__(self):
+        return f"{self.title} - {self.customer}"

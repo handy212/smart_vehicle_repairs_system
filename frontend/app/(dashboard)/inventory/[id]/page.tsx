@@ -8,14 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ArrowLeft, Edit, Package, AlertTriangle, DollarSign, MapPin, Wrench, FileText, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Edit, Package, AlertTriangle, MapPin, Calendar, Clock, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import StockAdjustmentDialog from "./components/StockAdjustmentDialog";
 import { useState } from "react";
 import Image from "next/image";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function PartDetailPage() {
+  const { formatCurrency } = useCurrency();
   const params = useParams();
   const router = useRouter();
   const partId = parseInt(params.id as string);
@@ -37,21 +39,21 @@ export default function PartDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (error || !part) {
     return (
-      <div className="space-y-4">
-        <Button variant="secondary" onClick={() => router.back()}>
+      <div className="space-y-4 max-w-5xl mx-auto">
+        <Button variant="ghost" onClick={() => router.back()}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
-        <Card>
+        <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
           <CardContent className="pt-6">
-            <p className="text-red-600">Error loading part. Please try again.</p>
+            <p className="text-red-600 dark:text-red-400">Error loading part. Please try again.</p>
           </CardContent>
         </Card>
       </div>
@@ -67,21 +69,30 @@ export default function PartDetailPage() {
   const stockStatus = getStockStatus();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="secondary" onClick={() => router.back()}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <Button variant="outline" size="icon" onClick={() => router.push('/inventory')} className="mt-1">
+            <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{part.name}</h1>
-            <p className="text-sm text-gray-500 mt-1 font-mono">{part.part_number}</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{part.name}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-sm font-mono text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+                {part.part_number}
+              </p>
+              <Badge variant={stockStatus.variant} className="h-6 gap-1">
+                <stockStatus.icon className="w-3 h-3" />
+                {stockStatus.text}
+              </Badge>
+              {!part.is_active && <Badge variant="secondary">Inactive</Badge>}
+            </div>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="secondary" onClick={() => setShowAdjustDialog(true)}>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowAdjustDialog(true)}>
+            <RotateCcw className="w-4 h-4 mr-2" />
             Adjust Stock
           </Button>
           <Link href={`/inventory/${partId}/edit`}>
@@ -93,311 +104,225 @@ export default function PartDetailPage() {
         </div>
       </div>
 
-      {/* Status Badges */}
-      <div className="flex items-center space-x-2">
-        <Badge variant={stockStatus.variant} className="text-sm px-3 py-1">
-          <stockStatus.icon className="w-3 h-3 mr-1" />
-          {stockStatus.text}
-        </Badge>
-        <Badge variant={part.is_active ? "success" : "secondary"} className="text-sm px-3 py-1">
-          {part.is_active ? "Active" : "Inactive"}
-        </Badge>
-        {part.is_taxable && (
-          <Badge variant="default" className="text-sm px-3 py-1">
-            Taxable
-          </Badge>
-        )}
-        {part.is_core && (
-          <Badge variant="warning" className="text-sm px-3 py-1">
-            Core Part
-          </Badge>
-        )}
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Column */}
-        <div className="lg:col-span-3">
-          {/* Tabs for organized sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column (Main Info) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Overview Card */}
           <Card>
-            <CardContent className="p-0">
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <div className="border-b border-gray-200 dark:border-gray-700 px-6 pt-4">
-                  <TabsList>
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="inventory">Inventory</TabsTrigger>
-                    <TabsTrigger value="pricing">Pricing</TabsTrigger>
-                    <TabsTrigger value="details">Details</TabsTrigger>
-                    <TabsTrigger value="history">History</TabsTrigger>
-                  </TabsList>
+            <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+              <CardTitle className="text-base font-medium">Overview</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* Image */}
+                <div className="flex-shrink-0">
+                  {part.image ? (
+                    <div
+                      className="w-full md:w-48 aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 relative cursor-pointer group"
+                      onClick={() => setShowImageModal(true)}
+                    >
+                      <Image
+                        src={part.image}
+                        alt={part.name}
+                        fill
+                        className="object-contain bg-gray-50 dark:bg-gray-900 transition-transform group-hover:scale-105"
+                        unoptimized={part.image?.startsWith("data:")}
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                        <span className="opacity-0 group-hover:opacity-100 bg-black/60 text-white text-xs px-2 py-1 rounded">View</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full md:w-48 aspect-square rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center border border-gray-200 dark:border-gray-700">
+                      <Package className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                    </div>
+                  )}
                 </div>
 
-                <TabsContent value="overview" className="p-6">
-                  <div className="flex flex-col md:flex-row gap-6">
-                    {/* Left Column - Part Image */}
-                    {part.image && (
-                      <div className="flex-shrink-0">
-                        <div
-                          className="w-40 cursor-pointer"
-                          onClick={() => setShowImageModal(true)}
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(e) => e.key === "Enter" && setShowImageModal(true)}
-                        >
-                          <div className="relative aspect-[4/3] rounded-lg overflow-hidden border border-gray-300 dark:border-gray-700">
-                            <Image
-                              src={part.image}
-                              alt={part.name}
-                              fill
-                              className="object-cover"
-                              sizes="160px"
-                              unoptimized={
-                                part.image?.startsWith("http://localhost") ||
-                                part.image?.startsWith("https://localhost")
-                              }
-                            />
-                          </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">Click to enlarge</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Right Column - Part Information */}
-                    <div className="flex-1 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Part Number</p>
-                          <p className="text-sm font-mono text-gray-900 dark:text-gray-100">{part.part_number}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Category</p>
-                          <p className="text-sm text-gray-900 dark:text-gray-100">{part.category_path || part.category_name || "-"}</p>
-                        </div>
-                      </div>
-                      {part.description && (
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Description</p>
-                          <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{part.description}</p>
-                        </div>
-                      )}
-                      {(part.manufacturer || part.manufacturer_part_number) && (
-                        <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                          {part.manufacturer && (
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Manufacturer</p>
-                              <p className="text-sm text-gray-900 dark:text-gray-100">{part.manufacturer}</p>
-                            </div>
-                          )}
-                          {part.manufacturer_part_number && (
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Mfr Part #</p>
-                              <p className="text-sm font-mono text-gray-900 dark:text-gray-100">{part.manufacturer_part_number}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {part.branch_name && (
-                        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Branch</p>
-                          <p className="text-sm text-gray-900 dark:text-gray-100">{part.branch_name}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="inventory" className="p-6 space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-gray-50 dark:bg-gray-600/50 p-4 rounded-lg">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">In Stock</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{part.quantity_in_stock || 0}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{part.unit || "piece"}</p>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-600/50 p-4 rounded-lg">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Available</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{part.available_quantity || part.quantity_in_stock || 0}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{part.unit || "piece"}</p>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-600/50 p-4 rounded-lg">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Reserved</p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{part.quantity_reserved || 0}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{part.unit || "piece"}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Reorder Point</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{part.reorder_point || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Minimum Stock</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{part.minimum_stock || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Reorder Quantity</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{part.reorder_quantity || 0}</p>
-                    </div>
-                  </div>
-                  {part.bin_location && (
-                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center">
-                        <MapPin className="w-3 h-3 mr-1" />
-                        Location
-                      </p>
-                      <p className="text-sm text-gray-900 dark:text-gray-100">{part.bin_location}{part.shelf ? ` - Shelf: ${part.shelf}` : ""}</p>
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="pricing" className="p-6 space-y-4">
+                {/* Details */}
+                <div className="flex-1 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cost Price</p>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {part.cost_price ? `$${parseFloat(part.cost_price).toFixed(2)}` : "-"}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Category</p>
+                      <p className="font-medium">{part.category_path || part.category_name || "Uncategorized"}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Selling Price</p>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        {part.selling_price ? `$${parseFloat(part.selling_price).toFixed(2)}` : "-"}
-                      </p>
+                      <p className="text-xs text-muted-foreground">Manufacturer</p>
+                      <p className="font-medium">{part.manufacturer || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Cost Price</p>
+                      <p className="font-medium">{part.cost_price ? formatCurrency(parseFloat(part.cost_price)) : "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Selling Price</p>
+                      <p className="font-medium text-lg text-primary">{part.selling_price ? formatCurrency(parseFloat(part.selling_price)) : "-"}</p>
                     </div>
                   </div>
-                  {(part.markup_percentage || part.profit_margin) && (
-                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                      {part.markup_percentage && (
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Markup</p>
-                          <p className="text-sm text-gray-900 dark:text-gray-100">{parseFloat(part.markup_percentage).toFixed(2)}%</p>
-                        </div>
-                      )}
-                      {part.profit_margin && (
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Profit Margin</p>
-                          <p className="text-sm text-gray-900 dark:text-gray-100">{parseFloat(part.profit_margin).toFixed(2)}%</p>
-                        </div>
-                      )}
+                  {part.description && (
+                    <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+                      <p className="text-xs text-muted-foreground mb-1">Description</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">{part.description}</p>
                     </div>
                   )}
-                  {part.total_value && (
-                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Total Inventory Value</p>
-                      <p className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                        ${parseFloat(part.total_value).toFixed(2)}
-                      </p>
-                    </div>
-                  )}
-                  {part.list_price && (
-                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">List Price (MSRP)</p>
-                      <p className="text-sm text-gray-900 dark:text-gray-100">
-                        ${parseFloat(part.list_price).toFixed(2)}
-                      </p>
-                    </div>
-                  )}
-                </TabsContent>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-                <TabsContent value="details" className="p-6 space-y-4">
-                  {(part.weight || part.dimensions) && (
+          {/* Tabs for detailed info */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview">Stock</TabsTrigger>
+              <TabsTrigger value="details">Specs</TabsTrigger>
+              <TabsTrigger value="compatibility">Vehicles</TabsTrigger>
+              <TabsTrigger value="history">History</TabsTrigger>
+            </TabsList>
+
+            {/* Stock Tab */}
+            <TabsContent value="overview" className="mt-4 space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">In Stock</p>
+                    <p className="text-3xl font-bold mt-1 text-primary">{part.quantity_in_stock || 0}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{part.unit || 'units'}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Reserved</p>
+                    <p className="text-3xl font-bold mt-1 text-orange-500">{part.quantity_reserved || 0}</p>
+                    <p className="text-xs text-muted-foreground mt-1">on work orders</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Available</p>
+                    <p className="text-3xl font-bold mt-1 text-green-600">{part.available_quantity || 0}</p>
+                    <p className="text-xs text-muted-foreground mt-1">to sell</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                  <CardTitle className="text-base font-medium">Inventory Rules</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Min Stock</p>
+                    <p className="font-semibold">{part.minimum_stock || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Reorder Point</p>
+                    <p className="font-semibold">{part.reorder_point || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Reorder Qty</p>
+                    <p className="font-semibold">{part.reorder_quantity || 0}</p>
+                  </div>
+                  {part.bin_location && (
+                    <div className="col-span-3 pt-2 text-sm flex items-center">
+                      <MapPin className="w-4 h-4 mr-2 text-muted-foreground" />
+                      Location: <span className="font-medium ml-1">{part.bin_location}</span>
+                      {part.shelf && <span className="text-muted-foreground ml-2">(Shelf {part.shelf})</span>}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Specs Tab */}
+            <TabsContent value="details" className="mt-4">
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-sm font-medium mb-4">Physical Specifications</h3>
+                  <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Specifications</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        {part.weight && (
-                          <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Weight</p>
-                            <p className="text-sm text-gray-900 dark:text-gray-100">{parseFloat(part.weight).toFixed(2)} lbs</p>
-                          </div>
-                        )}
-                        {part.dimensions && (
-                          <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Dimensions</p>
-                            <p className="text-sm text-gray-900 dark:text-gray-100">{part.dimensions}</p>
-                          </div>
-                        )}
-                      </div>
+                      <p className="text-xs text-muted-foreground">Weight</p>
+                      <p className="text-sm">{part.weight ? `${parseFloat(part.weight)} lbs` : '-'}</p>
                     </div>
-                  )}
-
-                  {(part.compatible_makes || part.compatible_models || part.compatible_years) && (
-                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Vehicle Compatibility</p>
-                      <div className="space-y-2">
-                        {part.compatible_makes && (
-                          <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Makes</p>
-                            <p className="text-sm text-gray-900 dark:text-gray-100">{part.compatible_makes}</p>
-                          </div>
-                        )}
-                        {part.compatible_models && (
-                          <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Models</p>
-                            <p className="text-sm text-gray-900 dark:text-gray-100">{part.compatible_models}</p>
-                          </div>
-                        )}
-                        {part.compatible_years && (
-                          <div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Years</p>
-                            <p className="text-sm text-gray-900 dark:text-gray-100">{part.compatible_years}</p>
-                          </div>
-                        )}
-                      </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Dimensions</p>
+                      <p className="text-sm">{part.dimensions || '-'}</p>
                     </div>
-                  )}
+                  </div>
 
-                  {part.warranty_months && (
-                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Warranty</p>
-                      <p className="text-sm text-gray-900 dark:text-gray-100">{part.warranty_months} months</p>
-                      {part.warranty_notes && (
-                        <div className="mt-2">
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Notes</p>
-                          <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{part.warranty_notes}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </TabsContent>
+                  <h3 className="text-sm font-medium mb-4 pt-4 border-t border-gray-100 dark:border-gray-800">Configuration</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {part.is_taxable && <Badge variant="outline">Taxable</Badge>}
+                    {part.is_core && <Badge variant="outline">Core Part</Badge>}
+                    {part.is_active ? <Badge variant="outline" className="border-green-200 text-green-700">Active</Badge> : <Badge variant="outline" className="border-red-200 text-red-700">Inactive</Badge>}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-                <TabsContent value="history" className="p-6">
-                  <div className="rounded-md border">
+            {/* Compatibility Tab */}
+            <TabsContent value="compatibility" className="mt-4">
+              <Card>
+                <CardContent className="p-6 space-y-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Compatible Makes</p>
+                    <p className="text-sm">{part.compatible_makes || "Universal / Not specified"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Compatible Models</p>
+                    <p className="text-sm">{part.compatible_models || "Not specified"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Year Range</p>
+                    <p className="text-sm">{part.compatible_years || "All years"}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* History Tab */}
+            <TabsContent value="history" className="mt-4">
+              <Card>
+                <CardContent className="p-0">
+                  <div className="rounded-md border border-gray-100 dark:border-gray-800 overflow-hidden">
                     <table className="w-full text-sm text-left">
-                      <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500 font-medium">
+                      <thead className="bg-gray-50 dark:bg-gray-800 text-muted-foreground font-medium">
                         <tr>
                           <th className="px-4 py-3">Date</th>
                           <th className="px-4 py-3">Type</th>
-                          <th className="px-4 py-3 text-right">Quantity</th>
+                          <th className="px-4 py-3 text-right">Qty</th>
                           <th className="px-4 py-3 text-right">Balance</th>
                           <th className="px-4 py-3">User</th>
                           <th className="px-4 py-3">Notes</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                         {transactions?.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                              No transactions found.
+                            <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                              No transaction history found.
                             </td>
                           </tr>
                         ) : (
                           transactions?.map((txn) => (
-                            <tr key={txn.id}>
+                            <tr key={txn.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                               <td className="px-4 py-3 whitespace-nowrap">
-                                {format(new Date(txn.created_at), "MMM dd, yyyy HH:mm")}
+                                {format(new Date(txn.created_at), "MMM dd, HH:mm")}
                               </td>
                               <td className="px-4 py-3 capitalize">
-                                {txn.transaction_type.replace('_', ' ')}
+                                <Badge variant="outline" className="text-xs font-normal">
+                                  {txn.transaction_type.replace('_', ' ')}
+                                </Badge>
                               </td>
                               <td className={`px-4 py-3 text-right font-medium ${txn.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {txn.quantity > 0 ? '+' : ''}{txn.quantity}
                               </td>
-                              <td className="px-4 py-3 text-right">
+                              <td className="px-4 py-3 text-right text-muted-foreground">
                                 {txn.balance_after}
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3 text-muted-foreground">
                                 {txn.created_by_name || '-'}
                               </td>
-                              <td className="px-4 py-3 text-gray-500">
+                              <td className="px-4 py-3 text-muted-foreground max-w-[200px] truncate">
                                 {txn.reason || txn.notes || '-'}
                               </td>
                             </tr>
@@ -406,92 +331,80 @@ export default function PartDetailPage() {
                       </tbody>
                     </table>
                   </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
 
-        {/* Right Column */}
-        <div className="space-y-4">
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-2">
-              <Button className="w-full" variant="secondary" size="sm" onClick={() => setShowAdjustDialog(true)}>
-                Adjust Stock
-              </Button>
-              <Link href={`/inventory/${partId}/edit`} className="block">
-                <Button className="w-full" variant="secondary" size="sm">
-                  <Edit className="w-3 h-3 mr-1.5" />
-                  Edit Part
-                </Button>
-              </Link>
+        {/* Right Column (Sidebar) */}
+        <div className="space-y-6">
+          {/* Value Card */}
+          <Card className="bg-primary/5 border-primary/10">
+            <CardContent className="p-6">
+              <p className="text-sm font-medium text-muted-foreground">Total Value</p>
+              <p className="text-2xl font-bold text-primary">{part.total_value ? formatCurrency(parseFloat(part.total_value)) : "$0.00"}</p>
+              <p className="text-xs text-muted-foreground mt-1">Based on cost price</p>
             </CardContent>
           </Card>
 
-          {/* Supplier Information */}
-          {part.preferred_supplier_name && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Supplier</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-sm text-gray-900 dark:text-gray-100">{part.preferred_supplier_name}</p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Part Information */}
+          {/* Supplier Info */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Info</CardTitle>
+            <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+              <CardTitle className="text-base font-medium">Supplier Info</CardTitle>
             </CardHeader>
-            <CardContent className="pt-0 space-y-2">
-              {part.created_at && (
+            <CardContent className="p-4 space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Preferred Supplier</p>
+                <p className="font-medium text-sm text-blue-600">{part.preferred_supplier_name || "None Set"}</p>
+              </div>
+              {part.manufacturer_part_number && (
                 <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Created</p>
-                  <p className="text-xs text-gray-900 dark:text-gray-100">
-                    {format(new Date(part.created_at), "MMM dd, yyyy")}
-                  </p>
-                </div>
-              )}
-              {part.updated_at && (
-                <div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Updated</p>
-                  <p className="text-xs text-gray-900 dark:text-gray-100">
-                    {format(new Date(part.updated_at), "MMM dd, yyyy")}
-                  </p>
+                  <p className="text-xs text-muted-foreground">Mfr Part #</p>
+                  <p className="text-sm font-mono">{part.manufacturer_part_number}</p>
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Timestamps */}
+          <div className="space-y-2 px-1">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Created</span>
+              <span>{part.created_at ? format(new Date(part.created_at), "MMM dd, yyyy") : "-"}</span>
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Last Updated</span>
+              <span>{part.updated_at ? format(new Date(part.updated_at), "MMM dd, yyyy") : "-"}</span>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      {/* Image Dialog */}
-      {part.image && (
-        <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
-          <DialogContent className="!max-w-[60vw] !w-[60vw] !h-[60vh] !p-0 !mx-0 max-h-[60vh]">
-            <div className="relative w-full h-full min-h-0 rounded-lg overflow-hidden bg-black flex items-center justify-center">
+      {/* Images Modal */}
+      <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
+        <DialogContent className="max-w-3xl p-0 overflow-hidden bg-black/95 border-none">
+          <div className="relative w-full h-[80vh] flex items-center justify-center">
+            {part.image && (
               <Image
                 src={part.image}
                 alt={part.name}
                 fill
                 className="object-contain"
-                sizes="60vw"
-                priority
-                unoptimized={
-                  part.image?.startsWith("http://localhost") ||
-                  part.image?.startsWith("https://localhost")
-                }
+                unoptimized={part.image?.startsWith("data:")}
               />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+            )}
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white rounded-full p-2"
+            >
+              <span className="sr-only">Close</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {showAdjustDialog && (
         <StockAdjustmentDialog
@@ -500,7 +413,6 @@ export default function PartDetailPage() {
           onClose={() => setShowAdjustDialog(false)}
           onSuccess={() => {
             setShowAdjustDialog(false);
-            // Refresh data
             window.location.reload();
           }}
         />
@@ -508,4 +420,3 @@ export default function PartDetailPage() {
     </div>
   );
 }
-

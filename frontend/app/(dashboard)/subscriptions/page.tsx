@@ -36,6 +36,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 const subscriptionCreateSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
   vehicle: z.number().min(1, "Vehicle is required"),
@@ -75,6 +76,7 @@ const formatError = (error: any, defaultMessage: string) => {
 };
 
 export default function SubscriptionsPage() {
+    const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
@@ -619,12 +621,12 @@ export default function SubscriptionsPage() {
 
                 <div className="space-y-1 border-t pt-2">
                   <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Original Price</Label>
-                  <p className="text-sm">${parseFloat(selectedSubscription.original_price || selectedSubscription.purchase_price).toFixed(2)}</p>
+                  <p className="text-sm">{formatCurrency(parseFloat(selectedSubscription.original_price || selectedSubscription.purchase_price))}</p>
                 </div>
                 <div className="space-y-1 border-t pt-2">
                   <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Paid Amount</Label>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold">${parseFloat(selectedSubscription.purchase_price).toFixed(2)}</p>
+                    <p className="text-sm font-semibold">{formatCurrency(parseFloat(selectedSubscription.purchase_price))}</p>
                     {selectedSubscription.discount_applied > 0 && (
                       <Badge variant="success" className="text-[10px] py-0">
                         {selectedSubscription.discount_applied}% {selectedSubscription.discount_reason}
@@ -653,7 +655,7 @@ export default function SubscriptionsPage() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm">{selectedSubscription.is_refund_eligible ? "✅ Within 30-day window" : "❌ Past 30-day window"}</span>
                       {selectedSubscription.is_refund_eligible && (
-                        <span className="text-sm font-bold">Estimated: ${parseFloat(selectedSubscription.calculated_refund_amount || "0").toFixed(2)}</span>
+                        <span className="text-sm font-bold">Estimated: {formatCurrency(parseFloat(selectedSubscription.calculated_refund_amount || "0"))}</span>
                       )}
                     </div>
                   </div>
@@ -820,7 +822,7 @@ export default function SubscriptionsPage() {
                 <option value="">Select a package</option>
                 {packages.map((pkg: Package) => (
                   <option key={pkg.id} value={pkg.id}>
-                    {pkg.name} - ${parseFloat(pkg.price).toFixed(2)} ({pkg.duration_months} months)
+                    {pkg.name} - {formatCurrency(parseFloat(pkg.price))} ({pkg.duration_months} months)
                   </option>
                 ))}
               </Select>
@@ -834,7 +836,7 @@ export default function SubscriptionsPage() {
                 <div className="font-medium">{selectedPackage.name} Summary</div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mt-1">
                   <div>Duration: {selectedPackage.duration_months} months</div>
-                  <div>Price: ${parseFloat(selectedPackage.price).toFixed(2)}</div>
+                  <div>Price: {formatCurrency(parseFloat(selectedPackage.price))}</div>
                   <div>Calls: {selectedPackage.features?.total_service_calls || 0}</div>
                   <div>Towing: {selectedPackage.features?.towing_services_km || 0} km</div>
                   <div>Mechanic: {selectedPackage.features?.roadside_first_aid || 0}</div>
@@ -940,7 +942,7 @@ export default function SubscriptionsPage() {
                 <option value="">Select a new package</option>
                 {packages.map((pkg: Package) => (
                   <option key={pkg.id} value={pkg.id}>
-                    {pkg.name} - ${parseFloat(pkg.price).toFixed(2)}
+                    {pkg.name} - {formatCurrency(parseFloat(pkg.price))}
                   </option>
                 ))}
               </Select>

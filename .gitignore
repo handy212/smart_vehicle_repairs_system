@@ -96,3 +96,7 @@ htmlcov/
 # Project specific
 Attached_image.png
 .cursor/
+
+# Firebase credentials (sensitive)
+firebase/*.json
+!firebase/.gitkeep

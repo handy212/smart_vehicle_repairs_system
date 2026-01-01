@@ -13,7 +13,12 @@ from apps.billing.models import (
     CashierTill,
     CashCount,
     PaymentAllocation,
+    PaymentAllocation,
     Refund,
+    CreditNote,
+    CreditNoteLineItem,
+    Bill,
+    BillLineItem,
 )
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
@@ -143,7 +148,7 @@ class EstimateListSerializer(serializers.ModelSerializer):
         model = Estimate
         fields = [
             'id', 'estimate_number', 'customer', 'customer_name',
-            'vehicle', 'vehicle_display', 'status', 'title',
+            'vehicle', 'vehicle_display', 'status', 'title', 'reference_number',
             'estimate_date', 'valid_until', 'is_expired', 'days_until_expiration',
             'subtotal', 'discount_amount', 'tax_amount', 'total',
             'can_be_approved', 'created_by', 'created_by_name',
@@ -151,6 +156,8 @@ class EstimateListSerializer(serializers.ModelSerializer):
         ]
     
     def get_vehicle_display(self, obj):
+        if not obj.vehicle:
+            return None
         return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
 
 
@@ -167,6 +174,7 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
     line_items = EstimateLineItemSerializer(many=True, read_only=True)
     
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    sales_agent_name = serializers.CharField(source='sales_agent.get_full_name', read_only=True)
     approved_by_name = serializers.CharField(source='approved_by.get_full_name', read_only=True)
     sent_by_name = serializers.CharField(source='sent_by.get_full_name', read_only=True)
     tax_breakdown = serializers.SerializerMethodField()
@@ -184,12 +192,12 @@ class EstimateDetailSerializer(serializers.ModelSerializer):
             'customer_email', 'customer_phone',
             'vehicle', 'vehicle_display', 'vehicle_vin',
             'work_order', 'work_order_number', 'status', 'estimate_date', 'valid_until',
-            'title', 'description', 'notes', 'customer_notes',
+            'title', 'description', 'reference_number', 'sales_agent', 'sales_agent_name',
+            'notes', 'customer_notes',
             'labor_subtotal', 'parts_subtotal', 'sublet_subtotal', 'subtotal',
-            'discount_amount', 'discount_percentage', 'discount_reason',
+            'discount_amount', 'discount_percentage', 'discount_type', 'discount_reason',
             'tax_amount', 'shop_supplies_fee', 'environmental_fee', 'total',
             'taxable_subtotal', 'tax_breakdown', 'line_items',
-            'line_items',
             'is_expired', 'days_until_expiration', 'can_be_approved', 'can_be_converted',
             'approved_date', 'declined_date', 'converted_date',
             'created_by', 'created_by_name',
@@ -230,8 +238,9 @@ class EstimateCreateSerializer(serializers.ModelSerializer):
         model = Estimate
         fields = [
             'id', 'estimate_number', 'customer', 'vehicle', 'work_order', 'title', 'description',
+            'reference_number', 'sales_agent',
             'notes', 'customer_notes', 'estimate_date', 'valid_until',
-            'discount_percentage', 'discount_reason',
+            'discount_percentage', 'discount_type', 'discount_reason',
             'shop_supplies_fee', 'environmental_fee',
             'line_items'
         ]
@@ -301,9 +310,10 @@ class EstimateUpdateSerializer(serializers.ModelSerializer):
         model = Estimate
         fields = [
             'customer', 'vehicle', 'work_order',
-            'title', 'description', 'notes', 'customer_notes',
+            'title', 'description', 'reference_number', 'sales_agent',
+            'notes', 'customer_notes',
             'estimate_date', 'valid_until',
-            'discount_percentage', 'discount_reason',
+            'discount_percentage', 'discount_type', 'discount_reason',
             'shop_supplies_fee', 'environmental_fee',
             'status', 'line_items'
         ]
@@ -317,6 +327,7 @@ class EstimateUpdateSerializer(serializers.ModelSerializer):
             'estimate_date': {'required': False},
             'valid_until': {'required': False},
             'discount_percentage': {'required': False},
+            'discount_type': {'required': False},
             'discount_reason': {'required': False},
             'shop_supplies_fee': {'required': False},
             'environmental_fee': {'required': False},
@@ -1167,3 +1178,225 @@ class RefundCreateSerializer(serializers.ModelSerializer):
             'original_payment', 'invoice', 'customer',
             'amount', 'reason', 'refund_method', 'reference_number'
         ]
+
+# ============================================================================
+# CREDIT NOTE SERIALIZERS
+# ============================================================================
+
+class CreditNoteLineItemSerializer(serializers.ModelSerializer):
+    """Serializer for credit note line items"""
+    
+    class Meta:
+        model = CreditNoteLineItem
+        fields = [
+            'id', 'description', 'quantity', 
+            'unit_price', 'total', 'is_taxable'
+        ]
+        read_only_fields = ['total']
+
+
+class CreditNoteListSerializer(serializers.ModelSerializer):
+    """Serializer for listing credit notes"""
+    
+    customer_name = serializers.CharField(source='customer.full_name', read_only=True)
+    invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    
+    class Meta:
+        model = CreditNote
+        fields = [
+            'id', 'credit_note_number', 'credit_date', 'status',
+            'customer', 'customer_name', 'invoice', 'invoice_number',
+            'amount', 'unused_amount', 'reason',
+            'created_by', 'created_by_name', 'created_at'
+        ]
+        # Map 'amount' to 'total' for listing consistency
+        extra_kwargs = {'amount': {'source': 'total', 'read_only': True}}
+
+
+class CreditNoteDetailSerializer(serializers.ModelSerializer):
+    """Serializer for credit note details"""
+    
+    customer_name = serializers.CharField(source='customer.full_name', read_only=True)
+    invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    line_items = CreditNoteLineItemSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = CreditNote
+        fields = [
+            'id', 'credit_note_number', 'credit_date', 'status',
+            'customer', 'customer_name', 'invoice', 'invoice_number',
+            'subtotal', 'tax_amount', 'total', 'unused_amount',
+            'reason', 'notes', 'internal_notes',
+            'line_items',
+            'created_by', 'created_by_name', 'created_at', 'updated_at'
+        ]
+
+
+class CreditNoteCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating credit notes"""
+    
+    line_items = CreditNoteLineItemSerializer(many=True)
+    
+    class Meta:
+        model = CreditNote
+        fields = [
+            'customer', 'invoice', 'credit_date', 
+            'reason', 'notes', 'internal_notes',
+            'line_items'
+        ]
+    
+    @transaction.atomic
+    def create(self, validated_data):
+        line_items_data = validated_data.pop('line_items')
+        
+        # Set created_by
+        validated_data['created_by'] = self.context['request'].user
+        
+        # Resolve branch from request
+        from apps.branches.utils import resolve_branch
+        request = self.context['request']
+        validated_data['branch'] = resolve_branch(request)
+        
+        # Create credit note
+        credit_note = CreditNote.objects.create(**validated_data)
+        
+        # Create line items
+        for item_data in line_items_data:
+            CreditNoteLineItem.objects.create(credit_note=credit_note, **item_data)
+            
+        # Calculate totals
+        credit_note.calculate_totals()
+        
+        return credit_note
+
+# ============================================================================
+# BILL SERIALIZERS
+# ============================================================================
+
+class BillLineItemSerializer(serializers.ModelSerializer):
+    """Serializer for bill line items"""
+    
+    class Meta:
+        model = BillLineItem
+        fields = [
+            'id', 'description', 'quantity', 'unit_price', 
+            'total', 'expense_category',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['total', 'created_at', 'updated_at']
+
+
+class BillLineItemCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating bill line items"""
+    
+    class Meta:
+        model = BillLineItem
+        fields = [
+            'description', 'quantity', 'unit_price', 'expense_category'
+        ]
+
+
+class BillSerializer(serializers.ModelSerializer):
+    """Serializer for bills (list/detail)"""
+    
+    vendor_name = serializers.CharField(source='vendor.name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    line_items = BillLineItemSerializer(many=True, read_only=True)
+    ledger_bill_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Bill
+        fields = [
+            'id', 'bill_number', 'vendor', 'vendor_name', 'branch',
+            'reference_number', 'bill_date', 'due_date',
+            'terms', 'notes', 'status', 'currency',
+            'subtotal', 'tax_amount', 'total', 
+            'amount_paid', 'amount_due',
+            'line_items', 'ledger_bill', 'ledger_bill_url',
+            'created_by', 'created_by_name',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'bill_number', 'subtotal', 'total', 'amount_due',
+            'ledger_bill', 'created_by', 'created_at', 'updated_at'
+        ]
+    
+    def get_ledger_bill_url(self, obj):
+        """Get URL to view bill in Django Ledger"""
+        if obj.ledger_bill and obj.branch and hasattr(obj.branch, 'ledger_entity') and obj.branch.ledger_entity:
+            entity_slug = obj.branch.ledger_entity.slug
+            # Get request from context
+            request = self.context.get('request')
+            if request:
+                base_url = request.build_absolute_uri('/').rstrip('/')
+                if '/api' in base_url:
+                    base_url = base_url.replace('/api', '')
+                if ':3000' in base_url:
+                    base_url = base_url.replace(':3000', ':8000')
+                return f"{base_url}/ledger/bill/{entity_slug}/detail/{obj.ledger_bill.uuid}/"
+        return None
+
+
+class BillCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating bills"""
+    
+    line_items = BillLineItemCreateSerializer(many=True)
+    
+    class Meta:
+        model = Bill
+        fields = [
+            'id', 'bill_number', 'vendor', 'branch',
+            'reference_number', 'bill_date', 'due_date',
+            'terms', 'notes', 'currency',
+            'tax_amount',
+            'line_items'
+        ]
+        read_only_fields = ['id', 'bill_number']
+    
+    def validate(self, data):
+        if not data.get('line_items'):
+            raise serializers.ValidationError({"line_items": "At least one line item is required"})
+        return data
+
+    @transaction.atomic
+    def create(self, validated_data):
+        line_items_data = validated_data.pop('line_items')
+        
+        # Set created_by
+        validated_data['created_by'] = self.context['request'].user
+        
+        # Create bill
+        bill = Bill.objects.create(**validated_data)
+        
+        # Create line items
+        for item_data in line_items_data:
+            BillLineItem.objects.create(bill=bill, **item_data)
+        
+        # Calculate totals
+        bill.calculate_totals()
+        bill.refresh_from_db()
+        
+        return bill
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        line_items_data = validated_data.pop('line_items', None)
+        
+        # Update bill fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Update line items if provided
+        if line_items_data is not None:
+            # For simplicity, replace all items
+            instance.line_items.all().delete()
+            for item_data in line_items_data:
+                BillLineItem.objects.create(bill=instance, **item_data)
+            
+            instance.calculate_totals()
+            instance.refresh_from_db()
+            
+        return instance

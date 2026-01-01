@@ -2,11 +2,11 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi } from "@/lib/api/inventory";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Package, AlertTriangle, Trash2, Download, Upload, ChevronDown, MoreVertical, Eye, Edit, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Package, AlertTriangle, Trash2, Download, Upload, MoreVertical, Eye, Edit, Search, X, ChevronDown, DollarSign } from "lucide-react";
 import { ImportDialog } from "@/components/ui/import-dialog";
 import { downloadPartTemplate } from "@/lib/utils/import-templates";
 import { exportPartsForImport } from "@/lib/utils/export-templates";
@@ -17,10 +17,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/lib/hooks/useToast";
 import { exportToCSV } from "@/lib/utils/export";
 import { useBulkSelection } from "@/lib/hooks/useBulkSelection";
-import { BulkActionToolbar } from "@/components/ui/bulk-action-toolbar";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { useCurrency } from "@/lib/hooks/useCurrency";
+import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,22 +30,87 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// Stats Grid Component
+// Stats Grid Component
+const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="shadow-sm border bg-gray-50/50 dark:bg-gray-800/50">
+            <CardContent className="p-3">
+              <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
+              <div className="h-6 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (!stats) return null;
+
+  const items = [
+    { label: "Total Parts", value: stats.total_parts, color: "text-blue-600" },
+    { label: "Low Stock", value: stats.low_stock, color: "text-amber-600" },
+    { label: "Out of Stock", value: stats.out_of_stock, color: "text-red-600" },
+    { label: "Total Value", value: stats.total_value, isCurrency: true, color: "text-green-600" },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      {items.map((item, index) => (
+        <Card key={index} className="shadow-sm border bg-white dark:bg-gray-800">
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{item.label}</span>
+            <span className={`text-lg font-bold ${item.color || 'text-gray-900'} dark:text-gray-100`}>
+              {item.isCurrency ? <CurrencyValue value={item.value} /> : item.value?.toLocaleString() || 0}
+            </span>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// Helper component for currency to use the hook correctly
+const CurrencyValue = ({ value }: { value: any }) => {
+  const { formatCurrency } = useCurrency();
+  return <>{formatCurrency(value)}</>;
+};
+
 export default function InventoryPage() {
+  const { formatCurrency } = useCurrency();
   const router = useRouter();
-  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
 
+  // Unified Filter State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
+
+  // Fetch Lists
   const { data, isLoading, error } = useQuery({
-    queryKey: ["inventory", page, search],
+    queryKey: ["inventory", page, searchQuery, advancedFilters],
     queryFn: () =>
       inventoryApi.list({
         page,
-        search: search || undefined,
+        search: searchQuery || undefined,
+        category: advancedFilters.category,
+        is_active: advancedFilters.is_active === 'true' ? true : advancedFilters.is_active === 'false' ? false : undefined,
+        low_stock: advancedFilters.stock_status === 'low_stock' ? true : undefined,
+        out_of_stock: advancedFilters.stock_status === 'out_of_stock' ? true : undefined,
+        needs_reorder: advancedFilters.stock_status === 'needs_reorder' ? true : undefined,
       }),
+  });
+
+  // Fetch Stats
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["inventory-stats"],
+    queryFn: () => inventoryApi.partsDashboardStats(),
   });
 
   const parts = data?.results || [];
@@ -54,6 +120,7 @@ export default function InventoryPage() {
     mutationFn: (id: number) => inventoryApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-stats"] });
       toast({ title: "Success", description: "Part deleted successfully" });
     },
     onError: (error: any) => {
@@ -77,6 +144,7 @@ export default function InventoryPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-stats"] });
       bulkSelection.clearSelection();
       toast({ title: "Success", description: `${bulkSelection.selectedCount} parts deleted successfully` });
     },
@@ -114,26 +182,26 @@ export default function InventoryPage() {
   };
 
   const isLowStock = (part: any) => part.quantity_in_stock <= part.minimum_stock;
-  const hasActiveFilters = !!search;
-  const clearFilters = () => { setSearch(""); setPage(1); };
 
-  if (isLoading && !data) {
-    return (
-      <div className="space-y-5">
-        <div className="flex justify-between items-center">
-          <div>
-            <div className="h-7 w-36 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-1"></div>
-            <div className="h-4 w-56 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          </div>
-        </div>
-        <Card className="border-t shadow-sm">
-          <CardContent className="pt-6">
-            <TableSkeleton rows={8} columns={8} />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Filter Options
+  const quickFilters: QuickFilter[] = [
+    { label: "All Parts", value: "all", filters: { stock_status: null } },
+    { label: "Low Stock", value: "low_stock", filters: { stock_status: "low_stock" } },
+    { label: "Out of Stock", value: "out_of_stock", filters: { stock_status: "out_of_stock" } },
+    { label: "Needs Reorder", value: "needs_reorder", filters: { stock_status: "needs_reorder" } },
+  ];
+
+  const filterOptions: FilterOption[] = [
+    {
+      key: "is_active",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "true", label: "Active" },
+        { value: "false", label: "Inactive" },
+      ],
+    },
+  ];
 
   if (error) {
     return (
@@ -145,20 +213,142 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center pt-2">
-        <div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
-            <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Inventory</span>
+      {/* Header with Stats */}
+      <div className="flex flex-col space-y-4">
+        <div className="flex justify-between items-center pt-2">
+          <div>
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+              <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+              <span>/</span>
+              <span className="text-gray-900 dark:text-gray-100 font-medium">Inventory</span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+              Inventory Parts
+            </h1>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Inventory</h1>
         </div>
-        <div className="flex items-center space-x-2">
+
+        <StatsGrid stats={stats} loading={statsLoading} />
+      </div>
+
+      {/* Unified Toolbar */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-900/50 p-1 rounded-lg">
+        <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
+          {/* Search */}
+          <div className="relative flex-1 md:flex-none md:w-64">
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Search parts..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 h-9 text-sm bg-gray-50 dark:bg-gray-800 border-none focus:ring-1 transition-all"
+            />
+          </div>
+
+          {/* Advanced Filters */}
+          <AdvancedFilters
+            filters={filterOptions}
+            quickFilters={quickFilters}
+            activeFilters={advancedFilters}
+            onFiltersChange={(filters) => {
+              setAdvancedFilters(filters);
+              setPage(1);
+            }}
+            onClear={() => {
+              setAdvancedFilters({});
+              setPage(1);
+            }}
+            title="Filter Inventory"
+          />
+
+          {/* Clear Filters (Icon only) */}
+          {(searchQuery || Object.keys(advancedFilters).length > 0) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchQuery("");
+                setAdvancedFilters({});
+                setPage(1);
+              }}
+              className="h-9 w-9 p-0 text-gray-500 hover:text-red-600"
+              title="Clear all filters"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+
+          {/* Active Filter Badges */}
+          <div className="hidden lg:flex flex-wrap items-center gap-1.5 ml-2">
+            {Object.entries(advancedFilters).map(([key, value]) => {
+              if (!value || (typeof value === 'string' && value === '') || value === null) return null;
+              // Filter out internal filter keys like stock_status if they shouldn't be badges? 
+              // Or format them nicely.
+              // For stock_status, map value to label
+              let displayLabel = key;
+              let displayValue = String(value);
+
+              const filter = filterOptions.find((f) => f.key === key);
+              if (filter) {
+                displayLabel = filter.label;
+                if (filter.type === 'select') {
+                  const option = filter.options?.find(o => o.value === String(value));
+                  if (option) displayValue = option.label;
+                }
+              } else if (key === 'stock_status') {
+                displayLabel = "Stock Status";
+                const qFilter = quickFilters.find(q => q.filters.stock_status === value);
+                if (qFilter) displayValue = qFilter.label;
+              }
+
+              return (
+                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-normal">
+                  {displayLabel}: {displayValue}
+                  <X
+                    className="w-3 h-3 cursor-pointer hover:text-red-500"
+                    onClick={() => {
+                      const newFilters = { ...advancedFilters };
+                      delete newFilters[key];
+                      setAdvancedFilters(newFilters);
+                      setPage(1);
+                    }}
+                  />
+                </Badge>
+              );
+            })}
+            {/* Bulk Actions Badge if selection active */}
+            {bulkSelection.selectedCount > 0 && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-100 font-normal">
+                {bulkSelection.selectedCount} selected
+                <X
+                  className="w-3 h-3 cursor-pointer hover:text-blue-900"
+                  onClick={bulkSelection.clearSelection}
+                />
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+          {bulkSelection.selectedCount > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              className="h-9 text-xs"
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+              Delete ({bulkSelection.selectedCount})
+            </Button>
+          )}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+              <Button variant="outline" size="sm" className="h-9 bg-white dark:bg-gray-800">
                 Actions
                 <ChevronDown className="w-3.5 h-3.5 ml-2" />
               </Button>
@@ -182,10 +372,11 @@ export default function InventoryPage() {
               </PermissionGuard>
             </DropdownMenuContent>
           </DropdownMenu>
+
           <PermissionGuard permission="create_parts">
             <Link href="/inventory/new">
-              <Button size="sm" className="h-9">
-                <Plus className="w-3.5 h-3.5 mr-2" />
+              <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                <Plus className="w-4 h-4 mr-2" />
                 Add Part
               </Button>
             </Link>
@@ -193,181 +384,177 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
-            <Input
-              type="text"
-              placeholder="Search parts..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="pl-9 h-9 text-sm bg-white dark:bg-gray-900 w-64 focus:w-80 transition-all duration-300"
-            />
-          </div>
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
-              <X className="h-4 h-4 mr-1" />
-              Clear
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Bulk Action Toolbar */}
-      <BulkActionToolbar
-        selectedCount={bulkSelection.selectedCount}
-        onClearSelection={bulkSelection.clearSelection}
-        onBulkDelete={handleBulkDelete}
-      />
-
-      {/* Inventory Table */}
-      <Card className="border-t shadow-sm">
-        <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
-          <CardTitle className="text-sm font-semibold">All Parts ({data?.count || 0})</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+      {/* Main Content Card */}
+      <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
+        <div className="relative">
           {isLoading ? (
-            <div className="p-6"><TableSkeleton rows={8} columns={10} /></div>
-          ) : data?.results && data.results.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 dark:bg-gray-800/50">
-                  <TableHead className="px-4 h-10 w-10">
-                    <input
-                      type="checkbox"
-                      checked={bulkSelection.isAllSelected}
-                      ref={(input) => { if (input) input.indeterminate = bulkSelection.isIndeterminate; }}
-                      onChange={bulkSelection.toggleSelectAll}
-                      className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                  </TableHead>
-                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Part #</TableHead>
-                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Name</TableHead>
-                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Category</TableHead>
-                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Stock</TableHead>
-                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Min</TableHead>
-                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Cost</TableHead>
-                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Sell</TableHead>
-                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
-                  <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.results.map((part) => (
-                  <TableRow
-                    key={part.id}
-                    className={`group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800 cursor-pointer ${isLowStock(part) ? "bg-red-50/50 dark:bg-red-900/10" : ""}`}
-                    onDoubleClick={() => router.push(`/inventory/${part.id}`)}
-                  >
-                    <TableCell className="px-4 py-2">
+            <div className="p-6"><TableSkeleton rows={8} columns={8} /></div>
+          ) : (data?.results || []).length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Package className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No parts found</h3>
+              <p className="text-gray-500 max-w-sm mt-1 mb-4">
+                {searchQuery || Object.keys(advancedFilters).length > 0
+                  ? "Try adjusting your search terms or filters."
+                  : "Get started by adding a new part to your inventory."}
+              </p>
+              <PermissionGuard permission="create_parts">
+                <Link href="/inventory/new">
+                  <Button size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add New Part
+                  </Button>
+                </Link>
+              </PermissionGuard>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-gray-50/50 dark:bg-gray-800/50 border-y border-gray-100 dark:border-gray-800">
+                  <TableRow className="hover:bg-transparent border-none">
+                    <TableHead className="w-10 px-4">
                       <input
                         type="checkbox"
-                        checked={bulkSelection.isSelected(part.id)}
-                        onChange={() => bulkSelection.toggleSelection(part.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        checked={bulkSelection.isAllSelected}
+                        ref={(input) => { if (input) input.indeterminate = bulkSelection.isIndeterminate; }}
+                        onChange={bulkSelection.toggleSelectAll}
+                        className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
                       />
-                    </TableCell>
-                    <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700 dark:text-gray-300">
-                      {part.part_number || "-"}
-                    </TableCell>
-                    <TableCell className="px-4 py-2">
-                      <div className="flex items-center space-x-2">
-                        <Package className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{part.name || "-"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 capitalize">
-                      {typeof part.category === 'object' && part.category !== null ? part.category.name : part.category || "-"}
-                    </TableCell>
-                    <TableCell className="px-4 py-2">
-                      <div className="flex items-center space-x-1.5">
-                        <span className={`text-sm font-medium ${isLowStock(part) ? "text-red-600" : "text-gray-900 dark:text-gray-100"}`}>
-                          {part.quantity_in_stock || 0}
-                        </span>
-                        {isLowStock(part) && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-xs text-gray-500">{part.minimum_stock || 0}</TableCell>
-                    <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">
-                      {part.cost_price ? `$${parseFloat(part.cost_price).toFixed(2)}` : "-"}
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400">
-                      {part.selling_price ? `$${parseFloat(part.selling_price).toFixed(2)}` : "-"}
-                    </TableCell>
-                    <TableCell className="px-4 py-2">
-                      <Badge variant={part.is_active ? "success" : "secondary"} className="text-[10px] px-1.5 py-0">
-                        {part.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MoreVertical className="w-3.5 h-3.5" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/inventory/${part.id}`} className="flex items-center">
-                              <Eye className="w-4 h-4 mr-2" />
-                              View
-                            </Link>
-                          </DropdownMenuItem>
-                          <PermissionGuard permission="edit_parts">
+                    </TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Part #</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Name</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Category</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-center">Stock</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Cost</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Sell</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Status</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {parts.map((part) => (
+                    <TableRow
+                      key={part.id}
+                      className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 cursor-pointer transition-colors"
+                      onClick={() => router.push(`/inventory/${part.id}`)}
+                    >
+                      <TableCell className="px-4 py-2 w-10" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={bulkSelection.isSelected(part.id)}
+                          onChange={() => bulkSelection.toggleSelection(part.id)}
+                          className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                        />
+                      </TableCell>
+                      <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700 dark:text-gray-300">
+                        {part.part_number || "-"}
+                      </TableCell>
+                      <TableCell className="px-4 py-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[200px]">{part.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 capitalize">
+                        {typeof part.category === 'object' && part.category !== null ? part.category.name : part.category || "-"}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-center">
+                        <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${isLowStock(part)
+                          ? part.quantity_in_stock === 0
+                            ? "bg-red-50 text-red-700 border-red-100"
+                            : "bg-amber-50 text-amber-700 border-amber-100"
+                          : "bg-gray-50 text-gray-700 border-gray-200"
+                          }`}>
+                          {part.quantity_in_stock}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 text-right font-mono">
+                        {part.cost_price ? formatCurrency(parseFloat(part.cost_price)) : "-"}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 text-right font-mono">
+                        {part.selling_price ? formatCurrency(parseFloat(part.selling_price)) : "-"}
+                      </TableCell>
+                      <TableCell className="px-4 py-2">
+                        <Badge variant="outline" className={`text-[10px] px-2 py-0  ${part.is_active
+                          ? "text-emerald-600 border-emerald-200 bg-emerald-50"
+                          : "text-gray-500 border-gray-200 bg-gray-50"
+                          }`}>
+                          {part.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-7 w-7 p-0 hover:bg-gray-100 text-gray-500">
+                              <MoreVertical className="w-3.5 h-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
                             <DropdownMenuItem asChild>
-                              <Link href={`/inventory/${part.id}/edit`} className="flex items-center">
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
+                              <Link href={`/inventory/${part.id}`} className="flex items-center cursor-pointer">
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
                               </Link>
                             </DropdownMenuItem>
-                          </PermissionGuard>
-                          <DropdownMenuSeparator />
-                          <PermissionGuard permission="delete_parts">
-                            <DropdownMenuItem onClick={() => handleDelete(part)} disabled={deleteMutation.isPending} className="text-red-600 dark:text-red-400">
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </PermissionGuard>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-12">
-              <Package className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm text-gray-500 mb-4">No parts found.</p>
-              <Link href="/inventory/new">
-                <Button variant="outline" size="sm" className="h-8">
-                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Your First Part
-                </Button>
-              </Link>
+                            <PermissionGuard permission="edit_parts">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/inventory/${part.id}/edit`} className="flex items-center cursor-pointer">
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Part
+                                </Link>
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                            <DropdownMenuSeparator />
+                            <PermissionGuard permission="delete_parts">
+                              <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); handleDelete(part); }}
+                                disabled={deleteMutation.isPending}
+                                className="text-red-600 focus:text-red-700 cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
+        </div>
 
-          {/* Pagination */}
-          {data && data.count > 0 && (
-            <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-              <div className="text-xs text-gray-500">Page {page} of {Math.ceil(data.count / 10)}</div>
-              <div className="flex space-x-2">
-                <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={!data.previous} className="h-7 text-xs">
-                  Previous
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setPage((p) => p + 1)} disabled={!data.next} className="h-7 text-xs">
-                  Next
-                </Button>
-              </div>
+        {/* Pagination */}
+        {data && data.count > 0 && (
+          <div className="p-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/30">
+            <div className="text-xs text-gray-500">
+              Showing {((page - 1) * 10) + 1} to {Math.min(page * 10, data.count)} of {data.count}
             </div>
-          )}
-        </CardContent>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={!data.previous}
+                className="h-7 text-xs bg-white"
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={!data.next}
+                className="h-7 text-xs bg-white"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
-      {/* Import Dialog */}
       <ImportDialog
         isOpen={showImportDialog}
         onClose={() => setShowImportDialog(false)}

@@ -4,14 +4,15 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { appointmentsApi } from "@/lib/api/appointments";
 import { authApi } from "@/lib/api/auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, Car, Filter } from "lucide-react";
+import { Calendar, Clock, Car, Plus, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Select } from "@/components/ui/select";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PortalPageHeader } from "../components/PortalPageHeader";
+import { PortalList } from "../components/PortalList";
+import { PortalCard } from "../components/PortalCard";
 
 export default function MyAppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -29,7 +30,8 @@ export default function MyAppointmentsPage() {
         customer: customerId,
         ordering: "-appointment_date,-appointment_time",
       };
-      if (statusFilter !== "all") {
+      if (statusFilter !== "all" && statusFilter !== "upcoming" && statusFilter !== "past") {
+        // Direct status filter
         params.status = statusFilter;
       }
       return appointmentsApi.list(params);
@@ -38,209 +40,141 @@ export default function MyAppointmentsPage() {
   });
 
   const appointments = (appointmentsData?.results || appointmentsData || []) as any[];
-  const today = new Date().toISOString().split("T")[0];
-  const upcoming = appointments.filter(
-    (apt: any) => apt.appointment_date >= today && ["pending", "confirmed"].includes(apt.status)
-  );
-  const past = appointments.filter(
-    (apt: any) => apt.appointment_date < today || !["pending", "confirmed"].includes(apt.status)
-  );
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <Skeleton className="h-8 w-48 mb-2" />
-          <Skeleton className="h-4 w-96" />
-        </div>
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <Skeleton className="h-6 w-48 mb-4" />
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-3/4" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // Client-side filtering for "upcoming" vs "past" tabs if needed, 
+  // but for simplicity we'll just show the list based on the API response for now.
+  // Ideally, "upcoming" and "past" would filter by date in the backend.
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "confirmed":
-        return "success";
-      case "pending":
-        return "warning";
-      case "completed":
-        return "default";
-      case "cancelled":
-        return "danger";
-      default:
-        return "secondary";
+      case "confirmed": return "success";
+      case "pending": return "warning";
+      case "completed": return "default";
+      case "cancelled": return "danger";
+      default: return "secondary";
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">My Appointments</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            View and manage your service appointments
-          </p>
-        </div>
-        {/* <div className="flex items-center space-x-2">
-          <Link href="/portal/appointments/calendar">
-            <Button variant="secondary">
-              <Calendar className="w-4 h-4 mr-2" />
-              Calendar View
+    <div>
+      <PortalPageHeader
+        title="My Appointments"
+        description="View and manage your service appointments"
+        action={
+          <Link href="/portal/book">
+            <Button size="sm" className="gap-2">
+              <Plus className="w-4 h-4" />
+              Book Appointment
             </Button>
           </Link>
-          <Link href="/portal/book">
-            <Button>Book New Appointment</Button>
-          </Link>
-        </div> */}
+        }
+      />
+
+      <div className="mt-6">
+        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="confirmed">Confirmed</TabsTrigger>
+            <TabsTrigger value="completed">Completed</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value={statusFilter} className="mt-0">
+            <PortalList
+              data={appointments}
+              isLoading={isLoading}
+              emptyMessage="No appointments found."
+              emptyAction={
+                <Link href="/portal/book">
+                  <Button variant="outline" size="sm" className="mt-4 gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Book Appointment
+                  </Button>
+                </Link>
+              }
+              columns={[
+                {
+                  header: "Date & Time",
+                  cell: (apt) => (
+                    <div>
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">
+                        {format(new Date(apt.appointment_date), "MMM d, yyyy")}
+                      </div>
+                      <div className="flex items-center text-xs text-gray-500 gap-1 mt-0.5">
+                        <Clock className="w-3 h-3" />
+                        {apt.appointment_time}
+                      </div>
+                    </div>
+                  )
+                },
+                {
+                  header: "Vehicle",
+                  cell: (apt) => (
+                    <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <Car className="w-4 h-4 text-gray-400" />
+                      {apt.vehicle_info || "N/A"}
+                    </div>
+                  )
+                },
+                {
+                  header: "Service",
+                  cell: (apt) => (
+                    <div className="max-w-xs">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{apt.service_type || "Service"}</div>
+                      {apt.customer_concerns && (
+                        <div className="text-xs text-gray-500 truncate">{apt.customer_concerns}</div>
+                      )}
+                    </div>
+                  )
+                },
+                {
+                  header: "Status",
+                  cell: (apt) => (
+                    <Badge variant={getStatusVariant(apt.status)} className="capitalize">
+                      {apt.status}
+                    </Badge>
+                  )
+                },
+                {
+                  header: "Action",
+                  className: "text-right",
+                  cell: (apt) => (
+                    <div className="flex justify-end">
+                      <Link href={`/portal/appointments/${apt.id}`}>
+                        <Button variant="ghost" size="sm" className="gap-1">
+                          Details
+                          <ArrowRight className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                    </div>
+                  )
+                }
+              ]}
+              renderMobileItem={(apt) => (
+                <PortalCard
+                  key={apt.id}
+                  href={`/portal/appointments/${apt.id}`}
+                  icon={<Calendar className="w-5 h-5 text-blue-500" />}
+                  title={format(new Date(apt.appointment_date), "EEEE, MMM d")}
+                  subtitle={
+                    <span className="flex flex-col gap-1 mt-1">
+                      <span className="flex items-center gap-1.5 font-medium text-gray-700 dark:text-gray-300">
+                        <Clock className="w-3 h-3" /> {apt.appointment_time}
+                      </span>
+                      <span className="text-xs text-gray-500">{apt.vehicle_info}</span>
+                    </span>
+                  }
+                  status={
+                    <Badge variant={getStatusVariant(apt.status)} className="capitalize text-[10px] h-5 px-1.5">
+                      {apt.status}
+                    </Badge>
+                  }
+                />
+              )}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
-
-      {/* Filter */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-4">
-            <Filter className="w-5 h-5 text-gray-400" />
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-48"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Upcoming Appointments */}
-      {statusFilter === "all" && upcoming.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Upcoming Appointments
-          </h2>
-          <div className="space-y-4">
-            {upcoming.map((apt: any) => (
-              <Card key={apt.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <Link href={`/portal/appointments/${apt.id}`} className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <Calendar className="w-5 h-5 text-blue-500" />
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400">
-                          {format(new Date(apt.appointment_date), "EEEE, MMMM d, yyyy")}
-                        </h3>
-                      </div>
-                      <div className="ml-8 space-y-2">
-                        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                          <Clock className="w-4 h-4" />
-                          <span>{apt.appointment_time}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                          <Car className="w-4 h-4" />
-                          <span>{apt.vehicle_info || "N/A"}</span>
-                        </div>
-                        {apt.customer_concerns && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
-                            {apt.customer_concerns}
-                          </p>
-                        )}
-                      </div>
-                    </Link>
-                    <div className="flex items-center space-x-3">
-                      <Badge variant={getStatusVariant(apt.status)}>{apt.status}</Badge>
-                      <Link href={`/portal/appointments/${apt.id}`}>
-                        <Button variant="secondary" size="sm">
-                          View Details
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Past Appointments */}
-      {(statusFilter === "all" || statusFilter !== "pending") && past.length > 0 && (
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            {statusFilter === "all" ? "Past Appointments" : "Appointments"}
-          </h2>
-          <div className="space-y-4">
-            {past.map((apt: any) => (
-              <Card key={apt.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <Link href={`/portal/appointments/${apt.id}`} className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <Calendar className="w-5 h-5 text-gray-400" />
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400">
-                          {format(new Date(apt.appointment_date), "EEEE, MMMM d, yyyy")}
-                        </h3>
-                      </div>
-                      <div className="ml-8 space-y-2">
-                        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                          <Clock className="w-4 h-4" />
-                          <span>{apt.appointment_time}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                          <Car className="w-4 h-4" />
-                          <span>{apt.vehicle_info || "N/A"}</span>
-                        </div>
-                      </div>
-                    </Link>
-                    <div className="flex items-center space-x-3">
-                      <Badge variant={getStatusVariant(apt.status)}>{apt.status}</Badge>
-                      <Link href={`/portal/appointments/${apt.id}`}>
-                        <Button variant="secondary" size="sm">
-                          View Details
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {appointments.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Calendar className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              No appointments found
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-              {statusFilter !== "all"
-                ? `No appointments with status "${statusFilter}" found.`
-                : "You don't have any appointments yet. Book your first appointment to get started."}
-            </p>
-            <Link href="/portal/book">
-              <Button>
-                <Calendar className="w-4 h-4 mr-2" />
-                Book Your First Appointment
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

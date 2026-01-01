@@ -291,5 +291,11 @@ export const inspectionsApi = {
       return response.data;
     },
   },
+  // Photos
+  photos: {
+    delete: async (id: number): Promise<void> => {
+      await apiClient.delete(`/inspections/photos/${id}/`);
+    },
+  },
 };
 

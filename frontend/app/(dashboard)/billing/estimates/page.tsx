@@ -23,8 +23,11 @@ import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/adva
 import { SortableHeader, SortConfig } from "@/components/ui/sortable-header";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { CreditCard, Ban } from "lucide-react"; // Added missing icons
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function EstimatesPage() {
+  const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [startDate, setStartDate] = useState("");
@@ -118,6 +121,11 @@ export default function EstimatesPage() {
         ordering,
       });
     },
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["estimate-stats"],
+    queryFn: () => billingApi.estimates.stats(),
   });
 
   const estimates = data?.results || [];
@@ -388,40 +396,84 @@ export default function EstimatesPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="shadow-none border-none bg-gray-50/50">
-          <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Estimates</span>
-            <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-gray-900">{totalEstimates}</span>
-              <FileText className="w-5 h-5 text-gray-400 mb-0.5" />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <Card
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'draft' ? 'ring-2 ring-gray-500 bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+          onClick={() => {
+            const newStatus = advancedFilters.status === 'draft' ? null : 'draft';
+            setAdvancedFilters({ ...advancedFilters, status: newStatus });
+            setPage(1);
+          }}
+        >
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Draft</span>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-gray-600">{stats?.counts.draft || 0}</span>
+              <FileText className="w-4 h-4 text-gray-400" />
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-none border-none bg-gray-50/50">
-          <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Value</span>
-            <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-gray-900">${totalAmount.toFixed(2)}</span>
-              <DollarSign className="w-5 h-5 text-gray-400 mb-0.5" />
+        <Card
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'sent' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+          onClick={() => {
+            const newStatus = advancedFilters.status === 'sent' ? null : 'sent';
+            setAdvancedFilters({ ...advancedFilters, status: newStatus });
+            setPage(1);
+          }}
+        >
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sent (Pending)</span>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-blue-600">{stats?.counts.sent || 0}</span>
+              <Mail className="w-4 h-4 text-blue-500/50" />
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-none border-none bg-gray-50/50">
-          <CardContent className="p-4 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pending</span>
-            <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-yellow-600">{pendingCount}</span>
-              <Clock className="w-5 h-5 text-yellow-500/50 mb-0.5" />
+        <Card
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'approved' ? 'ring-2 ring-green-500 bg-green-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+          onClick={() => {
+            const newStatus = advancedFilters.status === 'approved' ? null : 'approved';
+            setAdvancedFilters({ ...advancedFilters, status: newStatus });
+            setPage(1);
+          }}
+        >
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Approved</span>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-green-600">{stats?.counts.approved || 0}</span>
+              <CheckCircle className="w-4 h-4 text-green-500/50" />
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-none border-none bg-gray-50/50">
-          <CardContent className="p-4 flex flex-col gap-1">
+        <Card
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'declined' ? 'ring-2 ring-red-500 bg-red-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+          onClick={() => {
+            const newStatus = advancedFilters.status === 'declined' ? null : 'declined';
+            setAdvancedFilters({ ...advancedFilters, status: newStatus });
+            setPage(1);
+          }}
+        >
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Declined</span>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-red-600">{stats?.counts.declined || 0}</span>
+              <XCircle className="w-4 h-4 text-red-500/50" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'expired' ? 'ring-2 ring-orange-500 bg-orange-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+          onClick={() => {
+            const newStatus = advancedFilters.status === 'expired' ? null : 'expired';
+            setAdvancedFilters({ ...advancedFilters, status: newStatus });
+            setPage(1);
+          }}
+        >
+          <CardContent className="p-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Expired</span>
-            <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-red-600">{expiredCount}</span>
-              <AlertCircle className="w-5 h-5 text-red-500/50 mb-0.5" />
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-orange-600">{stats?.counts.expired || 0}</span>
+              <Clock className="w-4 h-4 text-orange-500/50" />
             </div>
           </CardContent>
         </Card>
@@ -483,6 +535,21 @@ export default function EstimatesPage() {
                   <X className="w-3.5 h-3.5 mr-1" />
                   Clear
                 </Button>
+              )}
+
+              {/* Mini Widget - Financial Summary */}
+              {stats && (
+                <div className="hidden md:flex items-center space-x-4 ml-auto text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 font-medium">Approved Value:</span>
+                    <span className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(stats.financials.total_approved)}</span>
+                  </div>
+                  <div className="h-4 w-px bg-gray-300 dark:bg-gray-700"></div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 font-medium">Pipeline Value:</span>
+                    <span className="font-bold text-blue-600">{formatCurrency(stats.financials.total_pending)}</span>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -569,8 +636,8 @@ export default function EstimatesPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
-                    <TableHead className="w-[40px] px-4">
+                  <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-b border-gray-200">
+                    <TableHead className="w-[32px] px-2">
                       <input
                         type="checkbox"
                         checked={bulkSelection.isAllSelected}
@@ -581,13 +648,13 @@ export default function EstimatesPage() {
                         className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                     </TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Estimate #</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Customer</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Vehicle</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Dates</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Total</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
-                    <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 text-right">Actions</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Estimate #</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Customer</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Vehicle</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Dates</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-right text-gray-500">Total</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Status</TableHead>
+                    <TableHead className="px-2 h-9 text-[10px] uppercase tracking-wider font-semibold text-right text-gray-500">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -597,7 +664,7 @@ export default function EstimatesPage() {
                       className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0 data-[state=selected]:bg-blue-50/30 cursor-pointer"
                       onDoubleClick={() => router.push(`/billing/estimates/${estimate.id}`)}
                     >
-                      <TableCell className="px-4 py-2">
+                      <TableCell className="px-2 py-1.5 w-[32px]">
                         <input
                           type="checkbox"
                           checked={bulkSelection.isSelected(estimate.id)}
@@ -605,44 +672,46 @@ export default function EstimatesPage() {
                           className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
                       </TableCell>
-                      <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700">
+                      <TableCell className="px-2 py-1.5 font-mono text-[11px] font-medium text-gray-700">
                         {estimate.estimate_number || "-"}
                       </TableCell>
-                      <TableCell className="px-4 py-2">
-                        <span className="text-sm font-medium text-gray-900">{estimate.customer_name || "N/A"}</span>
+                      <TableCell className="px-2 py-1.5">
+                        <span className="text-sm font-medium text-gray-900 line-clamp-1">{estimate.customer_name || "N/A"}</span>
                       </TableCell>
-                      <TableCell className="px-4 py-2 text-xs text-gray-600">
-                        {estimate.vehicle_display || "-"}
+                      <TableCell className="px-2 py-1.5 text-xs text-gray-600">
+                        <span className="line-clamp-1">{estimate.vehicle_display || "-"}</span>
                       </TableCell>
-                      <TableCell className="px-4 py-2">
-                        <div className="flex flex-col text-xs text-gray-500">
-                          <span>created: {estimate.estimate_date ? format(new Date(estimate.estimate_date), "MMM dd, yyyy") : "-"}</span>
-                          <span className={estimate.is_expired ? "text-red-500 font-medium" : ""}>
-                            valid: {estimate.valid_until ? format(new Date(estimate.valid_until), "MMM dd, yyyy") : "-"}
-                          </span>
+                      <TableCell className="px-2 py-1.5">
+                        <div className="flex flex-col text-[10px] text-gray-500">
+                          <span>{estimate.estimate_date ? format(new Date(estimate.estimate_date), "MMM dd") : "-"}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="px-4 py-2 text-right font-medium text-sm text-gray-700">
-                        ${parseFloat(estimate.total || "0").toFixed(2)}
+                      <TableCell className="px-2 py-1.5 text-right font-medium text-sm text-gray-700">
+                        {formatCurrency(parseFloat(estimate.total || "0"))}
                       </TableCell>
-                      <TableCell className="px-4 py-2">
-                        <Badge variant={getStatusVariant(estimate.status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
+                      <TableCell className="px-2 py-1.5">
+                        <Badge variant={getStatusVariant(estimate.status) as any} className="text-[10px] px-1.5 py-0 font-medium border shadow-none bg-transparent whitespace-nowrap">
                           <span className="flex items-center gap-1.5">
                             {getStatusIcon(estimate.status)}
-                            {estimate.status?.replace("_", " ") || estimate.status}
+                            {estimate.status === 'draft' ? 'Draft' :
+                              estimate.status === 'sent' ? 'Sent' :
+                                estimate.status === 'approved' ? 'Approved' :
+                                  estimate.status === 'declined' ? 'Declined' :
+                                    estimate.status === 'expired' ? 'Expired' :
+                                      estimate.status}
                           </span>
                         </Badge>
                       </TableCell>
-                      <TableCell className="px-4 py-2 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <TableCell className="px-2 py-1.5 text-right w-[80px]">
+                        <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Link href={`/billing/estimates/${estimate.id}`}>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-blue-600">
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600 hover:bg-blue-50">
                               <Eye className="w-3.5 h-3.5" />
                             </Button>
                           </Link>
                           {estimate.status === 'draft' && (
                             <Link href={`/billing/estimates/${estimate.id}/edit`}>
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-green-600">
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-green-600 hover:bg-green-50">
                                 <Edit className="w-3.5 h-3.5" />
                               </Button>
                             </Link>
@@ -660,7 +729,7 @@ export default function EstimatesPage() {
                               });
                               setOpenMenuId(openMenuId === estimate.id ? null : estimate.id);
                             }}
-                            className="h-7 w-7 p-0 text-gray-500 hover:bg-gray-100"
+                            className="h-6 w-6 p-0 text-gray-400 hover:text-gray-900 hover:bg-gray-100"
                           >
                             <MoreVertical className="w-3.5 h-3.5" />
                           </Button>

@@ -221,6 +221,12 @@ class RoadsideRequest(models.Model):
         blank=True,
         help_text="Customer feedback after service"
     )
+    rating = models.PositiveSmallIntegerField(
+        _('rating'),
+        null=True,
+        blank=True,
+        help_text="Customer rating (1-5)"
+    )
     
     # Timestamps
     requested_at = models.DateTimeField(

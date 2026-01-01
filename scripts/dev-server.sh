@@ -285,8 +285,8 @@ echo ""
 cleanup() {
     echo ""
     echo -e "${YELLOW}Shutting down servers...${NC}"
-    kill $DJANGO_PID $NEXTJS_PID 2>/dev/null || true
-    wait $DJANGO_PID $NEXTJS_PID 2>/dev/null || true
+    kill $DJANGO_PID $NEXTJS_PID $CELERY_WORKER_PID $CELERY_BEAT_PID 2>/dev/null || true
+    wait $DJANGO_PID $NEXTJS_PID $CELERY_WORKER_PID $CELERY_BEAT_PID 2>/dev/null || true
     echo -e "${GREEN}✓ Servers stopped${NC}"
     exit 0
 }
@@ -310,6 +310,18 @@ cd "$FRONTEND_DIR"
 NEXT_PUBLIC_API_URL=http://localhost:$DJANGO_PORT/api PORT=$NEXTJS_PORT npm run dev > /tmp/nextjs-dev.log 2>&1 &
 NEXTJS_PID=$!
 
+# Start Celery Worker
+echo -e "${GREEN}Starting Celery Worker...${NC}"
+cd "$BACKEND_DIR"
+source "$VENV_DIR/bin/activate"
+celery -A config worker -l info > /tmp/celery-worker.log 2>&1 &
+CELERY_WORKER_PID=$!
+
+# Start Celery Beat
+echo -e "${GREEN}Starting Celery Beat...${NC}"
+celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler > /tmp/celery-beat.log 2>&1 &
+CELERY_BEAT_PID=$!
+
 echo ""
 echo -e "${BLUE}========================================${NC}"
 echo -e "${GREEN}Development servers are running!${NC}"
@@ -326,6 +338,6 @@ echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop all servers${NC}"
 echo ""
 
-# Wait for both processes
-wait $DJANGO_PID $NEXTJS_PID
+# Wait for all processes
+wait $DJANGO_PID $NEXTJS_PID $CELERY_WORKER_PID $CELERY_BEAT_PID
 

@@ -24,13 +24,16 @@ import {
 import Link from "next/link";
 import { format } from "date-fns";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 interface DiagnosisTabProps {
   workOrderId: number;
   workOrder?: any;
   onRefresh?: () => void;
 }
 
-export default function DiagnosisTab({ workOrderId, workOrder, onRefresh }: DiagnosisTabProps) {
+export default function DiagnosisTab({
+    workOrderId, workOrder, onRefresh }: DiagnosisTabProps) {
+    const { formatCurrency } = useCurrency();
   const { toast } = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -171,7 +174,7 @@ export default function DiagnosisTab({ workOrderId, workOrder, onRefresh }: Diag
                 <Label className="text-xs text-gray-500">Diagnostic Fee</Label>
               </div>
               <p className="text-sm font-semibold">
-                ${Number(diagnosis.diagnostic_fee || 0).toFixed(2)}
+                {formatCurrency(Number(diagnosis.diagnostic_fee || 0))}
               </p>
             </div>
             <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
@@ -208,7 +211,7 @@ export default function DiagnosisTab({ workOrderId, workOrder, onRefresh }: Diag
                     </div>
                     <div className="text-right ml-4">
                       <p className="text-sm font-semibold">
-                        ${Number(rec.estimated_total_cost || 0).toFixed(2)}
+                        {formatCurrency(Number(rec.estimated_total_cost || 0))}
                       </p>
                     </div>
                   </div>
@@ -224,7 +227,7 @@ export default function DiagnosisTab({ workOrderId, workOrder, onRefresh }: Diag
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold">Total Estimated Cost</span>
                     <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                      ${Number(diagnosis.total_estimated_cost).toFixed(2)}
+                      {formatCurrency(Number(diagnosis.total_estimated_cost))}
                     </span>
                   </div>
                 </div>

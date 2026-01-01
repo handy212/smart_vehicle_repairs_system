@@ -38,6 +38,10 @@ app.conf.beat_schedule = {
         'task': 'sync_popular_diagnostic_codes',
         'schedule': crontab(hour=3, minute=0),  # Run daily at 3 AM (Hybrid System: Periodic Sync)
     },
+    'process-scheduled-notifications': {
+        'task': 'apps.notifications_app.tasks.process_scheduled_notifications',
+        'schedule': crontab(minute='*'),  # Run every minute
+    },
 }
 
 @app.task(bind=True)

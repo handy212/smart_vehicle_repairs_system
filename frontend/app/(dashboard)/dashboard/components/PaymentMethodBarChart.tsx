@@ -3,6 +3,7 @@
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts";
 import { memo, useMemo } from "react";
 import { CreditCard, Wallet, Banknote, Building2, Smartphone, DollarSign } from "lucide-react";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 interface PaymentMethodBarChartProps {
   data: Array<{ method: string; total: number; count?: number }>;
@@ -31,10 +32,11 @@ const PAYMENT_METHOD_CONFIG: Record<string, { color: string; label: string; icon
 const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
   data,
 }: PaymentMethodBarChartProps) {
+  const { formatCurrency: formatMoney } = useCurrency();
   // Process and enhance data
   const processedData = useMemo(() => {
     if (!data || data.length === 0) return [];
-    
+
     return data
       .map(item => {
         const methodKey = item.method.toLowerCase().replace(/\s+/g, '_');
@@ -77,10 +79,7 @@ const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
           <div className="space-y-1">
             <p className="text-xs text-gray-600 dark:text-gray-400">
               Revenue: <span className="font-semibold text-gray-900 dark:text-gray-100">
-                ${parseFloat(String(data.total)).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                {formatMoney(data.total)}
               </span>
             </p>
             {data.count && (
@@ -99,10 +98,7 @@ const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
   };
 
   const formatCurrency = (value: number) => {
-    return `$${parseFloat(String(value)).toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    })}`;
+    return formatMoney(value, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   };
 
   return (
@@ -156,10 +152,7 @@ const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
                   {item.label}
                 </p>
                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  ${parseFloat(String(item.total)).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatMoney(item.total)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {percentage}% {item.count && `• ${item.count} txns`}
@@ -181,10 +174,7 @@ const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
               </span>
             </div>
             <span className="text-lg font-bold text-blue-900 dark:text-blue-100">
-              ${parseFloat(String(totalRevenue)).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              {formatMoney(totalRevenue)}
             </span>
           </div>
         </div>

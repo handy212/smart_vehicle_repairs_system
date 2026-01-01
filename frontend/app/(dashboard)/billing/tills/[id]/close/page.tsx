@@ -13,9 +13,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/lib/hooks/useToast";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 const DENOMINATIONS = [200, 100, 50, 20, 10, 5, 2, 1, 0.50, 0.25, 0.10, 0.05];
 
 export default function CloseTillPage() {
+    const { formatCurrency } = useCurrency();
     const params = useParams();
     const router = useRouter();
     const queryClient = useQueryClient();
@@ -139,7 +141,7 @@ export default function CloseTillPage() {
                                     {DENOMINATIONS.map((denom) => (
                                         <div key={denom} className="grid grid-cols-4 gap-4 items-center">
                                             <div className="font-semibold">
-                                                ${denom.toFixed(2)}
+                                                {formatCurrency(denom)}
                                             </div>
                                             <div className="col-span-2">
                                                 <Input
@@ -151,7 +153,7 @@ export default function CloseTillPage() {
                                                 />
                                             </div>
                                             <div className="text-right font-mono">
-                                                = ${(denom * (counts[denom.toString()] || 0)).toFixed(2)}
+                                                = {formatCurrency((denom * (counts[denom.toString()] || 0)))}
                                             </div>
                                         </div>
                                     ))}
@@ -181,11 +183,11 @@ export default function CloseTillPage() {
                             <CardContent className="space-y-4">
                                 <div>
                                     <p className="text-sm text-muted-foreground">Opening Balance</p>
-                                    <p className="text-2xl font-bold">${parseFloat(till.opening_balance).toFixed(2)}</p>
+                                    <p className="text-2xl font-bold">{formatCurrency(parseFloat(till.opening_balance))}</p>
                                 </div>
                                 <div>
                                     <p className="text-sm text-muted-foreground">Counted Total</p>
-                                    <p className="text-3xl font-bold text-blue-600">${total.toFixed(2)}</p>
+                                    <p className="text-3xl font-bold text-blue-600">{formatCurrency(total)}</p>
                                 </div>
                                 <div className="pt-4 border-t">
                                     <p className="text-sm text-muted-foreground">Duration</p>

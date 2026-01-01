@@ -233,7 +233,7 @@ class RepairRecommendationCreateSerializer(serializers.ModelSerializer):
             'recommendation_type', 'description', 'priority',
             'parts_needed', 'estimated_parts_cost',
             'estimated_labor_hours', 'estimated_labor_cost',
-            'order'
+            'order', 'customer_approved'
         ]
     
     def create(self, validated_data):

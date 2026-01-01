@@ -72,7 +72,8 @@ class NotificationListSerializer(serializers.ModelSerializer):
         model = Notification
         fields = [
             'id', 'recipient', 'recipient_name', 'notification_type',
-            'channel', 'priority', 'title', 'status', 'is_read',
+            'channel', 'priority', 'title', 'message', 'data',
+            'status', 'is_read', 'related_object_type', 'related_object_id',
             'is_expired', 'created_at'
         ]
     

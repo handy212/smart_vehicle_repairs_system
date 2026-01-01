@@ -7,6 +7,7 @@ import { Sidebar } from "./Sidebar";
 import { SubNav, getSubNavConfig } from "./SubNav";
 import { useKeyboardShortcut } from "@/lib/hooks/useKeyboardShortcut";
 import { KeyboardShortcutsDialog } from "@/components/ui/keyboard-shortcuts-dialog";
+import { CommandPalette } from "@/components/ui/CommandPalette";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -107,47 +108,49 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Navbar
-        onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-        isSidebarOpen={isSidebarOpen}
-        onToggleCollapse={() => {
-          const newCollapsed = !isSidebarCollapsed;
-          setIsSidebarCollapsed(newCollapsed);
-          if (mounted) {
-            localStorage.setItem("sidebarCollapsed", newCollapsed.toString());
-          }
-        }}
-        isSidebarCollapsed={mounted ? isSidebarCollapsed : false}
-      />
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        isCollapsed={mounted ? isSidebarCollapsed : false}
-        onToggleCollapse={() => {
-          const newCollapsed = !isSidebarCollapsed;
-          setIsSidebarCollapsed(newCollapsed);
-          if (mounted) {
-            localStorage.setItem("sidebarCollapsed", newCollapsed.toString());
-          }
-        }}
-      />
-      {hasSubNav && subNavConfig && (
-        <SubNav
-          items={subNavConfig.items}
-          title={subNavConfig.title}
-          onToggle={(collapsed) => {
-            setIsSubNavCollapsed(collapsed);
+      <div className="print:hidden">
+        <Navbar
+          onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+          isSidebarOpen={isSidebarOpen}
+          onToggleCollapse={() => {
+            const newCollapsed = !isSidebarCollapsed;
+            setIsSidebarCollapsed(newCollapsed);
             if (mounted) {
-              localStorage.setItem("subNavCollapsed", collapsed.toString());
-              window.dispatchEvent(new Event("subNavToggle"));
+              localStorage.setItem("sidebarCollapsed", newCollapsed.toString());
             }
           }}
-          isCollapsed={mounted ? isSubNavCollapsed : false}
-          sidebarCollapsed={mounted ? isSidebarCollapsed : false}
+          isSidebarCollapsed={mounted ? isSidebarCollapsed : false}
         />
-      )}
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          isCollapsed={mounted ? isSidebarCollapsed : false}
+          onToggleCollapse={() => {
+            const newCollapsed = !isSidebarCollapsed;
+            setIsSidebarCollapsed(newCollapsed);
+            if (mounted) {
+              localStorage.setItem("sidebarCollapsed", newCollapsed.toString());
+            }
+          }}
+        />
+        {hasSubNav && subNavConfig && (
+          <SubNav
+            items={subNavConfig.items}
+            title={subNavConfig.title}
+            onToggle={(collapsed) => {
+              setIsSubNavCollapsed(collapsed);
+              if (mounted) {
+                localStorage.setItem("subNavCollapsed", collapsed.toString());
+                window.dispatchEvent(new Event("subNavToggle"));
+              }
+            }}
+            isCollapsed={mounted ? isSubNavCollapsed : false}
+            sidebarCollapsed={mounted ? isSidebarCollapsed : false}
+          />
+        )}
+      </div>
       <main
-        className="min-h-screen px-4 py-0 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 transition-all duration-300"
+        className="min-h-screen px-4 py-0 sm:px-6 lg:px-8 pb-4 sm:pb-6 lg:pb-8 transition-all duration-300 print:!m-0 print:!p-0"
         style={{
           marginLeft: `${totalMargin}px`,
           paddingTop: '5rem' // 80px to account for header (64px) + extra space for mobile search
@@ -161,6 +164,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         open={showShortcutsDialog}
         onOpenChange={setShowShortcutsDialog}
       />
+
+      <CommandPalette />
     </div>
   );
 }

@@ -15,7 +15,9 @@ from apps.branches.utils import filter_queryset_for_user_branches
 
 from .models import (
     PartCategory, Supplier, Part, PurchaseOrder, 
-    PurchaseOrderItem, InventoryTransaction
+    PartCategory, Supplier, Part, PurchaseOrder, 
+    PurchaseOrderItem, InventoryTransaction,
+    ServicePackage
 )
 from .serializers import (
     PartCategorySerializer, SupplierListSerializer, SupplierDetailSerializer,
@@ -26,7 +28,9 @@ from .serializers import (
     PurchaseOrderItemSerializer, PurchaseOrderItemCreateSerializer,
     ReceiveItemSerializer, InventoryTransactionSerializer,
     InventoryTransactionCreateSerializer, LowStockReportSerializer,
-    InventoryValueReportSerializer
+    InventoryTransactionCreateSerializer, LowStockReportSerializer,
+    InventoryValueReportSerializer, ServicePackageSerializer,
+    ServicePackageCreateSerializer
 )
 
 
@@ -49,6 +53,16 @@ class PartCategoryViewSet(viewsets.ModelViewSet):
         categories = self.queryset.filter(parent__isnull=True)
         serializer = self.get_serializer(categories, many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """
+        Get statistics for category dashboard.
+        """
+        total_categories = self.get_queryset().count()
+        return Response({
+            'total_categories': total_categories
+        })
 
     @action(detail=True, methods=['get'])
     def subcategories(self, request, pk=None):
@@ -129,6 +143,22 @@ class SupplierViewSet(viewsets.ModelViewSet):
         serializer = PurchaseOrderListSerializer(orders, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """
+        Get statistics for supplier dashboard.
+        """
+        queryset = self.get_queryset()
+        total_suppliers = queryset.count()
+        active_suppliers = queryset.filter(is_active=True).count()
+        preferred_suppliers = queryset.filter(is_preferred=True).count()
+        
+        return Response({
+            'total_suppliers': total_suppliers,
+            'active_suppliers': active_suppliers,
+            'preferred_suppliers': preferred_suppliers
+        })
+
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
         """Activate supplier"""
@@ -153,6 +183,28 @@ class PartViewSet(viewsets.ModelViewSet):
     queryset = Part.objects.select_related('category', 'preferred_supplier', 'created_by').prefetch_related('suppliers')
     permission_classes = [IsAuthenticated]
     
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """
+        Get statistics for parts dashboard.
+        """
+        queryset = self.get_queryset()
+        total_parts = queryset.count()
+        low_stock = queryset.filter(quantity_in_stock__lte=F('reorder_point')).count()
+        out_of_stock = queryset.filter(quantity_in_stock=0).count()
+        
+        # Calculate total inventory value
+        total_value = 0
+        for part in queryset:
+            total_value += part.total_value
+            
+        return Response({
+            'total_parts': total_parts,
+            'low_stock': low_stock,
+            'out_of_stock': out_of_stock,
+            'total_value': total_value
+        })
+
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action == 'list' or self.action == 'retrieve':
@@ -807,6 +859,25 @@ class PartViewSet(viewsets.ModelViewSet):
         })
 
 
+class ServicePackageViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for service packages (Job Kits)
+    """
+    queryset = ServicePackage.objects.select_related('category').prefetch_related('parts', 'parts__part')
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['category', 'is_active']
+    search_fields = ['name', 'description']
+    ordering_fields = ['name', 'created_at']
+    ordering = ['name']
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return ServicePackageCreateSerializer
+        return ServicePackageSerializer
+
+
+
 class PurchaseOrderViewSet(viewsets.ModelViewSet):
     """
     ViewSet for purchase orders with workflow management
@@ -831,6 +902,28 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
     search_fields = ['po_number', 'supplier__name', 'notes']
     ordering_fields = ['po_number', 'order_date', 'expected_delivery_date', 'total', 'created_at']
     ordering = ['-created_at']
+
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """
+        Get statistics for purchase order dashboard.
+        """
+        queryset = self.get_queryset()
+        total_orders = queryset.count()
+        pending_orders = queryset.filter(status__in=['draft', 'submitted']).count()
+        time_now = timezone.now().date()
+        overdue_orders = queryset.filter(
+            status__in=['draft', 'submitted'], 
+            expected_delivery_date__lt=time_now
+        ).count()
+        completed_orders = queryset.filter(status='received').count()
+        
+        return Response({
+            'total_orders': total_orders,
+            'pending_orders': pending_orders,
+            'overdue_orders': overdue_orders,
+            'completed_orders': completed_orders
+        })
 
     def get_queryset(self):
         queryset = super().get_queryset()

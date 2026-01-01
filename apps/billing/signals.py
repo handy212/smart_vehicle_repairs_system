@@ -3,7 +3,7 @@ Signals for billing app to integrate with Django Ledger
 """
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
-from apps.billing.models import Invoice, Payment
+from apps.billing.models import Invoice, Payment, Bill
 from apps.billing.accounting_service import AccountingService
 
 
@@ -65,6 +65,26 @@ def payment_post_save(sender, instance, created, **kwargs):
                     exc_info=True
                 )
 
+
+@receiver(post_save, sender=Bill)
+def bill_post_save(sender, instance, created, **kwargs):
+    """
+    Create Django Ledger Bill when our Bill is created
+    
+    This provides automatic AP posting and expense tracking.
+    """
+    if instance.branch:
+        try:
+            # Sync Django Ledger bill (creates or updates as needed)
+            AccountingService.create_dl_bill_from_bill(instance)
+        except Exception as e:
+            # Log error
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"Failed to sync DL Bill for {instance.bill_number}: {e}",
+                exc_info=True
+            )
 
 # Import PurchaseOrder for signal registration
 try:

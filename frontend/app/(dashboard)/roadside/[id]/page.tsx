@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useForm } from "react-hook-form";
@@ -55,6 +56,7 @@ export default function RoadsideDetailPage() {
     const router = useRouter();
     const queryClient = useQueryClient();
     const { toast } = useToast();
+    const { currencySymbol } = useCurrency();
 
     const requestIdStr = params?.id as string;
     const requestId = requestIdStr ? parseInt(requestIdStr) : NaN;
@@ -632,7 +634,7 @@ export default function RoadsideDetailPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                                    GH¢ {request.charge_amount}
+                                    {currencySymbol} {request.charge_amount}
                                 </div>
                             </CardContent>
                         </Card>

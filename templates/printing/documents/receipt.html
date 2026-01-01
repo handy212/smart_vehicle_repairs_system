@@ -43,8 +43,9 @@
                 {% endif %}
                 {% if document.customer.city %}
                 <div>
-                    {{ document.customer.city }}{% if document.customer.state %}, {{ document.customer.state }}{% endif
-                    %} {{ document.customer.zip_code }}
+                    {{ document.customer.city }}
+                    {% if document.customer.state %}, {{ document.customer.state }}{% endif %}
+                    {{ document.customer.zip_code }}
                 </div>
                 {% endif %}
                 {% if document.customer.phone %}

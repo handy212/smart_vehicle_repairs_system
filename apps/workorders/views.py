@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from apps.accounts.permissions import HasPermission, user_has_permission
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
@@ -28,7 +28,8 @@ from .serializers import (
     TechnicianTimeLogClockOutSerializer,
     WorkOrderNoteSerializer, WorkOrderNoteCreateSerializer,
     WorkOrderPhotoSerializer, WorkOrderPhotoCreateSerializer,
-    TechnicianWorkloadSerializer, WorkOrderStatusSummarySerializer
+    TechnicianWorkloadSerializer, WorkOrderStatusSummarySerializer,
+    PublicWorkOrderSerializer
 )
 
 
@@ -57,6 +58,29 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         'customer__user__last_name', 'customer__user__first_name'
     ]
     ordering = ['-created_at']
+
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """
+        Get statistics for work orders dashboard.
+        """
+        # Filter by branch if applicable
+        queryset = self.get_queryset()
+        
+        # Calculate stats
+        total_workorders = queryset.count()
+        in_progress = queryset.filter(status='in_progress').count()
+        pending = queryset.filter(status='pending').count()
+        completed = queryset.filter(status='completed').count()
+        cancelled = queryset.filter(status='cancelled').count()
+        
+        return Response({
+            'total_workorders': total_workorders,
+            'in_progress': in_progress,
+            'pending': pending,
+            'completed': completed,
+            'cancelled': cancelled
+        })
     
     def get_queryset(self):
         """Filter work orders by active branch from session"""
@@ -1330,24 +1354,78 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def start(self, request, pk=None):
-        """Start task"""
+        """Start task and auto-clock in technician"""
         task = self.get_object()
-        task.status = 'in_progress'
-        task.started_at = timezone.now()
-        task.save()
+        
+        # Don't restart if already in progress (unless multiple techs can work on it - typically one main status)
+        # But we can allow multiple technicians to clock in.
+        
+        # Update task status if not already in progress
+        update_task = False
+        if task.status != 'in_progress':
+            task.status = 'in_progress'
+            task.started_at = timezone.now()
+            # Assign to current user if not assigned
+            if not task.assigned_to and request.user.role in ['technician', 'manager']:
+                task.assigned_to = request.user
+            update_task = True
+        
+        if update_task:
+            task.save()
+        
+        # Auto-create time log (Clock In) for the user
+        user = request.user
+        if user.role in ['technician', 'manager']:
+            # Check if already clocked in to this task
+            existing_log = TechnicianTimeLog.objects.filter(
+                task=task,
+                technician=user,
+                clock_out__isnull=True
+            ).first()
+            
+            if not existing_log:
+                TechnicianTimeLog.objects.create(
+                    work_order=task.work_order,
+                    task=task,
+                    technician=user,
+                    clock_in=timezone.now(),
+                    is_billable=True, # Default to billable
+                    description=f"Auto-started task: {task.description}"
+                )
         
         serializer = self.get_serializer(task)
         return Response(serializer.data)
     
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
-        """Complete task"""
+        """Complete task and auto-clock out technician"""
         task = self.get_object()
         actual_hours = request.data.get('actual_hours')
         notes = request.data.get('notes', '')
         
         task.status = 'completed'
         task.completed_at = timezone.now()
+        
+        # Handle Time Logs (Clock Out)
+        user = request.user
+        if user.role in ['technician', 'manager']:
+            # Find open time logs for this user/task
+            open_logs = TechnicianTimeLog.objects.filter(
+                task=task,
+                technician=user,
+                clock_out__isnull=True
+            )
+            
+            for log in open_logs:
+                log.clock_out = timezone.now()
+                # Calculate hours if needed, mostly handled by save() or property?
+                # Let's ensure notes are added if provided
+                if notes:
+                    if log.notes:
+                        log.notes += f"\nCompletion Note: {notes}"
+                    else:
+                        log.notes = f"Completion Note: {notes}"
+                log.save()
         
         if actual_hours:
             task.actual_hours = actual_hours
@@ -1356,6 +1434,9 @@ class ServiceTaskViewSet(viewsets.ModelViewSet):
             task.detailed_notes = notes
         
         task.save()
+        
+        # Recalculate totals on Work Order
+        task.work_order.recalculate_totals()
         
         serializer = self.get_serializer(task)
         return Response(serializer.data)
@@ -1369,11 +1450,307 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
     filterset_fields = ['work_order', 'status']
     search_fields = ['part_number', 'part_name', 'description']
     
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """
+        Get statistics for parts requests dashboard.
+        """
+        queryset = self.get_queryset()
+        total_requests = queryset.count()
+        pending_requests = queryset.filter(status='pending').count()
+        ordered_requests = queryset.filter(status='ordered').count()
+        received_requests = queryset.filter(status='received').count()
+        
+        return Response({
+            'total_requests': total_requests,
+            'pending_requests': pending_requests,
+            'ordered_requests': ordered_requests,
+            'received_requests': received_requests
+        })
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        
+        # Admin can view all if requested
+        if getattr(user, 'role', None) == 'admin' and \
+           self.request.query_params.get('all_branches', 'false').lower() == 'true':
+            return queryset
+
+        # Filter by active branch
+        active_branch = resolve_branch(self.request)
+        if active_branch:
+            queryset = queryset.filter(work_order__branch=active_branch)
+        elif getattr(user, 'role', None) != 'admin':
+             # If no active branch and not admin, return empty or default restrictions
+             # Usually resolve_branch returns *something* if logged in, but safe to handle.
+             pass
+             
+        return queryset
+    
     def get_serializer_class(self):
         if self.action == 'create':
             return WorkOrderPartCreateSerializer
         return WorkOrderPartSerializer
     
+    @action(detail=True, methods=['post'])
+    def allocate(self, request, pk=None):
+        """Allocate part from inventory"""
+        from apps.inventory.models import Part
+        
+        wo_part = self.get_object()
+        if wo_part.status not in ['pending', 'draft']:
+             return Response(
+                 {'error': f'Cannot allocate part in {wo_part.status} status'},
+                 status=status.HTTP_400_BAD_REQUEST
+             )
+
+        if not wo_part.part_number:
+            return Response(
+                {'error': 'Part number is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Find part
+        part = Part.objects.filter(part_number=wo_part.part_number).first()
+        if not part:
+            return Response(
+                {'error': 'Part not found in inventory'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        # Check Branch
+        if part.branch and wo_part.work_order.branch and part.branch != wo_part.work_order.branch:
+             return Response(
+                 {'error': f'Inventory part is at {part.branch.name}, cannot allocate to {wo_part.work_order.branch.name}'},
+                 status=status.HTTP_400_BAD_REQUEST
+             )
+             
+        # Check Stock
+        if part.quantity_in_stock < wo_part.quantity:
+             return Response(
+                 {'error': f'Insufficient stock. Required: {wo_part.quantity}, Available: {part.quantity_in_stock}'},
+                 status=status.HTTP_400_BAD_REQUEST
+             )
+             
+        # Execute Allocation
+        from django.db import transaction
+        try:
+            with transaction.atomic():
+                # Re-fetch part with lock to prevent race conditions
+                part = Part.objects.select_for_update().get(id=part.id)
+                
+                # Check Stock again under lock
+                if part.quantity_in_stock < wo_part.quantity:
+                     return Response(
+                         {'error': f'Insufficient stock. Required: {wo_part.quantity}, Available: {part.quantity_in_stock}'},
+                         status=status.HTTP_400_BAD_REQUEST
+                     )
+
+                from apps.inventory.models import InventoryTransaction
+                
+                # Create transaction (negative quantity for usage)
+                # Note: The model's save() method will automatically:
+                # 1. Update part.quantity_in_stock (old_stock + quantity)
+                # 2. Set balance_after to the new stock level
+                InventoryTransaction.objects.create(
+                    part=part,
+                    transaction_type='sale',
+                    quantity=-wo_part.quantity,
+                    balance_after=part.quantity_in_stock - wo_part.quantity, # Model recalculates this, but providing expected value
+                    work_order=wo_part.work_order,
+                    reason=f"Allocated to WO #{wo_part.work_order.id}",
+                    created_by=request.user
+                )
+                
+                wo_part.status = 'ready'
+                wo_part.inventory_part = part
+                wo_part.save()
+            
+            serializer = self.get_serializer(wo_part)
+            return Response(serializer.data)
+        except Exception as e:
+            import traceback
+            # Log the full error for debugging
+            print(f"Error in allocate: {e}")
+            print(traceback.format_exc())
+            return Response(
+                {'error': f"Allocation failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
+    def order(self, request, pk=None):
+        """Create/Add to Purchase Order"""
+        from apps.inventory.models import Part, PurchaseOrder, PurchaseOrderItem
+        
+        wo_part = self.get_object()
+        
+        # Validation
+        if wo_part.status not in ['pending', 'draft']:
+             return Response(
+                 {'error': f'Cannot order part in {wo_part.status} status'},
+                 status=status.HTTP_400_BAD_REQUEST
+             )
+             
+        if not wo_part.part_number:
+             return Response(
+                 {'error': 'Part number is required to order'},
+                 status=status.HTTP_400_BAD_REQUEST
+             )
+
+        # Identify Part & Supplier
+        part = Part.objects.filter(part_number=wo_part.part_number).first()
+        if not part:
+             return Response(
+                 {'error': f"Part '{wo_part.part_number}' not found in Inventory. Please create it in Inventory first."},
+                 status=status.HTTP_404_NOT_FOUND
+             )
+             
+        supplier = part.preferred_supplier
+        if not supplier:
+            # Fallback: Check if part has any suppliers
+            supplier = part.suppliers.first()
+            
+        if not supplier:
+             return Response(
+                 {'error': 'Part has no supplier defined. Please assign a supplier in Inventory.'},
+                 status=status.HTTP_400_BAD_REQUEST
+             )
+
+        # Identify Branch (Order for the branch where WO exists)
+        branch = wo_part.work_order.branch
+        if not branch:
+             return Response({'error': 'Work Order has no branch assigned'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Find Open PO (Draft) or Create New
+        po = PurchaseOrder.objects.filter(
+            supplier=supplier,
+            branch=branch,
+            status='draft'
+        ).first()
+        
+        created_new_po = False
+        if not po:
+            po = PurchaseOrder.objects.create(
+                supplier=supplier,
+                branch=branch,
+                status='draft',
+                created_by=request.user,
+                notes=f"Auto-generated for Work Orders"
+            )
+            created_new_po = True
+            
+        # Create/Update PO Item
+        # Check if item already exists in this PO
+        po_item = PurchaseOrderItem.objects.filter(
+            purchase_order=po,
+            part=part
+        ).first()
+        
+        if po_item:
+            po_item.quantity += wo_part.quantity
+            po_item.save()
+        else:
+            po_item = PurchaseOrderItem.objects.create(
+                purchase_order=po,
+                part=part,
+                quantity=wo_part.quantity,
+                unit_cost=part.cost_price or part.last_cost or 0
+            )
+
+        # Link WO Part to PO Item
+        wo_part.purchase_order_item = po_item
+        wo_part.status = 'ordered'
+        wo_part.save()
+        
+        return Response({
+            'status': 'ordered',
+            'po_number': po.po_number,
+            'po_id': po.id,
+            'message': f"{'Created new' if created_new_po else 'Added to'} PO {po.po_number}"
+        })
+
+    @action(detail=False, methods=['post'])
+    def bulk_order(self, request):
+        """Bulk create/add to Purchase Orders for multiple parts"""
+        from apps.inventory.models import Part, PurchaseOrder, PurchaseOrderItem
+        
+        ids = request.data.get('ids', [])
+        if not ids:
+             return Response({'error': 'No IDs provided'}, status=status.HTTP_400_BAD_REQUEST)
+             
+        parts_to_order = WorkOrderPart.objects.filter(id__in=ids, status__in=['pending', 'draft'])
+        
+        results = {
+            'processed': 0,
+            'po_numbers': set(),
+            'errors': []
+        }
+        
+        for wo_part in parts_to_order:
+            if not wo_part.part_number:
+                results['errors'].append(f"Part {wo_part.id}: Missing part number")
+                continue
+                
+            # Identify Part & Supplier
+            part = Part.objects.filter(part_number=wo_part.part_number).first()
+            if not part:
+                 results['errors'].append(f"Part {wo_part.part_number}: Not found in inventory")
+                 continue
+                 
+            supplier = part.preferred_supplier or part.suppliers.first()
+            if not supplier:
+                 results['errors'].append(f"Part {wo_part.part_number}: No supplier")
+                 continue
+                 
+            branch = wo_part.work_order.branch
+            if not branch:
+                 results['errors'].append(f"WO {wo_part.work_order.id}: No branch")
+                 continue
+                 
+            # Find/Create PO
+            po = PurchaseOrder.objects.filter(
+                supplier=supplier,
+                branch=branch,
+                status='draft'
+            ).first()
+            
+            if not po:
+                po = PurchaseOrder.objects.create(
+                    supplier=supplier,
+                    branch=branch,
+                    status='draft',
+                    created_by=request.user,
+                    notes=f"Auto-generated for Work Orders"
+                )
+                
+            results['po_numbers'].add(po.po_number)
+            
+            # Create/Update PO Item
+            po_item = PurchaseOrderItem.objects.filter(purchase_order=po, part=part).first()
+            if po_item:
+                po_item.quantity += wo_part.quantity
+                po_item.save()
+            else:
+                po_item = PurchaseOrderItem.objects.create(
+                    purchase_order=po,
+                    part=part,
+                    quantity=wo_part.quantity,
+                    unit_cost=part.cost_price or part.last_cost or 0
+                )
+                
+            wo_part.purchase_order_item = po_item
+            wo_part.status = 'ordered'
+            wo_part.save()
+            results['processed'] += 1
+            
+        return Response({
+            'status': 'success',
+            'processed': results['processed'],
+            'po_numbers': list(results['po_numbers']),
+            'errors': results['errors']
+        })
     @action(detail=True, methods=['post'])
     def mark_installed(self, request, pk=None):
         """Mark part as installed"""
@@ -1446,3 +1823,73 @@ class WorkOrderPhotoViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return WorkOrderPhotoCreateSerializer
         return WorkOrderPhotoSerializer
+
+# ============= Public Portal Views =============
+
+class PublicWorkOrderViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Public access for customers via unique access_token.
+    Allows viewing status/details and approving/declining work.
+    """
+    queryset = WorkOrder.objects.all()
+    serializer_class = PublicWorkOrderSerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'access_token'
+
+    def get_queryset(self):
+        """Allow access to any work order with a defined access token"""
+        return WorkOrder.objects.filter(access_token__isnull=False)
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, access_token=None):
+        """Customer approves the estimate"""
+        work_order = self.get_object()
+        
+        # Log the approval
+        approval_notes = request.data.get('notes', 'Approved via Digital Portal')
+        
+        try:
+            work_order.approved_by_customer = True
+            work_order.approved_at = timezone.now()
+            work_order.approval_method = 'digital'
+            work_order.approval_notes = approval_notes
+            
+            # Transition status
+            if work_order.status == 'awaiting_approval':
+                work_order.transition_to('approved', user=None) # No user for public action
+                
+                # Notify
+                try:
+                    notification_triggers.work_order_approved(work_order)
+                except Exception as e:
+                     pass # Log error
+            
+            work_order.save()
+            return Response({'status': 'approved'})
+            
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def decline(self, request, access_token=None):
+        """Customer declines the work"""
+        work_order = self.get_object()
+        reason = request.data.get('reason', 'Declined via Digital Portal')
+        
+        try:
+            # We don't have a specific 'declined' status in the main workflow map often,
+            # usually it stays in awaiting_approval or goes to a specialized status.
+            # For now, we'll just log it and maybe keep status or set to specific if exists.
+            
+            # Create a note
+            WorkOrderNote.objects.create(
+                work_order=work_order,
+                note_type='customer',
+                note=f"Customer DECLINED work via portal. Reason: {reason}",
+                is_important=True
+            )
+            
+            return Response({'status': 'declined'})
+            
+        except Exception as e:
+             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

@@ -1,0 +1,91 @@
+"use client";
+
+import { cn } from "@/lib/utils/cn";
+import {
+    User,
+    Users,
+    FileText,
+    CreditCard,
+    Receipt,
+    FileBarChart,
+    Car,
+    Wrench,
+    Clock,
+    FolderOpen,
+    Bell,
+    Settings,
+    Mail,
+    ChevronRight
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface SidebarItem {
+    id: string;
+    label: string;
+    icon: any;
+    count?: number;
+}
+
+interface CustomerSidebarProps {
+    activeView: string;
+    onViewChange: (view: string) => void;
+    className?: string;
+    counts?: Record<string, number>;
+}
+
+export function CustomerSidebar({ activeView, onViewChange, className, counts = {} }: CustomerSidebarProps) {
+    const items: SidebarItem[] = [
+        { id: "profile", label: "Profile", icon: User },
+        { id: "contacts", label: "Contacts", icon: Users, count: counts.contacts },
+        { id: "notes", label: "Notes", icon: FileText, count: counts.notes },
+        { id: "statement", label: "Statement", icon: FileBarChart },
+        { id: "invoices", label: "Invoices", icon: Receipt, count: counts.invoices },
+        { id: "estimates", label: "Estimates", icon: FileText, count: counts.estimates },
+        { id: "payments", label: "Payments", icon: CreditCard, count: counts.payments },
+        { id: "credit-notes", label: "Credit Notes", icon: FileText, count: counts.credit_notes },
+        { id: "contracts", label: "Contracts", icon: FileText },
+        { id: "subscriptions", label: "Subscriptions", icon: Mail, count: counts.subscriptions },
+        { id: "vehicles", label: "Vehicles", icon: Car, count: counts.vehicles },
+        { id: "workorders", label: "Work Orders", icon: Wrench, count: counts.work_orders },
+        { id: "reminders", label: "Reminders", icon: Bell, count: counts.reminders },
+        { id: "files", label: "Files", icon: FolderOpen },
+    ];
+
+    return (
+        <div className={cn("bg-gray-50/50 dark:bg-gray-800/10 border-r border-gray-200 dark:border-gray-800 h-full py-4", className)}>
+            <div className="px-3 mb-2">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2">Menu</h3>
+            </div>
+            <div className="space-y-1 px-3">
+                {items.map((item) => {
+                    const isActive = activeView === item.id;
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => onViewChange(item.id)}
+                            className={cn(
+                                "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                                isActive
+                                    ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm border border-gray-100 dark:border-gray-700"
+                                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900"
+                            )}
+                        >
+                            <item.icon className={cn("w-4 h-4", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-400")} />
+                            <span className="flex-1 text-left">{item.label}</span>
+                            {item.count !== undefined && item.count > 0 && (
+                                <span className={cn(
+                                    "text-xs px-2 py-0.5 rounded-full",
+                                    isActive
+                                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                                )}>
+                                    {item.count}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}

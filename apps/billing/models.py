@@ -5,6 +5,8 @@ from decimal import Decimal
 from apps.accounts.models import User
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
+from apps.inventory.models import Part
+from apps.branches.models import Branch
 from apps.workorders.models import WorkOrder
 from apps.inventory.models import Part
 
@@ -95,6 +97,7 @@ class Estimate(models.Model):
     )
     
     # References
+    # References
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='estimates')
     vehicle = models.ForeignKey(
         Vehicle, 
@@ -111,7 +114,8 @@ class Estimate(models.Model):
         blank=True,
         related_name='estimate'
     )  # Link if converted to work order
-    
+    reference_number = models.CharField(max_length=50, blank=True, help_text="External reference number")
+
     # Status and dates
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     estimate_date = models.DateField(default=timezone.now)
@@ -121,8 +125,8 @@ class Estimate(models.Model):
     converted_date = models.DateTimeField(null=True, blank=True)
     
     # Description
-    title = models.CharField(max_length=200)
-    description = models.TextField()
+    title = models.CharField(max_length=200, blank=True) # made optional
+    description = models.TextField(blank=True) # made optional
     notes = models.TextField(blank=True)  # Internal notes
     customer_notes = models.TextField(blank=True)  # Notes visible to customer
     
@@ -133,6 +137,11 @@ class Estimate(models.Model):
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
     
     # Discounts
+    DISCOUNT_TYPE_CHOICES = [
+        ('none', 'No Discount'),
+        ('before_tax', 'Before Tax'),
+        ('after_tax', 'After Tax'),
+    ]
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
     discount_percentage = models.DecimalField(
         max_digits=5, 
@@ -140,7 +149,18 @@ class Estimate(models.Model):
         default=Decimal('0'),
         validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))]
     )
+    discount_type = models.CharField(max_length=20, choices=DISCOUNT_TYPE_CHOICES, default='before_tax')
     discount_reason = models.CharField(max_length=200, blank=True)
+    
+    # Sales Agent
+    sales_agent = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='estimates_sold',
+        help_text="Sales agent responsible for this estimate"
+    )
     
     # Tax
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
@@ -1353,3 +1373,225 @@ class Refund(models.Model):
             self.refund_number = f"{prefix}{new_seq:04d}"
         
         super().save(*args, **kwargs)
+
+# Audit Log Registration
+from auditlog.registry import auditlog
+auditlog.register(Invoice)
+auditlog.register(Payment)
+auditlog.register(Estimate)
+
+
+class CreditNote(models.Model):
+    credit_note_number = models.CharField(max_length=20, unique=True, editable=False)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='credit_notes')
+    invoice = models.ForeignKey(
+        Invoice, on_delete=models.SET_NULL, null=True, blank=True, 
+        related_name='credit_notes',
+        help_text="Optional link to an original invoice"
+    )
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name='credit_notes', null=True)
+    
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('issued', 'Issued'),
+        ('applied', 'Applied'),
+        ('refunded', 'Refunded'),
+        ('void', 'Void'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    
+    credit_date = models.DateField(default=timezone.now)
+    reason = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(blank=True)
+    internal_notes = models.TextField(blank=True)
+    
+    # Financials
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    unused_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_credit_notes')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-credit_date', '-credit_note_number']
+
+    def __str__(self):
+        return f"{self.credit_note_number} - {self.customer}"
+
+    def save(self, *args, **kwargs):
+        if not self.credit_note_number:
+            from django.utils.crypto import get_random_string
+            self.credit_note_number = f"CN-{get_random_string(8).upper()}"
+        
+        if self.pk is None:
+            self.unused_amount = self.total
+            
+        super().save(*args, **kwargs)
+
+    def calculate_totals(self):
+        """Recalculate totals based on line items"""
+        lines = self.line_items.all()
+        self.subtotal = sum(line.total for line in lines)
+        # Simplified tax logic for now
+        self.tax_amount = 0 
+        self.total = self.subtotal + self.tax_amount
+        
+        # If still draft or issued (not applied/refunded), unused amount tracks total
+        if self.status in ['draft', 'issued']:
+            self.unused_amount = self.total
+            
+        self.save()
+
+
+class CreditNoteLineItem(models.Model):
+    credit_note = models.ForeignKey(CreditNote, on_delete=models.CASCADE, related_name='line_items')
+    description = models.CharField(max_length=255)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    is_taxable = models.BooleanField(default=True)
+    
+    def save(self, *args, **kwargs):
+        self.total = self.quantity * self.unit_price
+        super().save(*args, **kwargs)
+
+auditlog.register(CreditNote)
+
+
+class Bill(models.Model):
+    """
+    Vendor Bills (Accounts Payable)
+    Independent of Inventory Purchase Orders - for rent, utilities, services, etc.
+    """
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('open', 'Open'),
+        ('partially_paid', 'Partially Paid'),
+        ('paid', 'Paid'),
+        ('overdue', 'Overdue'),
+        ('void', 'Void'),
+    ]
+
+    # Identifiers
+    bill_number = models.CharField(max_length=50, unique=True, editable=False)
+    vendor = models.ForeignKey(
+        'inventory.Supplier', 
+        on_delete=models.PROTECT, 
+        related_name='bills',
+        help_text="Vendor/Supplier who sent this bill"
+    )
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        related_name='bills',
+        help_text="Branch responsible for this bill"
+    )
+
+    # Details
+    reference_number = models.CharField(max_length=100, blank=True, help_text="Vendor's invoice number")
+    bill_date = models.DateField(default=timezone.now)
+    due_date = models.DateField()
+    terms = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+
+    # Status
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+
+    # Financials
+    currency = models.CharField(max_length=3, default='GHS')
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    amount_due = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+
+    # Integration
+    ledger_bill = models.OneToOneField(
+        'django_ledger.BillModel',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='repair_bill',
+        help_text="Django Ledger Bill for AP tracking"
+    )
+
+    # Tracking
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='bills_created')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-bill_date', '-created_at']
+        indexes = [
+            models.Index(fields=['bill_number']),
+            models.Index(fields=['vendor', 'status']),
+            models.Index(fields=['due_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.bill_number} - {self.vendor.name}"
+
+    def save(self, *args, **kwargs):
+        # Auto-generate bill number
+        if not self.bill_number:
+            prefix = "BILL" 
+            if self.branch:
+                # Try to include branch prefix if possible, e.g., ACC-BILL-...
+                # Assuming branch has a code or similar, or just leave as BILL
+                pass
+            
+            # Simple fallback generation
+            last_id = Bill.objects.aggregate(max_id=models.Max('id'))['max_id'] or 0
+            self.bill_number = f"{prefix}{(last_id + 1):06d}"
+
+        # Calculate amount due
+        self.amount_due = self.total - self.amount_paid
+        
+        # Update status based on payment
+        if self.status not in ['draft', 'void']:
+            if self.amount_paid >= self.total and self.total > 0:
+                self.status = 'paid'
+            elif self.amount_paid > 0:
+                self.status = 'partially_paid'
+            elif self.due_date and timezone.now().date() > self.due_date:
+                self.status = 'overdue'
+            else:
+                self.status = 'open'
+
+        super().save(*args, **kwargs)
+
+    def calculate_totals(self):
+        """Calculate totals from line items"""
+        lines = self.line_items.all()
+        self.subtotal = sum(line.total for line in lines)
+        # Tax could be sum of line items or handled separately. 
+        # For simplicity, let's assume tax is not auto-calculated per line item yet unless specified.
+        # But if we had tax fields on line items, we'd sum them.
+        # For now, we will rely on frontend or manual input for tax if lines don't specify it, 
+        # OR just sum total.
+        # Let's simple sum totals.
+        self.total = self.subtotal + self.tax_amount
+        self.save()
+
+
+class BillLineItem(models.Model):
+    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='line_items')
+    description = models.CharField(max_length=255)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('1.00'))
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    
+    # Optional: Link to an expense account if user knows it
+    # For now, just a text field or simple category
+    expense_category = models.CharField(max_length=100, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        self.total = self.quantity * self.unit_price
+        super().save(*args, **kwargs)
+        self.bill.calculate_totals()

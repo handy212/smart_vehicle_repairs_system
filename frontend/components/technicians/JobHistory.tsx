@@ -1,6 +1,7 @@
 "use client";
 
 import { JobHistoryItem } from "@/lib/api/technicians";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 import {
     Table,
     TableBody,
@@ -20,6 +21,8 @@ interface JobHistoryProps {
 }
 
 export function JobHistory({ history }: JobHistoryProps) {
+    const { formatCurrency } = useCurrency();
+
     const getStatusVariant = (status: string) => {
         switch (status) {
             case 'completed': return "secondary"; // or dedicated success/green if available
@@ -63,7 +66,7 @@ export function JobHistory({ history }: JobHistoryProps) {
                                 {job.completed_at ? format(parseISO(job.completed_at), "MMM d, yyyy") : "-"}
                             </TableCell>
                             <TableCell>
-                                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(job.actual_total || 0))}
+                                {formatCurrency(Number(job.actual_total || 0))}
                             </TableCell>
                             <TableCell>
                                 <Badge variant={getStatusVariant(job.status)} className="capitalize">

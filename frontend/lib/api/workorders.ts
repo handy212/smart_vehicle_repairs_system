@@ -9,6 +9,7 @@ export interface WorkOrder {
   customer_name?: string;
   vehicle: number | Vehicle;
   vehicle_info?: string;
+  vehicle_display?: string;
   status: string;
   priority: string;
   total_cost?: string;
@@ -76,7 +77,9 @@ export const workordersApi = {
     status?: string;
     customer?: number;
     priority?: string;
+    primary_technician?: number;
     search?: string;
+    vehicle?: number;
     date_from?: string;
     date_to?: string;
     created_at__gte?: string;
@@ -84,6 +87,17 @@ export const workordersApi = {
     ordering?: string;
   }): Promise<WorkOrderListResponse> => {
     const response = await apiClient.get("/workorders/work-orders/", { params });
+    return response.data;
+  },
+
+  dashboardStats: async (): Promise<{
+    total_workorders: number;
+    in_progress: number;
+    pending: number;
+    completed: number;
+    cancelled: number;
+  }> => {
+    const response = await apiClient.get("/workorders/work-orders/dashboard_stats/");
     return response.data;
   },
 
@@ -250,5 +264,87 @@ export const workordersApi = {
     const response = await apiClient.post("/workorders/work-orders/check_repeat_visit/", data);
     return response.data;
   },
+
+  parts: {
+    list: async (params: number | { work_order?: number; status?: string }): Promise<WorkOrderPart[]> => {
+      const queryParams = typeof params === 'number' ? { work_order: params } : params;
+      const response = await apiClient.get('/workorders/parts/', { params: queryParams });
+      return response.data;
+    },
+    dashboardStats: async () => {
+      const response = await apiClient.get("/workorders/parts/dashboard_stats/");
+      return response.data;
+    },
+    create: async (data: Partial<WorkOrderPart>): Promise<WorkOrderPart> => {
+      const response = await apiClient.post("/workorders/parts/", data);
+      return response.data;
+    },
+    update: async (id: number, data: Partial<WorkOrderPart>): Promise<WorkOrderPart> => {
+      const response = await apiClient.patch(`/workorders/parts/${id}/`, data);
+      return response.data;
+    },
+    delete: async (id: number): Promise<void> => {
+      await apiClient.delete(`/workorders/parts/${id}/`);
+    },
+    allocate: async (id: number): Promise<WorkOrderPart> => {
+      const response = await apiClient.post(`/workorders/parts/${id}/allocate/`);
+      return response.data;
+    },
+    order: async (id: number): Promise<{ status: string; po_number: string; po_id: number; message: string }> => {
+      const response = await apiClient.post(`/workorders/parts/${id}/order/`);
+      return response.data;
+    },
+    bulkOrder: async (ids: number[]): Promise<{ status: string; processed: number; po_numbers: string[]; errors: string[] }> => {
+      const response = await apiClient.post(`/workorders/parts/bulk_order/`, { ids });
+      return response.data;
+    },
+  },
+
+  // Public/Customer Portal APIs (unauthenticated)
+  public: {
+    get: async (token: string): Promise<any> => {
+      const response = await apiClient.get(`/workorders/public/${token}/`);
+      return response.data;
+    },
+    approve: async (token: string, data: { notes?: string }): Promise<any> => {
+      const response = await apiClient.post(`/workorders/public/${token}/approve/`, data);
+      return response.data;
+    },
+    decline: async (token: string, data: { reason: string }): Promise<any> => {
+      const response = await apiClient.post(`/workorders/public/${token}/decline/`, data);
+      return response.data;
+    },
+  },
 };
+
+export interface WorkOrderPart {
+  id: number;
+  work_order: number;
+  task?: number;
+  part_number?: string;
+  part_name: string;
+  description?: string;
+  quantity: number;
+  unit_cost?: string;
+  markup_percentage?: string;
+  selling_price?: string;
+  status: 'draft' | 'pending' | 'ordered' | 'ready' | 'received' | 'installed' | 'returned';
+  installed_at?: string;
+  installed_by?: number;
+  installed_by_name?: string;
+  warranty_months?: number;
+  warranty_notes?: string;
+  inventory_part?: number;
+  inventory_status?: {
+    available: boolean;
+    quantity: number;
+    part_id: number | null;
+    message?: string;
+  };
+  // Enriched fields
+  work_order_number?: string;
+  customer_name?: string;
+  vehicle_info?: string;
+  purchase_order_number?: string;
+}
 

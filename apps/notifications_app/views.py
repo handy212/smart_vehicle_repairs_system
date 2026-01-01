@@ -108,7 +108,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
     queryset = Notification.objects.select_related('recipient', 'template')
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['notification_type', 'channel', 'status', 'priority', 'is_read']
+    filterset_fields = ['notification_type', 'channel', 'status', 'priority', 'is_read', 'related_object_type', 'related_object_id']
     search_fields = ['title', 'message']
     ordering_fields = ['created_at', 'priority', 'scheduled_for']
     ordering = ['-created_at']
@@ -129,11 +129,11 @@ class NotificationViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = self.queryset
         
-        # Admins and managers can see all
-        if user.role in ['admin', 'manager']:
+        # Admins and managers can see all IF explicitly requested
+        if user.role in ['admin', 'manager'] and self.request.query_params.get('all', 'false') == 'true':
             return queryset
         
-        # Others see only their own
+        # Default: See only their own
         return queryset.filter(recipient=user)
     
     @action(detail=False, methods=['get'])

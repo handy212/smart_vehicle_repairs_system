@@ -164,6 +164,13 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         appointment = serializer.save(branch=branch, created_by=request.user)
         
+        # Send notification
+        try:
+            notification_triggers.appointment_created(appointment)
+        except Exception as e:
+            # Log but don't fail the request
+            print(f"Failed to send appointment creation notification: {e}")
+            
         # Note: Subscription deductions for roadside services are handled in the roadside assistance module
         # Appointments are for scheduled services, not roadside breakdown assistance
     

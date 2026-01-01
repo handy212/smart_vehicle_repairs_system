@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,16 +9,22 @@ import { billingApi } from "@/lib/api/billing";
 import { customersApi } from "@/lib/api/customers";
 import { vehiclesApi } from "@/lib/api/vehicles";
 import { inventoryApi } from "@/lib/api/inventory";
+import { adminApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, AlertCircle, Plus, Trash2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, AlertCircle, Plus, Trash2, Search } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { AxiosError } from "axios";
 import { computeGhanaTaxBreakdown } from "@/lib/utils/tax";
+import { BillingSubmitActions } from "@/components/billing/BillingSubmitActions";
+import { useCurrency } from "@/lib/hooks/useCurrency";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const lineItemSchema = z.object({
   item_type: z.enum(["labor", "part", "fee", "discount", "sublet", "other"]),
@@ -28,21 +34,26 @@ const lineItemSchema = z.object({
   labor_hours: z.number().min(0).optional(),
   labor_rate: z.number().min(0).optional(),
   is_taxable: z.boolean(),
-  part: z.number().optional(), // Link to inventory Part
+  part: z.number().optional(),
   part_number: z.string().optional(),
+  part_name: z.string().optional(),
   notes: z.string().optional(),
 });
 
 const estimateSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
   vehicle: z.number().optional(),
+  reference_number: z.string().optional(),
+  sales_agent: z.number().optional(),
+  status: z.enum(["draft", "sent", "expired", "declined", "approved"]),
   title: z.string().optional(),
-  description: z.string().optional(),
-  notes: z.string().optional(),
-  customer_notes: z.string().optional(),
+  description: z.string().optional(), // Terms & Conditions
+  notes: z.string().optional(), // Internal Notes
+  customer_notes: z.string().optional(), // Customer Notes
   estimate_date: z.string().min(1, "Estimate date is required"),
   valid_until: z.string().min(1, "Valid until date is required"),
   discount_percentage: z.number().min(0).max(100).optional(),
+  discount_type: z.enum(["none", "before_tax", "after_tax"]),
   discount_reason: z.string().optional(),
   shop_supplies_fee: z.number().min(0).optional(),
   environmental_fee: z.number().min(0).optional(),
@@ -51,19 +62,41 @@ const estimateSchema = z.object({
 
 type LineItemFormData = z.infer<typeof lineItemSchema>;
 type EstimateFormData = z.infer<typeof estimateSchema>;
+type ExtendedLineItem = Omit<LineItemFormData, 'is_taxable'> & {
+  is_taxable: boolean;
+  part?: number;
+  part_number?: string;
+  part_name?: string;
+  part_id?: number;// legacy support if needed
+};
 
 export default function NewEstimatePage() {
+  const { formatCurrency } = useCurrency();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [lineItems, setLineItems] = useState<Array<Omit<LineItemFormData, 'is_taxable'> & { is_taxable: boolean; part?: number; part_number?: string }>>([
-    { item_type: "labor", description: "", quantity: 1, unit_price: 0, is_taxable: true },
+  const [partSearchTerm, setPartSearchTerm] = useState("");
+  const [lineItems, setLineItems] = useState<ExtendedLineItem[]>([
+    { item_type: "labor", description: "Labor Service", quantity: 1, unit_price: 0, labor_hours: 1, labor_rate: 0, is_taxable: true },
   ]);
 
-  // Fetch parts for part selection
+  // Fetch Next Estimate Number
+  const { data: nextNumberData } = useQuery({
+    queryKey: ["estimates", "nextNumber"],
+    queryFn: () => billingApi.estimates.nextNumber(),
+  });
+
+  // Fetch Sales Agents (Staff)
+  const { data: salesAgents } = useQuery({
+    queryKey: ["users", "staff"],
+    queryFn: () => adminApi.users.staffList(),
+  });
+
+  // Fetch parts for search
   const { data: partsData } = useQuery({
-    queryKey: ["parts", "list"],
-    queryFn: () => inventoryApi.list({ page: 1, is_active: true }),
+    queryKey: ["parts", "search", partSearchTerm],
+    queryFn: () => inventoryApi.list({ search: partSearchTerm, page: 1, is_active: true }),
+    enabled: partSearchTerm.length > 1,
   });
 
   // Fetch customers
@@ -81,7 +114,7 @@ export default function NewEstimatePage() {
     enabled: !!selectedCustomer,
   });
 
-  const { data: taxConfig, isLoading: taxConfigLoading } = useQuery({
+  const { data: taxConfig } = useQuery({
     queryKey: ["tax", "config"],
     queryFn: () => billingApi.taxes.config(),
   });
@@ -91,21 +124,21 @@ export default function NewEstimatePage() {
     handleSubmit,
     formState: { errors, isSubmitting },
     setValue,
-    setError,
     watch,
   } = useForm<EstimateFormData>({
     resolver: zodResolver(estimateSchema),
     defaultValues: {
       estimate_date: new Date().toISOString().split("T")[0],
       valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      status: "draft",
+      discount_type: "before_tax" as const,
       line_items: lineItems,
     },
   });
 
   const customer = watch("customer");
-  const discountPercentage = watch("discount_percentage") || 0;
-  const shopSuppliesFee = watch("shop_supplies_fee") || 0;
-  const environmentalFee = watch("environmental_fee") || 0;
+  const discountPercentage = watch("discount_percentage");
+  const discountType = watch("discount_type");
 
   // Update selected customer when form value changes
   if (customer && customer !== selectedCustomer) {
@@ -113,58 +146,86 @@ export default function NewEstimatePage() {
     setValue("vehicle", undefined);
   }
 
-  const addLineItem = () => {
-    setLineItems([...lineItems, { item_type: "labor", description: "", quantity: 1, unit_price: 0, is_taxable: true } as any]);
+  const addLineItem = (type: "labor" | "part" = "labor", partData?: any) => {
+    if (type === "part" && partData) {
+      setLineItems([
+        ...lineItems,
+        {
+          item_type: "part",
+          description: partData.name,
+          quantity: 1,
+          unit_price: parseFloat(partData.selling_price || "0"),
+          part: partData.id,
+          part_number: partData.part_number,
+          part_name: partData.name,
+          is_taxable: true,
+        },
+      ]);
+    } else {
+      setLineItems([
+        ...lineItems,
+        { item_type: "labor", description: "New Labor Item", quantity: 1, unit_price: 0, labor_hours: 1, labor_rate: 0, is_taxable: true },
+      ]);
+    }
   };
 
   const removeLineItem = (index: number) => {
     setLineItems(lineItems.filter((_, i) => i !== index));
   };
 
-  const updateLineItem = (index: number, field: string, value: any) => {
+  const updateLineItem = (index: number, field: keyof ExtendedLineItem, value: any) => {
     const updated = [...lineItems];
-    updated[index] = { ...updated[index], [field]: value } as any;
+    updated[index] = { ...updated[index], [field]: value } as ExtendedLineItem;
     setLineItems(updated);
-    // Sync with form state
-    setValue("line_items", updated as any, { shouldValidate: false });
+    setValue("line_items", updated, { shouldValidate: false });
   };
 
-  const updateLineItemFields = (index: number, updates: Record<string, any>) => {
-    const updated = [...lineItems];
-    updated[index] = { ...updated[index], ...updates } as any;
-    setLineItems(updated);
-    // Sync with form state
-    setValue("line_items", updated as any, { shouldValidate: false });
-  };
-
-  const calculateLineItemTotal = (item: LineItemFormData): number => {
-    if (item.item_type === "labor" && item.labor_hours && item.labor_rate) {
-      return item.labor_hours * item.labor_rate;
+  const calculateLineItemTotal = (item: Partial<ExtendedLineItem>): number => {
+    if (item.item_type === "labor") {
+      return (item.labor_hours || 0) * (item.labor_rate || 0);
     }
-    if (item.quantity && item.unit_price) {
-      return item.quantity * item.unit_price;
-    }
-    return item.unit_price || 0;
+    return (item.quantity || 0) * (item.unit_price || 0);
   };
 
   const subtotal = lineItems.reduce((sum, item) => sum + calculateLineItemTotal(item), 0);
+
+  // Tax Calculation
   const taxableSubtotalBeforeDiscount = lineItems.reduce(
     (sum, item) => sum + (item.is_taxable !== false ? calculateLineItemTotal(item) : 0),
     0
   );
-  const discountAmount = subtotal * (discountPercentage / 100);
-  const subtotalAfterDiscount = subtotal - discountAmount;
+
+  let discountAmount = 0;
+  if (discountPercentage && discountPercentage > 0) {
+    if (discountType === 'before_tax') {
+      discountAmount = (subtotal * discountPercentage) / 100;
+    } else if (discountType === 'after_tax') {
+      discountAmount = (subtotal * discountPercentage) / 100;
+    }
+  } else {
+    if (discountType === 'none') {
+      discountAmount = 0;
+    }
+  }
+
   const taxSummary = computeGhanaTaxBreakdown({
     taxableTotal: taxableSubtotalBeforeDiscount,
     subtotal,
-    discountAmount,
+    discountAmount: discountType === 'before_tax' ? discountAmount : 0,
     config: taxConfig,
   });
-  const total = Math.max(subtotalAfterDiscount, 0) + taxSummary.totalTax + shopSuppliesFee + environmentalFee;
+
+  let total = subtotal + taxSummary.totalTax;
+
+  if (discountType === 'before_tax') {
+    total = (subtotal - discountAmount) + taxSummary.totalTax;
+  } else if (discountType === 'after_tax') {
+    total = (subtotal + taxSummary.totalTax) - discountAmount;
+  }
+
 
   const createMutation = useMutation({
     mutationFn: (apiData: any) => {
-      // Data is already prepared in onSubmit, just send it
       return billingApi.estimates.create(apiData);
     },
     onSuccess: () => {
@@ -174,127 +235,53 @@ export default function NewEstimatePage() {
     onError: (error) => {
       console.error("Estimate creation error:", error);
       if (error instanceof AxiosError && error.response?.data) {
-        const errorData = error.response.data;
-        console.error("Error data:", errorData);
-        
-        // Handle nested line_items errors
-        if (errorData.line_items) {
-          errorData.line_items.forEach((itemError: any, index: number) => {
-            if (typeof itemError === 'object') {
-              Object.keys(itemError).forEach((field) => {
-                const fieldError = Array.isArray(itemError[field])
-                  ? itemError[field][0]
-                  : itemError[field];
-                setError(`line_items.${index}.${field}` as any, {
-                  type: "server",
-                  message: fieldError,
-                });
-              });
-            }
-          });
-        }
-        
-        Object.keys(errorData).forEach((field) => {
-          if (field !== "non_field_errors" && field !== "detail" && field !== "line_items") {
-            const fieldError = Array.isArray(errorData[field])
-              ? errorData[field][0]
-              : errorData[field];
-            setError(field as keyof EstimateFormData, {
-              type: "server",
-              message: fieldError,
-            });
-          }
-        });
-        if (errorData.non_field_errors) {
-          setServerError(
-            Array.isArray(errorData.non_field_errors)
-              ? errorData.non_field_errors[0]
-              : errorData.non_field_errors
-          );
-        } else if (errorData.detail) {
-          setServerError(errorData.detail);
-        } else {
-          setServerError("An error occurred while creating the estimate. Please check the form and try again.");
-        }
+        setServerError(error.response.data.detail || "An error occurred.");
       } else {
-        setServerError("An unexpected error occurred. Please try again.");
+        setServerError("An unexpected error occurred.");
       }
     },
   });
 
-  const onSubmit = async (data: EstimateFormData) => {
+  const onSubmit = async (data: EstimateFormData, statusAction: string = "draft") => {
     setServerError(null);
-    // Prepare line items - don't send total (it's calculated on backend)
-    // Use current lineItems state which has the latest part selections
-    const lineItemsForApi = lineItems.map((item: any) => {
+    const lineItemsForApi = lineItems.map((item) => {
       const lineItem: any = {
         item_type: item.item_type,
         description: item.description,
-        is_taxable: item.is_taxable ?? true,
+        is_taxable: item.is_taxable,
       };
-      
-      // Handle labor items differently
+
       if (item.item_type === 'labor') {
-        // For labor, use labor_hours and labor_rate, quantity defaults to labor_hours
         lineItem.labor_hours = item.labor_hours || 1;
         lineItem.labor_rate = (item.labor_rate || 0).toString();
-        lineItem.quantity = item.labor_hours || 1; // Quantity for labor is typically the hours
+        lineItem.quantity = item.labor_hours || 1;
         lineItem.unit_price = (item.labor_rate || 0).toString();
       } else {
-        // For non-labor items, use quantity and unit_price
-        lineItem.quantity = item.quantity && item.quantity > 0 ? item.quantity : 1;
+        lineItem.quantity = item.quantity || 1;
         lineItem.unit_price = (item.unit_price || 0).toString();
       }
-      
-      // Add part fields if present
-      if (item.part) {
-        lineItem.part = item.part;
-      }
-      if (item.part_number) {
-        lineItem.part_number = item.part_number;
-      }
-      
-      // Add notes if present
-      if (item.notes) {
-        lineItem.notes = item.notes;
-      }
-      
+
+      if (item.part) lineItem.part = item.part;
+      if (item.part_number) lineItem.part_number = item.part_number;
+
       return lineItem;
     });
-    
-    // Prepare API payload with proper formatting
+
     const apiData: any = {
-      customer: data.customer,
-      vehicle: data.vehicle || undefined,
-      title: data.title || undefined,
-      description: data.description || undefined,
-      notes: data.notes || undefined,
-      customer_notes: data.customer_notes || undefined,
-      estimate_date: data.estimate_date,
-      valid_until: data.valid_until,
-      discount_percentage: data.discount_percentage?.toString() || undefined,
-      discount_reason: data.discount_reason || undefined,
-      shop_supplies_fee: data.shop_supplies_fee?.toString() || undefined,
-      environmental_fee: data.environmental_fee?.toString() || undefined,
+      ...data,
       line_items: lineItemsForApi,
+      status: statusAction,
+      discount_percentage: data.discount_type !== 'none' ? data.discount_percentage?.toString() : '0',
     };
-    
+
     await createMutation.mutateAsync(apiData);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Link href="/billing/estimates">
-          <Button variant="secondary">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">New Estimate</h1>
-          <p className="text-sm text-gray-500 mt-1">Create a new estimate</p>
-        </div>
+    <div className="space-y-6 pb-24">
+      {/* Header - No Breadcrumbs */}
+      <div>
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">New Estimate</h1>
       </div>
 
       {serverError && (
@@ -308,517 +295,372 @@ export default function NewEstimatePage() {
         </Card>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Form */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Customer & Vehicle */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Customer & Vehicle</CardTitle>
-                <CardDescription>Select customer and vehicle</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label htmlFor="customer" className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer *
-                  </label>
+      <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+
+        {/* Basic Information / Estimate Details - Full Width */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Estimate Details</CardTitle>
+            <CardDescription>Enter estimate information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Column 1: Customer & Vehicle */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Customer</label>
                   <Select
-                    id="customer"
-                    {...register("customer", { valueAsNumber: true })}
-                    className={errors.customer ? "border-red-500" : ""}
+                    value={customer?.toString() || ""}
                     onChange={(e) => {
-                      setValue("customer", parseInt(e.target.value));
-                      setSelectedCustomer(parseInt(e.target.value));
+                      const val = e.target.value;
+                      if (val) {
+                        setValue("customer", parseInt(val));
+                        setSelectedCustomer(parseInt(val));
+                      }
                     }}
                   >
-                    <option value="">Select a customer</option>
-                    {customersData?.results?.map((customer) => {
-                      const displayName = customer.full_name || 
-                        customer.company_name || 
-                        (customer.user?.first_name && customer.user?.last_name 
-                          ? `${customer.user.first_name} ${customer.user.last_name}` 
-                          : customer.user?.email || customer.customer_number);
-                      return (
-                      <option key={customer.id} value={customer.id}>
-                          {displayName}
+                    <option value="">Select Customer</option>
+                    {customersData?.results?.map((c) => (
+                      <option key={c.id} value={c.id.toString()}>
+                        {c.full_name || c.company_name || c.email}
                       </option>
-                      );
-                    })}
+                    ))}
                   </Select>
-                  {errors.customer && (
-                    <p className="mt-1 text-sm text-red-600">{errors.customer.message}</p>
-                  )}
+                  {errors.customer && <p className="text-xs text-red-500">{errors.customer.message}</p>}
                 </div>
-
-                <div>
-                  <label htmlFor="vehicle" className="block text-sm font-medium text-gray-700 mb-1">
-                    Vehicle
-                  </label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Vehicle</label>
                   <Select
-                    id="vehicle"
-                    {...register("vehicle", { valueAsNumber: true })}
-                    disabled={!selectedCustomer || !vehiclesData?.results?.length}
+                    value={watch("vehicle")?.toString() || ""}
+                    onChange={(e) => setValue("vehicle", parseInt(e.target.value))}
+                    disabled={!selectedCustomer}
                   >
-                    <option value="">
-                      {!selectedCustomer
-                        ? "Select a customer first"
-                        : !vehiclesData?.results?.length
-                        ? "No vehicles found"
-                        : "Select a vehicle"}
-                    </option>
-                    {vehiclesData?.results?.map((vehicle) => (
-                      <option key={vehicle.id} value={vehicle.id}>
-                        {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.vin}
+                    <option value="">{!selectedCustomer ? "Select a customer first" : "Select Vehicle"}</option>
+                    {vehiclesData?.results?.map((v) => (
+                      <option key={v.id} value={v.id.toString()}>
+                        {v.year} {v.make} {v.model} - {v.vin}
                       </option>
                     ))}
                   </Select>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Estimate Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Estimate Details</CardTitle>
-                <CardDescription>Dates and description</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                    Title
-                  </label>
-                  <Input
-                    id="title"
-                    {...register("title")}
-                    placeholder="e.g., Brake Service Estimate"
-                  />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Sales Agent</label>
+                  <Select
+                    value={watch("sales_agent")?.toString() || ""}
+                    onChange={(e) => setValue("sales_agent", parseInt(e.target.value))}
+                  >
+                    <option value="">Select Agent</option>
+                    {salesAgents?.map((agent: any) => (
+                      <option key={agent.id} value={agent.id.toString()}>
+                        {agent.first_name} {agent.last_name}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
+              </div>
 
+              {/* Column 2: Estimate Specifics */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Estimate #</label>
+                  <div className="h-10 px-3 flex items-center bg-gray-50 border border-gray-200 rounded-md">
+                    <span className="text-gray-900 font-medium">
+                      {nextNumberData?.next_number || "Draft"}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Reference #</label>
+                  <Input {...register("reference_number")} placeholder="e.g. PO-123" />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="estimate_date" className="block text-sm font-medium text-gray-700 mb-1">
-                      Estimate Date *
-                    </label>
-                    <Input
-                      id="estimate_date"
-                      type="date"
-                      {...register("estimate_date")}
-                      className={errors.estimate_date ? "border-red-500" : ""}
-                    />
-                    {errors.estimate_date && (
-                      <p className="mt-1 text-sm text-red-600">{errors.estimate_date.message}</p>
-                    )}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Date</label>
+                    <Input type="date" {...register("estimate_date")} />
                   </div>
-                  <div>
-                    <label htmlFor="valid_until" className="block text-sm font-medium text-gray-700 mb-1">
-                      Valid Until *
-                    </label>
-                    <Input
-                      id="valid_until"
-                      type="date"
-                      {...register("valid_until")}
-                      className={errors.valid_until ? "border-red-500" : ""}
-                    />
-                    {errors.valid_until && (
-                      <p className="mt-1 text-sm text-red-600">{errors.valid_until.message}</p>
-                    )}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Valid Until</label>
+                    <Input type="date" {...register("valid_until")} />
                   </div>
                 </div>
+              </div>
 
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <Textarea
-                    id="description"
-                    {...register("description")}
-                    rows={3}
-                    placeholder="Estimate description..."
+              {/* Column 3: Status & Notes */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Status</label>
+                  <Select
+                    value={watch("status")}
+                    onChange={(e: any) => setValue("status", e.target.value)}
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="sent">Sent</option>
+                    <option value="approved">Accepted</option>
+                    <option value="declined">Declined</option>
+                    <option value="expired">Expired</option>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Internal Notes</label>
+                  <Textarea {...register("notes")} rows={2} placeholder="Internal use only" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Customer Notes</label>
+                  <Textarea {...register("customer_notes")} rows={2} placeholder="Visible to customer" />
+                </div>
+              </div>
+            </div>
+
+            {/* Discount Inputs */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Discount Type</label>
+                <Select
+                  value={watch("discount_type")}
+                  onChange={(e: any) => setValue("discount_type", e.target.value)}
+                >
+                  <option value="none">No Discount</option>
+                  <option value="before_tax">Before Tax</option>
+                  <option value="after_tax">After Tax</option>
+                </Select>
+              </div>
+              {watch("discount_type") !== 'none' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Discount (%)</label>
+                  <Input
+                    type="number"
+                    {...register("discount_percentage", { valueAsNumber: true })}
+                    min="0" max="100" step="0.01"
                   />
                 </div>
+              )}
+              {watch("discount_type") !== 'none' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Reason</label>
+                  <Input {...register("discount_reason")} placeholder="Discount reason..." />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-                <div>
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
-                    Internal Notes
-                  </label>
-                  <Textarea
-                    id="notes"
-                    {...register("notes")}
-                    rows={2}
-                    placeholder="Internal notes (not visible to customer)..."
+        {/* Line Items - Full Width */}
+        <div>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>Line Items</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* Search Bar & Add */}
+              <div className="flex gap-2 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder="Search to add item..."
+                    className="pl-9"
+                    value={partSearchTerm}
+                    onChange={(e) => setPartSearchTerm(e.target.value)}
                   />
+                  {partSearchTerm.length > 1 && partsData?.results && partsData.results.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                      {partsData.results.map((part) => (
+                        <div
+                          key={part.id}
+                          className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                          onClick={() => {
+                            addLineItem("part", part);
+                            setPartSearchTerm("");
+                          }}
+                        >
+                          <div className="font-medium">{part.part_number} - {part.name}</div>
+                          <div className="text-xs text-gray-500">Stock: {part.quantity_on_hand} | {formatCurrency(part.selling_price || "0")}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-
-                <div>
-                  <label htmlFor="customer_notes" className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer Notes
-                  </label>
-                  <Textarea
-                    id="customer_notes"
-                    {...register("customer_notes")}
-                    rows={2}
-                    placeholder="Notes visible to customer..."
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Line Items */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Line Items</CardTitle>
-                  <CardDescription>Add items to the estimate</CardDescription>
-                </div>
-                <Button type="button" onClick={addLineItem}variant="secondary" size="sm">
+                <Link href="/inventory/new" target="_blank">
+                  <Button type="button" variant="outline" size="icon" title="Add new part to inventory">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </Link>
+                <Button
+                  type="button"
+                  onClick={() => addLineItem("labor")}
+                  variant="default"
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Item
                 </Button>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {lineItems.map((item, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-sm">Item {index + 1}</h4>
-                      {lineItems.length > 1 && (
-                        <Button
-                          type="button"
-                         variant="secondary"
-                          size="sm"
-                          onClick={() => removeLineItem(index)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
+              </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Type *
-                        </label>
-                        <Select
-                          value={item.item_type}
-                          onChange={(e) => {
-                            const newType = e.target.value as any;
-                            // Update item_type and clear part fields if needed, all in one update
-                            const updates: any = { item_type: newType };
-                            if (newType !== "part") {
-                              updates.part = undefined;
-                              updates.part_number = undefined;
-                            }
-                            updateLineItemFields(index, updates);
-                          }}
-                        >
-                          <option value="labor">Labor</option>
-                          <option value="part">Part</option>
-                          <option value="fee">Fee</option>
-                          <option value="discount">Discount</option>
-                        </Select>
-                      </div>
-                      {item.item_type === "part" ? (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Select Part *
-                          </label>
-                          <Select
-                            value={item.part?.toString() || ""}
-                            onChange={(e) => {
-                              const partId = e.target.value ? parseInt(e.target.value) : null;
-                              if (partId && partsData?.results) {
-                                const selectedPart = partsData.results.find((p) => p.id === partId);
-                                if (selectedPart) {
-                                  // Update all fields at once to avoid multiple state updates
-                                  updateLineItemFields(index, {
-                                    part: partId,
-                                    part_number: selectedPart.part_number,
-                                    description: selectedPart.name,
-                                    unit_price: parseFloat(selectedPart.selling_price || "0"),
-                                    quantity: 1,
-                                  });
-                                }
-                              } else {
-                                // Clear part selection
-                                updateLineItemFields(index, {
-                                  part: undefined,
-                                  part_number: undefined,
-                                });
-                              }
-                            }}
-                          >
-                            <option value="">Select a part...</option>
-                            {partsData?.results && partsData.results.length > 0 ? (
-                              partsData.results.map((part) => (
-                                <option key={part.id} value={part.id.toString()}>
-                                  {part.part_number} - {part.name} (${parseFloat(part.selling_price || "0").toFixed(2)})
-                                </option>
-                              ))
-                            ) : (
-                              <option value="" disabled>Loading parts...</option>
-                            )}
-                          </Select>
-                        </div>
-                      ) : (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Description *
-                        </label>
-                        <Input
-                          value={item.description}
-                          onChange={(e) =>
-                            updateLineItem(index, "description", e.target.value)
-                          }
-                          placeholder="Item description"
-                        />
-                      </div>
-                      )}
-                    </div>
-
-                    {item.item_type === "labor" ? (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Hours
-                          </label>
+              <div className="border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-gray-50">
+                    <TableRow className="h-8">
+                      <TableHead className="w-[120px] py-1 px-2 h-8">Type</TableHead>
+                      <TableHead className="min-w-[200px] py-1 px-2 h-8">Description</TableHead>
+                      <TableHead className="w-[100px] py-1 px-2 h-8">Qty</TableHead>
+                      <TableHead className="w-[120px] py-1 px-2 h-8">Rate</TableHead>
+                      <TableHead className="w-[80px] text-center py-1 px-2 h-8">Tax</TableHead>
+                      <TableHead className="w-[120px] text-right py-1 px-2 h-8">Amount</TableHead>
+                      <TableHead className="w-[50px] py-1 px-2 h-8"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lineItems.map((item, index) => (
+                      <TableRow key={index} className="h-fit">
+                        <TableCell className="py-1 px-2">
+                          {item.item_type === 'part' ? (
+                            <div className="flex flex-col">
+                              <span className="font-medium text-xs">{item.part_number}</span>
+                              <Badge variant="outline" className="w-fit text-[10px] px-1 py-0 h-3">Part</Badge>
+                            </div>
+                          ) : (
+                            <Select
+                              value={item.item_type}
+                              onChange={(e) => updateLineItem(index, 'item_type', e.target.value)}
+                              className="h-8 text-xs"
+                            >
+                              <option value="labor">Labor</option>
+                              <option value="fee">Fee</option>
+                              <option value="sublet">Sublet</option>
+                              <option value="other">Other</option>
+                            </Select>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-1 px-2">
+                          <Input
+                            value={item.description}
+                            onChange={(e) => updateLineItem(index, "description", e.target.value)}
+                            className="h-8 text-sm"
+                          />
+                        </TableCell>
+                        <TableCell className="py-1 px-2">
                           <Input
                             type="number"
+                            min="0"
                             step="0.5"
-                            value={item.labor_hours || ""}
-                            onChange={(e) =>
-                              updateLineItem(index, "labor_hours", parseFloat(e.target.value) || 0)
-                            }
+                            value={item.item_type === 'labor' ? item.labor_hours : item.quantity}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              if (item.item_type === 'labor') updateLineItem(index, "labor_hours", val);
+                              else updateLineItem(index, "quantity", val);
+                            }}
+                            className="h-8 text-sm"
                           />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Rate ($/hr)
-                          </label>
+                        </TableCell>
+                        <TableCell className="py-1 px-2">
                           <Input
                             type="number"
+                            min="0"
                             step="0.01"
-                            value={item.labor_rate || ""}
-                            onChange={(e) =>
-                              updateLineItem(index, "labor_rate", parseFloat(e.target.value) || 0)
-                            }
+                            value={item.item_type === 'labor' ? item.labor_rate : item.unit_price}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              if (item.item_type === 'labor') updateLineItem(index, "labor_rate", val);
+                              else updateLineItem(index, "unit_price", val);
+                            }}
+                            className="h-8 text-sm"
                           />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Quantity
-                          </label>
-                          <Input
-                            type="number"
-                            value={item.quantity || ""}
-                            onChange={(e) =>
-                              updateLineItem(index, "quantity", parseFloat(e.target.value) || 0)
-                            }
+                        </TableCell>
+                        <TableCell className="text-center py-1 px-2">
+                          <Checkbox
+                            checked={item.is_taxable}
+                            onCheckedChange={(checked) => updateLineItem(index, "is_taxable", !!checked)}
                           />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Unit Price
-                          </label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={item.unit_price || ""}
-                            onChange={(e) =>
-                              updateLineItem(index, "unit_price", parseFloat(e.target.value) || 0)
-                            }
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={item.is_taxable}
-                          onChange={(e) =>
-                            updateLineItem(index, "is_taxable", e.target.checked)
-                          }
-                          className="rounded border-gray-300"
-                        />
-                        <span className="text-sm text-gray-700">Taxable</span>
-                      </label>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">Total</p>
-                        <p className="text-lg font-bold">
-                          ${calculateLineItemTotal(item).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {errors.line_items && (
-                  <p className="text-sm text-red-600">{errors.line_items.message}</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Discounts & Fees */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Discounts & Fees</CardTitle>
-                <CardDescription>Optional discounts and additional fees</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="discount_percentage" className="block text-sm font-medium text-gray-700 mb-1">
-                      Discount Percentage (%)
-                    </label>
-                    <Input
-                      id="discount_percentage"
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="100"
-                      {...register("discount_percentage", { valueAsNumber: true })}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="discount_reason" className="block text-sm font-medium text-gray-700 mb-1">
-                      Discount Reason
-                    </label>
-                    <Input
-                      id="discount_reason"
-                      {...register("discount_reason")}
-                      placeholder="e.g., Customer loyalty discount"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="shop_supplies_fee" className="block text-sm font-medium text-gray-700 mb-1">
-                      Shop Supplies Fee
-                    </label>
-                    <Input
-                      id="shop_supplies_fee"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      {...register("shop_supplies_fee", { valueAsNumber: true })}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="environmental_fee" className="block text-sm font-medium text-gray-700 mb-1">
-                      Environmental Fee
-                    </label>
-                    <Input
-                      id="environmental_fee"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      {...register("environmental_fee", { valueAsNumber: true })}
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Estimate Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Subtotal</span>
-                  <span className="text-gray-900">${subtotal.toFixed(2)}</span>
-                </div>
-                {discountAmount > 0 && (
-                  <div className="flex items-center justify-between text-red-600">
-                    <span className="text-sm">Discount ({discountPercentage}%)</span>
-                    <span className="text-sm font-medium">-${discountAmount.toFixed(2)}</span>
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-sm py-1 px-2">
+                          {formatCurrency(calculateLineItemTotal(item))}
+                        </TableCell>
+                        <TableCell className="py-1 px-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => removeLineItem(index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {!lineItems.length && (
+                  <div className="p-8 text-center text-gray-500 text-sm bg-gray-50">
+                    No items added. Search or click "Add Item" to start.
                   </div>
                 )}
-                {taxConfigLoading ? (
-                  <div className="text-sm text-gray-500">Loading tax configuration…</div>
-                ) : taxConfig?.enabled ? (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">NHIL ({taxConfig.nhil_rate}%)</span>
-                      <span className="text-gray-900">${taxSummary.nhilAmount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">GETFund ({taxConfig.getfund_rate}%)</span>
-                      <span className="text-gray-900">${taxSummary.getfundAmount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">COVID-19 ({taxConfig.covid_rate}%)</span>
-                      <span className="text-gray-900">${taxSummary.hrlAmount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">VAT ({taxConfig.vat_rate}%)</span>
-                      <span className="text-gray-900">${taxSummary.vatAmount.toFixed(2)}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Tax</span>
-                    <span className="text-gray-900">$0.00</span>
-                  </div>
-                )}
-                {shopSuppliesFee > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Shop Supplies</span>
-                    <span className="text-gray-900">${shopSuppliesFee.toFixed(2)}</span>
-                  </div>
-                )}
-                {environmentalFee > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Environmental Fee</span>
-                    <span className="text-gray-900">${environmentalFee.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="border-t pt-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">Total</span>
-                    <span className="text-2xl font-bold text-gray-900">${total.toFixed(2)}</span>
-                  </div>
-                  {taxConfig && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Taxes are calculated automatically using {taxConfig.regime?.replace(/_/g, " ")} rates.
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-            {/* Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating..." : "Create Estimate"}
-                </Button>
-                <Link href="/billing/estimates">
-                  <Button type="button"variant="secondary" className="w-full">
-                    Cancel
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+        {/* Bottom Right Summary Section */}
+        <div className="flex justify-end">
+          <div className="w-1/3 min-w-[300px] space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="font-medium">Sub Total :</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+
+            {watch("discount_type") !== 'none' && (
+              <div className="flex justify-between text-sm text-red-600">
+                <span>Discount ({discountPercentage}%)</span>
+                <span>- {formatCurrency(discountAmount)}</span>
+              </div>
+            )}
+
+            {/* Tax Lines */}
+            {taxSummary.vatAmount > 0 && (
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>VAT (15.00%)</span>
+                <span>{formatCurrency(taxSummary.vatAmount)}</span>
+              </div>
+            )}
+            {taxSummary.getfundAmount > 0 && (
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>GETFund (2.50%)</span>
+                <span>{formatCurrency(taxSummary.getfundAmount)}</span>
+              </div>
+            )}
+            {taxSummary.nhilAmount > 0 && (
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>NHIL (2.50%)</span>
+                <span>{formatCurrency(taxSummary.nhilAmount)}</span>
+              </div>
+            )}
+            {taxSummary.hrlAmount > 0 && (
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>COVID-19 HRL (1.00%)</span>
+                <span>{formatCurrency(taxSummary.hrlAmount)}</span>
+              </div>
+            )}
+
+            <div className="flex justify-between text-lg font-bold border-t border-gray-300 pt-2 mt-2">
+              <span>Total :</span>
+              <span>{formatCurrency(total)}</span>
+            </div>
           </div>
         </div>
+
       </form>
+
+      {/* Sticky Footer */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 z-10 flex justify-end items-center gap-3 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] lg:pl-64">
+        <Link href="/billing/estimates">
+          <Button variant="outline">Cancel</Button>
+        </Link>
+        <div className="w-auto">
+          <BillingSubmitActions
+            isSubmitting={isSubmitting}
+            resourceType="estimate"
+            onSend={handleSubmit((data) => onSubmit(data, "sent"))}
+            onSave={handleSubmit((data) => onSubmit(data, "draft"))}
+          />
+        </div>
+      </div >
     </div>
   );
 }
-

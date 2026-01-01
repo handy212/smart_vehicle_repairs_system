@@ -4,16 +4,17 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
+import { useRecentItems } from "@/lib/hooks/useRecentItems";
+import { useEffect } from "react";
 import { workOrderTasksApi } from "@/lib/api/workorder-tasks";
 import { workOrderPartsApi } from "@/lib/api/workorder-parts";
 import { workOrderNotesApi } from "@/lib/api/workorder-notes";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, FileText, User, Car, DollarSign, Calendar, Wrench, Package, MessageSquare, Image, Clock, Plus, Printer, Search, ChevronDown } from "lucide-react";
+import { ArrowLeft, Edit, FileText, Wrench, Package, MessageSquare, Image, Search, Printer, ChevronDown, Clock } from "lucide-react";
 import Link from "next/link";
-import { format } from "date-fns";
 import WorkOrderOverviewTab from "./components/OverviewTab";
 import WorkOrderTasksTab from "./components/TasksTab";
 import WorkOrderPartsTab from "./components/PartsTab";
@@ -24,6 +25,9 @@ import WorkflowActions from "./components/WorkflowActions";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { usePrint } from "@/lib/hooks/usePrint";
+import { getStatusVariant } from "@/lib/utils/workorder-status";
+import WorkOrderTimeline from "./components/WorkOrderTimeline";
+import WorkOrderDetailSkeleton from "./components/WorkOrderDetailSkeleton";
 
 // Workflow Progress Indicator Component
 function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusChange, onStartRepairs }: {
@@ -66,10 +70,6 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
   };
 
   const currentStepIndex = statusOrder[status] ?? 0;
-  const activeSteps = workflowSteps.filter((step, index) => {
-    // For invoiced and closed, show all steps up to and including current
-    return index <= currentStepIndex;
-  });
 
   const getStepStatus = (index: number) => {
     if (index < currentStepIndex) return 'completed';
@@ -83,7 +83,7 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
           Status: <span className="font-semibold capitalize text-gray-900 dark:text-gray-100">{status.replace('_', ' ')}</span>
         </span>
-        <Badge variant={getStatusVariantForProgress(status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
+        <Badge variant={getStatusVariant(status) as any} className="text-[10px] px-2 py-0.5 font-medium border shadow-none bg-transparent">
           {status?.replace("_", " ") || status}
         </Badge>
       </div>
@@ -142,25 +142,6 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
   );
 }
 
-function getStatusVariantForProgress(status: string) {
-  switch (status) {
-    case "completed":
-    case "closed":
-      return "success";
-    case "in_progress":
-    case "approved":
-      return "info";
-    case "pending":
-    case "draft":
-    case "awaiting_approval":
-      return "warning";
-    case "cancelled":
-      return "danger";
-    default:
-      return "default";
-  }
-}
-
 export default function WorkOrderDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -170,11 +151,23 @@ export default function WorkOrderDetailPage() {
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   const { downloadPDF, isDownloading } = usePrint();
+  const { addRecentItem } = useRecentItems();
 
   const { data: workOrder, isLoading, error } = useQuery({
     queryKey: ["workorder", workOrderId],
     queryFn: () => workordersApi.get(workOrderId),
   });
+
+  useEffect(() => {
+    if (workOrder) {
+      addRecentItem({
+        id: workOrder.id,
+        name: `WO #${workOrder.work_order_number} - ${workOrder.vehicle_info}`,
+        type: "workorder",
+        href: `/workorders/${workOrder.id}`,
+      });
+    }
+  }, [workOrder, addRecentItem]);
 
   const { data: tasks = [] } = useQuery({
     queryKey: ["workorder-tasks", workOrderId],
@@ -195,11 +188,7 @@ export default function WorkOrderDetailPage() {
   });
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <WorkOrderDetailSkeleton />;
   }
 
   if (error || !workOrder) {
@@ -218,22 +207,6 @@ export default function WorkOrderDetailPage() {
     );
   }
 
-
-  const getPriorityVariant = (priority: string) => {
-    switch (priority) {
-      case "urgent":
-        return "danger";
-      case "high":
-        return "warning";
-      case "normal":
-        return "default";
-      case "low":
-        return "secondary";
-      default:
-        return "default";
-    }
-  };
-
   const refreshData = () => {
     queryClient.invalidateQueries({ queryKey: ["workorder", workOrderId] });
     queryClient.invalidateQueries({ queryKey: ["workorder-tasks", workOrderId] });
@@ -244,7 +217,6 @@ export default function WorkOrderDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       {/* Header */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
@@ -307,6 +279,12 @@ export default function WorkOrderDetailPage() {
                 </>
               )}
             </div>
+            <Link href={`/tech/workorders/${workOrderId}`}>
+              <Button variant="secondary" size="sm" className="h-9 hidden md:inline-flex">
+                <Wrench className="w-3.5 h-3.5 mr-2" />
+                Tech Mode
+              </Button>
+            </Link>
             <PermissionGuard permission="edit_workorders">
               <Link href={`/workorders/${workOrderId}/edit`}>
                 <Button size="sm" className="h-9">
@@ -319,7 +297,7 @@ export default function WorkOrderDetailPage() {
         </div>
       </div>
 
-      {/* Workflow Progress Indicator & Next Action - Combined */}
+      {/* Workflow Progress Indicator */}
       <Card>
         <CardContent className="py-4 px-4">
           <WorkflowProgressIndicator
@@ -407,166 +385,7 @@ export default function WorkOrderDetailPage() {
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Activity Timeline</CardTitle>
-              <p className="text-sm text-gray-500 mt-1">
-                Chronological view of work order events and activities
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="relative">
-                {/* Timeline line */}
-                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-
-                <div className="space-y-6 pl-8">
-                  {/* Work Order Created */}
-                  {workOrder.created_at && (
-                    <div className="relative flex items-start">
-                      <div className="absolute -left-10 w-3 h-3 rounded-full bg-blue-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
-                      <div className="flex-1 pt-0.5">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Work Order Created</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {format(new Date(workOrder.created_at), "MMM dd, yyyy 'at' h:mm a")}
-                        </p>
-                        {workOrder.created_by && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            Created by: {typeof workOrder.created_by === 'object' ?
-                              (workOrder.created_by.first_name + ' ' + workOrder.created_by.last_name) :
-                              'System'}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Status Changes */}
-                  {(workOrder as any).diagnosis_completed_at && (
-                    <div className="relative flex items-start">
-                      <div className="absolute -left-10 w-3 h-3 rounded-full bg-purple-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
-                      <div className="flex-1 pt-0.5">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Diagnosis Completed</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {format(new Date((workOrder as any).diagnosis_completed_at), "MMM dd, yyyy 'at' h:mm a")}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {(workOrder as any).approval_requested_at && (
-                    <div className="relative flex items-start">
-                      <div className="absolute -left-10 w-3 h-3 rounded-full bg-yellow-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
-                      <div className="flex-1 pt-0.5">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Approval Requested</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {format(new Date((workOrder as any).approval_requested_at), "MMM dd, yyyy 'at' h:mm a")}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {(workOrder as any).approved_at && (
-                    <div className="relative flex items-start">
-                      <div className="absolute -left-10 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
-                      <div className="flex-1 pt-0.5">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Work Order Approved</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {format(new Date((workOrder as any).approved_at), "MMM dd, yyyy 'at' h:mm a")}
-                        </p>
-                        {(workOrder as any).approval_method && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            Via: {(workOrder as any).approval_method.replace('_', ' ')}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {(workOrder as any).started_at && (
-                    <div className="relative flex items-start">
-                      <div className="absolute -left-10 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
-                      <div className="flex-1 pt-0.5">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Work Started</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {format(new Date((workOrder as any).started_at), "MMM dd, yyyy 'at' h:mm a")}
-                        </p>
-                        {(workOrder as any).primary_technician_name && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            Technician: {(workOrder as any).primary_technician_name}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {(workOrder as any).quality_check_at && (
-                    <div className="relative flex items-start">
-                      <div className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 shadow-sm ${(workOrder as any).quality_check_passed ? 'bg-green-500' : 'bg-red-500'
-                        }`}></div>
-                      <div className="flex-1 pt-0.5">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                          Quality Check {(workOrder as any).quality_check_passed ? 'Passed' : 'Failed'}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {format(new Date((workOrder as any).quality_check_at), "MMM dd, yyyy 'at' h:mm a")}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {workOrder.completed_at && (
-                    <div className="relative flex items-start">
-                      <div className="absolute -left-10 w-3 h-3 rounded-full bg-green-600 border-2 border-white dark:border-gray-800 shadow-sm"></div>
-                      <div className="flex-1 pt-0.5">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Work Order Completed</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {format(new Date(workOrder.completed_at), "MMM dd, yyyy 'at' h:mm a")}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Notes Timeline */}
-                  {notes.length > 0 && (
-                    <>
-                      <div className="border-t dark:border-gray-700 pt-6 mt-4">
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Notes & Activity</p>
-                      </div>
-                      {notes
-                        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                        .map((note: any) => (
-                          <div key={note.id} className="relative flex items-start">
-                            <div className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 shadow-sm ${note.note_type === 'customer' ? 'bg-blue-400' :
-                              note.is_important ? 'bg-red-500' : 'bg-gray-400'
-                              }`}></div>
-                            <div className="flex-1 pt-0.5">
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                  {note.note_type === 'customer' ? 'Customer Note' :
-                                    note.is_important ? 'Important Note' : 'Internal Note'}
-                                </p>
-                              </div>
-                              <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 whitespace-pre-wrap">{note.note}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {format(new Date(note.created_at), "MMM dd, yyyy 'at' h:mm a")}
-                                {note.created_by_name && ` • ${note.created_by_name}`}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                    </>
-                  )}
-
-                  {!workOrder.created_at && notes.length === 0 && (
-                    <div className="text-center py-8">
-                      <Clock className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                      <p className="text-sm text-gray-500">No timeline events yet.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <WorkOrderTimeline workOrder={workOrder} notes={notes} />
         </TabsContent>
       </Tabs>
     </div>

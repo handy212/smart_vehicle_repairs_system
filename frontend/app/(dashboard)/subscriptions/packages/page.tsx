@@ -31,6 +31,7 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Switch } from "@/components/ui/switch";
 import Link from "next/link";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 const packageSchema = z.object({
   name: z.string().min(1, "Name is required"),
   code: z.string().min(1, "Code is required").max(50),
@@ -55,6 +56,7 @@ const packageSchema = z.object({
 type PackageFormData = z.infer<typeof packageSchema>;
 
 export default function PackagesPage() {
+    const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -367,7 +369,7 @@ export default function PackagesPage() {
                       <TableCell>
                         <Badge variant="secondary">{pkg.code}</Badge>
                       </TableCell>
-                      <TableCell>${parseFloat(pkg.price).toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(parseFloat(pkg.price))}</TableCell>
                       <TableCell>{pkg.duration_months} months</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">

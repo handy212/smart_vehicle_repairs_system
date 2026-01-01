@@ -14,9 +14,10 @@ export interface Vehicle {
   engine_type?: string;
   owner: number | { id: number };
   owner_name?: string;
-  status: string;
+  status: "active" | "in_service" | "sold" | "totaled" | "inactive" | string;
   created_at: string;
   image?: string;
+  vehicle_type?: "other" | "saloon" | "suv" | "pickup" | "minivan" | "motorcycle" | "truck" | string;
   // Legacy fields for backward compatibility
   color?: string;
   mileage?: number;
@@ -46,8 +47,20 @@ export const vehiclesApi = {
     created_at__gte?: string;
     created_at__lte?: string;
     ordering?: string;
+    page_size?: number;
   }): Promise<VehicleListResponse> => {
     const response = await apiClient.get("/vehicles/vehicles/", { params });
+    return response.data;
+  },
+
+  dashboardStats: async (): Promise<{
+    total_vehicles: number;
+    active_vehicles: number;
+    in_service_vehicles: number;
+    due_service_vehicles: number;
+    sold_vehicles: number;
+  }> => {
+    const response = await apiClient.get("/vehicles/vehicles/dashboard_stats/");
     return response.data;
   },
 
@@ -145,9 +158,9 @@ export const vehiclesApi = {
     message?: string;
     error?: string;
   }> => {
-    const response = await apiClient.post("/vehicles/vehicles/check_license_plate/", { 
+    const response = await apiClient.post("/vehicles/vehicles/check_license_plate/", {
       license_plate: licensePlate,
-      vehicle_id: vehicleId 
+      vehicle_id: vehicleId
     });
     return response.data;
   },

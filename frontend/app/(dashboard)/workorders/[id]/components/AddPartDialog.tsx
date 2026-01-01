@@ -14,6 +14,7 @@ import { AxiosError } from "axios";
 import InventoryPartSearch from "./InventoryPartSearch";
 import { Part } from "@/lib/api/inventory";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 const partSchema = z.object({
   inventory_part: z.number().optional(), // Phase 4 Integration
   part_number: z.string().min(1, "Part number is required"),
@@ -33,7 +34,9 @@ interface AddPartDialogProps {
   onSuccess: () => void;
 }
 
-export default function AddPartDialog({ workOrderId, open, onClose, onSuccess }: AddPartDialogProps) {
+export default function AddPartDialog({
+    workOrderId, open, onClose, onSuccess }: AddPartDialogProps) {
+    const { formatCurrency } = useCurrency();
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -245,7 +248,7 @@ export default function AddPartDialog({ workOrderId, open, onClose, onSuccess }:
             <div className="bg-gray-50 p-3 rounded">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-gray-700">Total Price (To Customer):</span>
-                <span className="text-lg font-bold text-gray-900">${totalCost.toFixed(2)}</span>
+                <span className="text-lg font-bold text-gray-900">{formatCurrency(totalCost)}</span>
               </div>
             </div>
           </div>

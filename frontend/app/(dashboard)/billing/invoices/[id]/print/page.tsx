@@ -6,7 +6,9 @@ import { billingApi } from "@/lib/api/billing";
 import { format } from "date-fns";
 import { useEffect } from "react";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function InvoicePrintPage() {
+    const { formatCurrency } = useCurrency();
   const params = useParams();
   const invoiceId = parseInt(params.id as string);
 
@@ -261,9 +263,9 @@ export default function InvoicePrintPage() {
                       {item.item_type === 'labor' && item.labor_hours ? `${quantity.toFixed(1)} hrs` : quantity}
                     </td>
                     <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>
-                      {item.item_type === 'labor' && item.labor_rate ? `$${unitPrice.toFixed(2)}/hr` : `$${unitPrice.toFixed(2)}`}
+                      {item.item_type === 'labor' && item.labor_rate ? `${formatCurrency(unitPrice)}/hr` : `${formatCurrency(unitPrice)}`}
                     </td>
-                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${lineTotal.toFixed(2)}</td>
+                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>{formatCurrency(lineTotal)}</td>
                   </tr>
                 );
               })
@@ -285,7 +287,7 @@ export default function InvoicePrintPage() {
           <tbody>
             <tr>
               <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>Subtotal</td>
-              <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold' }}>${subtotal.toFixed(2)}</td>
+              <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(subtotal)}</td>
             </tr>
             {discountAmount > 0 && (
               <>
@@ -294,11 +296,11 @@ export default function InvoicePrintPage() {
                     Discount ({invoice.discount_percentage ? parseFloat(invoice.discount_percentage).toFixed(1) : 0}%)
                     {invoice.discount_reason && <><br /><small>{invoice.discount_reason}</small></>}
                   </td>
-                  <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>-${discountAmount.toFixed(2)}</td>
+                  <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>-{formatCurrency(discountAmount)}</td>
                 </tr>
                 <tr>
                   <td style={{ border: '1px solid #000', padding: '5px' }}>Subtotal after Discount</td>
-                  <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${(subtotal - discountAmount).toFixed(2)}</td>
+                  <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>{formatCurrency((subtotal - discountAmount))}</td>
                 </tr>
               </>
             )}
@@ -310,52 +312,52 @@ export default function InvoicePrintPage() {
                 {invoice.tax_nhil_amount && parseFloat(invoice.tax_nhil_amount) > 0 && (
                   <tr>
                     <td style={{ border: '1px solid #000', padding: '5px' }}>NHIL (2.5%)</td>
-                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${parseFloat(invoice.tax_nhil_amount).toFixed(2)}</td>
+                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>{formatCurrency(parseFloat(invoice.tax_nhil_amount))}</td>
                   </tr>
                 )}
                 {invoice.tax_getfund_amount && parseFloat(invoice.tax_getfund_amount) > 0 && (
                   <tr>
                     <td style={{ border: '1px solid #000', padding: '5px' }}>GETFund (2.5%)</td>
-                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${parseFloat(invoice.tax_getfund_amount).toFixed(2)}</td>
+                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>{formatCurrency(parseFloat(invoice.tax_getfund_amount))}</td>
                   </tr>
                 )}
                 {invoice.tax_hrl_amount && parseFloat(invoice.tax_hrl_amount) > 0 && (
                   <tr>
                     <td style={{ border: '1px solid #000', padding: '5px' }}>COVID-19 HRL (1%)</td>
-                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${parseFloat(invoice.tax_hrl_amount).toFixed(2)}</td>
+                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>{formatCurrency(parseFloat(invoice.tax_hrl_amount))}</td>
                   </tr>
                 )}
                 {invoice.tax_vat_amount && parseFloat(invoice.tax_vat_amount) > 0 && (
                   <tr>
                     <td style={{ border: '1px solid #000', padding: '5px' }}>VAT (15%)</td>
-                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${parseFloat(invoice.tax_vat_amount).toFixed(2)}</td>
+                    <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>{formatCurrency(parseFloat(invoice.tax_vat_amount))}</td>
                   </tr>
                 )}
                 <tr>
                   <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>Total Tax</td>
-                  <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold' }}>${taxAmount.toFixed(2)}</td>
+                  <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(taxAmount)}</td>
                 </tr>
               </>
             ) : taxAmount > 0 && (
               <tr>
                 <td style={{ border: '1px solid #000', padding: '5px' }}>Tax</td>
-                <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${taxAmount.toFixed(2)}</td>
+                <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>{formatCurrency(taxAmount)}</td>
               </tr>
             )}
             <tr style={{ backgroundColor: '#f0f0f0' }}>
               <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold', fontSize: '14px' }}>TOTAL AMOUNT</td>
-              <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold', fontSize: '14px' }}>${total.toFixed(2)}</td>
+              <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold', fontSize: '14px' }}>{formatCurrency(total)}</td>
             </tr>
             {amountPaid > 0 && (
               <tr>
                 <td style={{ border: '1px solid #000', padding: '5px' }}>Amount Paid</td>
-                <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>${amountPaid.toFixed(2)}</td>
+                <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>{formatCurrency(amountPaid)}</td>
               </tr>
             )}
             {amountDue > 0 && (
               <tr style={{ backgroundColor: '#fffacd' }}>
                 <td style={{ border: '1px solid #000', padding: '5px', fontWeight: 'bold' }}>BALANCE DUE</td>
-                <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold' }}>${amountDue.toFixed(2)}</td>
+                <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right', fontWeight: 'bold' }}>{formatCurrency(amountDue)}</td>
               </tr>
             )}
           </tbody>
@@ -384,7 +386,7 @@ export default function InvoicePrintPage() {
                     {payment.payment_method.replace('_', ' ')}
                   </td>
                   <td style={{ border: '1px solid #000', padding: '5px', textAlign: 'right' }}>
-                    ${parseFloat(payment.amount || '0').toFixed(2)}
+                    {formatCurrency(parseFloat(payment.amount || '0'))}
                   </td>
                 </tr>
               ))}

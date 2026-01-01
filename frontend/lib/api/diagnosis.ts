@@ -343,6 +343,11 @@ export const diagnosisApi = {
     return response.data;
   },
 
+  requestPartsEstimate: async (diagnosisId: number): Promise<{ message: string; parts_count: number; notified_count: number }> => {
+    const response = await apiClient.post(`/diagnosis/diagnoses/${diagnosisId}/request_parts_estimate/`);
+    return response.data;
+  },
+
   // Phase 2: Structured Data API Methods
 
   // Diagnostic Codes

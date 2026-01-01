@@ -178,7 +178,7 @@ export default function TillDashboardPage() {
 
             {/* Quick Links */}
             <div className="grid grid-cols-3 gap-4">
-                <Link href="/billing/tills?status=open">
+                <Link href="/billing/tills/history?status=open">
                     <Card className="cursor-pointer hover:shadow-md transition-shadow">
                         <CardContent className="pt-6">
                             <div className="flex items-center gap-3">
@@ -194,7 +194,7 @@ export default function TillDashboardPage() {
                     </Card>
                 </Link>
 
-                <Link href="/billing/tills?status=closed">
+                <Link href="/billing/tills/history?status=closed">
                     <Card className="cursor-pointer hover:shadow-md transition-shadow">
                         <CardContent className="pt-6">
                             <div className="flex items-center gap-3">

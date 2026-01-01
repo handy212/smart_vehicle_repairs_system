@@ -4,28 +4,30 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tool
 import { memo, useMemo } from "react";
 import { TrendingUp, TrendingDown, DollarSign, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { format, parseISO, isToday, isYesterday } from "date-fns";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 interface RevenueAreaChartProps {
   data: Array<{ date?: string; period?: string; revenue: number }>;
 }
 
 const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaChartProps) {
+  const { formatCurrency: formatMoney, currency } = useCurrency();
   // Process data to ensure all 7 days are represented and add day labels
   const processedData = useMemo(() => {
     if (!data || data.length === 0) return [];
-    
+
     return data.map(item => {
       const dateStr = item.period || item.date || "";
       const date = parseISO(dateStr);
       let dateLabel = format(date, "MMM d");
-      
+
       // Add special labels for today and yesterday
       if (isToday(date)) {
         dateLabel = "Today";
       } else if (isYesterday(date)) {
         dateLabel = "Yesterday";
       }
-      
+
       return {
         ...item,
         date: dateStr,
@@ -50,7 +52,7 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
     // Calculate change (compare last day to first day, or last 2 days if available)
     let change = 0;
     let changePercent = 0;
-    
+
     if (processedData.length >= 2) {
       const firstDay = processedData[0].revenue;
       const lastDay = processedData[processedData.length - 1].revenue;
@@ -66,7 +68,7 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+      <div className="flex flex-col items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
         <DollarSign className="w-12 h-12 mb-2 opacity-50" />
         <p className="text-sm font-medium">No revenue data available</p>
         <p className="text-xs mt-1">Revenue data for the last 7 days will appear here</p>
@@ -79,7 +81,7 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
       const data = payload[0].payload;
       const revenue = data.revenue || 0;
       const date = parseISO(data.date);
-      
+
       // Calculate change from previous day
       const currentIndex = processedData.findIndex(d => d.date === data.date);
       let dayOverDay = null;
@@ -98,28 +100,21 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
           <div className="space-y-1">
             <p className="text-xs text-gray-600 dark:text-gray-400">
               Revenue: <span className="font-semibold text-gray-900 dark:text-gray-100">
-                ${parseFloat(String(revenue)).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                {formatMoney(revenue)}
               </span>
             </p>
             {dayOverDay && (
-              <p className={`text-xs flex items-center gap-1 ${
-                dayOverDay.change >= 0 
-                  ? 'text-green-600 dark:text-green-400' 
-                  : 'text-red-600 dark:text-red-400'
-              }`}>
+              <p className={`text-xs flex items-center gap-1 ${dayOverDay.change >= 0
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-red-600 dark:text-red-400'
+                }`}>
                 {dayOverDay.change >= 0 ? (
                   <ArrowUpRight className="w-3 h-3" />
                 ) : (
                   <ArrowDownRight className="w-3 h-3" />
                 )}
                 {dayOverDay.change >= 0 ? '+' : ''}
-                ${Math.abs(dayOverDay.change).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })} ({Math.abs(dayOverDay.changePct).toFixed(1)}%)
+                {formatMoney(Math.abs(dayOverDay.change), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(currency, '')} ({Math.abs(dayOverDay.changePct).toFixed(1)}%)
               </p>
             )}
           </div>
@@ -131,9 +126,10 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
 
   const formatCurrency = (value: number) => {
     if (value >= 1000) {
-      return `$${(value / 1000).toFixed(1)}k`;
+      const currencySymbol = formatMoney(0).replace(/[0-9.,\s]/g, '');
+      return `${currencySymbol}${(value / 1000).toFixed(1)}k`;
     }
-    return `$${value.toFixed(0)}`;
+    return formatMoney(value, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   };
 
   const CustomDot = (props: any) => {
@@ -141,7 +137,7 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
     // Highlight today with a larger dot
     const date = parseISO(payload.date);
     const isTodayDate = isToday(date);
-    
+
     return (
       <Dot
         cx={cx}
@@ -227,7 +223,7 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
       </div>
 
       {/* Chart */}
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={200}>
         <AreaChart
           data={processedData}
           margin={{ top: 10, right: 10, left: 0, bottom: 5 }}

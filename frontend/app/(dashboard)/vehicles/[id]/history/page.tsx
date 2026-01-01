@@ -13,7 +13,9 @@ import { useParams } from "next/navigation";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function VehicleHistoryPage() {
+    const { formatCurrency } = useCurrency();
   const params = useParams();
   const id = parseInt(params.id as string);
 
@@ -241,7 +243,7 @@ export default function VehicleHistoryPage() {
                       </TableCell>
                       <TableCell className="font-medium text-gray-900 dark:text-gray-100">
                         {wo.total_cost
-                          ? `$${parseFloat(wo.total_cost.toString()).toFixed(2)}`
+                          ? `${formatCurrency(parseFloat(wo.total_cost.toString()))}`
                           : "-"}
                       </TableCell>
                       <TableCell>

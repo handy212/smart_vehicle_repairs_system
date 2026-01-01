@@ -58,6 +58,23 @@ class VehicleViewSet(viewsets.ModelViewSet):
             return VehicleUpdateSerializer
         return VehicleDetailSerializer
     
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """Get vehicle dashboard statistics"""
+        today = timezone.now().date()
+        
+        stats = {
+            'total_vehicles': Vehicle.objects.count(),
+            'active_vehicles': Vehicle.objects.filter(status='active').count(),
+            'in_service_vehicles': Vehicle.objects.filter(status='in_service').count(),
+            'sold_vehicles': Vehicle.objects.filter(status='sold').count(),
+            'due_service_vehicles': Vehicle.objects.filter(
+                Q(next_service_due_date__lte=today) |
+                Q(next_service_due_mileage__lte=F('current_mileage'))
+            ).filter(status='active').count()
+        }
+        return Response(stats)
+
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
         """Get vehicle service history"""

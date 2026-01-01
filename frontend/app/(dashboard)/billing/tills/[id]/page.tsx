@@ -9,8 +9,11 @@ import { ArrowLeft, Download } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { exportToCSV } from "@/lib/utils/export";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function TillDetailPage() {
+    const { formatCurrency } = useCurrency();
     const params = useParams();
     const router = useRouter();
     const tillId = parseInt(params.id as string);
@@ -19,6 +22,22 @@ export default function TillDetailPage() {
         queryKey: ['till-detail', tillId],
         queryFn: () => tillApi.get(tillId),
     });
+
+    const handleExport = () => {
+        if (!till) return;
+        exportToCSV([till], `till_report_${till.id}`, [
+            { key: "id", label: "Till ID" },
+            { key: "cashier_name", label: "Cashier" },
+            { key: "branch_name", label: "Branch" },
+            { key: "status", label: "Status" },
+            { key: "opening_balance", label: "Opening Balance" },
+            { key: "closing_balance", label: "Closing Balance" },
+            { key: "expected_balance", label: "Expected Balance" },
+            { key: "variance", label: "Variance" },
+            { key: "opened_at", label: "Opened At" },
+            { key: "closed_at", label: "Closed At" },
+        ]);
+    };
 
     if (isLoading) {
         return (
@@ -57,7 +76,7 @@ export default function TillDetailPage() {
                     <Badge variant={till.status === 'open' ? 'success' : 'secondary'} className="px-4 py-1 text-sm">
                         {till.status.toUpperCase()}
                     </Badge>
-                    <Button variant="outline">
+                    <Button variant="outline" onClick={handleExport}>
                         <Download className="mr-2 h-4 w-4" />
                         Export
                     </Button>
@@ -148,7 +167,7 @@ export default function TillDetailPage() {
                             {till.cash_counts.map((count: any) => (
                                 <div key={count.id} className="flex items-center justify-between p-3 border rounded-lg">
                                     <div className="flex items-center gap-4">
-                                        <span className="font-semibold">${parseFloat(count.denomination).toFixed(2)}</span>
+                                        <span className="font-semibold">{formatCurrency(parseFloat(count.denomination))}</span>
                                         <span className="text-muted-foreground">×</span>
                                         <span className="font-mono">{count.quantity}</span>
                                     </div>

@@ -604,3 +604,79 @@ class InventoryTransaction(models.Model):
         
         super().save(*args, **kwargs)
 
+
+class ServicePackage(models.Model):
+    """
+    Service Packages (Job Kits) - Pre-defined bundles of parts and labor
+    Used for quick-select in recommendations and estimates.
+    """
+    name = models.CharField(max_length=200, unique=True)
+    description = models.TextField(blank=True)
+    category = models.ForeignKey(
+        PartCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='service_packages',
+        help_text="Category for this service package"
+    )
+    
+    # Labor Estimates
+    estimated_labor_hours = models.DecimalField(
+        max_digits=6, 
+        decimal_places=2, 
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        help_text="Standard labor hours for this job"
+    )
+    
+    # Metadata
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Service Package'
+        verbose_name_plural = 'Service Packages'
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def total_parts_cost(self):
+        """Calculate total estimated cost of parts in this package"""
+        total = Decimal('0.00')
+        for item in self.parts.all():
+            if item.part.selling_price:
+                total += item.part.selling_price * item.quantity
+        return total
+
+
+class ServicePackagePart(models.Model):
+    """Parts included in a Service Package"""
+    service_package = models.ForeignKey(
+        ServicePackage,
+        on_delete=models.CASCADE,
+        related_name='parts'
+    )
+    part = models.ForeignKey(
+        Part,
+        on_delete=models.CASCADE,
+        related_name='service_packages'
+    )
+    quantity = models.DecimalField(
+        max_digits=8, 
+        decimal_places=2, 
+        default=Decimal('1.00'),
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        unique_together = ['service_package', 'part']
+        verbose_name = 'Service Package Part'
+        verbose_name_plural = 'Service Package Parts'
+
+    def __str__(self):
+        return f"{self.quantity}x {self.part.part_number} for {self.service_package.name}"

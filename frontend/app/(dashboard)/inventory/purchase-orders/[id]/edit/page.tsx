@@ -6,7 +6,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { inventoryApi, PurchaseOrder } from "@/lib/api/inventory";
+import { inventoryApi, PurchaseOrder, PurchaseOrderItem } from "@/lib/api/inventory";
+import PurchaseOrderItemsManager from "../../components/PurchaseOrderItemsManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -139,6 +140,7 @@ export default function EditPurchaseOrderPage() {
                 <CardContent>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                            {/* ... fields ... */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField
                                     control={form.control}
@@ -214,6 +216,14 @@ export default function EditPurchaseOrderPage() {
                     </Form>
                 </CardContent>
             </Card>
+
+            {purchaseOrder && (
+                <Card>
+                    <CardContent className="pt-6">
+                        <PurchaseOrderItemsManager purchaseOrder={purchaseOrder} />
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 }

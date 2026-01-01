@@ -19,6 +19,7 @@ import { useToast } from "@/lib/hooks/useToast";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 const userUpdateSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
@@ -81,6 +82,7 @@ const ROLE_OPTIONS = [
 ];
 
 export default function UserDetailPage() {
+    const { formatCurrency } = useCurrency();
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -1078,7 +1080,7 @@ export default function UserDetailPage() {
                         <div>
                           <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Hourly Rate</dt>
                           <dd className="text-sm text-gray-900 dark:text-white font-semibold">
-                            ${parseFloat(user.hourly_rate).toFixed(2)}/hr
+                            {formatCurrency(parseFloat(user.hourly_rate))}/hr
                           </dd>
                         </div>
                       )}

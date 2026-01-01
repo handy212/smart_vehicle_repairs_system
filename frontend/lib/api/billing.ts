@@ -58,6 +58,9 @@ export interface Invoice {
   discount_amount?: string;
   discount_percentage?: string;
   discount_reason?: string;
+  reference_number?: string;
+  sales_agent?: number;
+  sales_agent_name?: string;
   tax_amount?: string;
   taxable_subtotal?: string;
   tax_nhil_amount?: string;
@@ -72,6 +75,7 @@ export interface Invoice {
   notes?: string;
   customer_notes?: string;
   internal_notes?: string;
+  terms?: string;
   line_items?: InvoiceLineItem[];
   tax_breakdown?: TaxBreakdown;
   created_at?: string;
@@ -107,6 +111,36 @@ export interface Payment {
   created_at: string;
 }
 
+export interface PaymentAllocation {
+  id: number;
+  payment: number;
+  payment_number: string;
+  invoice: number;
+  invoice_number: string;
+  amount: string;
+  allocated_at: string;
+  allocated_by: number;
+  allocated_by_name: string;
+  notes?: string;
+}
+
+export interface AllocationInput {
+  invoice_id: number;
+  amount: string;
+  notes?: string;
+}
+
+export interface AllocatePaymentRequest {
+  payment_id: number;
+  allocations: AllocationInput[];
+}
+
+export interface UnallocatedAmountResponse {
+  payment_amount: string;
+  allocated: string;
+  unallocated: string;
+}
+
 export interface EstimateLineItem {
   id?: number;
   item_type: "labor" | "part" | "fee" | "discount" | "sublet" | "other";
@@ -140,6 +174,9 @@ export interface Estimate {
   status: string;
   title?: string;
   description?: string;
+  reference_number?: string;
+  sales_agent?: number;
+  sales_agent_name?: string;
   notes?: string;
   customer_notes?: string;
   estimate_date: string;
@@ -150,6 +187,7 @@ export interface Estimate {
   subtotal?: string;
   discount_amount?: string;
   discount_percentage?: string;
+  discount_type?: 'none' | 'before_tax' | 'after_tax';
   discount_reason?: string;
   tax_amount?: string;
   taxable_subtotal?: string;
@@ -189,7 +227,130 @@ export interface EstimateListResponse {
   results: Estimate[];
 }
 
+
+export interface CreditNoteLineItem {
+  id?: number;
+  description: string;
+  quantity: number;
+  unit_price: string;
+  total?: string;
+  is_taxable?: boolean;
+}
+
+export interface CreditNote {
+  id: number;
+  credit_note_number: string;
+  customer: number | { id: number; full_name?: string };
+  customer_name?: string;
+  invoice?: number | { id: number; invoice_number?: string };
+  invoice_number?: string;
+  credit_date: string;
+  status: 'draft' | 'issued' | 'applied' | 'refunded' | 'void';
+  reason?: string;
+  notes?: string;
+  internal_notes?: string;
+  subtotal?: string;
+  tax_amount?: string;
+  total: string;
+  unused_amount: string;
+  line_items?: CreditNoteLineItem[];
+  created_by?: number;
+  created_by_name?: string;
+  created_at?: string;
+}
+
+export interface CreditNoteListResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: CreditNote[];
+}
+
+
+export interface BillLineItem {
+  id?: number;
+  description: string;
+  quantity: number;
+  unit_price: string;
+  total?: string;
+  expense_category?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Bill {
+  id: number;
+  bill_number: string;
+  vendor: number; // ID
+  vendor_name?: string;
+  branch: number; // ID
+  reference_number?: string;
+  bill_date: string;
+  due_date: string;
+  terms?: string;
+  notes?: string;
+  status: 'draft' | 'open' | 'partially_paid' | 'paid' | 'overdue' | 'void';
+  currency: string;
+  subtotal: string;
+  tax_amount: string;
+  total: string;
+  amount_paid: string;
+  amount_due: string;
+  line_items?: BillLineItem[];
+  ledger_bill?: number; // ID of DL Bill
+  ledger_bill_url?: string;
+  created_by?: number;
+  created_by_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BillListResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Bill[];
+}
+
 export const billingApi = {
+  // ... existing methods ...
+  bills: {
+    list: async (params?: {
+      page?: number;
+      status?: string;
+      vendor?: number;
+      branch?: number;
+      search?: string;
+      date_from?: string;
+      date_to?: string;
+      due_date_from?: string;
+      due_date_to?: string;
+      ordering?: string;
+    }): Promise<BillListResponse> => {
+      const response = await apiClient.get("/billing/bills/", { params });
+      return response.data;
+    },
+
+    get: async (id: number): Promise<Bill> => {
+      const response = await apiClient.get(`/billing/bills/${id}/`);
+      return response.data;
+    },
+
+    create: async (data: Partial<Bill>): Promise<Bill> => {
+      const response = await apiClient.post("/billing/bills/", data);
+      return response.data;
+    },
+
+    update: async (id: number, data: Partial<Bill>): Promise<Bill> => {
+      const response = await apiClient.put(`/billing/bills/${id}/`, data);
+      return response.data;
+    },
+
+    delete: async (id: number): Promise<void> => {
+      await apiClient.delete(`/billing/bills/${id}/`);
+    },
+  },
+
   invoices: {
     list: async (params?: {
       page?: number;
@@ -200,6 +361,8 @@ export const billingApi = {
       date_to?: string;
       invoice_date__gte?: string;
       invoice_date__lte?: string;
+      due_date__gte?: string;
+      due_date__lte?: string;
       ordering?: string;
     }): Promise<InvoiceListResponse> => {
       const response = await apiClient.get("/billing/invoices/", { params });
@@ -208,6 +371,11 @@ export const billingApi = {
 
     get: async (id: number): Promise<Invoice> => {
       const response = await apiClient.get(`/billing/invoices/${id}/`);
+      return response.data;
+    },
+
+    history: async (id: number) => {
+      const response = await apiClient.get(`/billing/invoices/${id}/history/`);
       return response.data;
     },
 
@@ -238,6 +406,62 @@ export const billingApi = {
       const response = await apiClient.get("/billing/invoices/overdue/");
       return response.data.results || response.data;
     },
+
+    bulkSend: async (ids: number[]): Promise<{ message: string; sent_count: number; errors?: string[] }> => {
+      const response = await apiClient.post(`/billing/invoices/bulk_send/`, { ids });
+      return response.data;
+    },
+
+    bulkUpdateStatus: async (ids: number[], status: string): Promise<{ message: string; updated_count: number; errors?: string[] }> => {
+      const response = await apiClient.post(`/billing/invoices/bulk_update_status/`, { ids, status });
+      return response.data;
+    },
+
+    stats: async (): Promise<{
+      counts: { total: number; draft: number; paid: number; partially_paid: number; overdue: number; unpaid: number };
+      financials: { total_paid: number; past_due_total: number; outstanding_total: number };
+    }> => {
+      const response = await apiClient.get("/billing/invoices/stats/");
+      return response.data;
+    },
+  },
+
+  creditNotes: {
+    list: async (params?: {
+      page?: number;
+      status?: string;
+      customer?: number;
+      search?: string;
+      date_from?: string;
+      date_to?: string;
+      ordering?: string;
+    }): Promise<CreditNoteListResponse> => {
+      const response = await apiClient.get("/billing/credit-notes/", { params });
+      return response.data;
+    },
+
+    get: async (id: number): Promise<CreditNote> => {
+      const response = await apiClient.get(`/billing/credit-notes/${id}/`);
+      return response.data;
+    },
+
+    create: async (data: Partial<CreditNote>): Promise<CreditNote> => {
+      const response = await apiClient.post("/billing/credit-notes/", data);
+      return response.data;
+    },
+
+    update: async (id: number, data: Partial<CreditNote>): Promise<CreditNote> => {
+      const response = await apiClient.put(`/billing/credit-notes/${id}/`, data);
+      return response.data;
+    },
+
+    delete: async (id: number): Promise<void> => {
+      await apiClient.delete(`/billing/credit-notes/${id}/`);
+    },
+
+    approve: async (id: number): Promise<void> => {
+      await apiClient.post(`/billing/credit-notes/${id}/approve/`);
+    },
   },
 
   payments: {
@@ -264,6 +488,63 @@ export const billingApi = {
     },
     refund: async (id: number, data: { refund_amount: string; refund_reason: string }): Promise<Payment> => {
       const response = await apiClient.post(`/billing/payments/${id}/refund/`, data);
+      return response.data;
+    },
+
+    allocations: async (paymentId: number): Promise<PaymentAllocation[]> => {
+      const response = await apiClient.get(`/billing/payments/${paymentId}/allocations/`);
+      return response.data;
+    },
+
+    unallocatedAmount: async (paymentId: number): Promise<UnallocatedAmountResponse> => {
+      const response = await apiClient.get(`/billing/payments/${paymentId}/unallocated_amount/`);
+      return response.data;
+    },
+  },
+
+  paymentAllocations: {
+    list: async (params?: {
+      payment?: number;
+      invoice?: number;
+      customer?: number;
+    }): Promise<{ results: PaymentAllocation[] }> => {
+      const response = await apiClient.get("/billing/payment-allocations/", { params });
+      return response.data;
+    },
+
+    get: async (id: number): Promise<PaymentAllocation> => {
+      const response = await apiClient.get(`/billing/payment-allocations/${id}/`);
+      return response.data;
+    },
+
+    create: async (data: Partial<PaymentAllocation>): Promise<PaymentAllocation> => {
+      const response = await apiClient.post("/billing/payment-allocations/", data);
+      return response.data;
+    },
+
+    allocatePayment: async (data: AllocatePaymentRequest): Promise<PaymentAllocation[]> => {
+      const response = await apiClient.post(
+        "/billing/payment-allocations/allocate_payment/",
+        data
+      );
+      return response.data;
+    },
+
+    autoAllocate: async (paymentId: number): Promise<{
+      allocations: PaymentAllocation[];
+      unallocated_amount: string;
+    }> => {
+      const response = await apiClient.post(
+        "/billing/payment-allocations/auto_allocate/",
+        { payment_id: paymentId }
+      );
+      return response.data;
+    },
+
+    byCustomer: async (customerId: number): Promise<PaymentAllocation[]> => {
+      const response = await apiClient.get("/billing/payment-allocations/by_customer/", {
+        params: { customer_id: customerId }
+      });
       return response.data;
     },
   },
@@ -324,6 +605,11 @@ export const billingApi = {
       return response.data.invoice || response.data;
     },
 
+    history: async (id: number) => {
+      const response = await apiClient.get(`/billing/estimates/${id}/history/`);
+      return response.data.history || response.data;
+    },
+
     convertToWorkOrder: async (id: number): Promise<{ work_order_id: number; work_order_number: string }> => {
       const response = await apiClient.post(`/billing/estimates/${id}/convert_to_work_order/`);
       return response.data;
@@ -353,6 +639,19 @@ export const billingApi = {
     expiringSoon: async (): Promise<Estimate[]> => {
       const response = await apiClient.get("/billing/estimates/expiring_soon/");
       return response.data.results || response.data;
+    },
+
+    stats: async (): Promise<{
+      counts: { total: number; draft: number; sent: number; approved: number; declined: number; expired: number };
+      financials: { total_approved: number; total_pending: number; total_declined: number };
+    }> => {
+      const response = await apiClient.get("/billing/estimates/stats/");
+      return response.data;
+    },
+
+    nextNumber: async (): Promise<{ next_number: string }> => {
+      const response = await apiClient.get("/billing/estimates/next_number/");
+      return response.data;
     },
   },
 

@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/lib/hooks/useToast";
 import { AlertCircle, DollarSign } from "lucide-react";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
+
 interface ProcessRefundDialogProps {
     payment: any;
     open: boolean;
@@ -33,6 +35,7 @@ const ProcessRefundDialog: React.FC<ProcessRefundDialogProps> = ({
 }) => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { formatCurrency } = useCurrency();
     const [amount, setAmount] = useState<string>(
         (parseFloat(payment.amount) - parseFloat(payment.refund_amount || "0")).toFixed(2)
     );
@@ -97,7 +100,7 @@ const ProcessRefundDialog: React.FC<ProcessRefundDialogProps> = ({
                     </DialogTitle>
                     <DialogDescription>
                         Refund payment for Transaction #{payment.payment_number}.
-                        Max available: ${maxRefund.toFixed(2)}
+                        Max available: {formatCurrency(maxRefund)}
                     </DialogDescription>
                 </DialogHeader>
 

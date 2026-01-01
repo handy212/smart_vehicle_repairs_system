@@ -490,73 +490,64 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
             )
     
     @action(detail=True, methods=['post'])
-    def create_estimate(self, request, pk=None):
-        """Create a draft estimate linked to this diagnosis for the service coordinator to prepare"""
-        from apps.billing.models import Estimate
-        from apps.branches.utils import resolve_branch
-        from datetime import timedelta
-        from django.utils import timezone
+    def request_parts_estimate(self, request, pk=None):
+        """Notify Parts Manager that parts are required for this diagnosis"""
+        from apps.notifications_app.models import Notification
+        from django.contrib.auth import get_user_model
         
+        User = get_user_model()
         diagnosis = self.get_object()
         work_order = diagnosis.work_order
         
-        # Check if estimate already exists for this work order
-        if hasattr(work_order, 'estimate') and work_order.estimate:
-            from apps.billing.serializers import EstimateDetailSerializer
-            serializer = EstimateDetailSerializer(work_order.estimate, context={'request': request})
-            return Response(
-                {
-                    "message": "An estimate already exists for this work order",
-                    "estimate": serializer.data
-                },
-                status=status.HTTP_200_OK
+        # Check if any parts are requested (WorkOrderPart)
+        parts = work_order.parts.all()
+        parts_count = parts.count()
+        if parts_count == 0:
+             return Response(
+                {"error": "No parts requested. Please add parts before requesting an estimate."},
+                status=status.HTTP_400_BAD_REQUEST
             )
+            
+        # Update draft parts to pending
+        updated_count = parts.filter(status='draft').update(status='pending')
+
+        # Find parts managers in the same branch
+        parts_managers = User.objects.filter(
+            branch=work_order.branch, 
+            role='parts_manager', 
+            is_active=True
+        )
         
-        try:
-            # Create empty draft estimate - service coordinator will add line items manually
-            valid_until_days = int(request.data.get('valid_until_days', 30))
-            
-            # Build description from diagnosis findings
-            description_parts = []
-            if diagnosis.root_cause:
-                description_parts.append(f"Root Cause: {diagnosis.root_cause}")
-            if diagnosis.customer_complaint:
-                description_parts.append(f"Customer Complaint: {diagnosis.customer_complaint}")
-            
-            description = request.data.get('description', '\n'.join(description_parts) or "Repair estimate based on diagnosis findings")
-            
-            estimate = Estimate.objects.create(
-                customer=work_order.customer,
-                vehicle=work_order.vehicle,
-                work_order=work_order,
-                branch=resolve_branch(request),
-                status='draft',
-                estimate_date=timezone.now().date(),
-                valid_until=(timezone.now() + timedelta(days=valid_until_days)).date(),
-                title=request.data.get('title', f"Repair Estimate - {work_order.vehicle.year} {work_order.vehicle.make} {work_order.vehicle.model}"),
-                description=description,
-                notes=request.data.get('notes', 'Estimate prepared from diagnosis findings. Add line items for parts and labor based on recommendations.'),
-                customer_notes=request.data.get('customer_notes', ''),
-                created_by=request.user,
+        # Fallback to managers if no parts manager found
+        if not parts_managers.exists():
+             parts_managers = User.objects.filter(
+                managed_branches=work_order.branch, 
+                role='manager', 
+                is_active=True
             )
-            
-            # Serialize and return
-            from apps.billing.serializers import EstimateDetailSerializer
-            serializer = EstimateDetailSerializer(estimate, context={'request': request})
-            
-            return Response({
-                "message": "Draft estimate created successfully. Add line items based on diagnosis findings and recommendations.",
-                "estimate": serializer.data
-            }, status=status.HTTP_201_CREATED)
-                
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error creating estimate from diagnosis: {e}", exc_info=True)
-            return Response(
-                {"error": f"Failed to create estimate: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        notification_count = 0
+        for pm in parts_managers:
+            Notification.objects.create(
+                recipient=pm,
+                notification_type='work_order',
+                channel='in_app',
+                title=f"Parts Estimate Requested: WO #{work_order.work_order_number}",
+                message=f"Technician {request.user.get_full_name()} has requested an estimate for {parts_count} part(s) on Work Order #{work_order.work_order_number}.",
+                priority='high',
+                data={
+                    'work_order_id': work_order.id,
+                    'diagnosis_id': diagnosis.id,
+                    'action': 'estimate_required'
+                }
             )
+            notification_count += 1
+            
+        return Response({
+            "message": f"Parts estimate requested. Notified {notification_count} parts manager(s).",
+            "parts_count": parts_count,
+            "notified_count": notification_count
+        })
     
     @action(detail=True, methods=['get'])
     def generate_report(self, request, pk=None):

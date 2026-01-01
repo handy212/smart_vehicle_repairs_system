@@ -39,7 +39,9 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function DiagnosisListPage() {
+    const { formatCurrency } = useCurrency();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -143,7 +145,7 @@ export default function DiagnosisListPage() {
             </span>
             <div className="flex items-end justify-between">
               <span className="text-xl font-bold text-purple-600 dark:text-purple-400">
-                ${stats.totalFee.toFixed(2)}
+                {formatCurrency(stats.totalFee)}
               </span>
               <DollarSign className="w-5 h-5 text-purple-400 mb-0.5" />
             </div>
@@ -319,7 +321,7 @@ export default function DiagnosisListPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="py-2.5 text-right font-medium text-sm text-gray-900 dark:text-gray-100">
-                        {diagnosis.diagnostic_fee ? `$${Number(diagnosis.diagnostic_fee).toFixed(2)}` : "-"}
+                        {diagnosis.diagnostic_fee ? `${formatCurrency(Number(diagnosis.diagnostic_fee))}` : "-"}
                       </TableCell>
                       <TableCell className="py-2.5 text-right">
                         <DropdownMenu>

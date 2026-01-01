@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Plus, Search, Filter, Trash2, Download, X, Upload, ChevronDown, FileDown, FileUp, MoreVertical, Eye, Edit, Mail, UserCheck, UserX, MessageSquare, Calendar, Wrench, Package } from "lucide-react";
+import { Plus, Search, Filter, Trash2, Download, X, Upload, ChevronDown, FileDown, FileUp, MoreVertical, Eye, Edit, Mail, UserCheck, UserX, MessageSquare, Calendar, Wrench, Package, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -38,8 +38,11 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils/cn";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
+
 export default function CustomersPage() {
   const router = useRouter();
+  const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -53,7 +56,7 @@ export default function CustomersPage() {
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
-    new Set(["checkbox", "name", "email", "type", "status", "actions"])
+    new Set(["checkbox", "name", "email", "type", "balance", "created_at", "status", "actions"])
   );
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -63,6 +66,8 @@ export default function CustomersPage() {
     { key: "name", label: "Name", defaultVisible: true },
     { key: "email", label: "Email", defaultVisible: true },
     { key: "type", label: "Type", defaultVisible: true },
+    { key: "balance", label: "Balance", defaultVisible: true },
+    { key: "created_at", label: "Joined", defaultVisible: true },
     { key: "status", label: "Status", defaultVisible: true },
   ];
 
@@ -144,6 +149,11 @@ export default function CustomersPage() {
     });
     setPage(1);
   };
+
+  const { data: stats } = useQuery({
+    queryKey: ["customer-stats"],
+    queryFn: () => customersApi.dashboardStats(),
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["customers", page, debouncedSearch, advancedFilters, sortConfig],
@@ -303,22 +313,141 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-5">
-      {/* Compact Header */}
-      <div className="flex justify-between items-center">
+      {/* Page Title & Stats */}
+      <div className="space-y-4">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Customers</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">Manage your customer database</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <ColumnVisibility
-            columns={columnConfigs}
-            visibleColumns={visibleColumns}
-            onVisibilityChange={setVisibleColumns}
-            title="Customer Table Columns"
+
+        {/* Stats Grid - Small Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          <Card className="shadow-sm border bg-white dark:bg-gray-800">
+            <CardContent className="p-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{stats?.total_customers || 0}</span>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border bg-white dark:bg-gray-800">
+            <CardContent className="p-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
+              <span className="text-lg font-bold text-green-600 dark:text-green-400">{stats?.active_customers || 0}</span>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border bg-white dark:bg-gray-800">
+            <CardContent className="p-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Inactive</span>
+              <span className="text-lg font-bold text-gray-500 dark:text-gray-400">{stats?.inactive_customers || 0}</span>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border bg-white dark:bg-gray-800">
+            <CardContent className="p-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Contact</span>
+              <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{stats?.active_contacts || 0}</span>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border bg-white dark:bg-gray-800">
+            <CardContent className="p-3 flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Inactive Contact</span>
+              <span className="text-lg font-bold text-gray-500 dark:text-gray-400">{stats?.inactive_contacts || 0}</span>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Unified Toolbar */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-900/50 p-1 rounded-lg">
+        <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
+          {/* Search */}
+          <div className="relative flex-1 md:flex-none md:w-64">
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 h-9 text-sm bg-gray-50 dark:bg-gray-800 border-none focus:ring-1 transition-all"
+            />
+          </div>
+
+          {/* Advanced Filters Button */}
+          <AdvancedFilters
+            filters={filterOptions}
+            quickFilters={quickFilters}
+            activeFilters={advancedFilters}
+            onFiltersChange={(filters) => {
+              setAdvancedFilters(filters);
+              setPage(1);
+            }}
+            onClear={() => {
+              setAdvancedFilters({});
+              setStatusFilter("all");
+              setTypeFilter("all");
+              setStartDate("");
+              setEndDate("");
+            }}
+            title="Filter"
           />
+
+          {/* Clear Filters (Icon only for compactness) */}
+          {(search || Object.keys(advancedFilters).length > 0) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearch("");
+                setAdvancedFilters({});
+                setStatusFilter("all");
+                setTypeFilter("all");
+                setStartDate("");
+                setEndDate("");
+                setPage(1);
+              }}
+              className="h-9 w-9 p-0 text-gray-500 hover:text-red-600"
+              title="Clear all filters"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+
+          {/* Active Filter Badges (Inline if possible, or wrapped) */}
+          <div className="hidden lg:flex flex-wrap items-center gap-1.5 ml-2">
+            {Object.entries(advancedFilters).map(([key, value]) => {
+              if (!value || (typeof value === 'string' && value === '')) return null;
+              const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
+              if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
+              if (key.includes("_to")) return null;
+
+              return (
+                <Badge key={key} variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-normal">
+                  {String(value)}
+                  <X
+                    className="w-3 h-3 cursor-pointer hover:text-red-500"
+                    onClick={() => {
+                      const newFilters = { ...advancedFilters };
+                      if (key.includes("_from")) {
+                        delete newFilters[key];
+                        delete newFilters[key.replace("_from", "_to")];
+                      } else {
+                        delete newFilters[key];
+                      }
+                      setAdvancedFilters(newFilters);
+                      setPage(1);
+                    }}
+                  />
+                </Badge>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
+              <Button variant="outline" size="sm" className="h-9">
                 Actions
                 <ChevronDown className="w-3.5 h-3.5 ml-2" />
               </Button>
@@ -343,125 +472,11 @@ export default function CustomersPage() {
             </DropdownMenuContent>
           </DropdownMenu>
           <Link href="/customers/new">
-            <Button size="sm" className="h-9">
+            <Button size="sm" className="h-9 bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200">
               <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Customer
             </Button>
           </Link>
         </div>
-      </div>
-
-      {/* Compact Filter Bar */}
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              type="text"
-              placeholder="Search customers..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="pl-9 h-9 text-sm bg-white dark:bg-gray-900 w-64 focus:w-80 transition-all duration-300"
-            />
-          </div>
-
-          {/* Advanced Filters Button */}
-          <AdvancedFilters
-            filters={filterOptions}
-            quickFilters={quickFilters}
-            activeFilters={advancedFilters}
-            onFiltersChange={(filters) => {
-              setAdvancedFilters(filters);
-              setPage(1);
-            }}
-            onClear={() => {
-              setAdvancedFilters({});
-              setStatusFilter("all");
-              setTypeFilter("all");
-              setStartDate("");
-              setEndDate("");
-            }}
-            title="Advanced Customer Filters"
-          />
-
-          {/* Clear Filters */}
-          {(search || Object.keys(advancedFilters).length > 0) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSearch("");
-                setAdvancedFilters({});
-                setStatusFilter("all");
-                setTypeFilter("all");
-                setStartDate("");
-                setEndDate("");
-                setPage(1);
-              }}
-              className="h-9"
-            >
-              <X className="w-4 h-4 mr-1" />
-              Clear
-            </Button>
-          )}
-        </div>
-
-        {/* Active Filter Badges */}
-        {(search || Object.keys(advancedFilters).length > 0) && (
-          <div className="flex flex-wrap items-center gap-2">
-            {search && (
-              <Badge variant="secondary" className="flex items-center gap-1.5">
-                <span className="text-xs">Search: {search}</span>
-                <button
-                  onClick={() => {
-                    setSearch("");
-                    setPage(1);
-                  }}
-                  className="hover:text-red-600"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </Badge>
-            )}
-            {Object.entries(advancedFilters).map(([key, value]) => {
-              if (!value || (typeof value === 'string' && value === '')) return null;
-              const filter = filterOptions.find((f) => f.key === key || f.key === key.replace("_from", "").replace("_to", ""));
-              if (!filter && !key.includes("_from") && !key.includes("_to")) return null;
-              if (key.includes("_to")) return null;
-
-              const displayValue = key.includes("_from") && advancedFilters[key.replace("_from", "_to")]
-                ? `${value} - ${advancedFilters[key.replace("_from", "_to")]}`
-                : String(value);
-
-              const displayLabel = filter?.label || key.replace("_from", "").replace(/_/g, " ");
-
-              return (
-                <Badge key={key} variant="secondary" className="flex items-center gap-1.5">
-                  <span className="text-xs">{displayLabel}: {displayValue}</span>
-                  <button
-                    onClick={() => {
-                      const newFilters = { ...advancedFilters };
-                      if (key.includes("_from")) {
-                        delete newFilters[key];
-                        delete newFilters[key.replace("_from", "_to")];
-                      } else {
-                        delete newFilters[key];
-                      }
-                      setAdvancedFilters(newFilters);
-                      setPage(1);
-                    }}
-                    className="hover:text-red-600"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* Bulk Action Toolbar */}
@@ -475,11 +490,6 @@ export default function CustomersPage() {
 
       {/* Customers Table */}
       <Card className="border-t shadow-sm dark:bg-gray-800 dark:border-gray-700">
-        <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
-          <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-            All Customers <span className="text-muted-foreground font-normal ml-1">({data?.count || 0})</span>
-          </CardTitle>
-        </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6">
@@ -531,6 +541,26 @@ export default function CustomersPage() {
                         className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
                       >
                         Type
+                      </SortableHeader>
+                    )}
+                    {visibleColumns.has("balance") && (
+                      <SortableHeader
+                        field="current_balance"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400 text-right"
+                      >
+                        Balance
+                      </SortableHeader>
+                    )}
+                    {visibleColumns.has("created_at") && (
+                      <SortableHeader
+                        field="created_at"
+                        sortConfig={sortConfig}
+                        onSort={handleSort}
+                        className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400"
+                      >
+                        Joined
                       </SortableHeader>
                     )}
                     {visibleColumns.has("status") && (
@@ -589,8 +619,24 @@ export default function CustomersPage() {
                         </TableCell>
                       )}
                       {visibleColumns.has("type") && (
-                        <TableCell className="px-4 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400 capitalize">
-                          {customer.customer_type || "-"}
+                        <TableCell className="px-4 py-2 whitespace-nowrap">
+                          <Badge variant="outline" className="capitalize text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700">
+                            {customer.customer_type || "-"}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {visibleColumns.has("balance") && (
+                        <TableCell className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
+                          <span className={cn(
+                            parseFloat(customer.current_balance || "0") > 0 ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
+                          )}>
+                            {formatCurrency(parseFloat(customer.current_balance || "0"))}
+                          </span>
+                        </TableCell>
+                      )}
+                      {visibleColumns.has("created_at") && (
+                        <TableCell className="px-4 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                          {new Date(customer.created_at).toLocaleDateString()}
                         </TableCell>
                       )}
                       {visibleColumns.has("status") && (

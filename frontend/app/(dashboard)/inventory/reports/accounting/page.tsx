@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,13 +74,7 @@ export default function InventoryAccountingPage() {
         },
     });
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 2,
-        }).format(amount);
-    };
+    const { formatCurrency } = useCurrency();
 
     const formatNumber = (num: number) => {
         return new Intl.NumberFormat('en-US').format(num);
@@ -319,9 +314,9 @@ export default function InventoryAccountingPage() {
                                             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                                 <div
                                                     className={`h-2 rounded-full ${index === 0 ? 'bg-green-500' :
-                                                            index === 1 ? 'bg-yellow-500' :
-                                                                index === 2 ? 'bg-orange-500' :
-                                                                    'bg-red-500'
+                                                        index === 1 ? 'bg-yellow-500' :
+                                                            index === 2 ? 'bg-orange-500' :
+                                                                'bg-red-500'
                                                         }`}
                                                     style={{ width: `${percentage}%` }}
                                                 />

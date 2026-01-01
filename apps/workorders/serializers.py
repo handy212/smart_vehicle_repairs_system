@@ -141,6 +141,7 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkOrder
         fields = [
+            'id', 'work_order_number',
             'appointment', 'customer', 'vehicle',
             'status', 'priority',
             'service_coordinator',
@@ -478,6 +479,57 @@ class WorkOrderPartSerializer(serializers.ModelSerializer):
         model = WorkOrderPart
         fields = '__all__'
     
+    inventory_status = serializers.SerializerMethodField()
+    customer_name = serializers.SerializerMethodField()
+    vehicle_info = serializers.SerializerMethodField()
+    purchase_order_number = serializers.SerializerMethodField()
+    
+    work_order_number = serializers.CharField(source='work_order.work_order_number', read_only=True)
+    customer_name = serializers.SerializerMethodField()
+    vehicle_info = serializers.SerializerMethodField() 
+    
+    def get_customer_name(self, obj):
+        if obj.work_order.customer and obj.work_order.customer.user:
+            return obj.work_order.customer.user.get_full_name()
+        return "Unknown"
+        
+    def get_vehicle_info(self, obj):
+        if obj.work_order.vehicle:
+            return f"{obj.work_order.vehicle.year} {obj.work_order.vehicle.make} {obj.work_order.vehicle.model}"
+        return "Unknown Vehicle"
+    
+    def get_inventory_status(self, obj):
+        from apps.inventory.models import Part
+        if not obj.part_number:
+            return None
+            
+        # Find part by number
+        part = Part.objects.filter(part_number=obj.part_number).first()
+        if not part:
+            return {'available': False, 'quantity': 0, 'part_id': None, 'message': 'Part not found in inventory'}
+            
+        # Optional: Check branch compatibility
+        if part.branch and obj.work_order.branch and part.branch != obj.work_order.branch:
+             return {
+                 'available': False, 
+                 'quantity': 0, 
+                 'part_id': part.id, 
+                 'message': f'Part at {part.branch.name}'
+             }
+             
+        is_available = part.quantity_in_stock >= obj.quantity
+        return {
+            'available': is_available,
+            'quantity': part.quantity_in_stock,
+            'part_id': part.id,
+            'message': 'In Stock' if is_available else 'Insufficient Stock'
+        }
+
+    def get_purchase_order_number(self, obj):
+        if obj.purchase_order_item and obj.purchase_order_item.purchase_order:
+            return obj.purchase_order_item.purchase_order.po_number
+        return None
+
     def get_installed_by_name(self, obj):
         if obj.installed_by:
             return f"{obj.installed_by.first_name} {obj.installed_by.last_name}"
@@ -635,3 +687,87 @@ class WorkOrderStatusSummarySerializer(serializers.Serializer):
     count = serializers.IntegerField()
     total_estimated = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_actual = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
+# ============= Public Portal Serializers =============
+
+class PublicWorkOrderSerializer(serializers.ModelSerializer):
+    """Restricted serializer for public customer portal"""
+    customer_name = serializers.SerializerMethodField()
+    vehicle_info = serializers.SerializerMethodField()
+    vehicle_details = serializers.SerializerMethodField()
+    recommendations = serializers.SerializerMethodField()
+    approved_jobs = serializers.SerializerMethodField()
+    timeline_status = serializers.SerializerMethodField()
+    total_cost = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = WorkOrder
+
+        fields = [
+            'id', 'work_order_number', 'status', 'created_at',
+            'customer_name', 'vehicle_info', 'vehicle_details',
+            'estimated_total', 'total_cost',
+            'customer_concerns',
+            'recommendations', 'approved_jobs', 'timeline_status'
+        ]
+        read_only_fields = fields
+
+    def get_customer_name(self, obj):
+        if obj.customer and obj.customer.user:
+            return obj.customer.user.get_full_name() or obj.customer.user.username
+        return "Valued Customer"
+
+    def get_vehicle_info(self, obj):
+        if obj.vehicle:
+            return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
+        return "Unknown Vehicle"
+        
+    def get_vehicle_details(self, obj):
+        if obj.vehicle:
+            return {
+                'vin': obj.vehicle.vin,
+                'license_plate': obj.vehicle.license_plate,
+                'color': obj.vehicle.exterior_color
+            }
+        return {}
+    
+    def get_total_cost(self, obj):
+        """Get total cost (use actual_total if available, otherwise estimated_total)"""
+        return obj.actual_total if obj.actual_total else obj.estimated_total
+
+    def get_recommendations(self, obj):
+
+        """Get pending recommendations"""
+        # Return simplified list of ServiceTasks that are not completed
+        # This is a simplification for now
+        tasks = obj.tasks.exclude(status='completed')
+        return [
+            {
+                'id': t.id,
+                'name': t.description,
+                'status': t.status,
+                'estimated_cost': t.estimated_hours * t.labor_rate
+            }
+            for t in tasks
+        ]
+
+    def get_approved_jobs(self, obj):
+        """Get list of completed tasks"""
+        tasks = obj.tasks.filter(status='completed')
+        return [
+            {
+                'id': t.id,
+                'name': t.description,
+                'status': t.status,
+                # 'total': t.total_cost # removed as field might not exist on simple task model verify later
+            }
+            for t in tasks
+        ]
+
+    def get_timeline_status(self, obj):
+        return {
+            'current_status': obj.status,
+            'last_updated': obj.created_at.isoformat(), # simplistic fallback
+            'estimated_completion': obj.estimated_completion
+        }

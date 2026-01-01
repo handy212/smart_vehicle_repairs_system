@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Sum, Count, Q, Avg
+from django.db.models import Sum, Count, Q, Avg, F
 from django.utils import timezone
 from decimal import Decimal
 import logging
@@ -91,6 +91,44 @@ class FixedAssetViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
         serializer = FixedAssetListSerializer(assets, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """Get dashboard statistics for fixed assets"""
+        assets = self.get_queryset()
+        
+        # Total counts
+        total_count = assets.count()
+        active_count = assets.filter(status='active').count()
+        inactive_count = assets.filter(status='inactive').count()
+        disposed_count = assets.filter(status='disposed').count()
+        
+        # Financial aggregates
+        aggregates = assets.aggregate(
+            total_acquisition_cost=Sum('acquisition_cost'),
+            total_net_book_value=Sum('net_book_value'),
+            total_accumulated_depreciation=Sum('accumulated_depreciation'),
+            avg_depreciation_percent=Avg(
+                (F('accumulated_depreciation') / F('acquisition_cost')) * 100
+            )
+        )
+        
+        # Calculate fully depreciated count
+        fully_depreciated = assets.filter(
+            accumulated_depreciation__gte=F('acquisition_cost') - F('salvage_value')
+        ).count()
+        
+        return Response({
+            'total_assets': total_count,
+            'active_assets': active_count,
+            'inactive_assets': inactive_count,
+            'disposed_assets': disposed_count,
+            'fully_depreciated': fully_depreciated,
+            'total_acquisition_cost': float(aggregates['total_acquisition_cost'] or 0),
+            'total_net_book_value': float(aggregates['total_net_book_value'] or 0),
+            'total_accumulated_depreciation': float(aggregates['total_accumulated_depreciation'] or 0),
+            'avg_depreciation_percent': float(aggregates['avg_depreciation_percent'] or 0),
+        })
     
     @action(detail=False, methods=['get'])
     def fully_depreciated(self, request):

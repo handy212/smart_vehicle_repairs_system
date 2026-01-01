@@ -12,12 +12,15 @@ import { workordersApi } from "@/lib/api/workorders";
 import { adminApi } from "@/lib/api/admin";
 import { useToast } from "@/lib/hooks/useToast";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 interface OverviewTabProps {
   workOrder: any;
   onStatusChange?: () => void;
 }
 
-export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: OverviewTabProps) {
+export default function WorkOrderOverviewTab({
+    workOrder, onStatusChange }: OverviewTabProps) {
+    const { formatCurrency } = useCurrency();
   const [isEditingServiceCoordinator, setIsEditingServiceCoordinator] = useState(false);
   const [selectedServiceCoordinator, setSelectedServiceCoordinator] = useState<string>(() => {
     const sc = workOrder?.service_coordinator;
@@ -399,13 +402,13 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-500">Estimated Labor</span>
               <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                ${parseFloat((workOrder as any).estimated_labor_cost || "0").toFixed(2)}
+                {formatCurrency(parseFloat((workOrder as any).estimated_labor_cost || "0"))}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-500">Estimated Parts</span>
               <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                ${parseFloat((workOrder as any).estimated_parts_cost || "0").toFixed(2)}
+                {formatCurrency(parseFloat((workOrder as any).estimated_parts_cost || "0"))}
               </span>
             </div>
             <div className="border-t dark:border-gray-700 pt-3">
@@ -416,7 +419,7 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
                     ? "text-gray-900 dark:text-gray-100" 
                     : "text-gray-400"
                 }`}>
-                  ${parseFloat((workOrder as any).estimated_total || workOrder.total_cost || "0").toFixed(2)}
+                  {formatCurrency(parseFloat((workOrder as any).estimated_total || workOrder.total_cost || "0"))}
                 </span>
               </div>
             </div>
@@ -426,19 +429,19 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Actual Labor</span>
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      ${parseFloat((workOrder as any).actual_labor_cost || "0").toFixed(2)}
+                      {formatCurrency(parseFloat((workOrder as any).actual_labor_cost || "0"))}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Actual Parts</span>
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      ${parseFloat((workOrder as any).actual_parts_cost || "0").toFixed(2)}
+                      {formatCurrency(parseFloat((workOrder as any).actual_parts_cost || "0"))}
                     </span>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t dark:border-gray-700">
                     <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">Actual Total</span>
                     <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                      ${parseFloat((workOrder as any).actual_total).toFixed(2)}
+                      {formatCurrency(parseFloat((workOrder as any).actual_total))}
                     </span>
                   </div>
                 </div>
@@ -452,7 +455,7 @@ export default function WorkOrderOverviewTab({ workOrder, onStatusChange }: Over
                           : "text-green-600 dark:text-green-400"
                       }`}>
                         {parseFloat((workOrder as any).actual_total) > parseFloat((workOrder as any).estimated_total || "0") ? "+" : ""}
-                        ${(parseFloat((workOrder as any).actual_total) - parseFloat((workOrder as any).estimated_total || "0")).toFixed(2)}
+                        {formatCurrency((parseFloat((workOrder as any).actual_total) - parseFloat((workOrder as any).estimated_total || "0")))}
                       </span>
                     </div>
                   </div>

@@ -730,7 +730,26 @@ export default function SystemSettingsPage() {
                                                 setting.key === 'currency' ? (
                                                   <Select
                                                     value={getRowValue(setting) || 'USD'}
-                                                    onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                    onChange={(e) => {
+                                                      handleRowChange(setting, { value: e.target.value });
+                                                      // Auto-update currency_symbol when currency changes
+                                                      const currencyToSymbol: Record<string, string> = {
+                                                        'USD': '$',
+                                                        'EUR': '€',
+                                                        'GBP': '£',
+                                                        'GHS': '₵',
+                                                        'NGN': '₦',
+                                                        'KES': 'KSh',
+                                                        'ZAR': 'R',
+                                                        'CAD': 'CA$',
+                                                        'AUD': 'A$',
+                                                        'JPY': '¥',
+                                                      };
+                                                      const symbolSetting = settings.find(s => s.key === 'currency_symbol');
+                                                      if (symbolSetting) {
+                                                        handleRowChange(symbolSetting, { value: currencyToSymbol[e.target.value] || '$' });
+                                                      }
+                                                    }}
                                                     className="w-full h-8 text-xs bg-white"
                                                   >
                                                     <option value="USD">USD - US Dollar</option>
@@ -744,201 +763,219 @@ export default function SystemSettingsPage() {
                                                     <option value="AUD">AUD - Australian Dollar</option>
                                                     <option value="JPY">JPY - Japanese Yen</option>
                                                   </Select>
-                                                ) : /* Log Level - Dropdown */
-                                                  setting.key === 'log_level' ? (
+                                                ) : /* Currency Symbol - Dropdown */
+                                                  setting.key === 'currency_symbol' ? (
                                                     <Select
-                                                      value={getRowValue(setting) || 'INFO'}
+                                                      value={getRowValue(setting) || '$'}
                                                       onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                       className="w-full h-8 text-xs bg-white"
                                                     >
-                                                      <option value="DEBUG">DEBUG</option>
-                                                      <option value="INFO">INFO</option>
-                                                      <option value="WARNING">WARNING</option>
-                                                      <option value="ERROR">ERROR</option>
-                                                      <option value="CRITICAL">CRITICAL</option>
+                                                      <option value="$">$ - Dollar</option>
+                                                      <option value="€">€ - Euro</option>
+                                                      <option value="£">£ - Pound</option>
+                                                      <option value="₵">₵ - Cedi</option>
+                                                      <option value="₦">₦ - Naira</option>
+                                                      <option value="KSh">KSh - Shilling</option>
+                                                      <option value="R">R - Rand</option>
+                                                      <option value="CA$">CA$ - Canadian Dollar</option>
+                                                      <option value="A$">A$ - Australian Dollar</option>
+                                                      <option value="¥">¥ - Yen/Yuan</option>
                                                     </Select>
-                                                  ) : /* Backup Frequency - Dropdown */
-                                                    setting.key === 'backup_frequency' ? (
+                                                  ) : /* Log Level - Dropdown */
+                                                    setting.key === 'log_level' ? (
                                                       <Select
-                                                        value={getRowValue(setting) || 'daily'}
+                                                        value={getRowValue(setting) || 'INFO'}
                                                         onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                         className="w-full h-8 text-xs bg-white"
                                                       >
-                                                        <option value="daily">Daily</option>
-                                                        <option value="weekly">Weekly</option>
-                                                        <option value="monthly">Monthly</option>
+                                                        <option value="DEBUG">DEBUG</option>
+                                                        <option value="INFO">INFO</option>
+                                                        <option value="WARNING">WARNING</option>
+                                                        <option value="ERROR">ERROR</option>
+                                                        <option value="CRITICAL">CRITICAL</option>
                                                       </Select>
-                                                    ) : /* Color inputs */
-                                                      setting.key.match(/(primary_color|secondary_color|success_color|danger_color|warning_color|info_color)/i) ? (
-                                                        <div className="flex items-center gap-2">
-                                                          <Input
-                                                            type="color"
-                                                            value={getRowValue(setting) || '#000000'}
-                                                            onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                                            className="h-8 w-12 p-0.5 cursor-pointer"
-                                                          />
-                                                          <Input
-                                                            type="text"
-                                                            value={getRowValue(setting) || ''}
-                                                            onChange={(e) => handleRowChange(setting, { value: e.target.value.toUpperCase() })}
-                                                            placeholder="#000000"
-                                                            className="flex-1 font-mono h-8 text-xs"
-                                                            pattern="^#[0-9A-Fa-f]{6}$"
-                                                            maxLength={7}
-                                                          />
-                                                        </div>
-                                                      ) : /* Image path inputs */
-                                                        setting.key.match(/(logo_path|logo_dark_path|favicon_path|.*_background)/i) ? (
-                                                          <div className="space-y-2">
-                                                            <div className="flex items-center gap-2">
-                                                              <Input
-                                                                data-setting-id={setting.id}
-                                                                type="text"
-                                                                value={getRowValue(setting)}
-                                                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                                                placeholder="Path to image file"
-                                                                className="flex-1 h-8 text-xs bg-gray-50/50"
-                                                              />
-                                                              <Button
-                                                                type="button"
-                                                                variant="secondary"
-                                                                size="sm"
-                                                                onClick={() => {
-                                                                  const input = document.createElement('input');
-                                                                  input.type = 'file';
-                                                                  input.accept = setting.key.includes('favicon') ? '.ico,.png,.svg' : 'image/*';
-                                                                  input.onchange = (e) => {
-                                                                    const file = (e.target as HTMLInputElement).files?.[0];
-                                                                    if (file) {
-                                                                      uploadFileMutation.mutate({ settingId: setting.id, file });
-                                                                    }
-                                                                  };
-                                                                  input.click();
-                                                                }}
-                                                                disabled={uploadFileMutation.isPending}
-                                                                className="flex-shrink-0 h-8 px-2"
-                                                              >
-                                                                <Upload className="w-3.5 h-3.5 mr-1" />
-                                                                {uploadFileMutation.isPending ? "..." : "Upload"}
-                                                              </Button>
-                                                            </div>
-                                                            {getRowValue(setting) && (
-                                                              <div className="space-y-1">
-                                                                <div className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                                                  <ImageIcon className="w-3 h-3" />
-                                                                  Current: {getRowValue(setting)}
-                                                                </div>
-                                                                {getRowValue(setting).startsWith('branding/') && (
-                                                                  <img
-                                                                    src={`/media/${getRowValue(setting)}?t=${Date.now()}`}
-                                                                    alt={setting.key}
-                                                                    key={getRowValue(setting)}
-                                                                    className="h-10 w-auto object-contain border rounded p-1"
-                                                                    onError={(e) => {
-                                                                      (e.target as HTMLImageElement).style.display = 'none';
-                                                                    }}
-                                                                  />
-                                                                )}
-                                                              </div>
-                                                            )}
+                                                    ) : /* Backup Frequency - Dropdown */
+                                                      setting.key === 'backup_frequency' ? (
+                                                        <Select
+                                                          value={getRowValue(setting) || 'daily'}
+                                                          onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                          className="w-full h-8 text-xs bg-white"
+                                                        >
+                                                          <option value="daily">Daily</option>
+                                                          <option value="weekly">Weekly</option>
+                                                          <option value="monthly">Monthly</option>
+                                                        </Select>
+                                                      ) : /* Color inputs */
+                                                        setting.key.match(/(primary_color|secondary_color|success_color|danger_color|warning_color|info_color)/i) ? (
+                                                          <div className="flex items-center gap-2">
+                                                            <Input
+                                                              type="color"
+                                                              value={getRowValue(setting) || '#000000'}
+                                                              onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                              className="h-8 w-12 p-0.5 cursor-pointer"
+                                                            />
+                                                            <Input
+                                                              type="text"
+                                                              value={getRowValue(setting) || ''}
+                                                              onChange={(e) => handleRowChange(setting, { value: e.target.value.toUpperCase() })}
+                                                              placeholder="#000000"
+                                                              className="flex-1 font-mono h-8 text-xs"
+                                                              pattern="^#[0-9A-Fa-f]{6}$"
+                                                              maxLength={7}
+                                                            />
                                                           </div>
-                                                        ) : /* Overlay opacity - Range slider */
-                                                          setting.key === 'login_background_overlay' ? (
-                                                            <div className="space-y-1">
-                                                              <Input
-                                                                type="range"
-                                                                min="0"
-                                                                max="1"
-                                                                step="0.05"
-                                                                value={getRowValue(setting) || '0.85'}
-                                                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                                                className="w-full h-6"
-                                                              />
-                                                              <div className="flex items-center justify-between text-[10px] text-gray-400">
-                                                                <span>0</span>
-                                                                <span className="font-medium text-gray-600">{getRowValue(setting) || '0.85'}</span>
-                                                                <span>1</span>
-                                                              </div>
-                                                            </div>
-                                                          ) : /* Time inputs */
-                                                            setting.key.match(/(quiet_hours|business_hours)/i) ? (
-                                                              <Input
-                                                                data-setting-id={setting.id}
-                                                                type="text"
-                                                                value={getRowValue(setting)}
-                                                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                                                placeholder={setting.key.includes('hours') ? "HH:MM-HH:MM or 'Closed'" : "HH:MM"}
-                                                                className="font-mono h-8 text-xs"
-                                                                pattern={setting.key.includes('hours') ? "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^Closed$" : "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"}
-                                                              />
-                                                            ) : /* Phone number */
-                                                              setting.key.match(/(phone|sms_test_number|whatsapp)/i) ? (
+                                                        ) : /* Image path inputs */
+                                                          setting.key.match(/(logo_path|logo_dark_path|favicon_path|.*_background)/i) ? (
+                                                            <div className="space-y-2">
+                                                              <div className="flex items-center gap-2">
                                                                 <Input
                                                                   data-setting-id={setting.id}
-                                                                  type="tel"
+                                                                  type="text"
                                                                   value={getRowValue(setting)}
                                                                   onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                                                  placeholder="+1234567890"
-                                                                  className="h-8 text-xs"
+                                                                  placeholder="Path to image file"
+                                                                  className="flex-1 h-8 text-xs bg-gray-50/50"
                                                                 />
-                                                              ) : /* Percentage fields */
-                                                                setting.key.match(/(rate|percentage|deposit_percentage|late_fee_percentage|tax_.*_rate)/i) ? (
-                                                                  <div className="relative">
-                                                                    <Input
-                                                                      data-setting-id={setting.id}
-                                                                      type="number"
-                                                                      step="0.01"
-                                                                      min="0"
-                                                                      max={setting.key.match(/(deposit_percentage|percentage)/i) ? "100" : undefined}
-                                                                      value={getRowValue(setting)}
-                                                                      onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                                                      className="pr-6 h-8 text-xs"
-                                                                    />
-                                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
+                                                                <Button
+                                                                  type="button"
+                                                                  variant="secondary"
+                                                                  size="sm"
+                                                                  onClick={() => {
+                                                                    const input = document.createElement('input');
+                                                                    input.type = 'file';
+                                                                    input.accept = setting.key.includes('favicon') ? '.ico,.png,.svg' : 'image/*';
+                                                                    input.onchange = (e) => {
+                                                                      const file = (e.target as HTMLInputElement).files?.[0];
+                                                                      if (file) {
+                                                                        uploadFileMutation.mutate({ settingId: setting.id, file });
+                                                                      }
+                                                                    };
+                                                                    input.click();
+                                                                  }}
+                                                                  disabled={uploadFileMutation.isPending}
+                                                                  className="flex-shrink-0 h-8 px-2"
+                                                                >
+                                                                  <Upload className="w-3.5 h-3.5 mr-1" />
+                                                                  {uploadFileMutation.isPending ? "..." : "Upload"}
+                                                                </Button>
+                                                              </div>
+                                                              {getRowValue(setting) && (
+                                                                <div className="space-y-1">
+                                                                  <div className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                                    <ImageIcon className="w-3 h-3" />
+                                                                    Current: {getRowValue(setting)}
                                                                   </div>
-                                                                ) : /* Default input */
-                                                                  (
+                                                                  {getRowValue(setting).startsWith('branding/') && (
+                                                                    <img
+                                                                      src={`/media/${getRowValue(setting)}?t=${Date.now()}`}
+                                                                      alt={setting.key}
+                                                                      key={getRowValue(setting)}
+                                                                      className="h-10 w-auto object-contain border rounded p-1"
+                                                                      onError={(e) => {
+                                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                                      }}
+                                                                    />
+                                                                  )}
+                                                                </div>
+                                                              )}
+                                                            </div>
+                                                          ) : /* Overlay opacity - Range slider */
+                                                            setting.key === 'login_background_overlay' ? (
+                                                              <div className="space-y-1">
+                                                                <Input
+                                                                  type="range"
+                                                                  min="0"
+                                                                  max="1"
+                                                                  step="0.05"
+                                                                  value={getRowValue(setting) || '0.85'}
+                                                                  onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                                  className="w-full h-6"
+                                                                />
+                                                                <div className="flex items-center justify-between text-[10px] text-gray-400">
+                                                                  <span>0</span>
+                                                                  <span className="font-medium text-gray-600">{getRowValue(setting) || '0.85'}</span>
+                                                                  <span>1</span>
+                                                                </div>
+                                                              </div>
+                                                            ) : /* Time inputs */
+                                                              setting.key.match(/(quiet_hours|business_hours)/i) ? (
+                                                                <Input
+                                                                  data-setting-id={setting.id}
+                                                                  type="text"
+                                                                  value={getRowValue(setting)}
+                                                                  onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                                  placeholder={setting.key.includes('hours') ? "HH:MM-HH:MM or 'Closed'" : "HH:MM"}
+                                                                  className="font-mono h-8 text-xs"
+                                                                  pattern={setting.key.includes('hours') ? "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^Closed$" : "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"}
+                                                                />
+                                                              ) : /* Phone number */
+                                                                setting.key.match(/(phone|sms_test_number|whatsapp)/i) ? (
+                                                                  <Input
+                                                                    data-setting-id={setting.id}
+                                                                    type="tel"
+                                                                    value={getRowValue(setting)}
+                                                                    onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                                    placeholder="+1234567890"
+                                                                    className="h-8 text-xs"
+                                                                  />
+                                                                ) : /* Percentage fields */
+                                                                  setting.key.match(/(rate|percentage|deposit_percentage|late_fee_percentage|tax_.*_rate)/i) ? (
                                                                     <div className="relative">
                                                                       <Input
                                                                         data-setting-id={setting.id}
-                                                                        type={
-                                                                          setting.is_secret && !showSecret[setting.id]
-                                                                            ? "password"
-                                                                            : setting.key.includes("email")
-                                                                              ? "email"
-                                                                              : setting.key.includes("url") || setting.key.includes("website")
-                                                                                ? "url"
-                                                                                : setting.key.match(/(rate|amount|price|port|timeout|duration|max_|min_|length|attempts|days|hours|minutes|mb|size|retention|buffer|count)/i)
-                                                                                  ? "number"
-                                                                                  : "text"
-                                                                        }
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        min="0"
+                                                                        max={setting.key.match(/(deposit_percentage|percentage)/i) ? "100" : undefined}
                                                                         value={getRowValue(setting)}
                                                                         onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                                                        min={setting.key.match(/(length|attempts|timeout|retention|buffer|count)/i) ? "0" : undefined}
-                                                                        step={setting.key.match(/(rate|percentage|amount|price)/i) ? "0.01" : setting.key.match(/(duration|buffer|timeout)/i) ? "1" : undefined}
-                                                                        className={`h-8 text-xs bg-white ${setting.is_secret ? "pr-8" : ""} ${rowEdits[setting.id]?.value !== undefined &&
-                                                                          validateSetting(setting, rowEdits[setting.id]!.value || "")
-                                                                          ? "border-red-500 focus-visible:ring-red-500"
-                                                                          : ""
-                                                                          }`}
-                                                                        placeholder={setting.is_secret ? "Enter secret" : "Value"}
+                                                                        className="pr-6 h-8 text-xs"
                                                                       />
-                                                                      {setting.is_secret && (
-                                                                        <Button
-                                                                          variant="ghost"
-                                                                          size="icon"
-                                                                          className="absolute top-1/2 right-0.5 -translate-y-1/2 h-7 w-7"
-                                                                          onClick={() => toggleSecretVisibility(setting.id)}
-                                                                        >
-                                                                          {showSecret[setting.id] ? (
-                                                                            <EyeOff className="w-3.5 h-3.5 text-gray-400" />
-                                                                          ) : (
-                                                                            <Eye className="w-3.5 h-3.5 text-gray-400" />
-                                                                          )}
-                                                                        </Button>
-                                                                      )}
+                                                                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
                                                                     </div>
-                                                                  )}
+                                                                  ) : /* Default input */
+                                                                    (
+                                                                      <div className="relative">
+                                                                        <Input
+                                                                          data-setting-id={setting.id}
+                                                                          type={
+                                                                            setting.is_secret && !showSecret[setting.id]
+                                                                              ? "password"
+                                                                              : setting.key.includes("email")
+                                                                                ? "email"
+                                                                                : setting.key.includes("url") || setting.key.includes("website")
+                                                                                  ? "url"
+                                                                                  : setting.key.match(/(rate|amount|price|port|timeout|duration|max_|min_|length|attempts|days|hours|minutes|mb|size|retention|buffer|count)/i)
+                                                                                    ? "number"
+                                                                                    : "text"
+                                                                          }
+                                                                          value={getRowValue(setting)}
+                                                                          onChange={(e) => handleRowChange(setting, { value: e.target.value })}
+                                                                          min={setting.key.match(/(length|attempts|timeout|retention|buffer|count)/i) ? "0" : undefined}
+                                                                          step={setting.key.match(/(rate|percentage|amount|price)/i) ? "0.01" : setting.key.match(/(duration|buffer|timeout)/i) ? "1" : undefined}
+                                                                          className={`h-8 text-xs bg-white ${setting.is_secret ? "pr-8" : ""} ${rowEdits[setting.id]?.value !== undefined &&
+                                                                            validateSetting(setting, rowEdits[setting.id]!.value || "")
+                                                                            ? "border-red-500 focus-visible:ring-red-500"
+                                                                            : ""
+                                                                            }`}
+                                                                          placeholder={setting.is_secret ? "Enter secret" : "Value"}
+                                                                        />
+                                                                        {setting.is_secret && (
+                                                                          <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="absolute top-1/2 right-0.5 -translate-y-1/2 h-7 w-7"
+                                                                            onClick={() => toggleSecretVisibility(setting.id)}
+                                                                          >
+                                                                            {showSecret[setting.id] ? (
+                                                                              <EyeOff className="w-3.5 h-3.5 text-gray-400" />
+                                                                            ) : (
+                                                                              <Eye className="w-3.5 h-3.5 text-gray-400" />
+                                                                            )}
+                                                                          </Button>
+                                                                        )}
+                                                                      </div>
+                                                                    )}
                                     {rowEdits[setting.id]?.value !== undefined &&
                                       (() => {
                                         const error = validateSetting(setting, rowEdits[setting.id]!.value || "");

@@ -1141,6 +1141,134 @@ class AccountingService:
             return None
     
     @classmethod
+    def create_dl_bill_from_bill(cls, bill):
+        """
+        Create Django Ledger BillModel from our Bill model
+        
+        This provides automatic AP posting and expense tracking for non-inventory bills.
+        """
+        if not bill.branch:
+            return None
+        
+        # Check if already created
+        if getattr(bill, 'ledger_bill', None):
+            return bill.ledger_bill
+        
+        entity = cls.get_entity(bill.branch)
+        if not entity:
+            return None
+        
+        try:
+            from django_ledger.models import BillModel, LedgerModel
+            
+            # Get or create ledger for entity - one ledger per bill
+            ledger_name = f'{entity.name} - Bill {bill.bill_number}'
+            ledger, _ = LedgerModel.objects.get_or_create(
+                entity=entity,
+                name=ledger_name,
+                defaults={'name': ledger_name}
+            )
+            
+            # Get or create vendor
+            dl_vendor = cls.get_or_create_vendor(bill.vendor, entity)
+            if not dl_vendor:
+                return None
+            
+            # Get accounts for bill (required by Django Ledger)
+            from django_ledger.models import ChartOfAccountModel, AccountModel
+            coa = ChartOfAccountModel.objects.filter(entity=entity).first()
+            cash_account = None
+            prepaid_account = None
+            unearned_account = None
+            
+            if coa:
+                cash_account = AccountModel.objects.filter(coa_model=coa, code='1110').first()
+                prepaid_account = AccountModel.objects.filter(coa_model=coa, code='1130').first()
+                unearned_account = AccountModel.objects.filter(coa_model=coa, code='2110').first()
+            
+            # Create Django Ledger bill
+            # Use bill.due_date directly
+            dl_bill = BillModel.objects.create(
+                entity_model=entity,
+                vendor=dl_vendor,
+                ledger=ledger,
+                terms=bill.terms or 'Net 30',
+                date_due=bill.due_date,
+                markdown_notes=bill.notes or '',
+                cash_account=cash_account,
+                prepaid_account=prepaid_account,
+                unearned_account=unearned_account,
+            )
+            
+            # Add line items using ItemTransactionModel
+            # For BillLineItems, we might not have a linked ItemModel (expense items),
+            # but Django Ledger BillModel expects ItemTransactionModel which links to ItemModel.
+            # We may need to use a generic "Expense" item or create Service items.
+            # For now, let's try to map to an expense account via a Service Item if possible,
+            # or creates items on the fly.
+            
+            from django_ledger.models import ItemTransactionModel, ItemModel, UnitOfMeasureModel
+            
+            # Ensure a generic service/expense item exists or specific items
+            # If line item has expense category, maybe map to that.
+            
+            for line in bill.line_items.all():
+                # For non-inventory bills, we treat items as Services or Non-Inventory Parts
+                # We'll create a simple item for the description if it doesn't exist,
+                # or use a generic one.
+                # Construct a code based on description
+                import slugify
+                item_code = line.description[:20].upper().replace(' ', '-')
+                
+                # Try to find item
+                dl_item = ItemModel.objects.filter(
+                    entity=entity,
+                    item_number=item_code
+                ).first()
+                
+                if not dl_item:
+                    # Create generic item for this line
+                    # Get UOM
+                    uom, _ = UnitOfMeasureModel.objects.get_or_create(
+                        entity=entity,
+                        unit_abbr='U',
+                        defaults={'name': 'Unit', 'is_active': True}
+                    )
+                    
+                    dl_item = ItemModel.objects.create(
+                        entity=entity,
+                        item_number=item_code,
+                        name=line.description[:100],
+                        uom=uom,
+                        item_role=ItemModel.ITEM_ROLE_EXPENSE, # Expense item
+                        item_type=ItemModel.ITEM_TYPE_SERVICE, # Service type (no inventory tracking)
+                        is_product_or_service=False,
+                        for_inventory=False, 
+                    )
+                
+                # Add transaction
+                ItemTransactionModel.objects.create(
+                    bill_model=dl_bill,
+                    item_model=dl_item,
+                    quantity=line.quantity,
+                    unit_cost=line.unit_price,
+                    total_amount=line.total,
+                )
+            
+            # Link back to bill
+            bill.ledger_bill = dl_bill
+            bill.save(update_fields=['ledger_bill'])
+            
+            return dl_bill
+        except ImportError:
+            return None
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to create DL Bill from Bill {bill.bill_number}: {e}")
+            return None
+
+    @classmethod
     def create_dl_bill(cls, purchase_order):
         """
         Create Django Ledger BillModel from PurchaseOrder when PO is received

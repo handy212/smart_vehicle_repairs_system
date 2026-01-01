@@ -2,7 +2,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     WorkOrderViewSet, ServiceTaskViewSet, WorkOrderPartViewSet,
-    TechnicianTimeLogViewSet, WorkOrderNoteViewSet, WorkOrderPhotoViewSet
+    TechnicianTimeLogViewSet, WorkOrderNoteViewSet, WorkOrderPhotoViewSet,
+    PublicWorkOrderViewSet
 )
 
 router = DefaultRouter()
@@ -12,6 +13,7 @@ router.register(r'parts', WorkOrderPartViewSet, basename='workorderpart')
 router.register(r'time-logs', TechnicianTimeLogViewSet, basename='techniciantimelog')
 router.register(r'notes', WorkOrderNoteViewSet, basename='workordernote')
 router.register(r'photos', WorkOrderPhotoViewSet, basename='workorderphoto')
+router.register(r'public', PublicWorkOrderViewSet, basename='public-workorder')
 
 urlpatterns = [
     path('', include(router.urls)),

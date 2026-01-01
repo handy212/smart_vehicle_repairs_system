@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { techniciansApi, Technician } from "@/lib/api/technicians";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, MapPin, Grid, List as ListIcon } from "lucide-react";
+import { Plus, Search, Filter, Grid, List as ListIcon, Users, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { StaffStatsGrid } from "@/components/shared/StaffStatsGrid";
+import { StaffPageHeader } from "@/components/shared/StaffPageHeader";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -13,8 +15,6 @@ import { cn } from "@/lib/utils/cn";
 import {
     Card,
     CardContent,
-    CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
@@ -58,24 +58,53 @@ export default function TechniciansPage() {
     };
 
     return (
-        <div className="space-y-4">
-            {/* Breadcrumbs */}
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-                <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
-                <span>/</span>
-                <span className="text-gray-900 dark:text-gray-100 font-medium">Technicians</span>
-            </div>
+        <div className="space-y-6">
+            <StaffPageHeader
+                title="Technicians"
+                description="Manage field service technicians and their schedules."
+                breadcrumbs={[
+                    { label: "Dashboard", href: "/dashboard" },
+                    { label: "Technicians" }
+                ]}
+                actions={
+                    <Button size="sm" asChild>
+                        <Link href="/technicians/new">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Technician
+                        </Link>
+                    </Button>
+                }
+            />
 
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Technicians</h1>
-                <Button size="sm" asChild>
-                    <Link href="/technicians/new">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Technician
-                    </Link>
-                </Button>
-            </div>
+            {/* Stats Overview */}
+            {!isLoading && data?.results && (
+                <StaffStatsGrid
+                    stats={[
+                        {
+                            title: "Total Technicians",
+                            value: data.results.length,
+                            icon: Users,
+                        },
+                        {
+                            title: "Available",
+                            value: data.results.filter(t => t.current_status === 'available').length,
+                            icon: CheckCircle2,
+                            trend: { value: "Ready", label: "for assignment", positive: true }
+                        },
+                        {
+                            title: "Busy / On Job",
+                            value: data.results.filter(t => ['busy', 'break'].includes(t.current_status)).length,
+                            icon: Clock,
+                            trend: { value: "Active", label: "working", positive: undefined }
+                        },
+                        {
+                            title: "Offline",
+                            value: data.results.filter(t => t.current_status === 'offline').length,
+                            icon: AlertCircle,
+                        }
+                    ]}
+                />
+            )}
 
             {/* Filter Bar - Lightweight */}
             <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">

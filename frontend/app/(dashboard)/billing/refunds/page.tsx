@@ -23,8 +23,11 @@ export default function RefundsPage() {
     const { toast } = useToast();
 
     const { data, isLoading } = useQuery({
-        queryKey: ['refunds', statusFilter],
-        queryFn: () => refundApi.list({ status: statusFilter || undefined }),
+        queryKey: ['refunds', statusFilter, search],
+        queryFn: () => refundApi.list({
+            status: statusFilter || undefined,
+            search: search || undefined
+        }),
     });
 
     const approveMutation = useMutation({
@@ -43,11 +46,8 @@ export default function RefundsPage() {
         },
     });
 
-    const filteredRefunds = data?.results?.filter((refund: Refund) => {
-        if (search === "") return true;
-        return refund.refund_number.toLowerCase().includes(search.toLowerCase()) ||
-            refund.customer_name.toLowerCase().includes(search.toLowerCase());
-    }) || [];
+    // Client-side filtering removed since API now handles search
+    const filteredRefunds = data?.results || [];
 
     const getStatusBadge = (status: string) => {
         const variants: Record<string, any> = {

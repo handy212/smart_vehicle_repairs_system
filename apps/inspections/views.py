@@ -23,6 +23,18 @@ from apps.inspections.serializers import (
 )
 
 
+class InspectionPhotoViewSet(viewsets.ModelViewSet):
+    """ViewSet for inspection photos"""
+    queryset = InspectionPhoto.objects.all()
+    permission_classes = [IsAuthenticated]
+    serializer_class = InspectionPhotoSerializer
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), HasPermission('edit_inspections')]
+        return [IsAuthenticated(), HasPermission('view_inspections')]
+
+
 class InspectionTemplateViewSet(viewsets.ModelViewSet):
     """
     ViewSet for inspection templates.

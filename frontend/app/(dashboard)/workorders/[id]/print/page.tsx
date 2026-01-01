@@ -8,7 +8,9 @@ import { workOrderPartsApi } from "@/lib/api/workorder-parts";
 import { format } from "date-fns";
 import { useEffect } from "react";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function WorkOrderPrintPage() {
+    const { formatCurrency } = useCurrency();
   const params = useParams();
   const workOrderId = parseInt(params.id as string);
 
@@ -224,8 +226,8 @@ export default function WorkOrderPrintPage() {
                     <td className="border border-gray-300 px-3 py-2">{part.part_number || 'N/A'}</td>
                     <td className="border border-gray-300 px-3 py-2">{part.part_name || part.description || 'N/A'}</td>
                     <td className="border border-gray-300 px-3 py-2 text-right">{quantity}</td>
-                    <td className="border border-gray-300 px-3 py-2 text-right">${unitCost.toFixed(2)}</td>
-                    <td className="border border-gray-300 px-3 py-2 text-right">${lineTotal.toFixed(2)}</td>
+                    <td className="border border-gray-300 px-3 py-2 text-right">{formatCurrency(unitCost)}</td>
+                    <td className="border border-gray-300 px-3 py-2 text-right">{formatCurrency(lineTotal)}</td>
                   </tr>
                 );
               })}
@@ -233,7 +235,7 @@ export default function WorkOrderPrintPage() {
             <tfoot>
               <tr className="bg-gray-50 font-semibold">
                 <td colSpan={4} className="border border-gray-300 px-3 py-2 text-right">Total Parts:</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">${totalPartsCost.toFixed(2)}</td>
+                <td className="border border-gray-300 px-3 py-2 text-right">{formatCurrency(totalPartsCost)}</td>
               </tr>
             </tfoot>
           </table>
@@ -248,11 +250,11 @@ export default function WorkOrderPrintPage() {
               <tbody>
                 <tr>
                   <td className="border border-gray-300 px-3 py-2 text-right font-semibold">Subtotal:</td>
-                  <td className="border border-gray-300 px-3 py-2 text-right">${subtotal.toFixed(2)}</td>
+                  <td className="border border-gray-300 px-3 py-2 text-right">{formatCurrency(subtotal)}</td>
                 </tr>
                 <tr className="bg-gray-100">
                   <td className="border border-gray-300 px-3 py-2 text-right font-bold text-lg">TOTAL:</td>
-                  <td className="border border-gray-300 px-3 py-2 text-right font-bold text-lg">${total.toFixed(2)}</td>
+                  <td className="border border-gray-300 px-3 py-2 text-right font-bold text-lg">{formatCurrency(total)}</td>
                 </tr>
               </tbody>
             </table>

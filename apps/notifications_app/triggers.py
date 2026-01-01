@@ -69,6 +69,74 @@ class NotificationTriggers:
     
     # ==================== APPOINTMENT NOTIFICATIONS ====================
     
+    def appointment_created(self, appointment):
+        """Notify staff when customer creates appointment, or customer when staff creates it"""
+        # If created by customer, notify staff
+        if appointment.created_by == appointment.customer.user:
+            # Notify admins/managers for now
+            from apps.accounts.models import User
+            recipients = User.objects.filter(role__in=['admin', 'manager', 'receptionist'])
+            
+            customer_name = self._build_customer_name(appointment.customer)
+            vehicle_display = self._build_vehicle_display(appointment.vehicle)
+            
+            for recipient in recipients:
+                notification = Notification.objects.create(
+                    recipient=recipient,
+                    notification_type='appointment',
+                    channel='in_app',
+                    priority='normal',
+                    title=f'New Appointment Request - {customer_name}',
+                    message=f'''New appointment request from {customer_name}.
+    
+    Date: {appointment.appointment_date}
+    Time: {appointment.appointment_time}
+    Vehicle: {vehicle_display}
+    Service: {appointment.service_description or "General Service"}
+    
+    Please review and confirm.''',
+                    data={
+                        'appointment_id': appointment.id,
+                        'appointment_number': appointment.appointment_number,
+                        'customer_name': customer_name,
+                        'vehicle_display': vehicle_display,
+                    },
+                    related_object_type='appointment',
+                    related_object_id=appointment.id
+                )
+                self.service.send_notification(notification)
+        
+        # If created by staff, notify customer (Confirmation request or just info)
+        elif appointment.status == 'pending':
+            # Notify customer
+             if appointment.customer.user:
+                customer_name = self._build_customer_name(appointment.customer)
+                vehicle_display = self._build_vehicle_display(appointment.vehicle)
+                
+                notification = Notification.objects.create(
+                    recipient=appointment.customer.user,
+                    notification_type='appointment',
+                    channel='email', # And in-app
+                    priority='normal',
+                    title=f'Appointment Created - {appointment.appointment_date}',
+                    message=f'''An appointment has been scheduled for you.
+    
+    Date: {appointment.appointment_date}
+    Time: {appointment.appointment_time}
+    Vehicle: {vehicle_display}
+    
+    Status: Pending Confirmation''',
+                    data={
+                        'appointment_id': appointment.id,
+                        'appointment_number': appointment.appointment_number,
+                        'customer_name': customer_name,
+                        'vehicle_display': vehicle_display,
+                    },
+                    related_object_type='appointment',
+                    related_object_id=appointment.id
+                )
+                self.service.send_notification(notification)
+    
     def appointment_confirmed(self, appointment):
         """Send confirmation notification when appointment is confirmed"""
         if not appointment.customer.user:

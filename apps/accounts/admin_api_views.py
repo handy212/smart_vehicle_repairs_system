@@ -36,6 +36,7 @@ class IsAdmin(IsAuthenticated):
         return super().has_permission(request, view) and is_admin_user(request.user)
 
 
+
 class SystemSettingsViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing system settings
@@ -54,6 +55,13 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
         from .admin_serializers import SystemSettingsSerializer
         return SystemSettingsSerializer
     
+    def get_permissions(self):
+        if self.action in ['public_branding', 'public_firebase', 'public_integrations']:
+            return [AllowAny()]
+        if self.action == 'by_category':
+            return [IsAuthenticated()]
+        return [IsAdmin()] # Default to admin only
+
     def list(self, request, *args, **kwargs):
         category = request.query_params.get('category')
         # Auto-initialize settings for the category if none exist
@@ -91,6 +99,16 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
     def by_category(self, request):
         """Get settings grouped by category"""
         category = request.query_params.get('category')
+        
+        # Check permissions for non-admins
+        if not is_admin_user(request.user):
+            allowed_categories = ['payment', 'branding', 'general', 'integration']
+            if not category or category not in allowed_categories:
+                 return Response(
+                    {'error': 'You do not have permission to access these settings'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
         # Auto-initialize settings for the category if none exist
         if category:
             from .settings_init import initialize_category_settings
@@ -100,11 +118,18 @@ class SystemSettingsViewSet(viewsets.ModelViewSet):
             # Also ensure tax settings if tax category
             if category == 'tax':
                 SystemSettings.ensure_tax_settings()
+        
         queryset = self.get_queryset()
+        
         if category:
             settings = queryset.filter(category=category, is_active=True)
         else:
             settings = queryset.filter(is_active=True)
+            
+        # Secure filtering for non-admins
+        if not is_admin_user(request.user):
+            # Exclude secrets for standard users
+            settings = settings.filter(is_secret=False)
         
         serializer = self.get_serializer(settings, many=True)
         return Response(serializer.data)

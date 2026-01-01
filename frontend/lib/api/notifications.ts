@@ -4,6 +4,7 @@ export interface Notification {
   id: number;
   recipient: number;
   notification_type: string;
+  channel?: string;
   title: string;
   message: string;
   priority: string;
@@ -13,6 +14,7 @@ export interface Notification {
   read_at?: string;
   related_object_type?: string;
   related_object_id?: number;
+  scheduled_for?: string;
   data?: {
     appointment_id?: number;
     work_order_id?: number;
@@ -32,6 +34,7 @@ export interface NotificationPreference {
   sms_enabled: boolean;
   push_enabled: boolean;
   in_app_enabled: boolean;
+  sound_enabled: boolean;
   appointment_notifications: boolean;
   work_order_notifications: boolean;
   invoice_notifications: boolean;
@@ -80,8 +83,16 @@ export const notificationsApi = {
     status?: string;
     is_read?: boolean;
     notification_type?: string;
+    related_object_type?: string;
+    related_object_id?: number;
+    ordering?: string;
   }): Promise<NotificationListResponse> => {
     const response = await apiClient.get("/notifications/notifications/", { params });
+    return response.data;
+  },
+
+  create: async (data: Partial<Notification>): Promise<Notification> => {
+    const response = await apiClient.post("/notifications/notifications/", data);
     return response.data;
   },
 

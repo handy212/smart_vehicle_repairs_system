@@ -17,6 +17,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils/cn";
+import { useNotificationSound } from "@/lib/hooks/useNotificationSound";
+
+import { authApi } from "@/lib/api/auth";
 
 export function NotificationDropdown() {
     const router = useRouter();
@@ -25,19 +28,29 @@ export function NotificationDropdown() {
     const hasAccessToken =
         typeof window !== "undefined" && !!localStorage.getItem("access_token");
 
+    // Fetch user to determine role
+    const { data: user } = useQuery({
+        queryKey: ["user"],
+        queryFn: () => authApi.getCurrentUser(),
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        enabled: hasAccessToken,
+    });
+
     // Fetch recent notifications (take first 10 from results)
     const { data: notificationsData } = useQuery({
         queryKey: ["notifications", "recent"],
         queryFn: () => notificationsApi.list({}),
         enabled: hasAccessToken,
-        refetchInterval: 30000, // Refetch every 30s
+        refetchInterval: 3000, // 3s - near-instant notifications
+        refetchIntervalInBackground: true, // Keep fetching even when tab is backgrounded
     });
 
     const { data: unreadCountData } = useQuery({
         queryKey: ["notifications", "unread-count"],
         queryFn: () => notificationsApi.unreadCount(),
         enabled: hasAccessToken,
-        refetchInterval: 30000,
+        refetchInterval: 3000, // 3s - near-instant notifications
+        refetchIntervalInBackground: true, // Keep fetching even when tab is backgrounded
     });
 
     const markAsReadMutation = useMutation({
@@ -58,6 +71,12 @@ export function NotificationDropdown() {
 
     const notifications = (notificationsData?.results || []).slice(0, 10);
     const unreadCount = unreadCountData?.unread_count || 0;
+
+    // Enable notification sounds
+    useNotificationSound({
+        enabled: hasAccessToken,
+        unreadCount,
+    });
 
     const getTypeIcon = (type: string) => {
         const iconClass = "w-4 h-4";
@@ -82,10 +101,45 @@ export function NotificationDropdown() {
     };
 
     const getNotificationUrl = (notification: Notification): string | null => {
-        if (notification.related_object_id && notification.related_object_type) {
-            const type = notification.related_object_type.toLowerCase();
-            const id = notification.related_object_id;
+        // Use related_object_type if available, otherwise fallback to notification_type
+        const typeRaw = notification.related_object_type || notification.notification_type;
+        if (!typeRaw || !notification.related_object_id) return null;
 
+        const type = typeRaw.toLowerCase();
+        const id = notification.related_object_id;
+        const isCustomer = user?.role === 'customer';
+
+        if (isCustomer) {
+            // Customer Portal Routes
+            switch (type) {
+                case "appointment":
+                    return `/portal/appointments/${id}`;
+                case "workorder":
+                case "work_order":
+                    return `/portal/work-orders/${id}`;
+                case "invoice":
+                    return `/portal/invoices/${id}`;
+                case "estimate":
+                    return `/portal/estimates/${id}`;
+                case "customer":
+                    return `/portal/profile`;
+                case "vehicle":
+                    return `/portal/vehicles/${id}`;
+                case "inspection":
+                    return `/portal/inspections/${id}`;
+                case "payment":
+                    return `/portal/payments/${id}`;
+                case "subscription":
+                    return `/portal/subscriptions/${id}`;
+                case "roadside":
+                case "roadside_request":
+                case "roadsideassistancerequest":
+                    return `/portal/roadside/${id}`;
+                default:
+                    return null;
+            }
+        } else {
+            // Staff/Admin Routes
             switch (type) {
                 case "appointment":
                     return `/appointments/${id}`;
@@ -93,7 +147,7 @@ export function NotificationDropdown() {
                 case "work_order":
                     return `/workorders/${id}`;
                 case "invoice":
-                    return `/billing/${id}`;
+                    return `/billing/invoices/${id}`;
                 case "estimate":
                     return `/billing/estimates/${id}`;
                 case "customer":
@@ -102,20 +156,23 @@ export function NotificationDropdown() {
                     return `/vehicles/${id}`;
                 case "inspection":
                     return `/inspections/${id}`;
+                case "payment":
+                    return `/billing/payments/${id}`;
+                case "subscription":
+                    return `/subscriptions/${id}`;
+                case "roadside":
+                case "roadside_request":
+                case "roadsideassistancerequest":
+                    return `/roadside/${id}`;
                 default:
                     return null;
             }
         }
-        return null;
     };
 
-    const handleNotificationClick = (notification: Notification) => {
-        const url = getNotificationUrl(notification);
-        if (url) {
-            if (!notification.is_read && !notification.read_at) {
-                markAsReadMutation.mutate(notification.id);
-            }
-            router.push(url);
+    const handleRead = (notification: Notification) => {
+        if (!notification.is_read && !notification.read_at) {
+            markAsReadMutation.mutate(notification.id);
         }
     };
 
@@ -173,17 +230,26 @@ export function NotificationDropdown() {
                         notifications.map((notification) => {
                             const isUnread = !notification.is_read && !notification.read_at;
                             const url = getNotificationUrl(notification);
+                            const hasLink = !!url;
 
                             return (
                                 <DropdownMenuItem
                                     key={notification.id}
-                                    onClick={() => url && handleNotificationClick(notification)}
                                     className={cn(
-                                        "px-3 py-3 cursor-pointer focus:bg-gray-50 dark:focus:bg-gray-800",
+                                        "px-3 py-3 cursor-pointer focus:bg-gray-50 dark:focus:bg-gray-800 outline-none",
                                         isUnread && "bg-blue-50/50 dark:bg-blue-950/20"
                                     )}
+                                    onClick={(e) => {
+                                        // Handle read status
+                                        handleRead(notification);
+
+                                        // Navigate if URL exists
+                                        if (url) {
+                                            router.push(url);
+                                        }
+                                    }}
                                 >
-                                    <div className="flex items-start gap-3 w-full">
+                                    <div className="flex items-start gap-3 w-full text-left">
                                         {/* Unread indicator */}
                                         {isUnread && (
                                             <div className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 mt-1.5 flex-shrink-0" />
@@ -208,20 +274,20 @@ export function NotificationDropdown() {
                                             </p>
                                         </div>
 
-                                        {/* Mark as read button */}
-                                        {isUnread && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
+                                        {/* Mark as read button (only if has link, otherwise the whole item click marks as read) */}
+                                        {isUnread && hasLink && (
+                                            <div
+                                                role="button"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    e.preventDefault();
                                                     markAsReadMutation.mutate(notification.id);
                                                 }}
-                                                className="h-7 w-7 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
+                                                className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0 cursor-pointer"
                                                 title="Mark as read"
                                             >
                                                 <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                            </Button>
+                                            </div>
                                         )}
                                     </div>
                                 </DropdownMenuItem>

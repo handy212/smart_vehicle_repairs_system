@@ -10,14 +10,16 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count, Sum, Avg
 from django.utils import timezone
 
-from .models import Customer, CustomerNote
+from .models import Customer, CustomerNote, CustomerContact, CustomerReminder
 from .serializers import (
     CustomerListSerializer,
     CustomerDetailSerializer,
     CustomerCreateSerializer,
     CustomerUpdateSerializer,
     CustomerNoteSerializer,
-    CustomerStatsSerializer
+    CustomerStatsSerializer,
+    CustomerContactSerializer,
+    CustomerReminderSerializer
 )
 
 
@@ -315,6 +317,25 @@ class CustomerViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
+    def dashboard_stats(self, request):
+        """Get customer dashboard statistics"""
+        total_customers = Customer.objects.count()
+        active_customers = Customer.objects.filter(status='active').count()
+        inactive_customers = Customer.objects.filter(status='inactive').count()
+        
+        # Count contacts
+        active_contacts = CustomerContact.objects.filter(customer__status='active').count()
+        inactive_contacts = CustomerContact.objects.filter(customer__status='inactive').count()
+        
+        return Response({
+            'total_customers': total_customers,
+            'active_customers': active_customers,
+            'inactive_customers': inactive_customers,
+            'active_contacts': active_contacts,
+            'inactive_contacts': inactive_contacts
+        })
+
+    @action(detail=False, methods=['get'])
     def fleet(self, request):
         """Get fleet customers"""
         customers = self.get_queryset().filter(customer_type='fleet')
@@ -599,6 +620,65 @@ class CustomerNoteViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         return CustomerNote.objects.select_related('customer', 'created_by').all()
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+class CustomerContactViewSet(viewsets.ModelViewSet):
+    """ViewSet for customer contacts"""
+    serializer_class = CustomerContactSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['customer', 'is_primary', 'is_billing']
+    ordering = ['-is_primary', 'first_name']
+
+    def get_queryset(self):
+        return CustomerContact.objects.filter(customer__user__is_active=True).select_related('customer')
+
+
+class CustomerReminderViewSet(viewsets.ModelViewSet):
+    """ViewSet for customer reminders"""
+    serializer_class = CustomerReminderSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['customer', 'status', 'is_system_generated']
+    ordering = ['due_date']
+
+    def get_queryset(self):
+        return CustomerReminder.objects.select_related('customer', 'created_by').all()
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+
+from .models import CustomerDocument, CustomerContract
+from .serializers import CustomerDocumentSerializer, CustomerContractSerializer
+
+class CustomerDocumentViewSet(viewsets.ModelViewSet):
+    """ViewSet for customer documents"""
+    serializer_class = CustomerDocumentSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['customer', 'is_public']
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        return CustomerDocument.objects.select_related('customer', 'uploaded_by').all()
+        
+    def perform_create(self, serializer):
+        serializer.save(uploaded_by=self.request.user)
+
+
+class CustomerContractViewSet(viewsets.ModelViewSet):
+    """ViewSet for customer contracts"""
+    serializer_class = CustomerContractSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['customer', 'status']
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        return CustomerContract.objects.select_related('customer', 'created_by').all()
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)

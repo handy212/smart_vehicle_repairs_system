@@ -9,7 +9,9 @@ import { ArrowLeft, Edit, Building2, Mail, Phone, MapPin, Globe } from "lucide-r
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
+import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function SupplierDetailPage() {
+    const { formatCurrency } = useCurrency();
   const params = useParams();
   const id = parseInt(params.id as string);
 
@@ -205,7 +207,7 @@ export default function SupplierDetailPage() {
             {supplier.credit_limit && (
               <div>
                 <label className="text-sm font-medium text-gray-500">Credit Limit</label>
-                <p className="text-lg">${parseFloat(supplier.credit_limit).toFixed(2)}</p>
+                <p className="text-lg">{formatCurrency(parseFloat(supplier.credit_limit))}</p>
               </div>
             )}
             {supplier.notes && (

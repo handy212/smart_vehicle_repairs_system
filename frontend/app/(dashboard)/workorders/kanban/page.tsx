@@ -2,13 +2,15 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workordersApi, WorkOrder } from "@/lib/api/workorders";
+import { adminApi, User } from "@/lib/api/admin";
+import { useAuthStore } from "@/store/authStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Filter, RefreshCw, Eye, Edit } from "lucide-react";
+import { ArrowLeft, Plus, Filter, RefreshCw, Eye, Edit, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -28,21 +30,10 @@ import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
-const WORK_ORDER_STATUSES = [
-  { value: "draft", label: "Draft", color: "gray" },
-  { value: "inspection", label: "Initial Inspection", color: "blue" },
-  { value: "intake", label: "Intake", color: "indigo" },
-  { value: "diagnosis", label: "Diagnosis", color: "purple" },
-  { value: "awaiting_approval", label: "Awaiting Approval", color: "yellow" },
-  { value: "approved", label: "Approved", color: "green" },
-  { value: "in_progress", label: "In Progress", color: "blue" },
-  { value: "paused", label: "Paused", color: "orange" },
-  { value: "quality_check", label: "Quality Check", color: "cyan" },
-  { value: "completed", label: "Completed", color: "green" },
-  { value: "invoiced", label: "Invoiced", color: "teal" },
-  { value: "closed", label: "Closed", color: "gray" },
-];
+import { WORK_ORDER_STATUSES } from "@/lib/utils/workorder-status";
 
 interface KanbanColumnProps {
   status: typeof WORK_ORDER_STATUSES[0];
@@ -57,9 +48,8 @@ function KanbanColumn({ status, workOrders }: KanbanColumnProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`min-w-[300px] max-w-[300px] bg-gray-50 rounded-lg p-4 border-2 ${
-        isOver ? "border-blue-500" : "border-gray-200"
-      } transition-colors`}
+      className={`min-w-[300px] max-w-[300px] bg-gray-50 rounded-lg p-4 border-2 ${isOver ? "border-blue-500" : "border-gray-200"
+        } transition-colors`}
     >
       <div className="flex justify-between items-center mb-4 p-2 bg-white rounded border border-gray-200">
         <h6 className="text-sm font-semibold text-gray-900">{status.label}</h6>
@@ -179,6 +169,14 @@ function WorkOrderCard({ workOrder }: WorkOrderCardProps) {
         </div>
       </div>
 
+      {/* Technician Info */}
+      {workOrder.primary_technician_name && (
+        <div className="text-xs text-gray-500 my-1 flex items-center gap-1">
+          <UserIcon className="w-3 h-3" />
+          <span className="truncate">{workOrder.primary_technician_name}</span>
+        </div>
+      )}
+
       {/* Card Footer */}
       <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-200">
         <span className="text-xs text-gray-500">
@@ -213,8 +211,11 @@ export default function WorkOrderKanbanPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuthStore();
+
   const [technicianFilter, setTechnicianFilter] = useState<string>("");
   const [priorityFilter, setPriorityFilter] = useState<string>("");
+  const [myTasksOnly, setMyTasksOnly] = useState<boolean>(false);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -225,12 +226,18 @@ export default function WorkOrderKanbanPage() {
     })
   );
 
+  // Fetch technicians
+  const { data: technicians } = useQuery({
+    queryKey: ["technicians"],
+    queryFn: () => adminApi.users.technicians(),
+  });
+
   const { data: workOrdersData, isLoading } = useQuery({
-    queryKey: ["workorders", "kanban", technicianFilter, priorityFilter],
+    queryKey: ["workorders", "kanban", technicianFilter, priorityFilter, myTasksOnly, user?.id],
     queryFn: () =>
       workordersApi.list({
         priority: priorityFilter || undefined,
-        // Note: technician filter would need backend support
+        primary_technician: myTasksOnly && user?.id ? user.id : (technicianFilter ? parseInt(technicianFilter) : undefined),
       }),
   });
 
@@ -342,33 +349,64 @@ export default function WorkOrderKanbanPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-2">
-                Filter by Priority
-              </label>
-              <Select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value)}
-              >
-                <option value="">All Priorities</option>
-                <option value="urgent">Urgent</option>
-                <option value="high">High</option>
-                <option value="normal">Normal</option>
-                <option value="low">Low</option>
-              </Select>
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="flex items-center space-x-2 border-r border-gray-200 pr-6 mr-2">
+              <Switch
+                id="my-tasks"
+                checked={myTasksOnly}
+                onCheckedChange={setMyTasksOnly}
+              />
+              <Label htmlFor="my-tasks" className="font-medium">My Orders Only</Label>
             </div>
-            <div className="flex items-end">
-              <Button
-               variant="secondary"
-                onClick={() => {
-                  setTechnicianFilter("");
-                  setPriorityFilter("");
-                }}
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Clear Filters
-              </Button>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">
+                  Technician
+                </label>
+                <Select
+                  value={technicianFilter}
+                  onChange={(e) => setTechnicianFilter(e.target.value)}
+                  disabled={myTasksOnly}
+                >
+                  <option value="">All Technicians</option>
+                  {technicians?.map((tech) => (
+                    <option key={tech.id} value={tech.id.toString()}>
+                      {tech.first_name} {tech.last_name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">
+                  Priority
+                </label>
+                <Select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                >
+                  <option value="">All Priorities</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="high">High</option>
+                  <option value="normal">Normal</option>
+                  <option value="low">Low</option>
+                </Select>
+              </div>
+
+              <div className="flex items-end">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setTechnicianFilter("");
+                    setPriorityFilter("");
+                    setMyTasksOnly(false);
+                  }}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Clear Filters
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>

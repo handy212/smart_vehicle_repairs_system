@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, CheckCircle, Save, AlertCircle, X } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
@@ -22,6 +23,9 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { SignaturePad } from "@/components/inspections/SignaturePad";
 import { VehicleDamageMarker, DamageMark } from "@/components/inspections/VehicleDamageMarker";
+import { InspectionItemCard } from "@/components/inspections/InspectionItemCard";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 export default function PerformInspectionPage() {
   const params = useParams();
@@ -183,22 +187,58 @@ export default function PerformInspectionPage() {
 
   const saveDamageMutation = useMutation({
     mutationFn: async (damage: DamageMark[]) => {
-      console.log("Saving vehicle damage:", damage);
       const result = await inspectionsApi.update(inspectionId, { vehicle_damage: damage });
-      console.log("Vehicle damage saved successfully:", result);
       return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
     },
     onError: (error: any) => {
-      console.error("Vehicle damage save error:", error);
       toast({
         title: "Error",
         description: error.response?.data?.error || error.response?.data?.vehicle_damage?.[0] || error.message || "Failed to save vehicle damage",
         variant: "destructive",
       });
     },
+  });
+
+  const addPhotoMutation = useMutation({
+    mutationFn: async ({ itemId, file, resultId }: { itemId: number, file: File, resultId?: number }) => {
+      let targetResultId = resultId;
+
+      if (!targetResultId) {
+        // Create result first
+        const response = await inspectionsApi.saveResults(inspectionId, [{
+          inspection_item: itemId,
+          result: (results[itemId]?.result as any) || 'not_checked'
+        }]);
+
+        targetResultId = response.results?.find((r: any) => r.inspection_item === itemId)?.id;
+      }
+
+      if (!targetResultId) throw new Error("Could not prepare result for photo upload");
+
+      const formData = new FormData();
+      formData.append("image", file);
+      return inspectionsApi.results.addPhoto(targetResultId, formData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
+      toast({ title: "Photo added", variant: "success" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to upload photo", variant: "destructive" });
+    }
+  });
+
+  const deletePhotoMutation = useMutation({
+    mutationFn: (photoId: number) => {
+      return inspectionsApi.photos.delete(photoId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
+      toast({ title: "Photo removed" });
+    }
   });
 
   const hasDamageChanged = () => {
@@ -354,355 +394,247 @@ export default function PerformInspectionPage() {
   /* --------------------- UI Render ----------------------------- */
   if (!inspection)
     return (
-      <div className="flex justify-center p-20">
-        <div className="animate-spin w-12 h-12 border-b-2 border-blue-600 rounded-full" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full" />
       </div>
     );
 
+  const uncheckedCriticalItems = validateCriticalItems();
+  const hasUncheckedCritical = uncheckedCriticalItems.length > 0;
+
   return (
-    <div className="space-y-6">
+    <div className="pb-32">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+          <div className="flex items-center space-x-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
             <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
-            <span>/</span>
+            <span className="text-gray-300">/</span>
             <Link href="/inspections" className="hover:text-blue-600 transition-colors">Inspections</Link>
-            <span>/</span>
+            <span className="text-gray-300">/</span>
             <Link href={`/inspections/${inspectionId}`} className="hover:text-blue-600 transition-colors">#{inspection.inspection_number}</Link>
-            <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Perform</span>
+            <span className="text-gray-300">/</span>
+            <span className="text-gray-900 dark:text-gray-100">Perform</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
             Perform Inspection
           </h1>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Button onClick={save} variant="outline" size="sm" className="h-9">
-            <Save className="w-3.5 h-3.5 mr-2" /> Save
-          </Button>
-
-          <Button onClick={saveAndComplete} size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-            <CheckCircle className="w-3.5 h-3.5 mr-2" /> Save & Complete
-          </Button>
-        </div>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</span>
-          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{inspection.vehicle_info || "N/A"}</span>
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Template</span>
-          <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{templateData?.name}</span>
-        </div>
-        <div className="flex flex-col gap-1">
-          <div className="flex justify-between items-center">
-            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</span>
-            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{inspection.completion_percentage}%</span>
-          </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-600 rounded-full transition-all duration-500"
-              style={{ width: `${inspection.completion_percentage}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Categories & Vehicle Damage */}
-      <div className="w-full">
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
-          <div className="w-full overflow-x-auto -mx-4 px-4">
-            <TabsList className="inline-flex w-max">
-              {categories.map((cat) => (
-                <TabsTrigger key={cat.id} value={String(cat.id)} className="whitespace-nowrap">
-                  {cat.name} <Badge className="ml-2">{cat.item_count}</Badge>
-                </TabsTrigger>
-              ))}
-              <TabsTrigger value="vehicle-damage" className="whitespace-nowrap">
-                Vehicle Damage <Badge className="ml-2">{vehicleDamage.length}</Badge>
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          {/* Vehicle Damage Tab */}
-          <TabsContent value="vehicle-damage" className="mt-4">
-            <VehicleDamageMarker
-              damage={vehicleDamage}
-              onChange={setVehicleDamage}
-              disabled={inspection.status === "completed"}
-            />
-          </TabsContent>
-
-          {categories.map((cat) => (
-            <TabsContent key={cat.id} value={String(cat.id)} className="mt-4">
-              <div className="space-y-3">
-                <h3 className="text-lg font-semibold text-gray-900">{cat.name}</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {(cat.items || []).map((item) => {
-                    const r = results[item.id] || {};
-                    const isCritical = item.is_critical;
-                    const isChecked = !!results[item.id]?.result ||
-                      results[item.id]?.measurement_value !== undefined ||
-                      results[item.id]?.percentage_value !== undefined ||
-                      results[item.id]?.rating_value !== undefined ||
-                      results[item.id]?.condition ||
-                      results[item.id]?.text_note;
-
-                    const rowClassName = `flex flex-col gap-2 p-3 rounded-md border ${isCritical && !isChecked
-                        ? "border-red-500 bg-red-50"
-                        : isCritical
-                          ? "border-red-200 bg-red-50/30"
-                          : "border-gray-200 hover:bg-gray-50"
-                      } transition-colors`;
-
-                    return (
-                      <div key={item.id} className={rowClassName}>
-                        {/* Item Name */}
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm text-gray-900">
-                            {item.name}
-                          </span>
-                          {item.is_critical && (
-                            <Badge className="bg-red-100 text-red-700 text-xs">
-                              Critical
-                            </Badge>
-                          )}
-                          {isCritical && !isChecked && (
-                            <span className="text-xs text-red-600">
-                              (Required)
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Input Fields - Inline */}
-                        <div className="flex flex-col gap-2">
-                          {item.item_type === "yes_no" || item.item_type === "pass_fail" ? (
-                            <div className="flex items-center gap-3 flex-wrap">
-                              <div className="flex items-center gap-2">
-                                <Label className="text-sm whitespace-nowrap">Result:</Label>
-                                <select
-                                  value={r.result || "not_checked"}
-                                  onChange={(e) =>
-                                    updateResult(item.id, "result", e.target.value)
-                                  }
-                                  className="w-40 h-8 text-sm rounded-md border border-gray-300 px-2"
-                                >
-                                  <option value="not_checked">Not Checked</option>
-                                  <option value="pass">Pass</option>
-                                  <option value="fail">Fail</option>
-                                  <option value="advisory">Advisory</option>
-                                  <option value="not_applicable">N/A</option>
-                                </select>
-                              </div>
-                              <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={showNotes[item.id] || false}
-                                  onChange={(e) => {
-                                    setShowNotes((prev) => ({
-                                      ...prev,
-                                      [item.id]: e.target.checked,
-                                    }));
-                                    // Clear notes when hiding
-                                    if (!e.target.checked) {
-                                      updateResult(item.id, "notes", "");
-                                    }
-                                  }}
-                                  className="w-4 h-4"
-                                />
-                                <span className="text-xs">Add Notes</span>
-                              </label>
-                            </div>
-                          ) : null}
-
-                          {item.item_type === "measurement" && (
-                            <div className="flex items-center gap-2">
-                              <Label className="text-sm whitespace-nowrap">
-                                Value ({item.measurement_unit}):
-                              </Label>
-                              <Input
-                                type="number"
-                                value={r.measurement_value || ""}
-                                onChange={(e) =>
-                                  updateResult(
-                                    item.id,
-                                    "measurement_value",
-                                    Number(e.target.value)
-                                  )
-                                }
-                                className="w-32 h-8 text-sm"
-                              />
-                            </div>
-                          )}
-
-                          {item.item_type === "percentage" && (
-                            <div className="flex items-center gap-2">
-                              <Label className="text-sm whitespace-nowrap">Percentage:</Label>
-                              <Input
-                                type="number"
-                                max={100}
-                                value={r.percentage_value || ""}
-                                onChange={(e) =>
-                                  updateResult(
-                                    item.id,
-                                    "percentage_value",
-                                    Number(e.target.value)
-                                  )
-                                }
-                                className="w-24 h-8 text-sm"
-                              />
-                              <span className="text-sm text-gray-500">%</span>
-                            </div>
-                          )}
-
-                          {item.item_type === "rating" && (
-                            <div className="flex items-center gap-2">
-                              <Label className="text-sm whitespace-nowrap">Rating:</Label>
-                              <div className="flex gap-1">
-                                {[1, 2, 3, 4, 5].map((n) => (
-                                  <button
-                                    key={n}
-                                    type="button"
-                                    onClick={() =>
-                                      updateResult(item.id, "rating_value", n)
-                                    }
-                                    className={`w-8 h-8 text-xs rounded border transition-colors ${r.rating_value === n
-                                        ? "bg-blue-600 text-white border-blue-600"
-                                        : "bg-white border-gray-300 hover:border-blue-400"
-                                      }`}
-                                  >
-                                    {n}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {item.item_type === "condition" && (
-                            <div className="flex items-center gap-2">
-                              <Label className="text-sm whitespace-nowrap">Condition:</Label>
-                              <select
-                                value={r.condition || ""}
-                                onChange={(e) =>
-                                  updateResult(item.id, "condition", e.target.value || null)
-                                }
-                                className="w-40 h-8 text-sm rounded-md border border-gray-300 px-2"
-                              >
-                                <option value="">Select...</option>
-                                <option value="excellent">Excellent</option>
-                                <option value="good">Good</option>
-                                <option value="fair">Fair</option>
-                                <option value="poor">Poor</option>
-                                <option value="critical">Critical</option>
-                              </select>
-                            </div>
-                          )}
-
-                          {item.item_type === "text" && (
-                            <div className="w-full">
-                              <Label className="text-sm">Note:</Label>
-                              <Textarea
-                                value={r.text_note || ""}
-                                onChange={(e) =>
-                                  updateResult(item.id, "text_note", e.target.value)
-                                }
-                                className="w-full text-sm min-h-[60px] mt-1"
-                                placeholder="Enter text note..."
-                              />
-                            </div>
-                          )}
-
-                          {/* Notes - Only show when checkbox is checked */}
-                          {showNotes[item.id] && (
-                            <div className="w-full">
-                              <Textarea
-                                placeholder="Add notes..."
-                                value={r.notes || ""}
-                                onChange={(e) =>
-                                  updateResult(item.id, "notes", e.target.value)
-                                }
-                                className="w-full text-sm min-h-[60px]"
-                              />
-                            </div>
-                          )}
-
-                          {/* Needs Attention Checkbox */}
-                          <label className="flex items-center gap-1.5 text-sm cursor-pointer mt-1">
-                            <input
-                              type="checkbox"
-                              checked={r.needs_immediate_attention || false}
-                              onChange={(e) =>
-                                updateResult(
-                                  item.id,
-                                  "needs_immediate_attention",
-                                  e.target.checked
-                                )
-                              }
-                              className="w-4 h-4"
-                            />
-                            <span className="text-xs">Needs Attention</span>
-                          </label>
-                        </div>
-                      </div>
-                    );
-                  })}
+      {/* Summary Card */}
+      <Card className="mb-8 border-none bg-gray-900 text-white overflow-hidden shadow-xl">
+        <CardContent className="p-0">
+          <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-white/10">
+            <div className="p-6">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 block mb-1">Vehicle</span>
+              <span className="text-sm font-bold truncate block">{inspection.vehicle_info || "N/A"}</span>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge className="bg-white/10 text-white/80 hover:bg-white/20 border-none text-[10px]">
+                  {typeof inspection.vehicle === 'object' ? inspection.vehicle.license_plate : 'N/A'}
+                </Badge>
+              </div>
+            </div>
+            <div className="p-6">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 block mb-1">Template</span>
+              <span className="text-sm font-bold truncate block">{templateData?.name}</span>
+              <span className="text-[10px] text-white/60 mt-2 block">{categories.length} Categories • {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)} Items</span>
+            </div>
+            <div className="p-6 md:col-span-2 flex flex-col justify-center">
+              <div className="flex justify-between items-end mb-2">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 block mb-1">Overall Progress</span>
+                  <span className="text-2xl font-black text-blue-400">{inspection.completion_percentage}%</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 block mb-1">Checks Done</span>
+                  <span className="text-sm font-bold text-white/80">{getFilledResults().length} / {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)}</span>
                 </div>
               </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+              <Progress value={inspection.completion_percentage} className="h-2 bg-white/10" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Categories & Vehicle Damage */}
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full space-y-6"
+      >
+        <div className="sticky top-0 z-30 bg-gray-50/95 dark:bg-gray-950/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 -mx-6 px-6 py-2">
+          <TabsList className="bg-transparent h-auto p-0 flex space-x-6 overflow-x-auto scrollbar-none">
+            {categories.map((cat) => (
+              <TabsTrigger
+                key={cat.id}
+                value={String(cat.id)}
+                className="relative h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 font-bold text-xs uppercase tracking-widest transition-all px-0"
+              >
+                {cat.name}
+                <Badge variant="secondary" className="ml-2 h-5 min-w-[20px] justify-center px-1 text-[10px]">
+                  {cat.item_count}
+                </Badge>
+              </TabsTrigger>
+            ))}
+            <TabsTrigger
+              value="vehicle-damage"
+              className="relative h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 font-bold text-xs uppercase tracking-widest transition-all px-0"
+            >
+              Vehicle Damage
+              <Badge variant="secondary" className="ml-2 h-5 min-w-[20px] justify-center px-1 text-[10px]">
+                {vehicleDamage.length}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Vehicle Damage Tab */}
+        <TabsContent value="vehicle-damage" className="mt-0">
+          <Card className="border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+            <CardContent className="p-0">
+              <VehicleDamageMarker
+                damage={vehicleDamage}
+                onChange={setVehicleDamage}
+                disabled={inspection.status === "completed"}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {categories.map((cat) => (
+          <TabsContent key={cat.id} value={String(cat.id)} className="mt-0 outline-none">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {(cat.items || []).map((item) => (
+                <InspectionItemCard
+                  key={item.id}
+                  item={item}
+                  result={results[item.id] || {}}
+                  onUpdate={(field: string, value: any) => updateResult(item.id, field, value)}
+                  onAddPhoto={(itemId, file, resultId) => {
+                    addPhotoMutation.mutate({ itemId, file, resultId });
+                  }}
+                  onDeletePhoto={(photoId) => deletePhotoMutation.mutate(photoId)}
+                  showNotes={showNotes[item.id] || false}
+                  onToggleNotes={() => setShowNotes(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                  isCriticalRemaining={item.is_critical && !results[item.id]?.result}
+                />
+              ))}
+            </div>
+          </TabsContent>
+        ))}
+      </Tabs>
+
+      {/* Sticky Footer */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 shadow-2xl transition-all">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <div className="hidden sm:flex items-center gap-4">
+            {hasUncheckedCritical ? (
+              <div className="flex items-center gap-2 text-red-600">
+                <AlertCircle className="w-5 h-5 animate-pulse" />
+                <span className="text-[11px] font-black uppercase tracking-tighter italic">
+                  Critical items pending: {uncheckedCriticalItems.length}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="w-5 h-5" />
+                <span className="text-[11px] font-black uppercase tracking-tighter">All critical checks completed</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={save}
+              className="flex-1 sm:flex-none h-12 px-8 text-xs font-black uppercase tracking-widest border-2 hover:bg-gray-50 transition-all active:scale-95"
+              disabled={saveMutation.isPending || saveDamageMutation.isPending}
+            >
+              {saveMutation.isPending || saveDamageMutation.isPending ? (
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin mr-2" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Save Progress
+            </Button>
+            <Button
+              size="lg"
+              onClick={saveAndComplete}
+              className={cn(
+                "flex-1 sm:flex-none h-12 px-10 text-xs font-black uppercase tracking-widest shadow-lg transition-all active:scale-95",
+                hasUncheckedCritical ? "bg-gray-400 hover:bg-gray-500" : "bg-blue-600 hover:bg-blue-700"
+              )}
+              disabled={completeMutation.isPending}
+            >
+              {completeMutation.isPending ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+              ) : (
+                <CheckCircle className="w-4 h-4 mr-2" />
+              )}
+              Finalize & Complete
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Completion Dialog with Signature */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Complete Inspection</DialogTitle>
-            <DialogDescription>
-              {templateData?.requires_technician_signature
-                ? "Please provide your signature to complete this inspection"
-                : "Are you sure you want to complete this inspection?"}
-            </DialogDescription>
-          </DialogHeader>
-
-          {templateData?.requires_technician_signature && (
-            <div className="py-4">
-              <SignaturePad
-                value={technicianSignature || undefined}
-                onChange={setTechnicianSignature}
-                label="Technician Signature"
-                required
-              />
+        <DialogContent className="max-w-xl p-0 border-none overflow-hidden shadow-2xl">
+          <div className="bg-gray-900 p-8 text-white relative">
+            <button
+              onClick={() => setShowCompleteDialog(false)}
+              className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-600 rounded-lg">
+                <CheckCircle className="w-6 h-6" />
+              </div>
+              <h2 className="text-2xl font-black tracking-tight">Complete Inspection</h2>
             </div>
-          )}
+            <p className="text-gray-400 text-sm">
+              You are about to finalize this inspection report. Once completed, it will be ready for review and transmission to the customer.
+            </p>
+          </div>
 
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setShowCompleteDialog(false);
-                setTechnicianSignature(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCompleteWithSignature}
-              disabled={templateData?.requires_technician_signature && !technicianSignature}
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Complete Inspection
-            </Button>
-          </DialogFooter>
+          <div className="p-8 space-y-6">
+            {templateData?.requires_technician_signature && (
+              <div className="space-y-4">
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Technician Authentication</Label>
+                <div className="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden bg-gray-50 group hover:border-blue-400 transition-colors">
+                  <SignaturePad
+                    value={technicianSignature || undefined}
+                    onChange={setTechnicianSignature}
+                    label=""
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                className="flex-1 h-12 text-xs font-bold uppercase tracking-widest border-2"
+                onClick={() => {
+                  setShowCompleteDialog(false);
+                  setTechnicianSignature(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-[2] h-12 text-xs font-black uppercase tracking-widest bg-blue-600 hover:bg-blue-700 shadow-lg"
+                onClick={handleCompleteWithSignature}
+                disabled={templateData?.requires_technician_signature && !technicianSignature}
+              >
+                Sign & Finalize Report
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

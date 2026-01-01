@@ -1,35 +1,74 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { inventoryApi, PartCategory } from "@/lib/api/inventory";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { inventoryApi } from "@/lib/api/inventory";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Edit, Trash2, FolderTree, MoreVertical } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, Search, Edit, Trash2, FolderTree, MoreVertical, X, ChevronDown, Download, Upload } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
+import { AdvancedFilters, FilterOption, QuickFilter } from "@/components/ui/advanced-filters";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+// Stats Grid Component
+const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-800/50">
+          <CardContent className="p-4">
+            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse" />
+            <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!stats) return null;
+
+  const items = [
+    { label: "Total Categories", value: stats.total_categories, icon: FolderTree, color: "text-blue-600" },
+  ];
+
+};
 
 export default function PartCategoriesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
 
   const { data: categories = [], isLoading } = useQuery({
-    queryKey: ["part-categories", search],
-    queryFn: () => inventoryApi.listCategories({ search: search || undefined }),
+    queryKey: ["part-categories", searchQuery, advancedFilters],
+    queryFn: () => inventoryApi.listCategories({
+      search: searchQuery || undefined,
+      // Assuming listCategories supports filtering by status if needed
+      // is_active: advancedFilters.is_active === 'true' ? true : advancedFilters.is_active === 'false' ? false : undefined,
+    }),
   });
 
-  // NOTE: Category creation is handled on /inventory/categories/new (to match Suppliers UX).
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["category-stats"],
+    queryFn: () => inventoryApi.categoriesDashboardStats(),
+  });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => inventoryApi.deleteCategory(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["part-categories"] });
-      queryClient.invalidateQueries({ queryKey: ["root-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["category-stats"] });
       toast({
         title: "Success",
         description: "Category deleted successfully",
@@ -50,142 +89,165 @@ export default function PartCategoriesPage() {
     }
   };
 
-  // Dialog removed in favor of a dedicated New Category page.
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  const filterOptions: FilterOption[] = [
+    // No filters defined yet for categories in original code, but we can add Status
+    /*
+    {
+        key: "is_active",
+        label: "Status",
+        type: "select",
+        options: [
+            { value: "true", label: "Active" },
+            { value: "false", label: "Inactive" },
+        ],
+    },
+    */
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Part Categories</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Organize parts into categories and subcategories
-          </p>
+      <div className="flex flex-col space-y-4">
+        <div className="flex justify-between items-center pt-2">
+          <div>
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+              <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+              <span>/</span>
+              <Link href="/inventory" className="hover:text-blue-600 transition-colors">Inventory</Link>
+              <span>/</span>
+              <span className="text-gray-900 dark:text-gray-100 font-medium">Categories</span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+              Part Categories
+            </h1>
+          </div>
         </div>
-        <div className="flex gap-2">
+
+        <StatsGrid stats={stats} loading={statsLoading} />
+      </div>
+
+      {/* Unified Toolbar */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-900/50 p-1 rounded-lg">
+        <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
+          <div className="relative flex-1 md:flex-none md:w-64">
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Search categories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 h-9 text-sm bg-gray-50 dark:bg-gray-800 border-none focus:ring-1 transition-all"
+            />
+          </div>
+          {/* 
+                 <AdvancedFilters
+                    filters={filterOptions}
+                    activeFilters={advancedFilters}
+                    onFiltersChange={setAdvancedFilters}
+                    onClear={() => setAdvancedFilters({})}
+                    title="Filter Categories"
+                />
+                */}
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+          {/* 
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 bg-white dark:bg-gray-800">
+                            Actions
+                            <ChevronDown className="w-3.5 h-3.5 ml-2" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                         <DropdownMenuItem disabled>
+                            <Download className="w-4 h-4 mr-2" />
+                            Export CSV
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                */}
           <Link href="/inventory/categories/new">
-            <Button>
+            <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
               <Plus className="w-4 h-4 mr-2" />
               New Category
             </Button>
           </Link>
-              </div>
+        </div>
       </div>
 
-      {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <Input
-              type="text"
-              placeholder="Search categories..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Categories Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Categories ({categories.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {categories.length > 0 ? (
+      <Card className="border-none shadow-sm overflow-hidden ring-1 ring-gray-200 dark:ring-gray-800">
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-6"><TableSkeleton rows={8} columns={6} /></div>
+          ) : categories.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Full Path</TableHead>
-                    <TableHead>Subcategories</TableHead>
-                    <TableHead>Parts</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                <TableHeader className="bg-gray-50/50 dark:bg-gray-800/50 border-y border-gray-100 dark:border-gray-800">
+                  <TableRow className="hover:bg-transparent border-none">
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Name</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Full Path</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-center">Subcategories</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-center">Parts</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Status</TableHead>
+                    <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {categories.map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell className="font-medium">
+                    <TableRow
+                      key={category.id}
+                      className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 cursor-pointer transition-colors"
+                    >
+                      <TableCell className="px-4 py-2">
                         <div className="flex items-center">
-                          <FolderTree className="w-4 h-4 mr-2 text-gray-400" />
-                          {category.name}
+                          <FolderTree className="w-3.5 h-3.5 mr-2 text-gray-400" />
+                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{category.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600">
+                      <TableCell className="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 font-mono">
                         {category.full_path || category.name}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
+                      <TableCell className="px-4 py-2 text-center">
+                        <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100">
                           {category.subcategories_count || 0}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="default">
+                      <TableCell className="px-4 py-2 text-center">
+                        <Badge variant="outline" className="border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400">
                           {category.parts_count || 0}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={category.is_active ? "success" : "secondary"}>
+                      <TableCell className="px-4 py-2">
+                        <Badge variant={category.is_active ? "success" : "secondary"} className="text-[10px] px-2 py-0">
                           {category.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="relative flex justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setActionMenuOpen(actionMenuOpen === category.id ? null : category.id)}
-                            className="h-8 w-8 p-0 dark:hover:bg-gray-700"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                          {actionMenuOpen === category.id && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-10"
-                                onClick={() => setActionMenuOpen(null)}
-                              />
-                              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
-                                <div className="py-1">
-                                  <Link
-                                    href={`/inventory/categories/${category.id}/edit`}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                                    onClick={() => setActionMenuOpen(null)}
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                    Edit Category
-                                  </Link>
-                                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                                  <button
-                                    onClick={() => {
-                                      if (window.confirm(`Are you sure you want to delete category "${category.name}"? This action cannot be undone.`)) {
-                                        handleDelete(category.id);
-                                      }
-                                      setActionMenuOpen(null);
-                                    }}
-                                    disabled={deleteMutation.isPending}
-                                    className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                    Delete Category
-                                  </button>
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
+                      <TableCell className="px-4 py-2 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100 text-gray-500">
+                              <MoreVertical className="w-3.5 h-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/inventory/categories/${category.id}/edit`} className="flex items-center cursor-pointer">
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(category.id)}
+                              className="text-red-600 focus:text-red-700 cursor-pointer"
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -194,8 +256,17 @@ export default function PartCategoriesPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <FolderTree className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No categories found.</p>
+              <FolderTree className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">No categories found</h3>
+              <p className="text-gray-500 max-w-sm mx-auto mt-1 mb-4">
+                Get started by adding a new category to organize your parts.
+              </p>
+              <Link href="/inventory/categories/new">
+                <Button variant="outline" size="sm">
+                  <Plus className="w-3.5 h-3.5 mr-2" />
+                  Add Category
+                </Button>
+              </Link>
             </div>
           )}
         </CardContent>
@@ -203,4 +274,3 @@ export default function PartCategoriesPage() {
     </div>
   );
 }
-
