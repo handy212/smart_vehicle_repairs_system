@@ -41,6 +41,13 @@ class Admin(AbstractUserRole):
         'export_vehicles': True,
         'import_vehicles': True,
         
+        # Roadside Assistance
+        'view_roadside': True,
+        'create_roadside': True,
+        'edit_roadside': True,
+        'manage_roadside': True,
+        'dispatch_roadside': True,
+        
         # Appointments
         'view_appointments': True,
         'create_appointments': True,
@@ -205,6 +212,13 @@ class Manager(AbstractUserRole):
         'view_service_history': True,
         'export_vehicles': True,
         
+        # Roadside Assistance
+        'view_roadside': True,
+        'create_roadside': True,
+        'edit_roadside': True,
+        'manage_roadside': True,
+        'dispatch_roadside': True,
+        
         # Appointments
         'view_appointments': True,
         'create_appointments': True,
@@ -281,6 +295,13 @@ class Manager(AbstractUserRole):
         'send_estimates': True,
         'view_payment_history': True,
         'export_billing': True,
+        
+        # Subscriptions
+        'view_subscriptions': True,
+        'manage_subscriptions': True,
+        'create_subscriptions': True,
+        'cancel_subscriptions': True,
+        'record_usage': True,
         
         # Reports
         'view_reports': True,
@@ -442,6 +463,9 @@ class Technician(AbstractUserRole):
         'view_vehicles': True,
         'view_vehicle_history': True,
         'view_service_history': True,
+        
+        # Roadside Assistance
+        'view_roadside': True,
         
         # Work Orders
         'view_workorders': True,

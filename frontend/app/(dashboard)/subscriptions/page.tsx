@@ -586,162 +586,196 @@ export default function SubscriptionsPage() {
 
         {/* Details Dialog */}
         <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Subscription Details</DialogTitle>
+              <DialogTitle className="flex items-center gap-2 text-xl">
+                Subscription Details
+                {selectedSubscription && (
+                  <Badge variant={selectedSubscription.status === "active" ? "success" : "secondary"} className="ml-2">
+                    {selectedSubscription.status}
+                  </Badge>
+                )}
+              </DialogTitle>
             </DialogHeader>
             {selectedSubscription && (
-              <div className="px-6 space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Subscription Number</Label>
-                    <p className="font-mono text-sm">{selectedSubscription.subscription_number}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</Label>
+              <div className="space-y-8">
+                {/* Top Section: Overview */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Left Column */}
+                  <div className="space-y-6">
                     <div>
-                      <Badge variant={selectedSubscription.status === "active" ? "default" : "secondary"}>
-                        {selectedSubscription.status}
-                      </Badge>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3">Subscription</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between border-b pb-2 border-dashed">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Subscription #</span>
+                          <span className="text-sm font-mono font-medium">{selectedSubscription.subscription_number}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2 border-dashed">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Package</span>
+                          <span className="text-sm font-semibold">{selectedSubscription.package_name}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2 border-dashed">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Period</span>
+                          <span className="text-sm font-medium">
+                            {format(new Date(selectedSubscription.start_date), "MMM dd, yyyy")} - {format(new Date(selectedSubscription.end_date), "MMM dd, yyyy")}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2 border-dashed">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Days Remaining</span>
+                          <span className={cn("text-sm font-bold", (selectedSubscription.days_remaining || 0) < 30 ? "text-red-600" : "text-green-600")}>
+                            {selectedSubscription.days_remaining} days
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Auto Renew</span>
+                          <Badge variant={selectedSubscription.auto_renew ? "default" : "outline"}>
+                            {selectedSubscription.auto_renew ? "Enabled" : "Disabled"}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Customer</Label>
-                    <p className="text-sm">{selectedSubscription.customer_full_name || selectedSubscription.customer_name}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Package</Label>
-                    <p className="text-sm">{selectedSubscription.package_name}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Start Date</Label>
-                    <p className="text-sm">{format(new Date(selectedSubscription.start_date), "MMM dd, yyyy")}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">End Date</Label>
-                    <p className="text-sm">{format(new Date(selectedSubscription.end_date), "MMM dd, yyyy")}</p>
-                  </div>
 
-                  {/* AA Compliance Fields */}
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Activation Date (AA Policy)</Label>
-                    <p className="text-sm font-semibold text-blue-600">
-                      {selectedSubscription.activation_date
-                        ? format(new Date(selectedSubscription.activation_date), "MMM dd, yyyy")
-                        : "Pending Payment / Processing"}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Days Remaining</Label>
-                    <p className="text-sm font-semibold">{selectedSubscription.days_remaining || 0} days</p>
-                  </div>
-
-                  <div className="space-y-1 border-t pt-2">
-                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Original Price</Label>
-                    <p className="text-sm">{formatCurrency(parseFloat(selectedSubscription.original_price || selectedSubscription.purchase_price))}</p>
-                  </div>
-                  <div className="space-y-1 border-t pt-2">
-                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Paid Amount</Label>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold">{formatCurrency(parseFloat(selectedSubscription.purchase_price))}</p>
-                      {selectedSubscription.discount_applied > 0 && (
-                        <Badge variant="success" className="text-[10px] py-0">
-                          {selectedSubscription.discount_applied}% {selectedSubscription.discount_reason}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Status</Label>
                     <div>
-                      <Badge variant={selectedSubscription.payment_status === "paid" ? "default" : "secondary"}>
-                        {selectedSubscription.payment_status}
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Auto Renew</Label>
-                    <p className="text-sm">{selectedSubscription.auto_renew ? "Yes" : "No"}</p>
-                  </div>
-
-                  {/* Refund Visibility */}
-                  {selectedSubscription.status === 'active' && (
-                    <div className="col-span-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-md border border-amber-200 dark:border-amber-800">
-                      <p className="text-xs font-semibold uppercase text-amber-700 dark:text-amber-400 mb-1">Administrative: Refund Eligibility</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">{selectedSubscription.is_refund_eligible ? "✅ Within 30-day window" : "❌ Past 30-day window"}</span>
-                        {selectedSubscription.is_refund_eligible && (
-                          <span className="text-sm font-bold">Estimated: {formatCurrency(parseFloat(selectedSubscription.calculated_refund_amount || "0"))}</span>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3">Customer</h3>
+                      <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg space-y-2">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm font-medium">{selectedSubscription.customer_full_name || selectedSubscription.customer_name}</span>
+                        </div>
+                        {selectedSubscription.vehicle && (
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>Vehicle ID: {selectedSubscription.vehicle}</span>
+                          </div>
                         )}
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                {/* Usage History Section */}
-                <div className="border-t pt-4 space-y-3">
-                  <Label className="text-sm font-semibold">Usage History</Label>
-                  {isLoadingUsage ? (
-                    <div className="text-sm text-gray-500">Loading usage history...</div>
-                  ) : usageHistory && usageHistory.length > 0 ? (
-                    <div className="rounded-md border max-h-40 overflow-y-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="h-8">Date</TableHead>
-                            <TableHead className="h-8">Type</TableHead>
-                            <TableHead className="h-8">Amount</TableHead>
-                            <TableHead className="h-8">Ref</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {usageHistory.map((usage: any) => (
-                            <TableRow key={usage.id} className="h-8">
-                              <TableCell className="py-1">{format(new Date(usage.service_date), "MMM dd")}</TableCell>
-                              <TableCell className="py-1 capitalize">{usage.usage_type?.replace(/_/g, " ")}</TableCell>
-                              <TableCell className="py-1">{usage.quantity_used}</TableCell>
-                              <TableCell className="py-1 text-xs text-muted-foreground">{usage.reference_type || "-"}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                  {/* Right Column */}
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3">Payment & Financials</h3>
+                      <div className="space-y-3">
+                        <div className="flex justify-between border-b pb-2 border-dashed">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Price</span>
+                          <span className="text-sm font-medium">{formatCurrency(parseFloat(selectedSubscription.original_price || selectedSubscription.purchase_price))}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2 border-dashed">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Total Paid</span>
+                          <div className="flex flex-col items-end">
+                            <span className="text-sm font-bold">{formatCurrency(parseFloat(selectedSubscription.purchase_price))}</span>
+                            {selectedSubscription.discount_applied > 0 && (
+                              <span className="text-[10px] text-green-600">
+                                -{selectedSubscription.discount_applied}% ({selectedSubscription.discount_reason})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center pt-1">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Payment Status</span>
+                          <Badge variant={selectedSubscription.payment_status === "paid" ? "success" : "warning"} className="capitalize">
+                            {selectedSubscription.payment_status}
+                          </Badge>
+                        </div>
+
+                        {/* AA Policy */}
+                        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-100 dark:border-blue-900">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium text-blue-700 dark:text-blue-400">Activation Date (AA Policy)</span>
+                            <span className="text-xs font-bold text-blue-800 dark:text-blue-300">
+                              {selectedSubscription.activation_date
+                                ? format(new Date(selectedSubscription.activation_date), "MMM dd, yyyy")
+                                : "Pending"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <p className="text-sm text-gray-500 italic">No usage history recorded.</p>
-                  )}
+
+                    {/* Refund Eligibility */}
+                    {selectedSubscription.status === 'active' && (
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded-md border border-amber-200 dark:border-amber-800">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-2">Refund Eligibility</p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                            {selectedSubscription.is_refund_eligible ? "Eligible for Refund" : "Not Eligible"}
+                          </span>
+                          {selectedSubscription.is_refund_eligible && (
+                            <span className="text-sm font-bold text-amber-900 dark:text-amber-100">
+                              Est: {formatCurrency(parseFloat(selectedSubscription.calculated_refund_amount || "0"))}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {selectedSubscription.remaining_allowances && Object.keys(selectedSubscription.remaining_allowances).length > 0 && (
-                  <div className="border-t pt-4 space-y-3">
-                    <Label className="text-sm font-semibold">Remaining Allowances</Label>
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-3 pt-4 border-t">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">Remaining Allowances</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {Object.entries(selectedSubscription.remaining_allowances).map(([key, value]) => {
                         const labelMap: Record<string, string> = {
-                          roadside_first_aid: "Mech/Elec First Aid",
-                          towing_services_km: "Towing Limit (km)",
-                          emergency_fuel: "Emergency Fuel",
-                          key_lock_out: "Key Lock Out",
+                          roadside_first_aid: "Mech First Aid",
+                          towing_services_km: "Towing (km)",
+                          emergency_fuel: "Fuel",
+                          key_lock_out: "Lock Out",
                           extrication: "Extrication",
-                          accident_estimate: "Accident Estimate",
-                          pre_purchase_inspection: "Pre-Purchase Insp.",
-                          battery_boosts: "Battery Boosts",
-                          flat_tyre_service: "Flat Tyre Service",
-                          total_service_calls: "Total Service Calls",
+                          accident_estimate: "Accident Est.",
+                          pre_purchase_inspection: "Pre-Purchase",
+                          battery_boosts: "Boosts",
+                          flat_tyre_service: "Flat Tyre",
+                          total_service_calls: "Service Calls",
                         };
                         return (
-                          <div key={key} className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">{labelMap[key] || key.replace(/_/g, " ")}</span>
-                            <span className="text-sm font-semibold">{value}</span>
+                          <div key={key} className="p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-100 dark:border-gray-700 flex flex-col items-center text-center">
+                            <span className="text-lg font-black text-gray-900 dark:text-white">{value}</span>
+                            <span className="text-[10px] uppercase text-gray-500 font-medium mt-1">{labelMap[key] || key.replace(/_/g, " ")}</span>
                           </div>
                         );
                       })}
                     </div>
                   </div>
                 )}
+
+                {/* Usage History Section */}
+                <div className="space-y-3 pt-4 border-t">
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">Usage History</h3>
+                  {isLoadingUsage ? (
+                    <div className="text-sm text-gray-500 py-4 text-center">Loading usage history...</div>
+                  ) : usageHistory && usageHistory.length > 0 ? (
+                    <div className="rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50/50">
+                            <TableHead className="h-9">Date</TableHead>
+                            <TableHead className="h-9">Type</TableHead>
+                            <TableHead className="h-9">Amount</TableHead>
+                            <TableHead className="h-9">Ref</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {usageHistory.map((usage: any) => (
+                            <TableRow key={usage.id} className="h-9">
+                              <TableCell className="py-2 text-xs">{format(new Date(usage.service_date), "MMM dd, yyyy")}</TableCell>
+                              <TableCell className="py-2 text-xs font-medium capitalize">{usage.usage_type?.replace(/_/g, " ")}</TableCell>
+                              <TableCell className="py-2 text-xs">{usage.quantity_used}</TableCell>
+                              <TableCell className="py-2 text-xs text-muted-foreground">{usage.reference_type || "-"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-dashed">
+                      <p className="text-sm text-gray-500">No usage history recorded.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-            <DialogFooter className="flex justify-between items-center sm:justify-between">
+            <DialogFooter className="flex justify-between items-center sm:justify-between sm:gap-0 gap-2 mt-6">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -758,6 +792,7 @@ export default function SubscriptionsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
 
         {/* Cancel Dialog */}
         <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>

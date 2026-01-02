@@ -8,13 +8,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('customers', '0002_customernote_note_alter_customernote_content_and_more'),
-        ('django_ledger', '__first__'),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='customer',
-            name='ledger_customer',
-            field=models.OneToOneField(blank=True, help_text='Django Ledger Customer for AR tracking and aging reports', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='repair_customer', to='django_ledger.customermodel'),
-        ),
+        # fields removed
     ]

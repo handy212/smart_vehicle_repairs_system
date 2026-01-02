@@ -1595,4 +1595,3 @@ class AccountingService:
             logger = logging.getLogger(__name__)
             logger.error(f"Failed to post inventory transaction accounting entry: {e}")
             return None
-

@@ -106,15 +106,12 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
                     return self.queryset.none()
         elif user.role in ['admin', 'manager']:
             return self.queryset.all()
+        elif getattr(user, 'is_technician', False):
+             # Technicians can only see requests assigned to them
+             return self.queryset.filter(assigned_technician=user)
         else:
-            # Staff can see requests for their branch
-            from apps.branches.utils import filter_queryset_for_user_branches
-            return filter_queryset_for_user_branches(
-                self.queryset,
-                user,
-                request=self.request,
-                use_active_branch=True
-            )
+            # Other staff have no access to roadside requests
+            return self.queryset.none()
     
     
     def perform_create(self, serializer):

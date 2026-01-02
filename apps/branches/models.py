@@ -93,14 +93,14 @@ class Branch(models.Model):
     )
     
     # Django Ledger Entity reference (for accounting integration)
-    ledger_entity = models.OneToOneField(
-        'django_ledger.EntityModel',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='branch',
-        help_text="Django Ledger Entity for this branch's accounting"
-    )
+    # ledger_entity = models.OneToOneField(
+    #     'django_ledger.EntityModel',
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    #     related_name='branch',
+    #     help_text="Django Ledger Entity for this branch's accounting"
+    # )
     
     # Metadata
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)

@@ -9,28 +9,12 @@ class Migration(migrations.Migration):
     dependencies = [
         ('branches', '0002_branch_ledger_entity'),
         ('inventory', '0001_initial'),
-        ('django_ledger', '__first__'),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='part',
-            name='ledger_item',
-            field=models.OneToOneField(blank=True, help_text='Django Ledger Item for inventory accounting and COGS tracking', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='repair_part', to='django_ledger.itemmodel'),
-        ),
-        migrations.AddField(
             model_name='purchaseorder',
             name='branch',
             field=models.ForeignKey(blank=True, help_text='Branch where this purchase order is for', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='purchase_orders', to='branches.branch'),
-        ),
-        migrations.AddField(
-            model_name='purchaseorder',
-            name='ledger_bill',
-            field=models.OneToOneField(blank=True, help_text='Django Ledger Bill created when PO is received (for AP tracking)', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='repair_purchase_order', to='django_ledger.billmodel'),
-        ),
-        migrations.AddField(
-            model_name='supplier',
-            name='ledger_vendor',
-            field=models.OneToOneField(blank=True, help_text='Django Ledger Vendor for AP tracking and aging reports', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='repair_supplier', to='django_ledger.vendormodel'),
         ),
     ]

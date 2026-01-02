@@ -44,6 +44,9 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
+    # Accounting API
+    path('api/accounting/', include('apps.accounting.urls')),
     
     # Authentication - Convenient shortcuts
     path('login/', RedirectView.as_view(pattern_name='login', permanent=False)),
@@ -137,7 +140,7 @@ urlpatterns = [
     path('inbox/notifications/', include('notifications.urls', namespace='inbox_notifications')),
     
     # Django Ledger - Accounting System
-    path('ledger/', include('django_ledger.urls', namespace='django_ledger')),
+    # path('ledger/', include('django_ledger.urls', namespace='django_ledger')),  # Removed for accounting module archival
 ]
 
 # Serve static/media files

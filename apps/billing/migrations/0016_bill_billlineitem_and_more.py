@@ -13,7 +13,6 @@ class Migration(migrations.Migration):
         ('branches', '0003_add_proforma_numbering'),
         ('inventory', '0005_servicepackage_servicepackagepart'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('django_ledger', '0030_alter_accountmodel_role'),
         ('billing', '0015_creditnote_creditnotelineitem_and_more'),
     ]
 
@@ -39,7 +38,7 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('branch', models.ForeignKey(help_text='Branch responsible for this bill', on_delete=django.db.models.deletion.PROTECT, related_name='bills', to='branches.branch')),
                 ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='bills_created', to=settings.AUTH_USER_MODEL)),
-                ('ledger_bill', models.OneToOneField(blank=True, help_text='Django Ledger Bill for AP tracking', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='repair_bill', to='django_ledger.billmodel')),
+                # ledger_bill field removed
                 ('vendor', models.ForeignKey(help_text='Vendor/Supplier who sent this bill', on_delete=django.db.models.deletion.PROTECT, related_name='bills', to='inventory.supplier')),
             ],
             options={

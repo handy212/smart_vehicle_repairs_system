@@ -76,12 +76,13 @@ def resolve_branch(request: HttpRequest, branch_id: Optional[int] = None) -> Opt
 
 
 def filter_queryset_for_user_branches(
-    queryset,
+    queryset: QuerySet,
     user,
-    request=None,
-    use_active_branch=True,
-    include_unassigned=False,
-):
+    request: HttpRequest | None = None,
+    use_active_branch: bool = True,
+    include_unassigned: bool = False,
+    branch_lookup: str = "branch",
+) -> QuerySet:
     """
     Limit queryset to branches the user can access.
     
@@ -91,31 +92,41 @@ def filter_queryset_for_user_branches(
         request: Optional HttpRequest to get active branch from session
         use_active_branch: If True and request provided, filter by active branch only
                           If False, filter by all accessible branches
+        include_unassigned: If True, include records with no branch assignment
+        branch_lookup: The field lookup path to the branch (default: "branch")
     """
     if not user or not getattr(user, "is_authenticated", False):
         return queryset.none()
     
     # Admins can see all branches unless use_active_branch is True and active branch is set
-    def apply_filter(base_filter: Q | None):
-        if base_filter is None:
-            return queryset
+    def apply_filter(branch_obj_or_ids, is_list=False):
+        q_kwargs = {}
+        if is_list:
+            q_kwargs[f"{branch_lookup}__in"] = branch_obj_or_ids
+        else:
+            q_kwargs[branch_lookup] = branch_obj_or_ids
+            
+        base_filter = Q(**q_kwargs)
+        
         if include_unassigned:
-            base_filter = base_filter | Q(branch__isnull=True)
+            null_kwargs = {f"{branch_lookup}__isnull": True}
+            base_filter = base_filter | Q(**null_kwargs)
+            
         return queryset.filter(base_filter)
     
     if getattr(user, "role", None) == "admin":
         if use_active_branch and request:
             active_branch = resolve_branch(request)
             if active_branch:
-                return apply_filter(Q(branch=active_branch))
+                return apply_filter(active_branch)
         return queryset
     
     # For non-admins, check if we should use active branch
     if use_active_branch and request:
         active_branch = resolve_branch(request)
         if active_branch and user.has_branch_access(active_branch):
-            return apply_filter(Q(branch=active_branch))
+            return apply_filter(active_branch)
     
     # Fall back to all accessible branches
     branches = get_user_accessible_branches(user)
-    return apply_filter(Q(branch__in=branches))
+    return apply_filter(branches, is_list=True)

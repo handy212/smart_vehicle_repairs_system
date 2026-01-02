@@ -5,6 +5,7 @@ from django.utils import timezone
 from .models import Technician, Skill, TimeOffRequest, Shift, Certification
 from .serializers import TechnicianSerializer, SkillSerializer, TimeOffRequestSerializer, ShiftSerializer, TechnicianJobHistorySerializer, CertificationSerializer
 from django.db import models
+from apps.branches.utils import filter_queryset_for_user_branches
 
 class SkillViewSet(viewsets.ModelViewSet):
     queryset = Skill.objects.filter(is_active=True)
@@ -19,6 +20,15 @@ class TechnicianViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        
+        # Filter by branch
+        queryset = filter_queryset_for_user_branches(
+            queryset,
+            self.request.user,
+            self.request,
+            branch_lookup='user__branch'
+        )
+        
         status_param = self.request.query_params.get('status', None)
         if status_param:
             queryset = queryset.filter(current_status=status_param)
@@ -188,10 +198,20 @@ class TimeOffRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        queryset = super().get_queryset()
         user = self.request.user
+        
+        # Filter by branch first
+        queryset = filter_queryset_for_user_branches(
+            queryset,
+            user,
+            self.request,
+            branch_lookup='technician__user__branch'
+        )
+        
         if user.is_technician:
-            return TimeOffRequest.objects.filter(technician__user=user)
-        return TimeOffRequest.objects.all()
+            return queryset.filter(technician__user=user)
+        return queryset
 
     def perform_create(self, serializer):
         # Auto-assign the technician based on the logged-in user
@@ -206,6 +226,15 @@ class ShiftViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        
+        # Filter by branch
+        queryset = filter_queryset_for_user_branches(
+            queryset,
+            self.request.user,
+            self.request,
+            branch_lookup='technician__user__branch'
+        )
+        
         technician_id = self.request.query_params.get('technician', None)
         if technician_id:
             queryset = queryset.filter(technician_id=technician_id)
@@ -300,6 +329,14 @@ class CertificationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        
+        # Filter by branch
+        queryset = filter_queryset_for_user_branches(
+            queryset,
+            self.request.user,
+            self.request,
+            branch_lookup='technician__user__branch'
+        )
         
         # Filter by technician
         technician_id = self.request.query_params.get('technician', None)

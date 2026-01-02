@@ -8,13 +8,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('branches', '0001_initial'),
-        ('django_ledger', '__first__'),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='branch',
-            name='ledger_entity',
-            field=models.OneToOneField(blank=True, help_text="Django Ledger Entity for this branch's accounting", null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='branch', to='django_ledger.entitymodel'),
-        ),
+        # fields removed
     ]

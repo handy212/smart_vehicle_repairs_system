@@ -546,14 +546,14 @@ class Invoice(models.Model):
     )  # Link to original estimate if applicable
     
     # Django Ledger Invoice reference (for full accounting integration)
-    ledger_invoice = models.OneToOneField(
-        'django_ledger.InvoiceModel',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='repair_invoice',
-        help_text="Django Ledger Invoice for full accounting integration"
-    )
+    # ledger_invoice = models.OneToOneField(
+    #     'django_ledger.InvoiceModel',
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    #     related_name='repair_invoice',
+    #     help_text="Django Ledger Invoice for full accounting integration"
+    # )
     
     # Status and dates
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
@@ -1509,14 +1509,14 @@ class Bill(models.Model):
     amount_due = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
 
     # Integration
-    ledger_bill = models.OneToOneField(
-        'django_ledger.BillModel',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='repair_bill',
-        help_text="Django Ledger Bill for AP tracking"
-    )
+    # ledger_bill = models.OneToOneField(
+    #     'django_ledger.BillModel',
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    #     related_name='repair_bill',
+    #     help_text="Django Ledger Bill for AP tracking"
+    # )
 
     # Tracking
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='bills_created')
@@ -1587,6 +1587,15 @@ class BillLineItem(models.Model):
     # Optional: Link to an expense account if user knows it
     # For now, just a text field or simple category
     expense_category = models.CharField(max_length=100, blank=True)
+    
+    inventory_item = models.ForeignKey(
+        'inventory.Part',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='bill_line_items',
+        help_text='Inventory item associated with this line item'
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1595,3 +1604,58 @@ class BillLineItem(models.Model):
         self.total = self.quantity * self.unit_price
         super().save(*args, **kwargs)
         self.bill.calculate_totals()
+
+class BillPayment(models.Model):
+    """
+    Payments made to Vendors for Bills
+    """
+    PAYMENT_METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('check', 'Check'),
+        ('bank_transfer', 'Bank Transfer'),
+        ('mobile_money', 'Mobile Money'),
+        ('credit_card', 'Credit Card'),
+        ('other', 'Other'),
+    ]
+
+    payment_number = models.CharField(max_length=50, unique=True, editable=False)
+    bill = models.ForeignKey(Bill, on_delete=models.PROTECT, related_name='payments')
+    
+    amount = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    payment_date = models.DateField(default=timezone.now)
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
+    reference_number = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    
+    paid_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='bill_payments_made')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-payment_date', '-created_at']
+        indexes = [
+            models.Index(fields=['payment_number']),
+            models.Index(fields=['payment_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.payment_number} - {self.amount} for {self.bill.bill_number}"
+
+    def save(self, *args, **kwargs):
+        if not self.payment_number:
+            # Simple ID generation
+            last_id = BillPayment.objects.aggregate(max_id=models.Max('id'))['max_id'] or 0
+            self.payment_number = f"BPAY{(last_id + 1):06d}"
+            
+        super().save(*args, **kwargs)
+        self.update_bill_status()
+
+    def update_bill_status(self):
+        """Update parent bill amount_paid and status"""
+        total_paid = self.bill.payments.aggregate(total=models.Sum('amount'))['total'] or Decimal('0')
+        self.bill.amount_paid = total_paid
+        self.bill.save() # Bill.save() handles status update logic

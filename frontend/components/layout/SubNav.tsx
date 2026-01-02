@@ -122,6 +122,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Categories", href: "/inventory/categories", permission: "view_categories" },
     { name: "Suppliers", href: "/inventory/suppliers", permission: "view_suppliers" },
     { name: "Purchase Orders", href: "/inventory/purchase-orders", permission: "view_purchase_orders" },
+    { name: "Transfers", href: "/inventory/transfers", permission: "view_transfers" },
   ],
   billing: [
     { name: "Invoices", href: "/billing/invoices", permission: "view_invoices" },
@@ -144,6 +145,23 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Audit Log", href: "/admin/audit-log", permission: "view_audit_log" },
     { name: "Import History", href: "/admin/import-history", permission: "view_import_history" },
   ],
+  accounting: [
+    { name: "Overview", href: "/accounting", permission: "view_accounting_dashboard" },
+    { name: "Executive Dashboard", href: "/accounting/management", permission: "view_financial_reports" },
+    { name: "Journal Entries", href: "/accounting/journal-entries", permission: "view_journal_entries" },
+    { name: "Chart of Accounts", href: "/accounting/accounts", permission: "view_accounts" },
+    { name: "Banking", href: "/accounting/banking/reconciliation", permission: "view_accounting" },
+    { name: "Balance Sheet", href: "/accounting/reports/balance-sheet", permission: "view_financial_reports" },
+    { name: "Profit & Loss", href: "/accounting/reports/profit-loss", permission: "view_financial_reports" },
+    { name: "Trial Balance", href: "/accounting/reports/trial-balance", permission: "view_financial_reports" },
+    { name: "Aging Report", href: "/accounting/reports/aging", permission: "view_financial_reports" },
+    { name: "Cash Flow", href: "/accounting/reports/cash-flow", permission: "view_financial_reports" },
+    { name: "Tax Report", href: "/accounting/reports/tax", permission: "view_financial_reports" },
+    { name: "Job Profitability", href: "/accounting/reports/job-profitability", permission: "view_financial_reports" },
+    { name: "Budgets", href: "/accounting/budgets", permission: "view_accounting_settings" },
+    { name: "Fund Transfers", href: "/accounting/transfers", permission: "view_accounting_settings" },
+    { name: "Controls & Compliance", href: "/accounting/controls", permission: "view_accounting_settings" },
+  ],
 };
 
 // Helper function to get sub-nav config based on pathname
@@ -164,7 +182,12 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
     };
   }
 
-
+  if (pathname.startsWith("/accounting")) {
+    return {
+      items: subNavConfig.accounting,
+      title: "Accounting",
+    };
+  }
 
   if (pathname.startsWith("/admin")) {
     return {

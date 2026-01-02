@@ -7,7 +7,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Sum, Count, F, Q, Avg
 from django.utils import timezone
-from django.db import connection
+from django.db import connection, models
+from django.db.models import Sum, Count, F, Q, Avg, Subquery, OuterRef, Value
+from django.db.models.functions import Coalesce
 from datetime import date
 from decimal import Decimal
 
@@ -15,9 +17,8 @@ from apps.branches.utils import filter_queryset_for_user_branches
 
 from .models import (
     PartCategory, Supplier, Part, PurchaseOrder, 
-    PartCategory, Supplier, Part, PurchaseOrder, 
     PurchaseOrderItem, InventoryTransaction,
-    ServicePackage
+    ServicePackage, StockItem, Transfer, TransferItem
 )
 from .serializers import (
     PartCategorySerializer, SupplierListSerializer, SupplierDetailSerializer,
@@ -28,10 +29,11 @@ from .serializers import (
     PurchaseOrderItemSerializer, PurchaseOrderItemCreateSerializer,
     ReceiveItemSerializer, InventoryTransactionSerializer,
     InventoryTransactionCreateSerializer, LowStockReportSerializer,
-    InventoryTransactionCreateSerializer, LowStockReportSerializer,
     InventoryValueReportSerializer, ServicePackageSerializer,
-    ServicePackageCreateSerializer
+    ServicePackageCreateSerializer, StockItemSerializer,
+    TransferSerializer, TransferCreateSerializer
 )
+from .services import InventoryService
 
 
 class PartCategoryViewSet(viewsets.ModelViewSet):
@@ -190,13 +192,20 @@ class PartViewSet(viewsets.ModelViewSet):
         """
         queryset = self.get_queryset()
         total_parts = queryset.count()
-        low_stock = queryset.filter(quantity_in_stock__lte=F('reorder_point')).count()
-        out_of_stock = queryset.filter(quantity_in_stock=0).count()
+        low_stock = queryset.filter(current_stock__lte=F('reorder_point')).count()
+        out_of_stock = queryset.filter(current_stock=0).count()
         
         # Calculate total inventory value
+        # Note: total_value property on Part uses simple cost * quantity.
+        # But we want to use the annotated stock level.
         total_value = 0
-        for part in queryset:
-            total_value += part.total_value
+        
+        # Optimization: Aggregate in DB if possible, but total_value depends on cost_price * current_stock
+        # Since cost_price is on Part and current_stock is annotated
+        val_agg = queryset.aggregate(
+            total_val=Sum(F('cost_price') * F('current_stock'), output_field=models.DecimalField())
+        )
+        total_value = val_agg['total_val'] or 0
             
         return Response({
             'total_parts': total_parts,
@@ -233,76 +242,55 @@ class PartViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         
-        # Check if branch column exists in database before filtering
-        # This allows the API to work before migrations are run
-        try:
-            table_name = Part._meta.db_table
-            db_vendor = connection.vendor
-            
-            has_branch_column = False
-            with connection.cursor() as cursor:
-                if db_vendor == 'postgresql':
-                    cursor.execute("""
-                        SELECT column_name 
-                        FROM information_schema.columns 
-                        WHERE table_name = %s AND column_name = 'branch_id'
-                    """, [table_name])
-                    has_branch_column = cursor.fetchone() is not None
-                elif db_vendor == 'sqlite':
-                    cursor.execute("""
-                        SELECT name FROM pragma_table_info(?) WHERE name = 'branch_id'
-                    """, [table_name])
-                    has_branch_column = cursor.fetchone() is not None
-                elif db_vendor == 'mysql':
-                    cursor.execute("""
-                        SELECT column_name 
-                        FROM information_schema.columns 
-                        WHERE table_name = %s AND column_name = 'branch_id'
-                        AND table_schema = DATABASE()
-                    """, [table_name])
-                    has_branch_column = cursor.fetchone() is not None
-                else:
-                    # For other databases, try a simple test query
-                    try:
-                        cursor.execute(f"SELECT branch_id FROM {table_name} LIMIT 0")
-                        has_branch_column = True  # If query succeeds, column exists
-                    except Exception:
-                        has_branch_column = False  # If query fails, column doesn't exist
-        except Exception:
-            # If checking fails, assume column doesn't exist and defer it
-            has_branch_column = False
+        # Use centralized branch resolution
+        from apps.branches.utils import resolve_branch
+        branch = resolve_branch(self.request)
+        branch_id = branch.id if branch else None
         
-        if has_branch_column:
-            # Branch column exists, filter by branch
-            try:
-                queryset = filter_queryset_for_user_branches(
-                    queryset,
-                    self.request.user,
-                    self.request,
-                    include_unassigned=True
-                )
-            except Exception:
-                # If filtering fails for any reason, defer branch field
-                queryset = queryset.defer('branch')
+        if branch_id:
+            # Filter/Annotate based on specific branch
+            stock_subquery = StockItem.objects.filter(
+                part=OuterRef('pk'),
+                branch_id=branch_id
+            ).values('quantity_in_stock')[:1]
+            
+            reserved_subquery = StockItem.objects.filter(
+                part=OuterRef('pk'),
+                branch_id=branch_id
+            ).values('quantity_reserved')[:1]
+            
+            queryset = queryset.annotate(
+                branch_stock=Coalesce(Subquery(stock_subquery), 0),
+                branch_reserved=Coalesce(Subquery(reserved_subquery), 0)
+            ).annotate(
+                current_stock=F('branch_stock'),
+                current_reserved=F('branch_reserved')
+            )
         else:
-            # Branch column doesn't exist yet, defer it to avoid SQL errors
-            queryset = queryset.defer('branch')
+            # Aggregate global stock from all branches
+            queryset = queryset.annotate(
+                total_stock=Coalesce(Sum('stock_items__quantity_in_stock'), 0),
+                total_reserved=Coalesce(Sum('stock_items__quantity_reserved'), 0)
+            ).annotate(
+                current_stock=F('total_stock'),
+                current_reserved=F('total_reserved')
+            )
         
         # Custom filter: low stock
         if self.request.query_params.get('low_stock') == 'true':
-            queryset = queryset.filter(quantity_in_stock__lte=F('reorder_point'))
+            queryset = queryset.filter(current_stock__lte=F('reorder_point'))
         
         # Custom filter: out of stock
         if self.request.query_params.get('out_of_stock') == 'true':
-            queryset = queryset.filter(quantity_in_stock=0)
+            queryset = queryset.filter(current_stock=0)
         
         # Custom filter: needs reorder
         if self.request.query_params.get('needs_reorder') == 'true':
             queryset = queryset.filter(
-                quantity_in_stock__lte=F('reorder_point'),
-                quantity_in_stock__gt=0
+                current_stock__lte=F('reorder_point'),
+                # quantity_on_order=0  # Simple logic, can be improved
             )
-        
+            
         return queryset
 
     def get_serializer_class(self):
@@ -317,7 +305,9 @@ class PartViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def low_stock(self, request):
         """Get all parts with low stock"""
-        parts = self.queryset.filter(quantity_in_stock__lte=F('reorder_point'))
+        # Use get_queryset() to ensure we use branch-specific stock if filtered
+        parts = self.get_queryset().filter(current_stock__lte=F('reorder_point'))
+        
         page = self.paginate_queryset(parts)
         if page is not None:
             serializer = PartListSerializer(page, many=True)
@@ -328,7 +318,9 @@ class PartViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def out_of_stock(self, request):
         """Get all parts that are out of stock"""
-        parts = self.queryset.filter(quantity_in_stock=0)
+        # Use get_queryset() to ensure we use branch-specific stock if filtered
+        parts = self.get_queryset().filter(current_stock=0)
+        
         page = self.paginate_queryset(parts)
         if page is not None:
             serializer = PartListSerializer(page, many=True)
@@ -1158,3 +1150,243 @@ class InventoryTransactionViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(transactions, many=True)
         return Response(serializer.data)
 
+
+class StockItemViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing stock levels per branch.
+    """
+    queryset = StockItem.objects.all().select_related('part', 'branch')
+    serializer_class = StockItemSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['branch', 'is_low_stock', 'is_out_of_stock']
+    search_fields = ['part__part_number', 'part__name', 'bin_location']
+    ordering_fields = ['quantity_in_stock', 'total_value']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        
+        # Filter by branch (handled by permission utility or manual)
+        # Assuming we want users to only see stock for their accessible branches
+        # Or all branches if they have permission?
+        # For now, let's filter by user branches utility
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        
+        # Admin or Manager sees all? Depends on strictness.
+        # But filter_queryset_for_user_branches handles admin logic.
+        # However, for StockItem, the user function works well.
+        
+        return filter_queryset_for_user_branches(
+            queryset, 
+            user, 
+            self.request,
+            use_active_branch=True
+        )
+
+
+class TransferViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing stock transfers between branches.
+    """
+    queryset = Transfer.objects.all().select_related(
+        'source_branch', 'destination_branch', 
+        'created_by', 'approved_by', 'received_by'
+    ).prefetch_related('items__part')
+    
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['status', 'source_branch', 'destination_branch']
+    ordering = ['-created_at']
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return TransferCreateSerializer
+        return TransferSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        # Filter transfers relevant to user's branches (either source or dest)
+        # This complex logic might need custom implementation if utils don't cover "OR" logic well.
+        # simpler: show all if admin/manager, or filter?
+        # For now, return all, relying on permission classes to restrict actions?
+        return queryset
+
+    def perform_create(self, serializer):
+        # Use service to initiate transfer
+        items = serializer.validated_data.pop('items')
+        InventoryService.initiate_transfer(
+            source_branch=serializer.validated_data['source_branch'],
+            destination_branch=serializer.validated_data['destination_branch'],
+            items=items,
+            user=self.request.user,
+            notes=serializer.validated_data.get('notes', '')
+        )
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        transfer = self.get_object()
+        try:
+            InventoryService.approve_transfer(transfer, user=request.user)
+            return Response({'status': 'Transfer approved'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def ship(self, request, pk=None):
+        transfer = self.get_object()
+        try:
+            InventoryService.ship_transfer(transfer, user=request.user)
+            return Response({'status': 'Transfer marked as shipped'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def receive(self, request, pk=None):
+        transfer = self.get_object()
+        items_received = request.data.get('items', {})
+        # items_received expected format: {part_id: quantity}
+        # But JSON keys are strings, so we might need to parse keys to int
+        
+        parsed_items = {}
+        for k, v in items_received.items():
+            try:
+                parsed_items[int(k)] = int(v)
+            except:
+                pass
+                
+        try:
+            InventoryService.receive_transfer(transfer, parsed_items, user=request.user)
+            return Response({'status': 'Transfer received'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class StockItemViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing stock levels per branch.
+    """
+    queryset = StockItem.objects.all().select_related('part', 'branch')
+    serializer_class = StockItemSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['branch', 'is_low_stock', 'is_out_of_stock']
+    search_fields = ['part__part_number', 'part__name', 'bin_location']
+    ordering_fields = ['quantity_in_stock', 'total_value']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        
+        # Filter by branch (handled by permission utility or manual)
+        # Assuming we want users to only see stock for their accessible branches
+        # Or all branches if they have permission?
+        # For now, let's filter by user branches utility
+        try:
+             # Need to implement filtering based on StockItem.branch, not StockItem directly
+             queryset = filter_queryset_for_user_branches(
+                queryset, 
+                user, 
+                self.request,
+                branch_field='branch'
+            )
+        except Exception:
+            pass
+            
+        return queryset
+
+
+class TransferViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing stock transfers between branches.
+    """
+    queryset = Transfer.objects.all().select_related(
+        'source_branch', 'destination_branch', 
+        'created_by', 'approved_by', 'received_by'
+    ).prefetch_related('items__part')
+    
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['status', 'source_branch', 'destination_branch']
+    ordering = ['-created_at']
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return TransferCreateSerializer
+        return TransferSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        
+        if not user or not user.is_authenticated:
+            return queryset.none()
+            
+        if user.role == 'admin':
+            return queryset
+            
+        # For transfers, we want to see items where source OR destination is in our accessible branches
+        from apps.branches.utils import get_user_accessible_branches, resolve_branch
+        
+        # If strict active branch filtering is desired:
+        # active_branch = resolve_branch(self.request)
+        # if active_branch:
+        #     return queryset.filter(Q(source_branch=active_branch) | Q(destination_branch=active_branch))
+            
+        # Broader approach: any transfer involving any of my branches
+        my_branches = get_user_accessible_branches(user)
+        return queryset.filter(
+            Q(source_branch__in=my_branches) | 
+            Q(destination_branch__in=my_branches)
+        ).distinct()
+
+    def perform_create(self, serializer):
+        # Use service to initiate transfer
+        items = serializer.validated_data.pop('items')
+        InventoryService.initiate_transfer(
+            source_branch=serializer.validated_data['source_branch'],
+            destination_branch=serializer.validated_data['destination_branch'],
+            items=items,
+            user=self.request.user,
+            notes=serializer.validated_data.get('notes', '')
+        )
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        transfer = self.get_object()
+        try:
+            InventoryService.approve_transfer(transfer, user=request.user)
+            return Response({'status': 'Transfer approved'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def ship(self, request, pk=None):
+        transfer = self.get_object()
+        try:
+            InventoryService.ship_transfer(transfer, user=request.user)
+            return Response({'status': 'Transfer marked as shipped'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def receive(self, request, pk=None):
+        transfer = self.get_object()
+        items_received = request.data.get('items', {})
+        # items_received expected format: {part_id: quantity}
+        # But JSON keys are strings, so we might need to parse keys to int
+        
+        parsed_items = {}
+        for k, v in items_received.items():
+            try:
+                parsed_items[int(k)] = int(v)
+            except:
+                pass
+                
+        try:
+            InventoryService.receive_transfer(transfer, parsed_items, user=request.user)
+            return Response({'status': 'Transfer received'})
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

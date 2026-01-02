@@ -4,7 +4,8 @@ from decimal import Decimal
 from .models import (
     PartCategory, Supplier, Part, PurchaseOrder, 
     PurchaseOrderItem, InventoryTransaction,
-    ServicePackage, ServicePackagePart
+    ServicePackage, ServicePackagePart,
+    StockItem, Transfer, TransferItem
 )
 
 from apps.accounts.models import User
@@ -87,10 +88,13 @@ class PartListSerializer(serializers.ModelSerializer):
     category_name = serializers.SerializerMethodField()
     category_path = serializers.SerializerMethodField()
     preferred_supplier_name = serializers.SerializerMethodField()
-    available_quantity = serializers.ReadOnlyField()
-    is_low_stock = serializers.ReadOnlyField()
-    is_out_of_stock = serializers.ReadOnlyField()
-    needs_reorder = serializers.ReadOnlyField()
+    available_quantity = serializers.SerializerMethodField()
+    # Override quantity_in_stock to use annotated value
+    quantity_in_stock = serializers.IntegerField(source='current_stock', read_only=True)
+    quantity_reserved = serializers.IntegerField(source='current_reserved', read_only=True)
+    is_low_stock = serializers.SerializerMethodField()
+    is_out_of_stock = serializers.SerializerMethodField()
+    needs_reorder = serializers.SerializerMethodField()
     profit_margin = serializers.ReadOnlyField()
 
     class Meta:
@@ -104,6 +108,16 @@ class PartListSerializer(serializers.ModelSerializer):
             'is_active', 'created_at'
         ]
 
+
+    def get_available_quantity(self, obj):
+        # Use annotated values if available, otherwise fallback (which likely returns model defaults)
+        stock = getattr(obj, 'current_stock', obj.quantity_in_stock)
+        reserved = getattr(obj, 'current_reserved', obj.quantity_reserved)
+        # Handle None which might happen with Coalesce if something goes wrong, though Coalesce should handle it
+        if stock is None: stock = 0
+        if reserved is None: reserved = 0
+        return max(0, stock - reserved)
+
     def get_category_name(self, obj):
         return obj.category.name if obj.category else None
 
@@ -113,6 +127,18 @@ class PartListSerializer(serializers.ModelSerializer):
     def get_preferred_supplier_name(self, obj):
         return obj.preferred_supplier.name if obj.preferred_supplier else None
 
+    def get_is_low_stock(self, obj):
+        stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
+        return stock <= obj.reorder_point
+
+    def get_is_out_of_stock(self, obj):
+        stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
+        return stock == 0
+
+    def get_needs_reorder(self, obj):
+        stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
+        return stock <= obj.reorder_point
+
 
 class PartDetailSerializer(serializers.ModelSerializer):
     category_name = serializers.SerializerMethodField()
@@ -120,16 +146,46 @@ class PartDetailSerializer(serializers.ModelSerializer):
     preferred_supplier_name = serializers.SerializerMethodField()
     suppliers_list = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
-    available_quantity = serializers.ReadOnlyField()
-    is_low_stock = serializers.ReadOnlyField()
-    is_out_of_stock = serializers.ReadOnlyField()
-    needs_reorder = serializers.ReadOnlyField()
+    
+    # Override stock fields to use annotated values from viewset
+    quantity_in_stock = serializers.IntegerField(source='current_stock', read_only=True)
+    quantity_reserved = serializers.IntegerField(source='current_reserved', read_only=True)
+    
+    available_quantity = serializers.SerializerMethodField()
+    is_low_stock = serializers.SerializerMethodField()
+    is_out_of_stock = serializers.SerializerMethodField()
+    needs_reorder = serializers.SerializerMethodField()
     profit_margin = serializers.ReadOnlyField()
     total_value = serializers.ReadOnlyField()
+
+    stock_items = serializers.SerializerMethodField()
 
     class Meta:
         model = Part
         fields = '__all__'
+
+    def get_available_quantity(self, obj):
+        stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
+        reserved = getattr(obj, 'current_reserved', obj.quantity_reserved) or 0
+        return max(0, stock - reserved)
+        
+    def get_is_low_stock(self, obj):
+        stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
+        return stock <= obj.reorder_point
+
+    def get_is_out_of_stock(self, obj):
+        stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
+        return stock == 0
+
+    def get_needs_reorder(self, obj):
+        stock = getattr(obj, 'current_stock', obj.quantity_in_stock) or 0
+        # Basic logic: stock <= reorder_point. 
+        # Ideally should check quantity_on_order too, but that needs annotation as well.
+        return stock <= obj.reorder_point
+
+    def get_stock_items(self, obj):
+        items = obj.stock_items.select_related('branch').all()
+        return StockItemSerializer(items, many=True).data
 
     def get_category_name(self, obj):
         return obj.category.name if obj.category else None
@@ -450,3 +506,67 @@ class ServicePackageCreateSerializer(serializers.ModelSerializer):
         
         return instance
 
+
+class StockItemSerializer(serializers.ModelSerializer):
+    branch_name = serializers.ReadOnlyField(source='branch.name')
+    branch_code = serializers.ReadOnlyField(source='branch.code')
+    
+    class Meta:
+        model = StockItem
+        fields = [
+            'id', 'part', 'branch', 'branch_name', 'branch_code',
+            'quantity_in_stock', 'quantity_reserved', 'quantity_on_order',
+            'available_quantity', 'reorder_point', 'reorder_quantity',
+            'minimum_stock', 'maximum_stock', 'bin_location', 'shelf',
+            'is_low_stock', 'is_out_of_stock', 'total_value',
+            'updated_at'
+        ]
+
+
+class TransferItemSerializer(serializers.ModelSerializer):
+    part_number = serializers.ReadOnlyField(source='part.part_number')
+    part_name = serializers.ReadOnlyField(source='part.name')
+    
+    class Meta:
+        model = TransferItem
+        fields = [
+            'id', 'transfer', 'part', 'part_number', 'part_name',
+            'quantity_requested', 'quantity_sent', 'quantity_received',
+            'notes'
+        ]
+
+
+class TransferSerializer(serializers.ModelSerializer):
+    source_branch_name = serializers.ReadOnlyField(source='source_branch.name')
+    destination_branch_name = serializers.ReadOnlyField(source='destination_branch.name')
+    created_by_name = serializers.SerializerMethodField()
+    approved_by_name = serializers.SerializerMethodField()
+    items = TransferItemSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Transfer
+        fields = [
+            'id', 'transfer_number', 'source_branch', 'source_branch_name',
+            'destination_branch', 'destination_branch_name', 'status',
+            'requested_date', 'approved_date', 'shipped_date', 'received_date',
+            'notes', 'rejection_reason', 'created_by', 'created_by_name',
+            'approved_by', 'approved_by_name', 'items', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['transfer_number', 'status', 'created_by', 'approved_by', 'received_by']
+
+    def get_created_by_name(self, obj):
+        return obj.created_by.get_full_name() if obj.created_by else None
+
+    def get_approved_by_name(self, obj):
+        return obj.approved_by.get_full_name() if obj.approved_by else None
+
+
+class TransferCreateSerializer(serializers.ModelSerializer):
+    items = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True
+    )
+    
+    class Meta:
+        model = Transfer
+        fields = ['source_branch', 'destination_branch', 'notes', 'items']

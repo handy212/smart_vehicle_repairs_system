@@ -78,14 +78,14 @@ class Supplier(models.Model):
     notes = models.TextField(blank=True)
     
     # Django Ledger Vendor reference (for AP tracking)
-    ledger_vendor = models.OneToOneField(
-        'django_ledger.VendorModel',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='repair_supplier',
-        help_text="Django Ledger Vendor for AP tracking and aging reports"
-    )
+    # ledger_vendor = models.OneToOneField(
+    #     'django_ledger.VendorModel',
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    #     related_name='repair_supplier',
+    #     help_text="Django Ledger Vendor for AP tracking and aging reports"
+    # )
     
     # Tracking
     created_at = models.DateTimeField(auto_now_add=True)
@@ -151,14 +151,16 @@ class Part(models.Model):
         related_name='preferred_parts'
     )
     
-    # Inventory
-    quantity_in_stock = models.IntegerField(default=0, validators=[MinValueValidator(0)])
-    quantity_reserved = models.IntegerField(default=0, validators=[MinValueValidator(0)])
-    quantity_on_order = models.IntegerField(default=0, validators=[MinValueValidator(0)])
-    reorder_point = models.IntegerField(default=10, validators=[MinValueValidator(0)])
-    reorder_quantity = models.IntegerField(default=20, validators=[MinValueValidator(0)])
-    minimum_stock = models.IntegerField(default=5, validators=[MinValueValidator(0)])
-    maximum_stock = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
+    # Inventory - DEPRECATED: Use StockItem model for branch-specific inventory
+    quantity_in_stock = models.IntegerField(default=0, validators=[MinValueValidator(0)], help_text="DEPRECATED: Use StockItem")
+    quantity_reserved = models.IntegerField(default=0, validators=[MinValueValidator(0)], help_text="DEPRECATED: Use StockItem")
+    quantity_on_order = models.IntegerField(default=0, validators=[MinValueValidator(0)], help_text="DEPRECATED: Use StockItem")
+    reorder_point = models.IntegerField(default=10, validators=[MinValueValidator(0)], help_text="DEPRECATED: Use StockItem")
+    reorder_quantity = models.IntegerField(default=20, validators=[MinValueValidator(0)], help_text="DEPRECATED: Use StockItem")
+    minimum_stock = models.IntegerField(default=5, validators=[MinValueValidator(0)], help_text="DEPRECATED: Use StockItem")
+    maximum_stock = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)], help_text="DEPRECATED: Use StockItem")
+    
+    # Unit
     
     # Unit
     unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='piece')
@@ -190,9 +192,9 @@ class Part(models.Model):
         help_text='Manufacturer suggested retail price'
     )
     
-    # Location
-    bin_location = models.CharField(max_length=50, blank=True, help_text='Physical storage location')
-    shelf = models.CharField(max_length=50, blank=True)
+    # Location - DEPRECATED: Use StockItem
+    bin_location = models.CharField(max_length=50, blank=True, help_text='DEPRECATED: Use StockItem')
+    shelf = models.CharField(max_length=50, blank=True, help_text='DEPRECATED: Use StockItem')
     
     # Specifications
     weight = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text='Weight in pounds')
@@ -217,14 +219,14 @@ class Part(models.Model):
     core_charge = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     
     # Django Ledger Item reference (for inventory accounting)
-    ledger_item = models.OneToOneField(
-        'django_ledger.ItemModel',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='repair_part',
-        help_text="Django Ledger Item for inventory accounting and COGS tracking"
-    )
+    # ledger_item = models.OneToOneField(
+    #     'django_ledger.ItemModel',
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    #     related_name='repair_part',
+    #     help_text="Django Ledger Item for inventory accounting and COGS tracking"
+    # )
     
     # Tracking
     last_cost_update = models.DateTimeField(null=True, blank=True)
@@ -303,6 +305,164 @@ class Part(models.Model):
         super().save(*args, **kwargs)
 
 
+class StockItem(models.Model):
+    """
+    Inventory stock tracking per branch.
+    Replaces the global inventory fields in Part model.
+    """
+    part = models.ForeignKey(Part, on_delete=models.CASCADE, related_name='stock_items')
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.CASCADE,
+        related_name='stock_items',
+        help_text='Branch where this stock is held'
+    )
+    
+    # Inventory Levels
+    quantity_in_stock = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    quantity_reserved = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    quantity_on_order = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    
+    # Settings
+    reorder_point = models.IntegerField(default=10, validators=[MinValueValidator(0)])
+    reorder_quantity = models.IntegerField(default=20, validators=[MinValueValidator(0)])
+    minimum_stock = models.IntegerField(default=5, validators=[MinValueValidator(0)])
+    maximum_stock = models.IntegerField(null=True, blank=True, validators=[MinValueValidator(0)])
+    
+    # Location
+    bin_location = models.CharField(max_length=50, blank=True, help_text='Physical storage location at this branch')
+    shelf = models.CharField(max_length=50, blank=True)
+    
+    # Tracking
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['part', 'branch']
+        unique_together = ['part', 'branch']
+        indexes = [
+            models.Index(fields=['part', 'branch']),
+            models.Index(fields=['branch', 'quantity_in_stock']),
+            models.Index(fields=['branch', 'bin_location']),
+        ]
+    
+    def __str__(self):
+        return f"{self.part.part_number} at {self.branch.name}"
+    
+    @property
+    def available_quantity(self):
+        """Quantity available for use (not reserved)"""
+        return max(0, self.quantity_in_stock - self.quantity_reserved)
+    
+    @property
+    def is_low_stock(self):
+        """Check if stock is below reorder point"""
+        return self.quantity_in_stock <= self.reorder_point
+    
+    @property
+    def is_out_of_stock(self):
+        """Check if part is out of stock"""
+        return self.quantity_in_stock == 0
+    
+    @property
+    def total_value(self):
+        """Total inventory value at this branch (cost * quantity)"""
+        if not self.part.cost_price:
+            return Decimal('0.00')
+        return self.part.cost_price * self.quantity_in_stock
+
+
+class Transfer(models.Model):
+    """
+    Stock transfer between branches
+    """
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('requested', 'Requested'),
+        ('approved', 'Approved'),
+        ('in_transit', 'In Transit'),
+        ('received', 'Received'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    transfer_number = models.CharField(max_length=20, unique=True, editable=False, db_index=True)
+    
+    # Branches
+    source_branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        related_name='transfers_out',
+        help_text="Branch sending the stock"
+    )
+    destination_branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        related_name='transfers_in',
+        help_text="Branch receiving the stock"
+    )
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', db_index=True)
+    
+    # Dates
+    requested_date = models.DateTimeField(default=timezone.now)
+    approved_date = models.DateTimeField(null=True, blank=True)
+    shipped_date = models.DateTimeField(null=True, blank=True)
+    received_date = models.DateTimeField(null=True, blank=True)
+    
+    # Notes
+    notes = models.TextField(blank=True)
+    rejection_reason = models.TextField(blank=True)
+    
+    # Tracking
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='transfers_created')
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='transfers_approved')
+    received_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='transfers_received')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['transfer_number']),
+            models.Index(fields=['status']),
+            models.Index(fields=['source_branch', 'destination_branch']),
+        ]
+        
+    def __str__(self):
+        return f"{self.transfer_number}: {self.source_branch.code} -> {self.destination_branch.code}"
+        
+    def save(self, *args, **kwargs):
+        if not self.transfer_number:
+            # Generate Transfer number: TRF000001
+            last_trf = Transfer.objects.order_by('-id').first()
+            if last_trf and last_trf.transfer_number:
+                last_number = int(last_trf.transfer_number[3:])
+                new_number = last_number + 1
+            else:
+                new_number = 1
+            self.transfer_number = f"TRF{new_number:06d}"
+        
+        super().save(*args, **kwargs)
+
+
+class TransferItem(models.Model):
+    """Item within a stock transfer"""
+    transfer = models.ForeignKey(Transfer, on_delete=models.CASCADE, related_name='items')
+    part = models.ForeignKey(Part, on_delete=models.PROTECT, related_name='transfer_items')
+    
+    quantity_requested = models.IntegerField(validators=[MinValueValidator(1)])
+    quantity_sent = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    quantity_received = models.IntegerField(default=0, validators=[MinValueValidator(0)])
+    
+    notes = models.CharField(max_length=255, blank=True)
+    
+    class Meta:
+        unique_together = ['transfer', 'part']
+        
+    def __str__(self):
+        return f"{self.transfer.transfer_number} - {self.part.part_number}"
+
 class PurchaseOrder(models.Model):
     """Purchase orders for ordering parts from suppliers"""
     STATUS_CHOICES = [
@@ -331,14 +491,14 @@ class PurchaseOrder(models.Model):
     )
     
     # Django Ledger Bill reference (for AP tracking when PO is received)
-    ledger_bill = models.OneToOneField(
-        'django_ledger.BillModel',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='repair_purchase_order',
-        help_text="Django Ledger Bill created when PO is received (for AP tracking)"
-    )
+    # ledger_bill = models.OneToOneField(
+    #     'django_ledger.BillModel',
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    #     related_name='repair_purchase_order',
+    #     help_text="Django Ledger Bill created when PO is received (for AP tracking)"
+    # )
     
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', db_index=True)
@@ -538,6 +698,21 @@ class InventoryTransaction(models.Model):
         null=True,
         blank=True,
         related_name='inventory_transactions'
+    )
+    transfer = models.ForeignKey(
+        Transfer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='inventory_transactions'
+    )
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.PROTECT,
+        null=True, # Allow null for migration of old records
+        blank=True,
+        related_name='inventory_transactions',
+        help_text="Branch where this transaction occurred"
     )
     
     # Notes

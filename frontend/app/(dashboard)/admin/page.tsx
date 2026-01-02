@@ -3,10 +3,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { adminApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Users, UserCheck, UserX, Shield, Settings, FileText, Database, CreditCard, Package } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export default function AdminDashboardPage() {
   const { data: dashboardStats, isLoading } = useQuery({
@@ -38,93 +40,133 @@ export default function AdminDashboardPage() {
   }, {} as Record<string, number>) || {};
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Administration</h1>
-        <p className="text-xs text-gray-500 mt-0.5">Manage users, settings, and system configuration</p>
+        <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Administration</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage users, settings, and system configuration</p>
       </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-bold">{totalUsers}</div>
-            <p className="text-[10px] text-muted-foreground mt-1">All registered users</p>
+        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Total Users</p>
+                <p className="text-2xl font-black text-gray-900 dark:text-white mt-1">{totalUsers}</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/20 flex items-center justify-center">
+                <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <span className="font-medium">All registered accounts</span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Active</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-bold text-green-600">{activeUsers}</div>
-            <p className="text-[10px] text-muted-foreground mt-1">Currently active</p>
+        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active</p>
+                <p className="text-2xl font-black text-green-600 dark:text-green-400 mt-1">{activeUsers}</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-950/20 flex items-center justify-center">
+                <UserCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <span className="font-medium">Currently active users</span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Inactive</CardTitle>
-            <UserX className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-bold text-red-600">{inactiveUsers}</div>
-            <p className="text-[10px] text-muted-foreground mt-1">Disabled accounts</p>
+        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Inactive</p>
+                <p className="text-2xl font-black text-red-600 dark:text-red-400 mt-1">{inactiveUsers}</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950/20 flex items-center justify-center">
+                <UserX className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <span className="font-medium">Disabled accounts</span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-4">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Staff</CardTitle>
-            <Shield className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-bold text-blue-600">{staffCount}</div>
-            <p className="text-[10px] text-muted-foreground mt-1">Internal roles</p>
+        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Staff</p>
+                <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{staffCount}</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+            </div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <span className="font-medium">Internal roles</span>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Quick Actions - Compact */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="py-3 px-4 border-b">
-            <CardTitle className="text-sm font-semibold">Quick Actions</CardTitle>
+        <Card className="lg:col-span-2 border-gray-100 dark:border-gray-800 shadow-sm">
+          <CardHeader className="py-4 px-6 border-b border-gray-100 dark:border-gray-800">
+            <CardTitle className="text-base font-bold">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Link href="/admin/users">
-                <Button variant="outline" className="w-full justify-start h-auto py-2 px-3 text-left flex flex-col items-start gap-1 hover:bg-slate-50 border-slate-200">
-                  <Users className="h-4 w-4 text-blue-600 mb-1" />
-                  <span className="font-semibold text-xs">Users</span>
-                  <span className="text-[10px] text-gray-500 font-normal">Manage accounts</span>
+                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:scale-[1.02]">
+                  <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-1">
+                    <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="text-center">
+                    <span className="font-semibold text-sm block">Users</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-normal">Manage accounts</span>
+                  </div>
                 </Button>
               </Link>
               <Link href="/admin/settings">
-                <Button variant="outline" className="w-full justify-start h-auto py-2 px-3 text-left flex flex-col items-start gap-1 hover:bg-slate-50 border-slate-200">
-                  <Settings className="h-4 w-4 text-slate-600 mb-1" />
-                  <span className="font-semibold text-xs">Settings</span>
-                  <span className="text-[10px] text-gray-500 font-normal">System config</span>
+                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:scale-[1.02]">
+                  <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-1">
+                    <Settings className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                  </div>
+                  <div className="text-center">
+                    <span className="font-semibold text-sm block">Settings</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-normal">System config</span>
+                  </div>
                 </Button>
               </Link>
               <Link href="/admin/audit-log">
-                <Button variant="outline" className="w-full justify-start h-auto py-2 px-3 text-left flex flex-col items-start gap-1 hover:bg-slate-50 border-slate-200">
-                  <FileText className="h-4 w-4 text-orange-600 mb-1" />
-                  <span className="font-semibold text-xs">Audit Log</span>
-                  <span className="text-[10px] text-gray-500 font-normal">View history</span>
+                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:scale-[1.02]">
+                  <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center mb-1">
+                    <FileText className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <div className="text-center">
+                    <span className="font-semibold text-sm block">Audit Log</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-normal">View history</span>
+                  </div>
                 </Button>
               </Link>
               <Link href="/subscriptions">
-                <Button variant="outline" className="w-full justify-start h-auto py-2 px-3 text-left flex flex-col items-start gap-1 hover:bg-slate-50 border-slate-200">
-                  <CreditCard className="h-4 w-4 text-green-600 mb-1" />
-                  <span className="font-semibold text-xs">Subs</span>
-                  <span className="text-[10px] text-gray-500 font-normal">Manage plans</span>
+                <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:scale-[1.02]">
+                  <div className="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mb-1">
+                    <CreditCard className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="text-center">
+                    <span className="font-semibold text-sm block">Subscriptions</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-normal">Manage plans</span>
+                  </div>
                 </Button>
               </Link>
             </div>
@@ -132,16 +174,19 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Roles Distribution - Compact */}
-        <Card>
-          <CardHeader className="py-3 px-4 border-b">
-            <CardTitle className="text-sm font-semibold">Staff Overview</CardTitle>
+        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <CardHeader className="py-4 px-6 border-b border-gray-100 dark:border-gray-800">
+            <CardTitle className="text-base font-bold">Staff Overview</CardTitle>
           </CardHeader>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-2 gap-2">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 gap-3">
               {Object.entries(roleCounts).slice(0, 6).map(([role, count]) => (
-                <div key={role} className="flex justify-between items-center p-2 bg-gray-50 rounded border border-gray-100">
-                  <span className="text-xs font-medium capitalize truncate">{role.replace("_", " ")}</span>
-                  <span className="text-xs font-bold text-gray-700 bg-white px-1.5 py-0.5 rounded border border-gray-200 shadow-sm">{count}</span>
+                <div key={role} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="text-sm font-medium capitalize text-gray-700 dark:text-gray-300">{role.replace("_", " ")}</span>
+                  </div>
+                  <Badge variant="secondary" className="font-bold">{count}</Badge>
                 </div>
               ))}
             </div>
@@ -150,75 +195,78 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-semibold">Recent Audit Logs</CardTitle>
-            <Link href="/admin/audit-log" className="text-xs text-blue-600 hover:underline">View All</Link>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <CardHeader className="py-4 px-6 border-b border-gray-100 dark:border-gray-800 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-bold">Recent Audit Logs</CardTitle>
+            <Link href="/admin/audit-log">
+              <Button variant="ghost" size="sm" className="h-8 text-xs">View All</Button>
+            </Link>
           </CardHeader>
           <CardContent className="p-0">
             {dashboardStats?.recent_logs && dashboardStats.recent_logs.length > 0 ? (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {dashboardStats.recent_logs.slice(0, 5).map((log) => (
-                  <div key={log.id} className="p-3 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between mb-1">
+                  <div key={log.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
+                    <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center space-x-2">
-                        <span className={`w-1.5 h-1.5 rounded-full ${log.action === 'create' ? 'bg-green-500' :
+                        <span className={cn("w-2 h-2 rounded-full",
+                          log.action === 'create' ? 'bg-green-500' :
                             log.action === 'update' ? 'bg-blue-500' :
                               log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
-                          }`}></span>
-                        <span className="text-xs font-medium text-gray-900">{log.user_name || "System"}</span>
+                        )}></span>
+                        <span className="text-xs font-bold text-gray-900 dark:text-gray-100">{log.user_name || "System"}</span>
                       </div>
                       <span className="text-[10px] text-gray-400 font-mono">
                         {format(new Date(log.timestamp), "HH:mm")}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between pl-3.5">
-                      <p className="text-xs text-gray-600 truncate max-w-[200px] capitalize">
+                    <div className="flex items-center justify-between pl-4">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[200px] capitalize font-medium">
                         {log.action} {log.model_name}
                       </p>
-                      <span className="text-[10px] text-gray-400 truncate max-w-[100px]" title={log.object_repr}>
+                      <Badge variant="outline" className="text-[10px] max-w-[120px] truncate font-mono">
                         {log.object_repr}
-                      </span>
+                      </Badge>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-xs p-4 text-center italic">No recent activity</p>
+              <p className="text-gray-500 text-sm p-8 text-center italic">No recent activity</p>
             )}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="py-3 px-4 border-b">
-            <CardTitle className="text-sm font-semibold">Recent Backups</CardTitle>
+        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <CardHeader className="py-4 px-6 border-b border-gray-100 dark:border-gray-800">
+            <CardTitle className="text-base font-bold">Recent Backups</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {dashboardStats?.recent_backups && dashboardStats.recent_backups.length > 0 ? (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-gray-100 dark:divide-gray-800">
                 {dashboardStats.recent_backups.map((backup) => (
-                  <div key={backup.id} className="p-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div key={backup.id} className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors">
                     <div>
                       <div className="flex items-center space-x-2">
-                        <Database className="w-3 h-3 text-gray-400" />
-                        <span className="text-xs font-medium capitalize">{backup.backup_type} Backup</span>
+                        <Database className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="text-sm font-semibold capitalize text-gray-900 dark:text-white">{backup.backup_type} Backup</span>
                       </div>
-                      <span className="text-[10px] text-gray-400 pl-5 block">
-                        {format(new Date(backup.started_at), "MMM dd, HH:mm")}
+                      <span className="text-[10px] text-gray-500 pl-5 block mt-0.5">
+                        {format(new Date(backup.started_at), "MMM dd, yyyy • HH:mm")}
                       </span>
                     </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${backup.status === 'completed' ? 'bg-green-50 text-green-700 border-green-100' :
-                        backup.status === 'failed' ? 'bg-red-50 text-red-700 border-red-100' :
-                          'bg-yellow-50 text-yellow-700 border-yellow-100'
-                      }`}>
+                    <Badge variant={
+                      backup.status === 'completed' ? 'success' :
+                        backup.status === 'failed' ? 'danger' : 'warning'
+                    }>
                       {backup.status}
-                    </span>
+                    </Badge>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-xs p-4 text-center italic">No recent backups found</p>
+              <p className="text-gray-500 text-sm p-8 text-center italic">No recent backups found</p>
             )}
           </CardContent>
         </Card>

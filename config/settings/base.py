@@ -60,7 +60,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'django_celery_beat',
     'django_celery_results',
-    'django_ledger',
+    # 'django_ledger',  # Removed for accounting module archival
     'auditlog',  
     
     # Local apps
@@ -80,7 +80,8 @@ INSTALLED_APPS = [
     'apps.subscriptions',
     'apps.roadside',
     'apps.fixed_assets.apps.FixedAssetsConfig',  
-    'apps.technicians', 
+    'apps.technicians',
+    'apps.accounting',
 ]
 
 MIDDLEWARE = [
@@ -115,7 +116,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'apps.accounts.context_processors.settings_context',
                 'apps.branches.context_processors.branch_context',
-                'django_ledger.context.django_ledger_context',  # Django Ledger context
+                # 'django_ledger.context.django_ledger_context',  # Removed for accounting module archival
             ],
         },
     },
@@ -394,8 +395,8 @@ LOGGING = {
     },
 }
 
-# Django Ledger Settings
-DJANGO_LEDGER_USE_DEPRECATED_BEHAVIOR = False  # Use new API (set to True to use deprecated features)
+# Django Ledger Settings - Removed
+# DJANGO_LEDGER_USE_DEPRECATED_BEHAVIOR = False
 
 # Repeat Visit Detection Settings
 REPEAT_VISIT_DAYS = env.int('REPEAT_VISIT_DAYS', default=30)

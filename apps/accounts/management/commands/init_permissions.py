@@ -55,6 +55,13 @@ class Command(BaseCommand):
                 'export_vehicles': ('vehicles', 'Export Vehicles', 'Export vehicle data to CSV/Excel'),
                 'import_vehicles': ('vehicles', 'Import Vehicles', 'Import vehicles from CSV/Excel'),
                 
+                # ==================== ROADSIDE ASSISTANCE ====================
+                'view_roadside': ('vehicles', 'View Roadside', 'View roadside assistance requests'),
+                'create_roadside': ('vehicles', 'Create Roadside', 'Create roadside assistance requests'),
+                'edit_roadside': ('vehicles', 'Edit Roadside', 'Edit roadside assistance requests'),
+                'manage_roadside': ('vehicles', 'Manage Roadside', 'Full roadside assistance management'),
+                'dispatch_roadside': ('vehicles', 'Dispatch Roadside', 'Dispatch technicians for roadside assistance'),
+                
                 # ==================== APPOINTMENTS ====================
                 'view_appointments': ('appointments', 'View Appointments', 'View appointment schedules'),
                 'create_appointments': ('appointments', 'Create Appointments', 'Create new appointments'),

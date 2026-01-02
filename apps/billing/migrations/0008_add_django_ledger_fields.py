@@ -8,13 +8,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('billing', '0007_estimate_branch_invoice_branch'),
-        ('django_ledger', '__first__'),
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='invoice',
-            name='ledger_invoice',
-            field=models.OneToOneField(blank=True, help_text='Django Ledger Invoice for full accounting integration', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='repair_invoice', to='django_ledger.invoicemodel'),
-        ),
+        # fields removed
     ]

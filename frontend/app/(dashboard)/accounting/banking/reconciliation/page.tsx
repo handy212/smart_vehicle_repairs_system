@@ -1,0 +1,254 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { accountingApi } from "@/lib/api/accounting";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Check, AlertCircle, FileText } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
+import { useCurrency } from "@/lib/hooks/useCurrency";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { useToast } from "@/lib/hooks/useToast";
+
+export default function BankReconciliationPage() {
+    const router = useRouter();
+    const { formatCurrency } = useCurrency();
+    const { toast } = useToast();
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
+    // New Statement Form State
+    const [selectedAccount, setSelectedAccount] = useState("");
+    const [statementDate, setStatementDate] = useState("");
+    const [openingBalance, setOpeningBalance] = useState("");
+    const [closingBalance, setClosingBalance] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Fetch Bank Statements
+    const { data: statements, isLoading, refetch } = useQuery({
+        queryKey: ["bank-statements"],
+        queryFn: () => accountingApi.getBankStatements(),
+    });
+
+    // Fetch Bank Accounts for dropdown
+    const { data: accounts } = useQuery({
+        queryKey: ["bank-accounts"],
+        queryFn: async () => {
+            const allAccounts = await accountingApi.getAccounts();
+            // Filter only Asset accounts that look like banks
+            return allAccounts.filter((acc: any) =>
+                acc.account_type === 'asset' &&
+                (acc.code.startsWith('10') ||
+                    acc.name.toLowerCase().includes('bank') ||
+                    acc.name.toLowerCase().includes('cash'))
+            );
+        }
+    });
+
+    const handleCreateStatement = async () => {
+        if (!selectedAccount || !statementDate || !closingBalance) {
+            toast({
+                title: "Error",
+                description: "Please fill in all required fields",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            const newStatement = await accountingApi.createBankStatement({
+                bank_account: selectedAccount,
+                statement_date: statementDate,
+                opening_balance: openingBalance || 0,
+                closing_balance: closingBalance,
+            });
+
+            toast({
+                title: "Success",
+                description: "Statement created successfully",
+                variant: "success"
+            });
+            setIsCreateDialogOpen(false);
+            refetch(); // Refresh list
+
+            // Redirect to upload/reconcile page
+            router.push(`/accounting/banking/reconciliation/${newStatement.id}`);
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to create statement",
+                variant: "destructive"
+            });
+            console.error(error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-between items-center pt-2">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Bank Reconciliation</h1>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                        Verify and match bank transactions
+                    </p>
+                </div>
+                <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="h-9">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Statement
+                </Button>
+            </div>
+
+            <Card className="border shadow-sm">
+                <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
+                    <CardTitle className="text-base">Statement History</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <Table>
+                        <TableHeader className="bg-gray-50/50 dark:bg-gray-800/50 border-y border-gray-100 dark:border-gray-800">
+                            <TableRow className="hover:bg-transparent border-none">
+                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Statement Date</TableHead>
+                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Bank Account</TableHead>
+                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Opening Balance</TableHead>
+                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Closing Balance</TableHead>
+                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Status</TableHead>
+                                <TableHead className="h-8 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-500">Loading statements...</TableCell>
+                                </TableRow>
+                            ) : statements?.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-sm">
+                                        No bank statements found. Create one to start reconciling.
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                statements?.map((statement: any) => (
+                                    <TableRow key={statement.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+                                        <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
+                                            <div className="flex items-center">
+                                                <FileText className="w-4 h-4 mr-2 text-gray-400" />
+                                                {format(new Date(statement.statement_date), 'MMM d, yyyy')}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
+                                            {statement.bank_account_name || 'Bank Account'}
+                                        </TableCell>
+                                        <TableCell className="px-4 py-2 text-sm font-mono text-gray-600 dark:text-gray-400 text-right">
+                                            {formatCurrency(statement.opening_balance)}
+                                        </TableCell>
+                                        <TableCell className="px-4 py-2 text-sm font-mono text-gray-900 dark:text-gray-100 font-medium text-right">
+                                            {formatCurrency(statement.closing_balance)}
+                                        </TableCell>
+                                        <TableCell className="px-4 py-2">
+                                            {statement.reconciled ? (
+                                                <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
+                                                    <Check className="w-3 h-3 mr-1" /> Reconciled
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="outline" className="text-[10px] bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800">
+                                                    <AlertCircle className="w-3 h-3 mr-1" /> Pending
+                                                </Badge>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="px-4 py-2 text-right">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 text-xs"
+                                                onClick={() => router.push(`/accounting/banking/reconciliation/${statement.id}`)}
+                                            >
+                                                {statement.reconciled ? 'View' : 'Reconcile'}
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+            {/* Create Statement Dialog */}
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>New Bank Reconciliation</DialogTitle>
+                        <DialogDescription>
+                            Enter details from your physical bank statement.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="account">Bank Account</Label>
+                            <Select
+                                id="account"
+                                value={selectedAccount}
+                                onChange={(e: any) => setSelectedAccount(e.target.value)}
+                                className="w-full"
+                            >
+                                <option value="" disabled>Select account</option>
+                                {accounts?.map((acc: any) => (
+                                    <option key={acc.id} value={acc.id.toString()}>
+                                        {acc.code} - {acc.name}
+                                    </option>
+                                ))}
+                            </Select>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="date">Statement Date</Label>
+                            <Input
+                                id="date"
+                                type="date"
+                                value={statementDate}
+                                onChange={(e) => setStatementDate(e.target.value)}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="opening">Opening Balance</Label>
+                                <Input
+                                    id="opening"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={openingBalance}
+                                    onChange={(e) => setOpeningBalance(e.target.value)}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="closing">Closing Balance</Label>
+                                <Input
+                                    id="closing"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    value={closingBalance}
+                                    onChange={(e) => setClosingBalance(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleCreateStatement} disabled={isSubmitting}>
+                            {isSubmitting ? "Creating..." : "Start Reconciliation"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}

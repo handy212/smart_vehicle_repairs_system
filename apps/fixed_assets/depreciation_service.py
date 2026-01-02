@@ -197,55 +197,55 @@ class DepreciationService:
         Returns:
             str: Journal entry ID or None if failed
         """
-        try:
-            from apps.billing.accounting_service import AccountingService
+        # try:
+        #     from apps.billing.accounting_service import AccountingService
             
-            # Get account codes
-            expense_account = asset.gl_depreciation_expense_account_code or \
-                            asset.category.gl_depreciation_expense_account_code
-            accum_depreciation_account = asset.gl_accumulated_depreciation_account_code or \
-                                        asset.category.gl_accumulated_depreciation_account_code
+        #     # Get account codes
+        #     expense_account = asset.gl_depreciation_expense_account_code or \
+        #                     asset.category.gl_depreciation_expense_account_code
+        #     accum_depreciation_account = asset.gl_accumulated_depreciation_account_code or \
+        #                                 asset.category.gl_accumulated_depreciation_account_code
             
-            if not expense_account or not accum_depreciation_account:
-                logger.error(f'Missing GL account codes for asset {asset.asset_number}')
-                return None
+        #     if not expense_account or not accum_depreciation_account:
+        #         logger.error(f'Missing GL account codes for asset {asset.asset_number}')
+        #         return None
             
-            # Get entity for the asset's branch
-            entity = AccountingService.get_entity(asset.branch)
-            if not entity:
-                logger.error(f'No accounting entity found for branch {asset.branch.name}')
-                return None
+        #     # Get entity for the asset's branch
+        #     entity = AccountingService.get_entity(asset.branch)
+        #     if not entity:
+        #         logger.error(f'No accounting entity found for branch {asset.branch.name}')
+        #         return None
             
-            # Create journal entry
-            description = f"Depreciation - {asset.name} ({asset.asset_number})"
+        #     # Create journal entry
+        #     description = f"Depreciation - {asset.name} ({asset.asset_number})"
             
-            journal_entry = entity.commit_tx(
-                user_model=None,
-                je_timestamp=posting_date,
-                je_desc=description,
-                je_activity='op',  # Operating activity
-                ledger_posted=True,
-                je_data=[
-                    {
-                        'account': expense_account,
-                        'tx_type': 'debit',
-                        'amount': float(depreciation_amount),
-                        'description': description
-                    },
-                    {
-                        'account': accum_depreciation_account,
-                        'tx_type': 'credit',
-                        'amount': float(depreciation_amount),
-                        'description': description
-                    }
-                ]
-            )
+        #     journal_entry = entity.commit_tx(
+        #         user_model=None,
+        #         je_timestamp=posting_date,
+        #         je_desc=description,
+        #         je_activity='op',  # Operating activity
+        #         ledger_posted=True,
+        #         je_data=[
+        #             {
+        #                 'account': expense_account,
+        #                 'tx_type': 'debit',
+        #                 'amount': float(depreciation_amount),
+        #                 'description': description
+        #             },
+        #             {
+        #                 'account': accum_depreciation_account,
+        #                 'tx_type': 'credit',
+        #                 'amount': float(depreciation_amount),
+        #                 'description': description
+        #             }
+        #         ]
+        #     )
             
-            return str(journal_entry.uuid) if journal_entry else None
+        #     return str(journal_entry.uuid) if journal_entry else None
             
-        except Exception as e:
-            logger.error(f'Failed to post depreciation to GL for {asset.asset_number}: {e}', exc_info=True)
-            return None
+        # except Exception as e:
+        #     logger.error(f'Failed to post depreciation to GL for {asset.asset_number}: {e}', exc_info=True)
+        return None
     
     @classmethod
     def run_monthly_depreciation(cls, target_month=None, target_year=None, branch=None, post_to_gl=True):

@@ -552,21 +552,21 @@ class WorkOrder(models.Model):
             self._send_status_notification(new_status, old_status)
         
         # Post accounting entries when work order is completed
-        if new_status == 'completed':
-            try:
-                from apps.billing.accounting_service import AccountingService
-                # Post parts cost (COGS)
-                AccountingService.post_parts_cost(self)
-                # Post labor cost (COGS)
-                AccountingService.post_labor_cost(self)
-            except Exception as e:
-                # Log error but don't fail the transition
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.error(
-                    f"Failed to post accounting entries for WO {self.work_order_number}: {e}",
-                    exc_info=True
-                )
+        # if new_status == 'completed':
+        #     try:
+        #         from apps.billing.accounting_service import AccountingService
+        #         # Post parts cost (COGS)
+        #         AccountingService.post_parts_cost(self)
+        #         # Post labor cost (COGS)
+        #         AccountingService.post_labor_cost(self)
+        #     except Exception as e:
+        #         # Log error but don't fail the transition
+        #         import logging
+        #         logger = logging.getLogger(__name__)
+        #         logger.error(
+        #             f"Failed to post accounting entries for WO {self.work_order_number}: {e}",
+        #             exc_info=True
+        #         )
         
         return True
     

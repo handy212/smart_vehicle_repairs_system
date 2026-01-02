@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi } from "@/lib/api/inventory";
+import { branchesApi } from "@/lib/api/branches";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -104,6 +105,7 @@ export default function InventoryPage() {
         low_stock: advancedFilters.stock_status === 'low_stock' ? true : undefined,
         out_of_stock: advancedFilters.stock_status === 'out_of_stock' ? true : undefined,
         needs_reorder: advancedFilters.stock_status === 'needs_reorder' ? true : undefined,
+        branch: advancedFilters.branch ? parseInt(advancedFilters.branch) : undefined,
       }),
   });
 
@@ -112,6 +114,14 @@ export default function InventoryPage() {
     queryKey: ["inventory-stats"],
     queryFn: () => inventoryApi.partsDashboardStats(),
   });
+
+  // Fetch Branches for filter
+  const { data: branchesData } = useQuery({
+    queryKey: ["branches-active"],
+    queryFn: () => branchesApi.list({ is_active: true }),
+  });
+
+  const branches = Array.isArray(branchesData) ? branchesData : branchesData?.results || [];
 
   const parts = data?.results || [];
   const bulkSelection = useBulkSelection(parts);
@@ -200,6 +210,12 @@ export default function InventoryPage() {
         { value: "true", label: "Active" },
         { value: "false", label: "Inactive" },
       ],
+    },
+    {
+      key: "branch",
+      label: "Branch",
+      type: "select",
+      options: branches.map(b => ({ value: String(b.id), label: b.name })),
     },
   ];
 

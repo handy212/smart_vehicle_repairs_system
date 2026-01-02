@@ -15,11 +15,14 @@ import {
   DollarSign,
   Calendar,
   CreditCard,
+  CheckCircle2,
+  AlertCircle,
+  Archive
 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable } from "@/components/shared/DataTable";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -30,8 +33,10 @@ import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { Switch } from "@/components/ui/switch";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
+
 const packageSchema = z.object({
   name: z.string().min(1, "Name is required"),
   code: z.string().min(1, "Code is required").max(50),
@@ -56,7 +61,7 @@ const packageSchema = z.object({
 type PackageFormData = z.infer<typeof packageSchema>;
 
 export default function PackagesPage() {
-    const { formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -236,447 +241,470 @@ export default function PackagesPage() {
     setIsCreateDialogOpen(true);
   };
 
+  const columns = [
+    {
+      header: "Name",
+      accessor: "name" as const,
+      cell: (pkg: Package) => (
+        <div className="flex flex-col">
+          <span className="font-medium text-sm text-gray-900 dark:text-gray-100">{pkg.name}</span>
+          <span className="text-xs text-gray-500">{pkg.description}</span>
+        </div>
+      )
+    },
+    {
+      header: "Code",
+      accessor: "code" as const,
+      cell: (pkg: Package) => (
+        <Badge variant="secondary" className="font-mono">{pkg.code}</Badge>
+      )
+    },
+    {
+      header: "Price",
+      accessor: "price" as const,
+      cell: (pkg: Package) => (
+        <span className="font-mono font-medium text-gray-900 dark:text-gray-100">{formatCurrency(parseFloat(pkg.price))}</span>
+      )
+    },
+    {
+      header: "Duration",
+      accessor: "duration_months" as const,
+      cell: (pkg: Package) => (
+        <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+          <Calendar className="w-3.5 h-3.5" />
+          <span>{pkg.duration_months} months</span>
+        </div>
+      )
+    },
+    {
+      header: "Features",
+      accessor: "features" as const,
+      cell: (pkg: Package) => (
+        <div className="flex flex-wrap gap-1 max-w-xs">
+          {pkg.features.total_service_calls && (
+            <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-900">Calls: {pkg.features.total_service_calls}</Badge>
+          )}
+          {pkg.features.towing_services_km && (
+            <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-900">Tow: {pkg.features.towing_services_km}km</Badge>
+          )}
+          {pkg.features.emergency_fuel && (
+            <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-900">Fuel: {pkg.features.emergency_fuel}</Badge>
+          )}
+          {/* Show +N more if many features? For now let's just show key ones or trunc */}
+        </div>
+      )
+    },
+    {
+      header: "Active Subs",
+      accessor: "id" as const,
+      cell: (pkg: Package) => {
+        const count = subscriptions.filter((s: any) => s.package === pkg.id && s.status === "active").length;
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className={cn("text-sm font-bold", count > 0 ? "text-blue-600" : "text-gray-500")}>{count}</span>
+            <span className="text-xs text-muted-foreground">active</span>
+          </div>
+        )
+      }
+    },
+    {
+      header: "Status",
+      accessor: "is_active" as const,
+      cell: (pkg: Package) => (
+        <Badge variant={pkg.is_active ? "success" : "secondary"}>
+          {pkg.is_active ? "Active" : "Inactive"}
+        </Badge>
+      )
+    },
+    {
+      header: "Actions",
+      accessor: "id" as const,
+      cell: (pkg: Package) => (
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleEdit(pkg)}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDelete(pkg)}
+          >
+            <Trash2 className="h-4 w-4 text-red-500" />
+          </Button>
+        </div>
+      )
+    }
+  ];
+
   if (isLoading && !packagesData) {
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <div className="h-9 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
-            <div className="h-5 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          </div>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <TableSkeleton rows={8} columns={6} />
-          </CardContent>
-        </Card>
+      <div className="p-8">
+        <TableSkeleton rows={5} columns={6} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Subscription Packages</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Manage subscription packages and their features
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/subscriptions">
-            <Button variant="secondary">
-              <CreditCard className="mr-2 h-4 w-4" />
-              View Subscriptions
-            </Button>
-          </Link>
-          <PermissionGuard permission="manage_subscriptions">
-            <Button onClick={handleNew}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Package
-            </Button>
-          </PermissionGuard>
-        </div>
-      </div>
+    <div className="flex-1 overflow-auto">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-[1800px] mx-auto space-y-6">
 
-      {/* Statistics */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
-            <PackageIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{packages.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Packages</CardTitle>
-            <PackageIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {packages.filter((p) => p.is_active).length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inactive Packages</CardTitle>
-            <PackageIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {packages.filter((p) => !p.is_active).length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters and Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Packages</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search packages..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border rounded-md"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white">Subscription Packages</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Manage subscription packages and their features
+            </p>
           </div>
-
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Features</TableHead>
-                  <TableHead>Active Subs</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPackages.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      No packages found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredPackages.map((pkg) => (
-                    <TableRow key={pkg.id}>
-                      <TableCell className="font-medium">{pkg.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{pkg.code}</Badge>
-                      </TableCell>
-                      <TableCell>{formatCurrency(parseFloat(pkg.price))}</TableCell>
-                      <TableCell>{pkg.duration_months} months</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {pkg.features.total_service_calls !== undefined && (
-                            <Badge variant="secondary" className="text-xs">Calls: {pkg.features.total_service_calls}</Badge>
-                          )}
-                          {pkg.features.towing_services_km !== undefined && (
-                            <Badge variant="secondary" className="text-xs">Tow: {pkg.features.towing_services_km}km</Badge>
-                          )}
-                          {pkg.features.emergency_fuel !== undefined && (
-                            <Badge variant="secondary" className="text-xs">Fuel: {pkg.features.emergency_fuel}</Badge>
-                          )}
-                          {pkg.features.roadside_first_aid !== undefined && (
-                            <Badge variant="secondary" className="text-xs">Mechanic: {pkg.features.roadside_first_aid}</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div className="font-medium">
-                            {subscriptions.filter((s: any) => s.package === pkg.id && s.status === "active").length}
-                          </div>
-                          <div className="text-xs text-muted-foreground">active</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={pkg.is_active ? "default" : "secondary"}>
-                          {pkg.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(pkg)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(pkg)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+          <div className="flex gap-2">
+            <Link href="/subscriptions">
+              <Button variant="outline" size="sm" className="h-9">
+                <CreditCard className="mr-2 h-4 w-4" />
+                View Subscriptions
+              </Button>
+            </Link>
+            <PermissionGuard permission="manage_subscriptions">
+              <Button size="sm" className="h-9" onClick={handleNew}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Package
+              </Button>
+            </PermissionGuard>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingPackage ? "Edit Package" : "Create New Package"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="px-6 space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  {...register("name")}
-                  placeholder="e.g., Lite Package"
-                />
-                {errors.name && (
-                  <p className="text-sm text-red-500">{errors.name.message}</p>
-                )}
+        {/* Stats Grid */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Total Packages</p>
+                  <p className="text-2xl font-black text-gray-900 dark:text-white mt-1">{packages.length}</p>
+                </div>
+                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center">
+                  <PackageIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="code">Code *</Label>
-                <Input
-                  id="code"
-                  {...register("code")}
-                  onChange={(e) => {
-                    e.target.value = e.target.value.toUpperCase();
-                    register("code").onChange(e);
-                  }}
-                  placeholder="e.g., LITE"
-                />
-                {errors.code && (
-                  <p className="text-sm text-red-500">{errors.code.message}</p>
-                )}
+            </CardContent>
+          </Card>
+          <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active</p>
+                  <p className="text-2xl font-black text-green-600 dark:text-green-400 mt-1">{packages.filter((p) => p.is_active).length}</p>
+                </div>
+                <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-950/20 flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
+          <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Inactive</p>
+                  <p className="text-2xl font-black text-gray-500 dark:text-gray-400 mt-1">{packages.filter((p) => !p.is_active).length}</p>
+                </div>
+                <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                  <Archive className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                {...register("description")}
-                placeholder="Package description..."
-                className="min-h-[80px]"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="price">Price *</Label>
+        {/* Filters and Search */}
+        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  {...register("price")}
-                  placeholder="0.00"
+                  placeholder="Search packages..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 h-9 text-sm"
                 />
-                {errors.price && (
-                  <p className="text-sm text-red-500">{errors.price.message}</p>
-                )}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="duration_months">Duration (months) *</Label>
-                <Input
-                  id="duration_months"
-                  type="number"
-                  {...register("duration_months", { valueAsNumber: true })}
-                  placeholder="12"
-                />
-                {errors.duration_months && (
-                  <p className="text-sm text-red-500">{errors.duration_months.message}</p>
-                )}
+              <div className="flex gap-2">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="h-9 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
             </div>
 
-            <div className="space-y-4 border-t pt-4">
-              <h3 className="font-semibold text-base">Package Features</h3>
+            <DataTable
+              data={filteredPackages}
+              columns={columns}
+              isLoading={isLoading}
+              emptyMessage="No packages found matching your criteria."
+            />
+          </CardContent>
+        </Card>
+
+        {/* Create/Edit Dialog */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editingPackage ? "Edit Package" : "Create New Package"}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit(onSubmit)} className="px-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name *</Label>
+                  <Input
+                    id="name"
+                    {...register("name")}
+                    placeholder="e.g., Lite Package"
+                  />
+                  {errors.name && (
+                    <p className="text-sm text-red-500">{errors.name.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="code">Code *</Label>
+                  <Input
+                    id="code"
+                    {...register("code")}
+                    onChange={(e) => {
+                      e.target.value = e.target.value.toUpperCase();
+                      register("code").onChange(e);
+                    }}
+                    placeholder="e.g., LITE"
+                  />
+                  {errors.code && (
+                    <p className="text-sm text-red-500">{errors.code.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  {...register("description")}
+                  placeholder="Package description..."
+                  className="min-h-[80px]"
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="total_service_calls">Total Service Calls</Label>
+                  <Label htmlFor="price">Price *</Label>
                   <Input
-                    id="total_service_calls"
+                    id="price"
                     type="number"
-                    value={String(watchedFeatures?.total_service_calls || 0)}
-                    onChange={(e) =>
-                      setValue("features", { ...watchedFeatures, total_service_calls: parseInt(e.target.value) || 0 })
-                    }
+                    step="0.01"
+                    {...register("price")}
+                    placeholder="0.00"
                   />
+                  {errors.price && (
+                    <p className="text-sm text-red-500">{errors.price.message}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="towing_services_km">Towing Limit (km)</Label>
+                  <Label htmlFor="duration_months">Duration (months) *</Label>
                   <Input
-                    id="towing_services_km"
+                    id="duration_months"
                     type="number"
-                    value={String(watchedFeatures?.towing_services_km || 0)}
-                    onChange={(e) =>
-                      setValue("features", { ...watchedFeatures, towing_services_km: parseInt(e.target.value) || 0 })
-                    }
+                    {...register("duration_months", { valueAsNumber: true })}
+                    placeholder="12"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="roadside_first_aid">Roadside First Aid (Mech/Elec)</Label>
-                  <Input
-                    id="roadside_first_aid"
-                    type="number"
-                    value={String(watchedFeatures?.roadside_first_aid || 0)}
-                    onChange={(e) =>
-                      setValue("features", { ...watchedFeatures, roadside_first_aid: parseInt(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="emergency_fuel">Emergency Fuel</Label>
-                  <Input
-                    id="emergency_fuel"
-                    type="number"
-                    value={String(watchedFeatures?.emergency_fuel || 0)}
-                    onChange={(e) =>
-                      setValue("features", { ...watchedFeatures, emergency_fuel: parseInt(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="key_lock_out">Key Lock Out</Label>
-                  <Input
-                    id="key_lock_out"
-                    type="number"
-                    value={String(watchedFeatures?.key_lock_out || 0)}
-                    onChange={(e) =>
-                      setValue("features", { ...watchedFeatures, key_lock_out: parseInt(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="extrication">Extrication</Label>
-                  <Input
-                    id="extrication"
-                    type="number"
-                    value={String(watchedFeatures?.extrication || 0)}
-                    onChange={(e) =>
-                      setValue("features", { ...watchedFeatures, extrication: parseInt(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accident_estimate">Accident Estimate</Label>
-                  <Input
-                    id="accident_estimate"
-                    type="number"
-                    value={String(watchedFeatures?.accident_estimate || 0)}
-                    onChange={(e) =>
-                      setValue("features", { ...watchedFeatures, accident_estimate: parseInt(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pre_purchase_inspection">Pre-Purchase Inspection</Label>
-                  <Input
-                    id="pre_purchase_inspection"
-                    type="number"
-                    value={String(watchedFeatures?.pre_purchase_inspection || 0)}
-                    onChange={(e) =>
-                      setValue("features", { ...watchedFeatures, pre_purchase_inspection: parseInt(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="battery_boosts">Battery Boosts</Label>
-                  <Input
-                    id="battery_boosts"
-                    type="number"
-                    value={String(watchedFeatures?.battery_boosts || 0)}
-                    onChange={(e) =>
-                      setValue("features", { ...watchedFeatures, battery_boosts: parseInt(e.target.value) || 0 })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="flat_tyre_service">Flat Tyre Service</Label>
-                  <Input
-                    id="flat_tyre_service"
-                    type="number"
-                    value={String(watchedFeatures?.flat_tyre_service || 0)}
-                    onChange={(e) =>
-                      setValue("features", { ...watchedFeatures, flat_tyre_service: parseInt(e.target.value) || 0 })
-                    }
-                  />
+                  {errors.duration_months && (
+                    <p className="text-sm text-red-500">{errors.duration_months.message}</p>
+                  )}
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center space-x-2 border-t pt-4">
-              <Switch
-                checked={watch("is_active") || false}
-                onCheckedChange={(checked) => setValue("is_active", checked)}
-              />
-              <Label htmlFor="is_active" className="cursor-pointer">Active</Label>
-            </div>
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="font-semibold text-base">Package Features</h3>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="total_service_calls">Total Service Calls</Label>
+                    <Input
+                      id="total_service_calls"
+                      type="number"
+                      value={String(watchedFeatures?.total_service_calls || 0)}
+                      onChange={(e) =>
+                        setValue("features", { ...watchedFeatures, total_service_calls: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="towing_services_km">Towing Limit (km)</Label>
+                    <Input
+                      id="towing_services_km"
+                      type="number"
+                      value={String(watchedFeatures?.towing_services_km || 0)}
+                      onChange={(e) =>
+                        setValue("features", { ...watchedFeatures, towing_services_km: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="roadside_first_aid">Roadside First Aid (Mech/Elec)</Label>
+                    <Input
+                      id="roadside_first_aid"
+                      type="number"
+                      value={String(watchedFeatures?.roadside_first_aid || 0)}
+                      onChange={(e) =>
+                        setValue("features", { ...watchedFeatures, roadside_first_aid: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="emergency_fuel">Emergency Fuel</Label>
+                    <Input
+                      id="emergency_fuel"
+                      type="number"
+                      value={String(watchedFeatures?.emergency_fuel || 0)}
+                      onChange={(e) =>
+                        setValue("features", { ...watchedFeatures, emergency_fuel: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="key_lock_out">Key Lock Out</Label>
+                    <Input
+                      id="key_lock_out"
+                      type="number"
+                      value={String(watchedFeatures?.key_lock_out || 0)}
+                      onChange={(e) =>
+                        setValue("features", { ...watchedFeatures, key_lock_out: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="extrication">Extrication</Label>
+                    <Input
+                      id="extrication"
+                      type="number"
+                      value={String(watchedFeatures?.extrication || 0)}
+                      onChange={(e) =>
+                        setValue("features", { ...watchedFeatures, extrication: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="accident_estimate">Accident Estimate</Label>
+                    <Input
+                      id="accident_estimate"
+                      type="number"
+                      value={String(watchedFeatures?.accident_estimate || 0)}
+                      onChange={(e) =>
+                        setValue("features", { ...watchedFeatures, accident_estimate: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pre_purchase_inspection">Pre-Purchase Inspection</Label>
+                    <Input
+                      id="pre_purchase_inspection"
+                      type="number"
+                      value={String(watchedFeatures?.pre_purchase_inspection || 0)}
+                      onChange={(e) =>
+                        setValue("features", { ...watchedFeatures, pre_purchase_inspection: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="battery_boosts">Battery Boosts</Label>
+                    <Input
+                      id="battery_boosts"
+                      type="number"
+                      value={String(watchedFeatures?.battery_boosts || 0)}
+                      onChange={(e) =>
+                        setValue("features", { ...watchedFeatures, battery_boosts: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="flat_tyre_service">Flat Tyre Service</Label>
+                    <Input
+                      id="flat_tyre_service"
+                      type="number"
+                      value={String(watchedFeatures?.flat_tyre_service || 0)}
+                      onChange={(e) =>
+                        setValue("features", { ...watchedFeatures, flat_tyre_service: parseInt(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 border-t pt-4">
+                <Switch
+                  checked={watch("is_active") || false}
+                  onCheckedChange={(checked) => setValue("is_active", checked)}
+                />
+                <Label htmlFor="is_active" className="cursor-pointer">Active</Label>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setIsCreateDialogOpen(false);
+                    reset();
+                    setEditingPackage(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {editingPackage ? "Update" : "Create"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete Package</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Are you sure you want to delete package{" "}
+                <span className="font-semibold">{packageToDelete?.name}</span>?
+                This action cannot be undone.
+              </p>
+            </div>
             <DialogFooter>
               <Button
-                type="button"
                 variant="secondary"
-                onClick={() => {
-                  setIsCreateDialogOpen(false);
-                  reset();
-                  setEditingPackage(null);
-                }}
+                onClick={() => setIsDeleteDialogOpen(false)}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {editingPackage ? "Update" : "Create"}
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete Package"}
               </Button>
             </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Package</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Are you sure you want to delete package{" "}
-              <span className="font-semibold">{packageToDelete?.name}</span>?
-              This action cannot be undone.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Delete Package"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

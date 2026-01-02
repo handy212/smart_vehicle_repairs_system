@@ -1,0 +1,225 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { accountingApi } from "@/lib/api/accounting";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { format } from "date-fns";
+import { useState } from "react";
+import { Download, Filter, ArrowLeft } from "lucide-react";
+import { useCurrency } from "@/lib/hooks/useCurrency";
+import Link from "next/link";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+
+export default function BalanceSheetPage() {
+    const { formatCurrency } = useCurrency();
+    const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+    const [showFilters, setShowFilters] = useState(false);
+
+    const { data: report, isLoading } = useQuery({
+        queryKey: ["accounting", "balance-sheet", date],
+        queryFn: () => accountingApi.getBalanceSheet(date),
+    });
+
+    const handleExport = () => {
+        // Mock export
+        alert("Export feature coming soon");
+    };
+
+    return (
+        <div className="space-y-6 p-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <Link href="/accounting" className="text-gray-500 hover:text-gray-700">
+                            <ArrowLeft className="w-4 h-4" />
+                        </Link>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                            Balance Sheet
+                        </h1>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Statement of Financial Position
+                    </p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <Button
+                        variant="secondary"
+                        onClick={() => setShowFilters(!showFilters)}
+                        className="sm:hidden"
+                        size="sm"
+                    >
+                        <Filter className="w-4 h-4 mr-2" />
+                        Filters
+                    </Button>
+                    <div
+                        className={`flex flex-col sm:flex-row items-stretch sm:items-center gap-2 ${showFilters ? "flex" : "hidden sm:flex"}`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-500">As of:</span>
+                            <Input
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                className="w-full sm:w-40 h-10 text-sm"
+                            />
+                        </div>
+                        <Button variant="outline" onClick={handleExport} className="h-10">
+                            <Download className="w-4 h-4 mr-2" />
+                            Export
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            {isLoading ? (
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                </div>
+            ) : report ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Assets */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Assets</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Account</TableHead>
+                                        <TableHead className="text-right">Balance</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {report.assets.map((acc) => (
+                                        <TableRow key={acc.code}>
+                                            <TableCell>
+                                                <span className="font-medium text-gray-700">{acc.code}</span> - {acc.name}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {formatCurrency(acc.balance)}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {report.assets.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={2} className="text-center text-gray-500">No assets found</TableCell>
+                                        </TableRow>
+                                    )}
+                                    <TableRow className="font-bold bg-gray-50 dark:bg-gray-900/50">
+                                        <TableCell>Total Assets</TableCell>
+                                        <TableCell className="text-right">{formatCurrency(report.totals.assets)}</TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+
+                    <div className="space-y-6">
+                        {/* Liabilities */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Liabilities</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Account</TableHead>
+                                            <TableHead className="text-right">Balance</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {report.liabilities.map((acc) => (
+                                            <TableRow key={acc.code}>
+                                                <TableCell>
+                                                    <span className="font-medium text-gray-700">{acc.code}</span> - {acc.name}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {formatCurrency(acc.balance)}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {report.liabilities.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={2} className="text-center text-gray-500">No liabilities found</TableCell>
+                                            </TableRow>
+                                        )}
+                                        <TableRow className="font-bold bg-gray-50 dark:bg-gray-900/50">
+                                            <TableCell>Total Liabilities</TableCell>
+                                            <TableCell className="text-right">{formatCurrency(report.totals.liabilities)}</TableCell>
+                                        </TableRow>
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+
+                        {/* Equity */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Equity</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Account</TableHead>
+                                            <TableHead className="text-right">Balance</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {report.equity.map((acc) => (
+                                            <TableRow key={acc.code}>
+                                                <TableCell>
+                                                    <span className="font-medium text-gray-700">{acc.code}</span> - {acc.name}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {formatCurrency(acc.balance)}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {report.equity.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={2} className="text-center text-gray-500">No equity records found</TableCell>
+                                            </TableRow>
+                                        )}
+                                        <TableRow className="font-bold bg-gray-50 dark:bg-gray-900/50">
+                                            <TableCell>Total Equity</TableCell>
+                                            <TableCell className="text-right">{formatCurrency(report.totals.equity)}</TableCell>
+                                        </TableRow>
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+
+                        {/* Summary */}
+                        <Card className={report.is_balanced ? "border-green-200 bg-green-50/50" : "border-red-200 bg-red-50/50"}>
+                            <CardContent className="pt-6">
+                                <div className="flex justify-between items-center">
+                                    <span className="font-bold text-gray-700">Total Liabilities + Equity</span>
+                                    <span className={`font-bold ${report.is_balanced ? "text-green-700" : "text-red-700"}`}>
+                                        {formatCurrency(report.totals.liabilities_plus_equity)}
+                                    </span>
+                                </div>
+                                {!report.is_balanced && (
+                                    <p className="text-xs text-red-600 mt-1">Warning: Balance Sheet is not balanced!</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            ) : (
+                <div className="text-center py-10 text-gray-500">No data available</div>
+            )}
+        </div>
+    );
+}

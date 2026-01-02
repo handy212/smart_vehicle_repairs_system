@@ -183,6 +183,63 @@ export interface ServicePackage {
   created_at: string;
 }
 
+export interface StockItem {
+  id: number;
+  part: number;
+  branch: number;
+  branch_name?: string;
+  branch_code?: string;
+  quantity_in_stock: number;
+  quantity_reserved: number;
+  quantity_on_order: number;
+  available_quantity: number;
+  reorder_point: number;
+  reorder_quantity: number;
+  minimum_stock: number;
+  maximum_stock: number;
+  bin_location?: string;
+  shelf?: string;
+  is_low_stock: boolean;
+  is_out_of_stock: boolean;
+  total_value: string;
+  updated_at: string;
+}
+
+export interface TransferItem {
+  id: number;
+  transfer: number;
+  part: number;
+  part_number?: string;
+  part_name?: string;
+  quantity_requested: number;
+  quantity_sent: number;
+  quantity_received: number;
+  notes?: string;
+}
+
+export interface Transfer {
+  id: number;
+  transfer_number: string;
+  source_branch: number;
+  source_branch_name?: string;
+  destination_branch: number;
+  destination_branch_name?: string;
+  status: 'draft' | 'requested' | 'approved' | 'in_transit' | 'received' | 'rejected' | 'cancelled';
+  requested_date: string;
+  approved_date?: string;
+  shipped_date?: string;
+  received_date?: string;
+  notes?: string;
+  rejection_reason?: string;
+  created_by: number;
+  created_by_name?: string;
+  approved_by?: number;
+  approved_by_name?: string;
+  items: TransferItem[];
+  created_at: string;
+  updated_at: string;
+}
+
 export const inventoryApi = {
   // Service Packages
   listPackages: async (params?: {
@@ -208,6 +265,7 @@ export const inventoryApi = {
     out_of_stock?: boolean;
     needs_reorder?: boolean;
     is_active?: boolean;
+    branch?: number;
   }): Promise<PartListResponse> => {
     const response = await apiClient.get("/inventory/parts/", { params });
     return response.data;
@@ -424,6 +482,70 @@ export const inventoryApi = {
 
   overduePurchaseOrders: async (): Promise<PurchaseOrder[]> => {
     const response = await apiClient.get("/inventory/purchase-orders/overdue/");
+    return response.data;
+  },
+
+  // Stock Items (Branch Inventory)
+  listStockItems: async (params?: {
+    page?: number;
+    search?: string;
+    branch?: number;
+    is_low_stock?: boolean;
+    is_out_of_stock?: boolean;
+  }): Promise<{ count: number; next: string | null; previous: string | null; results: StockItem[] }> => {
+    const response = await apiClient.get("/inventory/stock-items/", { params });
+    return response.data;
+  },
+
+  getStockItem: async (id: number): Promise<StockItem> => {
+    const response = await apiClient.get(`/inventory/stock-items/${id}/`);
+    return response.data;
+  },
+
+  updateStockItem: async (id: number, data: Partial<StockItem>): Promise<StockItem> => {
+    const response = await apiClient.patch(`/inventory/stock-items/${id}/`, data);
+    return response.data;
+  },
+
+  // Transfers
+  listTransfers: async (params?: {
+    page?: number;
+    search?: string;
+    status?: string;
+    source_branch?: number;
+    destination_branch?: number;
+  }): Promise<{ count: number; next: string | null; previous: string | null; results: Transfer[] }> => {
+    const response = await apiClient.get("/inventory/transfers/", { params });
+    return response.data;
+  },
+
+  getTransfer: async (id: number): Promise<Transfer> => {
+    const response = await apiClient.get(`/inventory/transfers/${id}/`);
+    return response.data;
+  },
+
+  createTransfer: async (data: Partial<Transfer>): Promise<Transfer> => {
+    const response = await apiClient.post("/inventory/transfers/", data);
+    return response.data;
+  },
+
+  updateTransfer: async (id: number, data: Partial<Transfer>): Promise<Transfer> => {
+    const response = await apiClient.patch(`/inventory/transfers/${id}/`, data);
+    return response.data;
+  },
+
+  approveTransfer: async (id: number): Promise<any> => {
+    const response = await apiClient.post(`/inventory/transfers/${id}/approve/`);
+    return response.data;
+  },
+
+  shipTransfer: async (id: number): Promise<any> => {
+    const response = await apiClient.post(`/inventory/transfers/${id}/ship/`);
+    return response.data;
+  },
+
+  receiveTransfer: async (id: number, items: Record<number, number>): Promise<any> => {
+    const response = await apiClient.post(`/inventory/transfers/${id}/receive/`, { items });
     return response.data;
   },
 };

@@ -287,16 +287,14 @@ class EstimateCreateSerializer(serializers.ModelSerializer):
         estimate.refresh_from_db()
         
         # Sync parts to work order if estimate is linked to a work order
+        # Sync parts to work order if estimate is linked to a work order
         if estimate.work_order_id:
             try:
                 estimate.sync_parts_to_work_order()
             except Exception as e:
-                # Log error but don't fail estimate creation if sync fails
                 import logging
                 logger = logging.getLogger(__name__)
-                logger.error(f"Failed to sync parts to work order for estimate {estimate.id}: {e}", exc_info=True)
-                # Re-raise so we can see the error in development
-                # In production, this will be caught by the transaction rollback if needed
+                logger.warning(f"Failed to sync parts to work order/estimate: {e}")
         
         return estimate
 
@@ -380,12 +378,13 @@ class EstimateUpdateSerializer(serializers.ModelSerializer):
         
         # Sync parts to work order if work_order was just linked (even if line items weren't updated)
         if work_order_updated and instance.work_order_id:
-            try:
-                instance.sync_parts_to_work_order()
-            except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to sync parts to work order for estimate {instance.id}: {e}")
+            # from apps.billing.accounting_service import AccountingService
+            # try:
+            #     # This logic would be replaced by the new accounting system
+            #     pass
+            # except Exception as e:
+            #     logger.error(f"Failed to sync with accounting: {e}")
+            pass # Original sync_parts_to_work_order call removed as per instruction.
         
         return instance
 
@@ -463,9 +462,8 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
     
     estimate_number = serializers.CharField(source='estimate.estimate_number', read_only=True)
     
-    # Django Ledger integration fields
-    ledger_invoice = serializers.UUIDField(source='ledger_invoice.uuid', read_only=True, allow_null=True)
-    ledger_invoice_url = serializers.SerializerMethodField()
+    # ledger_invoice = serializers.UUIDField(source='ledger_invoice.uuid', read_only=True, allow_null=True)
+    # ledger_invoice_url = serializers.SerializerMethodField()
     
     # Include payment history and line items
     payments = serializers.SerializerMethodField()
@@ -491,7 +489,7 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             'vehicle', 'vehicle_display', 'vehicle_vin',
             'work_order', 'work_order_number', 'work_order_status',
             'estimate', 'estimate_number',
-            'ledger_invoice', 'ledger_invoice_url',
+            # 'ledger_invoice', 'ledger_invoice_url',
             'status', 'invoice_date', 'due_date',
             'description', 'notes', 'customer_notes', 'terms',
             'labor_subtotal', 'parts_subtotal', 'sublet_subtotal', 'subtotal',
@@ -567,31 +565,31 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
         
         return ", ".join(filter(None, parts))
     
-    def get_ledger_invoice_url(self, obj):
-        """Get URL to view invoice in Django Ledger"""
-        if obj.ledger_invoice and obj.branch and hasattr(obj.branch, 'ledger_entity') and obj.branch.ledger_entity:
-            entity_slug = obj.branch.ledger_entity.slug
-            # Get request from context
-            request = self.context.get('request')
-            if request:
-                # Build absolute URI from request
-                # Django request.build_absolute_uri gives us the full URL including protocol and domain
-                base_url = request.build_absolute_uri('/').rstrip('/')
-                # If the request came through /api, replace it, otherwise use as-is
-                if '/api' in base_url:
-                    base_url = base_url.replace('/api', '')
-                # Ensure we have the correct port (8000 for backend)
-                # If request came from frontend (port 3000), we need to change it
-                if ':3000' in base_url:
-                    base_url = base_url.replace(':3000', ':8000')
-                return f"{base_url}/ledger/invoice/{entity_slug}/detail/{obj.ledger_invoice.uuid}/"
-            else:
-                # Fallback: use environment variable or default to localhost:8000
-                import os
-                api_url = os.environ.get('NEXT_PUBLIC_API_URL', 'http://localhost:8000/api')
-                base_url = api_url.replace('/api', '').rstrip('/')
-                return f"{base_url}/ledger/invoice/{entity_slug}/detail/{obj.ledger_invoice.uuid}/"
-        return None
+    # def get_ledger_invoice_url(self, obj):
+    #     """Get URL to view invoice in Django Ledger"""
+    #     if obj.ledger_invoice and obj.branch and hasattr(obj.branch, 'ledger_entity') and obj.branch.ledger_entity:
+    #         entity_slug = obj.branch.ledger_entity.slug
+    #         # Get request from context
+    #         request = self.context.get('request')
+    #         if request:
+    #             # Build absolute URI from request
+    #             # Django request.build_absolute_uri gives us the full URL including protocol and domain
+    #             base_url = request.build_absolute_uri('/').rstrip('/')
+    #             # If the request came through /api, replace it, otherwise use as-is
+    #             if '/api' in base_url:
+    #                 base_url = base_url.replace('/api', '')
+    #             # Ensure we have the correct port (8000 for backend)
+    #             # If request came from frontend (port 3000), we need to change it
+    #             if ':3000' in base_url:
+    #                 base_url = base_url.replace(':3000', ':8000')
+    #             return f"{base_url}/ledger/invoice/{entity_slug}/detail/{obj.ledger_invoice.uuid}/"
+    #         else:
+    #             # Fallback: use environment variable or default to localhost:8000
+    #             import os
+    #             api_url = os.environ.get('NEXT_PUBLIC_API_URL', 'http://localhost:8000/api')
+    #             base_url = api_url.replace('/api', '').rstrip('/')
+    #             return f"{base_url}/ledger/invoice/{entity_slug}/detail/{obj.ledger_invoice.uuid}/"
+    #     return None
     
     def get_payments(self, obj):
         from apps.billing.serializers import PaymentSerializer
@@ -951,11 +949,12 @@ class InvoiceUpdateSerializer(serializers.ModelSerializer):
                     instance.calculate_totals_from_work_order()
                     instance.save()
         
-        try:
-            from apps.billing.accounting_service import AccountingService
-            AccountingService.create_dl_invoice(instance)
-        except Exception:
-            pass
+        # try:
+        #     from apps.billing.accounting_service import AccountingService
+        #     AccountingService.create_dl_invoice(instance)
+        # except Exception:
+        #     pass
+        pass
         
         return instance
 
