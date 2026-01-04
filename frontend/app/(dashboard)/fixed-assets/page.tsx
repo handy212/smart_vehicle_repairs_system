@@ -74,6 +74,7 @@ export default function FixedAssetsListPage() {
         {
             header: "Asset #",
             accessor: "asset_number" as const,
+            className: "w-28",
             cell: (asset: FixedAsset) => (
                 <Link
                     href={`/fixed-assets/${asset.id}`}
@@ -86,6 +87,7 @@ export default function FixedAssetsListPage() {
         {
             header: "Name",
             accessor: "name" as const,
+            className: "min-w-[200px]",
             cell: (asset: FixedAsset) => (
                 <div className="flex flex-col">
                     <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
@@ -100,6 +102,7 @@ export default function FixedAssetsListPage() {
         {
             header: "Branch",
             accessor: "branch_name" as const,
+            className: "w-32",
             cell: (asset: FixedAsset) => (
                 <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
                     <Building2 className="w-3 h-3" />
@@ -110,6 +113,7 @@ export default function FixedAssetsListPage() {
         {
             header: "Acquisition",
             accessor: "acquisition_cost" as const,
+            className: "w-32 text-right",
             cell: (asset: FixedAsset) => (
                 <div className="flex flex-col items-end">
                     <span className="font-mono text-xs font-bold text-green-600 dark:text-green-400">
@@ -124,6 +128,7 @@ export default function FixedAssetsListPage() {
         {
             header: "Net Book Value",
             accessor: "net_book_value" as const,
+            className: "w-32 text-right",
             cell: (asset: FixedAsset) => (
                 <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">
                     {formatCurrency(asset.net_book_value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -133,6 +138,7 @@ export default function FixedAssetsListPage() {
         {
             header: "Depreciation",
             accessor: "accumulated_depreciation" as const,
+            className: "w-32 text-right",
             cell: (asset: FixedAsset) => (
                 <div className="flex flex-col items-end">
                     <span className="font-mono text-xs font-bold text-orange-600 dark:text-orange-400">
@@ -147,6 +153,7 @@ export default function FixedAssetsListPage() {
         {
             header: "Status",
             accessor: "status" as const,
+            className: "w-24",
             cell: (asset: FixedAsset) => (
                 <Badge variant={getStatusBadge(asset.status)} className="text-[10px] font-bold uppercase px-1.5 py-0.5">
                     {asset.status}
@@ -157,7 +164,7 @@ export default function FixedAssetsListPage() {
 
     return (
         <div className="flex-1 overflow-auto">
-            <div className="p-4 sm:p-6 lg:p-8 max-w-[1800px] mx-auto space-y-6">
+            <div className="p-4 sm:p-6 lg:p-6 max-w-[1800px] mx-auto space-y-4">
                 {/* Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-center gap-3">
@@ -193,9 +200,9 @@ export default function FixedAssetsListPage() {
 
                 {/* Stats Grid */}
                 {stats && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
-                            <CardContent className="p-4">
+                            <CardContent className="p-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1">
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
@@ -218,7 +225,7 @@ export default function FixedAssetsListPage() {
                         </Card>
 
                         <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
-                            <CardContent className="p-4">
+                            <CardContent className="p-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1">
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
@@ -241,7 +248,7 @@ export default function FixedAssetsListPage() {
                         </Card>
 
                         <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
-                            <CardContent className="p-4">
+                            <CardContent className="p-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1">
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">

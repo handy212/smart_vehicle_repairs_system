@@ -3,19 +3,22 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.generics import ListAPIView, CreateAPIView, RetrieveUpdateAPIView, ListCreateAPIView
-from rest_framework.generics import ListAPIView, CreateAPIView, RetrieveUpdateAPIView, ListCreateAPIView
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.utils.dateparse import parse_date
 import csv
 import io
 from decimal import Decimal
 from django.utils import timezone
 from datetime import datetime
-from .services import ReportingService, DashboardService
+from .services import ReportingService, DashboardService, ExportService
 from .models import JournalEntry, Account, AccountingControl, AuditLog
 from .serializers import JournalEntrySerializer, JournalEntryCreateSerializer, AccountSimpleSerializer, AccountingControlSerializer, AuditLogSerializer
+from .serializers import JournalEntrySerializer, JournalEntryCreateSerializer, AccountSimpleSerializer, AccountingControlSerializer, AuditLogSerializer
+from django.http import HttpResponse
+from apps.accounts.permissions import HasPermission
 
 class BalanceSheetView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
 
     def get(self, request):
         date_str = request.query_params.get('date')
@@ -25,7 +28,7 @@ class BalanceSheetView(APIView):
         return Response(report)
 
 class ProfitLossView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
 
     def get(self, request):
         start_str = request.query_params.get('start_date')
@@ -50,7 +53,7 @@ class ProfitLossView(APIView):
         return Response(report)
 
 class TrialBalanceView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
 
     def get(self, request):
         date_str = request.query_params.get('date')
@@ -60,7 +63,7 @@ class TrialBalanceView(APIView):
         return Response(report)
 
 class AgingReportView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
 
     def get(self, request):
         report_type = request.query_params.get('type', 'ar') # 'ar' or 'ap'
@@ -71,7 +74,7 @@ class AgingReportView(APIView):
         return Response(report)
 
 class CashFlowView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
 
     def get(self, request):
         start_date_str = request.query_params.get('start_date')
@@ -84,7 +87,7 @@ class CashFlowView(APIView):
         return Response(report)
 
 class TaxReportView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
     
     def get(self, request):
         start_date_str = request.query_params.get('start_date')
@@ -104,7 +107,7 @@ class TaxReportView(APIView):
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from .models import BankStatement, BankStatementLine, FundTransfer, Transaction
-from .serializers import BankStatementSerializer, BankStatementLineSerializer, FundTransferSerializer
+from .serializers import BankStatementSerializer, BankStatementLineSerializer, FundTransferSerializer, TransactionSerializer
 
 class BankStatementViewSet(viewsets.ModelViewSet):
     """ViewSet for bank statements"""
@@ -125,7 +128,7 @@ class BankStatementViewSet(viewsets.ModelViewSet):
         statement.save()
         return Response({'status': 'reconciled'})
 
-    @action(detail=True, methods=['post'], parser_classes=[])
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def upload(self, request, pk=None):
         """Upload and parse bank statement CSV"""
         statement = self.get_object()
@@ -297,7 +300,7 @@ class FundTransferViewSet(viewsets.ModelViewSet):
         transfer = self.get_object()
         
         if transfer.status not in ['draft', 'approved']:
-            return Response({'error': 'Transfer must be draft or approved'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': f'Transfer must be draft or approved (current status: {transfer.status})'}, status=status.HTTP_400_BAD_REQUEST)
         
         transfer.status = 'completed'
         transfer.save()  # Signal will auto-post GL entry
@@ -477,6 +480,8 @@ class AccountDetailView(RetrieveUpdateAPIView):
         from .serializers import AccountSerializer
         return AccountSerializer
     
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
         instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -499,3 +504,146 @@ class ManagementDashboardView(APIView):
         
         report = DashboardService.get_management_metrics(start_date, end_date)
         return Response(report)
+
+    def post(self, request):
+        """Export Board Pack PDF"""
+        action = request.data.get('action')
+        if action == 'export_pdf':
+            start_date_str = request.data.get('start_date')
+            end_date_str = request.data.get('end_date')
+            
+            # Default to current month-to-date
+            end_date = parse_date(end_date_str) if end_date_str else timezone.now().date()
+            start_date = parse_date(start_date_str) if start_date_str else end_date.replace(day=1)
+            
+            pdf_buffer = ExportService.generate_board_pack(start_date, end_date)
+            
+            response = HttpResponse(pdf_buffer, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="board_pack_{end_date}.pdf"'
+            return response
+            
+        return Response({'error': 'Invalid action'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ============================================================================
+# PHASE 13: ACCRUALS VIEWSETS
+# ============================================================================
+
+from .models import Accrual
+from .serializers import AccrualSerializer, AccrualCandidateSerializer
+from .accruals import AccrualService
+
+class AccrualViewSet(viewsets.ModelViewSet):
+    queryset = Accrual.objects.all().select_related('account', 'created_by')
+    serializer_class = AccrualSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['status', 'accrual_type']
+    
+    @action(detail=False, methods=['get'])
+    def candidates(self, request):
+        """
+        Get potential accrual candidates (uninvoiced WOs, unbilled POs).
+        """
+        cutoff_date = request.query_params.get('cutoff_date')
+        if cutoff_date:
+            cutoff_date = parse_date(cutoff_date)
+            
+        candidates = AccrualService.identify_accruals(cutoff_date)
+        
+        # Flatten and serialize
+        # The service returns {'revenue': [], 'expense': []}
+        # We need to flatten to a list for the serializer
+        
+        flat_list = []
+        for item in candidates['revenue']:
+            flat_list.append({
+                'type': 'revenue',
+                'source_model': 'WorkOrder',
+                'source_id': item['source'].id,
+                'source_reference': item['source'].work_order_number,
+                'amount': item['amount'],
+                'date': item['date'],
+                'description': item['description']
+            })
+        for item in candidates['expense']:
+            flat_list.append({
+                'type': 'expense',
+                'source_model': 'PurchaseOrder',
+                'source_id': item['source'].id,
+                'source_reference': item['source'].po_number,
+                'amount': item['amount'],
+                'date': item['date'],
+                'description': item['description']
+            })
+            
+        serializer = AccrualCandidateSerializer(flat_list, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def reverse(self, request, pk=None):
+        """
+        Reverse an existing accrual.
+        """
+        try:
+            accrual = AccrualService.reverse_accrual(pk, request.user)
+            if not accrual:
+                return Response({'error': 'Accrual already reversed or not found'}, status=status.HTTP_400_BAD_REQUEST)
+            serializer = self.get_serializer(accrual)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def perform_create(self, serializer):
+        # We override perform_create to use the Service which handles GL posting
+        # But ModelViewSet calls serializer.save().
+        # We should probably use a custom create method or override create.
+        pass
+        
+    def create(self, request, *args, **kwargs):
+        """
+        Custom create to use AccrualService
+        """
+        # Validate serialized data first?
+        # AccrualSerializer expects model fields.
+        # But we need account_id, amount, etc.
+        
+        data = request.data
+        try:
+            accrual = AccrualService.create_accrual(
+                user=request.user,
+                account_id=data.get('account'),
+                amount=Decimal(str(data.get('amount'))),
+                date=parse_date(data.get('accrual_date')),
+                description=data.get('description'),
+                accrual_type=data.get('accrual_type'),
+                reversal_date=parse_date(data.get('reversal_date')) if data.get('reversal_date') else None
+            )
+            serializer = self.get_serializer(accrual)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AnalyticsDashboardView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        start_date_str = request.query_params.get('start_date')
+        end_date_str = request.query_params.get('end_date')
+        branch_id = request.query_params.get('branch')
+        
+        # Default to current month if dates not provided
+        today = timezone.now().date()
+        if not start_date_str:
+            start_date = today.replace(day=1)
+        else:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            
+        if not end_date_str:
+            end_date = today
+        else:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            
+        from .analytics import AnalyticsService
+        data = AnalyticsService.get_dashboard_snapshot(start_date, end_date, branch_id)
+        return Response(data)

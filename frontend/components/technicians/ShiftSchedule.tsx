@@ -77,7 +77,9 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
 
     const formatHours = (hours: number | null | undefined) => {
         if (hours === null || hours === undefined) return null;
-        return `${hours.toFixed(2)}h`;
+        const numHours = typeof hours === 'number' ? hours : parseFloat(hours as any);
+        if (isNaN(numHours)) return null;
+        return `${numHours.toFixed(2)}h`;
     };
 
     return (

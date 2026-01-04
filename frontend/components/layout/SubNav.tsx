@@ -147,7 +147,6 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
   ],
   accounting: [
     { name: "Overview", href: "/accounting", permission: "view_accounting_dashboard" },
-    { name: "Executive Dashboard", href: "/accounting/management", permission: "view_financial_reports" },
     { name: "Journal Entries", href: "/accounting/journal-entries", permission: "view_journal_entries" },
     { name: "Chart of Accounts", href: "/accounting/accounts", permission: "view_accounts" },
     { name: "Banking", href: "/accounting/banking/reconciliation", permission: "view_accounting" },
@@ -160,6 +159,7 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Job Profitability", href: "/accounting/reports/job-profitability", permission: "view_financial_reports" },
     { name: "Budgets", href: "/accounting/budgets", permission: "view_accounting_settings" },
     { name: "Fund Transfers", href: "/accounting/transfers", permission: "view_accounting_settings" },
+    { name: "Accruals", href: "/accounting/accruals", permission: "view_accounting_settings" },
     { name: "Controls & Compliance", href: "/accounting/controls", permission: "view_accounting_settings" },
   ],
 };

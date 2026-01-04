@@ -215,16 +215,16 @@ echo -e "${GREEN}✓ Database ready${NC}"
 echo ""
 
 # Initialize roles, permissions, and system data
-# echo -e "${YELLOW}Initializing system data...${NC}"
+echo -e "${YELLOW}Initializing system data...${NC}"
 
 # Initialize permissions and roles
-# echo -e "${YELLOW}  - Setting up roles and permissions...${NC}"
-# python manage.py init_permissions > /dev/null 2>&1
-# if [ $? -eq 0 ]; then
-#     echo -e "${GREEN}    ✓ Roles and permissions initialized${NC}"
-# else
-#     echo -e "${YELLOW}    ⚠ Roles/permissions already exist or failed${NC}"
-# fi
+echo -e "${YELLOW}  - Setting up roles and permissions...${NC}"
+python manage.py init_permissions > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}    ✓ Roles and permissions initialized${NC}"
+else
+    echo -e "${YELLOW}    ⚠ Roles/permissions already exist or failed${NC}"
+fi
 
 # Initialize system settings
 # echo -e "${YELLOW}  - Setting up system settings...${NC}"

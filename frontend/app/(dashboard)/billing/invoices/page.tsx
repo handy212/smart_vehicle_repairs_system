@@ -51,6 +51,7 @@ export default function InvoicesPage() {
     const router = useRouter();
     const { formatCurrency } = useCurrency();
     const { downloadPDF } = usePrint();
+    const { hasPermission } = usePermissions();
 
 
 
@@ -338,17 +339,19 @@ export default function InvoicesPage() {
                                 />
                                 <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
                                     <div className="py-1">
-                                        <button
-                                            onClick={() => {
-                                                handleExport();
-                                                setShowActionsMenu(false);
-                                            }}
-                                            disabled={!data?.results || data.results.length === 0}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                        >
-                                            <Download className="w-4 h-4" />
-                                            Export CSV
-                                        </button>
+                                        <PermissionGuard permission="export_invoices">
+                                            <button
+                                                onClick={() => {
+                                                    handleExport();
+                                                    setShowActionsMenu(false);
+                                                }}
+                                                disabled={!data?.results || data.results.length === 0}
+                                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                Export CSV
+                                            </button>
+                                        </PermissionGuard>
                                     </div>
                                 </div>
                             </>
@@ -586,8 +589,8 @@ export default function InvoicesPage() {
                 onBulkDelete={() => { }}
                 showBulkSend={true}
                 showStatusUpdate={true}
-                onBulkSend={handleBulkSend}
-                onBulkStatusUpdate={handleBulkStatusUpdate}
+                onBulkSend={hasPermission("create_invoices") ? handleBulkSend : undefined}
+                onBulkStatusUpdate={hasPermission("edit_invoices") ? handleBulkStatusUpdate : undefined}
             />
 
             {/* Invoices Table */}
@@ -679,11 +682,13 @@ export default function InvoicesPage() {
                                                         </Button>
                                                     </Link>
                                                     {invoice.status === 'draft' && (
-                                                        <Link href={`/billing/invoices/${invoice.id}/edit`}>
-                                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-green-600">
-                                                                <Edit className="w-3.5 h-3.5" />
-                                                            </Button>
-                                                        </Link>
+                                                        <PermissionGuard permission="edit_invoices">
+                                                            <Link href={`/billing/invoices/${invoice.id}/edit`}>
+                                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-green-600">
+                                                                    <Edit className="w-3.5 h-3.5" />
+                                                                </Button>
+                                                            </Link>
+                                                        </PermissionGuard>
                                                     )}
                                                     <Button
                                                         variant="ghost"

@@ -60,7 +60,7 @@ export function DataTable<T>({
     return (
         <Card className={cn("border-t shadow-sm overflow-hidden", className)}>
             <div className="overflow-x-auto">
-                <Table>
+                <Table className="table-fixed w-full">
                     <TableHeader>
                         <TableRow className="bg-gray-50/50 hover:bg-gray-50/50 border-gray-100 dark:border-gray-800">
                             {columns.map((col, index) => (

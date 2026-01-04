@@ -602,36 +602,46 @@ export default function VehiclesPage() {
                                 View Details
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/vehicles/${vehicle.id}/edit`} className="flex items-center">
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit Vehicle
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/vehicles/${vehicle.id}/history`} className="flex items-center">
-                                <History className="w-4 h-4 mr-2" />
-                                Service History
-                              </Link>
-                            </DropdownMenuItem>
+                            <PermissionGuard permission="edit_vehicles">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/vehicles/${vehicle.id}/edit`} className="flex items-center">
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Vehicle
+                                </Link>
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                            <PermissionGuard permission="view_service_history">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/vehicles/${vehicle.id}/history`} className="flex items-center">
+                                  <History className="w-4 h-4 mr-2" />
+                                  Service History
+                                </Link>
+                              </DropdownMenuItem>
+                            </PermissionGuard>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                              <Link href={`/workorders/new?vehicle=${vehicle.id}`} className="flex items-center">
-                                <Wrench className="w-4 h-4 mr-2" />
-                                Create Work Order
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <Link href={`/appointments/new?vehicle=${vehicle.id}`} className="flex items-center">
-                                <Calendar className="w-4 h-4 mr-2" />
-                                Schedule Appointment
-                              </Link>
-                            </DropdownMenuItem>
+                            <PermissionGuard permission="create_work_orders">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/workorders/new?vehicle=${vehicle.id}`} className="flex items-center">
+                                  <Wrench className="w-4 h-4 mr-2" />
+                                  Create Work Order
+                                </Link>
+                              </DropdownMenuItem>
+                            </PermissionGuard>
+                            <PermissionGuard permission="create_appointments">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/appointments/new?vehicle=${vehicle.id}`} className="flex items-center">
+                                  <Calendar className="w-4 h-4 mr-2" />
+                                  Schedule Appointment
+                                </Link>
+                              </DropdownMenuItem>
+                            </PermissionGuard>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => { if (window.confirm(`Delete vehicle "${vehicle.make} ${vehicle.model}" (${vehicle.vin})?`)) handleDelete(vehicle); }} disabled={deleteMutation.isPending} className="text-red-600 dark:text-red-400">
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete Vehicle
-                            </DropdownMenuItem>
+                            <PermissionGuard permission="delete_vehicles">
+                              <DropdownMenuItem onClick={() => { if (window.confirm(`Delete vehicle "${vehicle.make} ${vehicle.model}" (${vehicle.vin})?`)) handleDelete(vehicle); }} disabled={deleteMutation.isPending} className="text-red-600 dark:text-red-400">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete Vehicle
+                              </DropdownMenuItem>
+                            </PermissionGuard>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import {
     Card,
     CardContent,
@@ -58,7 +59,7 @@ export default function TechniciansPage() {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <StaffPageHeader
                 title="Technicians"
                 description="Manage field service technicians and their schedules."
@@ -67,12 +68,14 @@ export default function TechniciansPage() {
                     { label: "Technicians" }
                 ]}
                 actions={
-                    <Button size="sm" asChild>
-                        <Link href="/technicians/new">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Technician
-                        </Link>
-                    </Button>
+                    <PermissionGuard permission="manage_technicians">
+                        <Button size="sm" asChild>
+                            <Link href="/technicians/new">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Technician
+                            </Link>
+                        </Button>
+                    </PermissionGuard>
                 }
             />
 
@@ -181,7 +184,7 @@ export default function TechniciansPage() {
             ) : (
                 <>
                     {viewMode === "grid" ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
                             {data?.results && data.results.length > 0 ? (
                                 data.results.map((tech) => (
                                     <Card
@@ -189,7 +192,7 @@ export default function TechniciansPage() {
                                         className="shadow-none border hover:shadow-md transition-shadow cursor-pointer"
                                         onDoubleClick={() => router.push(`/technicians/${tech.id}`)}
                                     >
-                                        <CardContent className="p-4">
+                                        <CardContent className="p-3">
                                             <div className="flex items-start justify-between mb-3">
                                                 <div className="flex gap-3 items-center">
                                                     <Avatar className="h-10 w-10 border-2 border-white dark:border-gray-900 shadow-sm">
@@ -287,7 +290,7 @@ export default function TechniciansPage() {
                                                     className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-100 dark:border-gray-800 cursor-pointer"
                                                     onDoubleClick={() => router.push(`/technicians/${tech.id}`)}
                                                 >
-                                                    <TableCell className="px-4 py-2">
+                                                    <TableCell className="px-3 py-1.5">
                                                         <div className="flex items-center gap-3">
                                                             <Avatar className="h-8 w-8">
                                                                 <AvatarImage src={tech.user_details?.profile_picture} />

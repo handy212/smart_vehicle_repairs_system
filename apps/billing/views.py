@@ -79,6 +79,14 @@ class TaxRateViewSet(viewsets.ModelViewSet):
     
     queryset = TaxRate.objects.all()
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve', 'active', 'by_location']:
+            return [IsAuthenticated(), HasPermission('view_settings')]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), HasPermission('manage_settings')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['is_active', 'state', 'county', 'city']
     search_fields = ['name', 'description', 'state', 'county', 'city']

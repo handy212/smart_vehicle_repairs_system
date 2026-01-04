@@ -18,6 +18,10 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { exportToCSV, generateFilenameWithTimestamp } from "@/lib/utils/export-utils";
+import { exportToExcel } from "@/lib/utils/excel-export";
+import { ExportDropdown } from "@/components/ui/export-dropdown";
+import { COMPANY_NAME } from "@/lib/constants";
 
 export default function BalanceSheetPage() {
     const { formatCurrency } = useCurrency();
@@ -29,9 +33,91 @@ export default function BalanceSheetPage() {
         queryFn: () => accountingApi.getBalanceSheet(date),
     });
 
-    const handleExport = () => {
-        // Mock export
-        alert("Export feature coming soon");
+    const handleExportCSV = () => {
+        if (!report) return;
+
+        const rows: any[][] = [];
+        rows.push(['Balance Sheet']);
+        rows.push([`As of: ${date}`]);
+        rows.push([]);
+
+        // Assets
+        rows.push(['ASSETS']);
+        report.assets.forEach((acc: any) => {
+            rows.push([acc.code, acc.name, acc.balance]);
+        });
+        rows.push(['', 'Total Assets', report.totals.assets]);
+        rows.push([]);
+
+        // Liabilities
+        rows.push(['LIABILITIES']);
+        report.liabilities.forEach((acc: any) => {
+            rows.push([acc.code, acc.name, acc.balance]);
+        });
+        rows.push(['', 'Total Liabilities', report.totals.liabilities]);
+        rows.push([]);
+
+        // Equity
+        rows.push(['EQUITY']);
+        report.equity.forEach((acc: any) => {
+            rows.push([acc.code, acc.name, acc.balance]);
+        });
+        rows.push(['', 'Total Equity', report.totals.equity]);
+        rows.push([]);
+        rows.push(['', 'Total Liabilities + Equity', report.totals.liabilities_plus_equity]);
+
+        const filename = generateFilenameWithTimestamp('balance-sheet', 'csv');
+        exportToCSV(rows, filename, ['Account Code', 'Account Name', 'Amount']);
+    };
+
+    const handleExportExcel = () => {
+        if (!report) return;
+
+        const rows: any[][] = [];
+        rows.push(['Balance Sheet']);
+        rows.push([`As of: ${date}`]);
+        rows.push([]);
+
+        // Assets
+        rows.push(['ASSETS', '', '']);
+        rows.push(['Account Code', 'Account Name', 'Amount']);
+        report.assets.forEach((acc: any) => {
+            rows.push([acc.code, acc.name, acc.balance]);
+        });
+        rows.push(['', 'Total Assets', report.totals.assets]);
+        rows.push([]);
+
+        // Liabilities
+        rows.push(['LIABILITIES', '', '']);
+        rows.push(['Account Code', 'Account Name', 'Amount']);
+        report.liabilities.forEach((acc: any) => {
+            rows.push([acc.code, acc.name, acc.balance]);
+        });
+        rows.push(['', 'Total Liabilities', report.totals.liabilities]);
+        rows.push([]);
+
+        // Equity
+        rows.push(['EQUITY', '', '']);
+        rows.push(['Account Code', 'Account Name', 'Amount']);
+        report.equity.forEach((acc: any) => {
+            rows.push([acc.code, acc.name, acc.balance]);
+        });
+        rows.push(['', 'Total Equity', report.totals.equity]);
+        rows.push([]);
+        rows.push(['', 'Total Liabilities + Equity', report.totals.liabilities_plus_equity]);
+
+        const filename = generateFilenameWithTimestamp('balance-sheet', 'xlsx');
+        exportToExcel(rows, filename, {
+            sheetName: 'Balance Sheet',
+            reportTitle: 'Balance Sheet',
+            dateInfo: `As of: ${date}`,
+            boldRows: [0, 3, 4],
+            currencyColumns: [2],
+            colorRows: [{ row: 0, color: '3B82F6' }],
+            freezePane: { row: 1, col: 0 },
+            showTimestamp: true,
+            companyName: COMPANY_NAME
+        });
     };
 
     return (
@@ -72,10 +158,12 @@ export default function BalanceSheetPage() {
                                 className="w-full sm:w-40 h-10 text-sm"
                             />
                         </div>
-                        <Button variant="outline" onClick={handleExport} className="h-10">
-                            <Download className="w-4 h-4 mr-2" />
-                            Export
-                        </Button>
+                        <ExportDropdown
+                            onExportCSV={handleExportCSV}
+                            onExportExcel={handleExportExcel}
+                            disabled={!report}
+                            size="default"
+                        />
                     </div>
                 </div>
             </div>

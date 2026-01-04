@@ -448,3 +448,35 @@ class BudgetLine(models.Model):
     
     def __str__(self):
         return f"{self.budget.name} - {self.account.code} ({self.period})"
+    
+
+class Accrual(models.Model):
+    """Track accrued expenses/revenues"""
+    ACCRUAL_TYPE_CHOICES = [
+        ('expense', 'Accrued Expense'),
+        ('revenue', 'Accrued Revenue'),
+    ]
+    
+    ACCRUAL_STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('reversed', 'Reversed'),
+    ]
+    
+    accrual_type = models.CharField(max_length=20, choices=ACCRUAL_TYPE_CHOICES)
+    account = models.ForeignKey(Account, on_delete=models.PROTECT, help_text="The expense or revenue account to accrue")
+    amount = models.DecimalField(max_digits=15, decimal_places=2)
+    accrual_date = models.DateField(help_text="Date to recognize the expense/revenue")
+    reversal_date = models.DateField(help_text="Date to reverse the accrual (usually first day of next period)")
+    description = models.TextField()
+    
+    # GL Integration
+    accrual_je = models.ForeignKey(JournalEntry, on_delete=models.SET_NULL, null=True, blank=True, related_name='accrual_entries')
+    reversal_je = models.ForeignKey(JournalEntry, on_delete=models.SET_NULL, null=True, blank=True, related_name='reversal_entries')
+    
+    status = models.CharField(max_length=20, choices=ACCRUAL_STATUS_CHOICES, default='active')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+
+    def __str__(self):
+        return f"{self.get_accrual_type_display()} - {self.description} - {self.amount}"

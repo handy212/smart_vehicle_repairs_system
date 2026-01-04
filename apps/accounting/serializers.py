@@ -196,3 +196,32 @@ class BudgetSerializer(serializers.ModelSerializer):
         model = Budget
         fields = '__all__'
         read_only_fields = ('created_by', 'created_at', 'approved_by', 'approved_at', 'updated_at')
+
+# ============================================================================
+# PHASE 13: ACCRUALS SERIALIZERS
+# ============================================================================
+
+from .models import Accrual
+
+class AccrualSerializer(serializers.ModelSerializer):
+    account_code = serializers.CharField(source='account.code', read_only=True)
+    account_name = serializers.CharField(source='account.name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    
+    class Meta:
+        model = Accrual
+        fields = '__all__'
+        read_only_fields = ('created_by', 'created_at', 'accrual_je', 'reversal_je')
+
+class AccrualCandidateSerializer(serializers.Serializer):
+    """
+    Serializer for candidate accruals (uninvoiced WOs, unbilled POs).
+    Not a model serializer.
+    """
+    type = serializers.ChoiceField(choices=['revenue', 'expense'])
+    source_model = serializers.CharField()
+    source_id = serializers.IntegerField()
+    source_reference = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=15, decimal_places=2)
+    date = serializers.DateField()
+    description = serializers.CharField()

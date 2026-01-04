@@ -345,13 +345,15 @@ export default function AppointmentsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem
-                onClick={() => handleExport()}
-                disabled={!data?.results || data.results.length === 0}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export CSV
-              </DropdownMenuItem>
+              <PermissionGuard permission="export_appointments">
+                <DropdownMenuItem
+                  onClick={() => handleExport()}
+                  disabled={!data?.results || data.results.length === 0}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </DropdownMenuItem>
+              </PermissionGuard>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -648,10 +650,12 @@ export default function AppointmentsPage() {
                               </DropdownMenuItem>
                             </PermissionGuard>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => { }}>
-                              <Mail className="mr-2 h-4 w-4" />
-                              Send Reminder
-                            </DropdownMenuItem>
+                            <PermissionGuard permission="edit_appointments">
+                              <DropdownMenuItem onClick={() => { }}>
+                                <Mail className="mr-2 h-4 w-4" />
+                                Send Reminder
+                              </DropdownMenuItem>
+                            </PermissionGuard>
                             <DropdownMenuSeparator />
                             <PermissionGuard permission="delete_appointments">
                               <DropdownMenuItem

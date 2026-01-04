@@ -151,12 +151,14 @@ export default function UsersManagementPage() {
           </div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">User Management</h1>
         </div>
-        <Link href="/admin/users/new">
-          <Button size="sm" className="h-8 dark:bg-blue-600 dark:hover:bg-blue-700">
-            <Plus className="w-3.5 h-3.5 mr-1.5" />
-            Add User
-          </Button>
-        </Link>
+        <PermissionGuard permission="create_users">
+          <Link href="/admin/users/new">
+            <Button size="sm" className="h-8 dark:bg-blue-600 dark:hover:bg-blue-700">
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              Add User
+            </Button>
+          </Link>
+        </PermissionGuard>
       </div>
 
       {/* Filters */}
@@ -305,15 +307,19 @@ export default function UsersManagementPage() {
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => router.push(`/admin/users/${user.id}`)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit User
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleToggleActive(user)}>
-                                {user.is_active ? <UserX className="w-4 h-4 mr-2" /> : <UserCheck className="w-4 h-4 mr-2" />}
-                                {user.is_active ? 'Deactivate' : 'Activate'}
-                              </DropdownMenuItem>
+                              <PermissionGuard permission="edit_users">
+                                <DropdownMenuItem onClick={() => router.push(`/admin/users/${user.id}`)}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit User
+                                </DropdownMenuItem>
+                              </PermissionGuard>
+                              <PermissionGuard permission="edit_users">
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleToggleActive(user)}>
+                                  {user.is_active ? <UserX className="w-4 h-4 mr-2" /> : <UserCheck className="w-4 h-4 mr-2" />}
+                                  {user.is_active ? 'Deactivate' : 'Activate'}
+                                </DropdownMenuItem>
+                              </PermissionGuard>
                               <PermissionGuard permission="delete_users">
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem

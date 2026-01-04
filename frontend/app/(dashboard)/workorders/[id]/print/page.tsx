@@ -8,9 +8,13 @@ import { workOrderPartsApi } from "@/lib/api/workorder-parts";
 import { format } from "date-fns";
 import { useEffect } from "react";
 
+import { usePrint } from "@/lib/hooks/usePrint";
+import { PrintLayout } from "@/components/print/PrintLayout";
+import { PrintControls } from "@/components/print/PrintControls";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function WorkOrderPrintPage() {
-    const { formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrency();
+  const { downloadPDF, isDownloading } = usePrint();
   const params = useParams();
   const workOrderId = parseInt(params.id as string);
 
@@ -31,12 +35,14 @@ export default function WorkOrderPrintPage() {
     enabled: !!workOrderId,
   });
 
-  useEffect(() => {
-    if (!isLoading && workOrder) {
-      // Auto-print when page loads
-      window.print();
-    }
-  }, [isLoading, workOrder]);
+  const handleDownloadPDF = async () => {
+    if (!workOrder) return;
+    await downloadPDF({
+      documentType: 'work_order',
+      documentId: workOrderId,
+      documentNumber: workOrder.work_order_number
+    });
+  };
 
   if (isLoading || !workOrder) {
     return (
@@ -66,209 +72,163 @@ export default function WorkOrderPrintPage() {
   const total = parseFloat(workOrder.total_cost || '0') || subtotal;
 
   return (
-    <div className="print-container p-8 max-w-4xl mx-auto bg-white">
-      <style jsx global>{`
+    <div className="min-h-screen bg-gray-100">
+      <PrintControls
+        onPrint={() => window.print()}
+        onDownloadPDF={handleDownloadPDF}
+        isLoading={isDownloading}
+      />
+
+      <PrintLayout
+        documentType="Work Order"
+        documentNumber={workOrder.work_order_number}
+        watermark={workOrder.status === 'completed' ? 'PAID' : (workOrder.status === 'draft' ? 'DRAFT' : null)}
+        className="max-w-[1100px]" // Wider for landscape
+        metaInfo={
+          <>
+            <div className="mb-1"><span className="font-bold text-gray-700">Date:</span> {format(new Date(workOrder.created_at), 'MMM dd, yyyy')}</div>
+            <div className="mb-1"><span className="font-bold text-gray-700">Status:</span> <span className="uppercase font-semibold">{workOrder.status.replace('_', ' ')}</span></div>
+            {workOrder.completed_at && (
+              <div><span className="font-bold text-gray-700">Completed:</span> {format(new Date(workOrder.completed_at), 'MMM dd, yyyy')}</div>
+            )}
+          </>
+        }
+      >
+        <style jsx global>{`
         @media print {
           @page {
-            margin: 1cm;
-          }
-          body {
-            background: white;
-          }
-          .no-print {
-            display: none !important;
-          }
-          .print-container {
-            box-shadow: none;
-          }
-          /* Hide dashboard layout elements */
-          nav,
-          aside,
-          header,
-          [class*="Navbar"],
-          [class*="Sidebar"],
-          [class*="SubNav"],
-          nav[class*="fixed"],
-          aside[class*="fixed"] {
-            display: none !important;
-            visibility: hidden !important;
-          }
-          /* Reset main content margin for print */
-          main {
-            margin-left: 0 !important;
-            padding-top: 0 !important;
-            padding: 0 !important;
-          }
-          /* Hide any other dashboard elements */
-          [class*="dashboard-layout"],
-          [class*="dashboardLayout"],
-          div[class*="min-h-screen"] > nav,
-          div[class*="min-h-screen"] > aside {
-            display: none !important;
-            visibility: hidden !important;
-          }
-          /* Ensure print container is full width */
-          .print-container {
-            max-width: 100% !important;
-            margin: 0 auto !important;
-          }
-        }
-        @media screen {
-          .print-container {
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            size: landscape;
+            margin: 0.5cm;
           }
         }
       `}</style>
 
-      {/* Header */}
-      <div className="mb-8 border-b-2 border-gray-800 pb-4">
-        <div className="flex justify-between items-start">
+        {/* Header Info */}
+        <div className="grid grid-cols-2 gap-6 mb-8 text-sm">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">WORK ORDER</h1>
-            <p className="text-lg text-gray-600 mt-1">#{workOrder.work_order_number}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-600">Date: {format(new Date(workOrder.created_at), 'MMM dd, yyyy')}</p>
-            <p className="text-sm text-gray-600">Status: <span className="font-semibold uppercase">{workOrder.status.replace('_', ' ')}</span></p>
-          </div>
-        </div>
-      </div>
-
-      {/* Customer & Vehicle Info */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">CUSTOMER INFORMATION</h2>
-          <div className="text-sm space-y-1">
-            <p className="font-semibold">{customerName}</p>
-          </div>
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">Vehicle Info</h2>
-          {vehicleInfo && (
-            <div className="text-sm space-y-1">
-              <p className="font-semibold">{vehicleInfo}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Work Order Details */}
-      <div className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">WORK ORDER DETAILS</h2>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p><span className="font-semibold">Priority:</span> {workOrder.priority}</p>
+            <div className="font-bold text-gray-700 uppercase mb-1">Customer</div>
+            <div className="font-semibold text-lg">{customerName}</div>
           </div>
           <div>
-            {workOrder.completed_at && (
-              <p><span className="font-semibold">Completed:</span> {format(new Date(workOrder.completed_at), 'MMM dd, yyyy')}</p>
-            )}
+            <div className="font-bold text-gray-700 uppercase mb-1">Vehicle</div>
+            <div className="font-semibold text-lg">{vehicleInfo || 'N/A'}</div>
           </div>
         </div>
-      </div>
 
-      {/* Tasks */}
-      {tasks.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">SERVICE TASKS</h2>
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border border-gray-300 px-3 py-2 text-left">Task</th>
-                <th className="border border-gray-300 px-3 py-2 text-left">Status</th>
-                <th className="border border-gray-300 px-3 py-2 text-right">Hours</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.map((task) => (
-                <tr key={task.id}>
-                  <td className="border border-gray-300 px-3 py-2">{task.description}</td>
-                  <td className="border border-gray-300 px-3 py-2 capitalize">{task.status.replace('_', ' ')}</td>
+
+
+
+        {/* Tasks */}
+        {tasks.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">SERVICE TASKS</h2>
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 px-3 py-2 text-left">Task</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">Status</th>
+                  <th className="border border-gray-300 px-3 py-2 text-right">Hours</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tasks.map((task) => (
+                  <tr key={task.id}>
+                    <td className="border border-gray-300 px-3 py-2">{task.description}</td>
+                    <td className="border border-gray-300 px-3 py-2 capitalize">{task.status.replace('_', ' ')}</td>
+                    <td className="border border-gray-300 px-3 py-2 text-right">
+                      {task.actual_hours ? `${task.actual_hours} hrs` : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-gray-50 font-semibold">
+                  <td colSpan={2} className="border border-gray-300 px-3 py-2 text-right">Total Hours:</td>
                   <td className="border border-gray-300 px-3 py-2 text-right">
-                    {task.actual_hours ? `${task.actual_hours} hrs` : '-'}
+                    {tasks.reduce((sum, task) => sum + (task.actual_hours || 0), 0).toFixed(1)} hrs
                   </td>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="bg-gray-50 font-semibold">
-                <td colSpan={2} className="border border-gray-300 px-3 py-2 text-right">Total Hours:</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">
-                  {tasks.reduce((sum, task) => sum + (task.actual_hours || 0), 0).toFixed(1)} hrs
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      )}
-
-      {/* Parts */}
-      {parts.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">PARTS USED</h2>
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border border-gray-300 px-3 py-2 text-left">Part Number</th>
-                <th className="border border-gray-300 px-3 py-2 text-left">Description</th>
-                <th className="border border-gray-300 px-3 py-2 text-right">Qty</th>
-                <th className="border border-gray-300 px-3 py-2 text-right">Unit Cost</th>
-                <th className="border border-gray-300 px-3 py-2 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {parts.map((part) => {
-                const unitCost = parseFloat(part.unit_cost || '0');
-                const quantity = part.quantity || 0;
-                const lineTotal = parseFloat(part.total_cost || '0') || (unitCost * quantity);
-                return (
-                  <tr key={part.id}>
-                    <td className="border border-gray-300 px-3 py-2">{part.part_number || 'N/A'}</td>
-                    <td className="border border-gray-300 px-3 py-2">{part.part_name || part.description || 'N/A'}</td>
-                    <td className="border border-gray-300 px-3 py-2 text-right">{quantity}</td>
-                    <td className="border border-gray-300 px-3 py-2 text-right">{formatCurrency(unitCost)}</td>
-                    <td className="border border-gray-300 px-3 py-2 text-right">{formatCurrency(lineTotal)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="bg-gray-50 font-semibold">
-                <td colSpan={4} className="border border-gray-300 px-3 py-2 text-right">Total Parts:</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">{formatCurrency(totalPartsCost)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      )}
-
-      {/* Totals */}
-      <div className="mb-8">
-        <div className="flex justify-end">
-          <div className="w-64">
-            <table className="w-full text-sm border-collapse">
-              <tbody>
-                <tr>
-                  <td className="border border-gray-300 px-3 py-2 text-right font-semibold">Subtotal:</td>
-                  <td className="border border-gray-300 px-3 py-2 text-right">{formatCurrency(subtotal)}</td>
-                </tr>
-                <tr className="bg-gray-100">
-                  <td className="border border-gray-300 px-3 py-2 text-right font-bold text-lg">TOTAL:</td>
-                  <td className="border border-gray-300 px-3 py-2 text-right font-bold text-lg">{formatCurrency(total)}</td>
-                </tr>
-              </tbody>
+              </tfoot>
             </table>
           </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="mt-12 pt-4 border-t border-gray-300 text-xs text-gray-600 text-center">
-        <p>This is a computer-generated work order. Please retain for your records.</p>
-        {workOrder.completed_at && (
-          <p className="mt-2">Completed: {format(new Date(workOrder.completed_at), 'MMM dd, yyyy h:mm a')}</p>
         )}
-      </div>
+
+        {/* Parts */}
+        {parts.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2 border-b border-gray-300 pb-1">PARTS USED</h2>
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 px-3 py-2 text-left">Part Number</th>
+                  <th className="border border-gray-300 px-3 py-2 text-left">Description</th>
+                  <th className="border border-gray-300 px-3 py-2 text-right">Qty</th>
+                  <th className="border border-gray-300 px-3 py-2 text-right">Unit Cost</th>
+                  <th className="border border-gray-300 px-3 py-2 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parts.map((part) => {
+                  const unitCost = parseFloat(part.unit_cost || '0');
+                  const quantity = part.quantity || 0;
+                  const lineTotal = parseFloat(part.total_cost || '0') || (unitCost * quantity);
+                  return (
+                    <tr key={part.id}>
+                      <td className="border border-gray-300 px-3 py-2">{part.part_number || 'N/A'}</td>
+                      <td className="border border-gray-300 px-3 py-2">{part.part_name || part.description || 'N/A'}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-right">{quantity}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-right">{formatCurrency(unitCost)}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-right">{formatCurrency(lineTotal)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="bg-gray-50 font-semibold">
+                  <td colSpan={4} className="border border-gray-300 px-3 py-2 text-right">Total Parts:</td>
+                  <td className="border border-gray-300 px-3 py-2 text-right">{formatCurrency(totalPartsCost)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+
+        {/* Totals */}
+        <div className="mb-8">
+          <div className="flex justify-end">
+            <div className="w-64">
+              <table className="w-full text-sm border-collapse">
+                <tbody>
+                  <tr>
+                    <td className="border border-gray-300 px-3 py-2 text-right font-semibold">Subtotal:</td>
+                    <td className="border border-gray-300 px-3 py-2 text-right">{formatCurrency(subtotal)}</td>
+                  </tr>
+                  <tr className="bg-gray-100">
+                    <td className="border border-gray-300 px-3 py-2 text-right font-bold text-lg">TOTAL:</td>
+                    <td className="border border-gray-300 px-3 py-2 text-right font-bold text-lg">{formatCurrency(total)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Notes */}
+        <div className="grid grid-cols-2 gap-8 mt-12 pt-8 border-t border-gray-300 page-break-avoid">
+          <div>
+            <div className="text-xs font-bold uppercase mb-8">Service Advisor Signature</div>
+            <div className="border-b border-gray-400 w-3/4"></div>
+          </div>
+          <div>
+            <div className="text-xs font-bold uppercase mb-8">Technician Signature</div>
+            <div className="border-b border-gray-400 w-3/4"></div>
+          </div>
+        </div>
+
+        <div className="mt-8 text-center text-xs text-gray-500">
+          Internal Work Order - Not an Invoice
+        </div>
+      </PrintLayout>
     </div>
   );
 }

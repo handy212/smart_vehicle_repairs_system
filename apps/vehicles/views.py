@@ -35,6 +35,18 @@ class VehicleViewSet(viewsets.ModelViewSet):
     destroy: Delete vehicle
     """
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_vehicles')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('create_vehicles')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_vehicles')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('delete_vehicles')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'make', 'model', 'year', 'engine_type', 'transmission_type', 'owner']
     search_fields = ['vin', 'license_plate', 'make', 'model', 'owner__user__first_name', 
@@ -497,6 +509,12 @@ class VehicleMileageHistoryViewSet(viewsets.ModelViewSet):
     """ViewSet for vehicle mileage history"""
     serializer_class = VehicleMileageHistorySerializer
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_vehicle_history')]
+        return [IsAuthenticated(), HasPermission('edit_vehicles')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['vehicle']
     ordering = ['-recorded_date']
@@ -512,6 +530,12 @@ class VehicleDocumentViewSet(viewsets.ModelViewSet):
     """ViewSet for vehicle documents"""
     serializer_class = VehicleDocumentSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_vehicles')]
+        return [IsAuthenticated(), HasPermission('edit_vehicles')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['vehicle', 'document_type']
     ordering = ['-uploaded_at']
@@ -527,6 +551,12 @@ class VehiclePhotoViewSet(viewsets.ModelViewSet):
     """ViewSet for vehicle photos"""
     serializer_class = VehiclePhotoSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'list' or self.action == 'retrieve':
+            return [IsAuthenticated(), HasPermission('view_vehicles')]
+        return [IsAuthenticated(), HasPermission('edit_vehicles')]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['vehicle', 'photo_type']
     ordering = ['-uploaded_at']

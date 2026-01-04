@@ -8,12 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Save, Trash2, Eye, EyeOff, Info, Upload, Image as ImageIcon, Award } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Eye, EyeOff, Info, Upload, Image as ImageIcon, Award, Tag } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { billingApi } from "@/lib/api/billing";
+import { usePermissions } from "@/lib/hooks/usePermissions";
 
 const CATEGORIES: Array<{ value: string; label: string; link?: string }> = [
   { value: "company", label: "Company Info" },
@@ -35,6 +36,8 @@ export default function SystemSettingsPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canManage = hasPermission("manage_settings");
   const initialCategory = searchParams?.get("category") || "company";
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [showSecret, setShowSecret] = useState<Record<number, boolean>>({});
@@ -314,7 +317,7 @@ export default function SystemSettingsPage() {
             <Checkbox
               checked={setting.is_active}
               onCheckedChange={(checked) => handleActiveToggle(setting, Boolean(checked))}
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || !canManage}
               className="h-3.5 w-3.5"
             />
           </div>
@@ -329,6 +332,7 @@ export default function SystemSettingsPage() {
                   onCheckedChange={(checked) =>
                     handleRowChange(setting, { value: checked ? "true" : "false" })
                   }
+                  disabled={!canManage}
                   className="h-4 w-4"
                 />
                 <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
@@ -344,6 +348,7 @@ export default function SystemSettingsPage() {
                   onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                   placeholder={setting.is_secret ? "Enter secret value" : "Enter value"}
                   className={`h-8 text-sm ${setting.is_secret ? "pr-8" : ""}`}
+                  disabled={!canManage}
                 />
                 {setting.is_secret && (
                   <Button
@@ -448,6 +453,12 @@ export default function SystemSettingsPage() {
             <Button variant="outline" size="sm">
               <Award className="h-4 w-4 mr-2" />
               Skills
+            </Button>
+          </Link>
+          <Link href="/admin/settings/asset-categories">
+            <Button variant="outline" size="sm">
+              <Tag className="h-4 w-4 mr-2" />
+              Asset Categories
             </Button>
           </Link>
           <Link href="/admin/settings/email-templates">
@@ -656,6 +667,7 @@ export default function SystemSettingsPage() {
                                           onCheckedChange={(checked) =>
                                             handleRowChange(setting, { value: checked ? 'true' : 'false' })
                                           }
+                                          disabled={!canManage}
                                           className="h-4 w-4"
                                         />
                                         <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
@@ -673,6 +685,7 @@ export default function SystemSettingsPage() {
                                           value={getRowValue(setting) || 'light'}
                                           onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                           className="w-full h-8 text-xs bg-white"
+                                          disabled={!canManage}
                                         >
                                           <option value="light">Light</option>
                                           <option value="dark">Dark</option>
@@ -684,6 +697,7 @@ export default function SystemSettingsPage() {
                                             value={getRowValue(setting) || 'hubtel'}
                                             onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                             className="w-full h-8 text-xs bg-white"
+                                            disabled={!canManage}
                                           >
                                             <option value="hubtel">Hubtel</option>
                                             <option value="twilio">Twilio</option>
@@ -696,6 +710,7 @@ export default function SystemSettingsPage() {
                                               value={getRowValue(setting) || 'smtp'}
                                               onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                               className="w-full h-8 text-xs bg-white"
+                                              disabled={!canManage}
                                             >
                                               <option value="smtp">SMTP</option>
                                               <option value="sendgrid">SendGrid</option>
@@ -709,6 +724,7 @@ export default function SystemSettingsPage() {
                                                 value={getRowValue(setting) || ''}
                                                 onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                 className="w-full h-8 text-xs bg-white"
+                                                disabled={!canManage}
                                               >
                                                 <option value="">None</option>
                                                 <option value="stripe">Stripe</option>
@@ -722,6 +738,7 @@ export default function SystemSettingsPage() {
                                                   value={getRowValue(setting) || 'percentage'}
                                                   onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                   className="w-full h-8 text-xs bg-white"
+                                                  disabled={!canManage}
                                                 >
                                                   <option value="fixed">Fixed Amount</option>
                                                   <option value="percentage">Percentage</option>
@@ -751,6 +768,7 @@ export default function SystemSettingsPage() {
                                                       }
                                                     }}
                                                     className="w-full h-8 text-xs bg-white"
+                                                    disabled={!canManage}
                                                   >
                                                     <option value="USD">USD - US Dollar</option>
                                                     <option value="EUR">EUR - Euro</option>
@@ -769,6 +787,7 @@ export default function SystemSettingsPage() {
                                                       value={getRowValue(setting) || '$'}
                                                       onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                       className="w-full h-8 text-xs bg-white"
+                                                      disabled={!canManage}
                                                     >
                                                       <option value="$">$ - Dollar</option>
                                                       <option value="€">€ - Euro</option>
@@ -787,6 +806,7 @@ export default function SystemSettingsPage() {
                                                         value={getRowValue(setting) || 'INFO'}
                                                         onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                         className="w-full h-8 text-xs bg-white"
+                                                        disabled={!canManage}
                                                       >
                                                         <option value="DEBUG">DEBUG</option>
                                                         <option value="INFO">INFO</option>
@@ -800,6 +820,7 @@ export default function SystemSettingsPage() {
                                                           value={getRowValue(setting) || 'daily'}
                                                           onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                           className="w-full h-8 text-xs bg-white"
+                                                          disabled={!canManage}
                                                         >
                                                           <option value="daily">Daily</option>
                                                           <option value="weekly">Weekly</option>
@@ -813,6 +834,7 @@ export default function SystemSettingsPage() {
                                                               value={getRowValue(setting) || '#000000'}
                                                               onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                               className="h-8 w-12 p-0.5 cursor-pointer"
+                                                              disabled={!canManage}
                                                             />
                                                             <Input
                                                               type="text"
@@ -822,6 +844,7 @@ export default function SystemSettingsPage() {
                                                               className="flex-1 font-mono h-8 text-xs"
                                                               pattern="^#[0-9A-Fa-f]{6}$"
                                                               maxLength={7}
+                                                              disabled={!canManage}
                                                             />
                                                           </div>
                                                         ) : /* Image path inputs */
@@ -835,6 +858,7 @@ export default function SystemSettingsPage() {
                                                                   onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                                   placeholder="Path to image file"
                                                                   className="flex-1 h-8 text-xs bg-gray-50/50"
+                                                                  disabled={!canManage}
                                                                 />
                                                                 <Button
                                                                   type="button"
@@ -852,7 +876,7 @@ export default function SystemSettingsPage() {
                                                                     };
                                                                     input.click();
                                                                   }}
-                                                                  disabled={uploadFileMutation.isPending}
+                                                                  disabled={uploadFileMutation.isPending || !canManage}
                                                                   className="flex-shrink-0 h-8 px-2"
                                                                 >
                                                                   <Upload className="w-3.5 h-3.5 mr-1" />
@@ -890,6 +914,7 @@ export default function SystemSettingsPage() {
                                                                   value={getRowValue(setting) || '0.85'}
                                                                   onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                                   className="w-full h-6"
+                                                                  disabled={!canManage}
                                                                 />
                                                                 <div className="flex items-center justify-between text-[10px] text-gray-400">
                                                                   <span>0</span>
@@ -907,6 +932,7 @@ export default function SystemSettingsPage() {
                                                                   placeholder={setting.key.includes('hours') ? "HH:MM-HH:MM or 'Closed'" : "HH:MM"}
                                                                   className="font-mono h-8 text-xs"
                                                                   pattern={setting.key.includes('hours') ? "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$|^Closed$" : "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"}
+                                                                  disabled={!canManage}
                                                                 />
                                                               ) : /* Phone number */
                                                                 setting.key.match(/(phone|sms_test_number|whatsapp)/i) ? (
@@ -917,6 +943,7 @@ export default function SystemSettingsPage() {
                                                                     onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                                     placeholder="+1234567890"
                                                                     className="h-8 text-xs"
+                                                                    disabled={!canManage}
                                                                   />
                                                                 ) : /* Percentage fields */
                                                                   setting.key.match(/(rate|percentage|deposit_percentage|late_fee_percentage|tax_.*_rate)/i) ? (
@@ -930,6 +957,7 @@ export default function SystemSettingsPage() {
                                                                         value={getRowValue(setting)}
                                                                         onChange={(e) => handleRowChange(setting, { value: e.target.value })}
                                                                         className="pr-6 h-8 text-xs"
+                                                                        disabled={!canManage}
                                                                       />
                                                                       <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
                                                                     </div>
@@ -959,6 +987,7 @@ export default function SystemSettingsPage() {
                                                                             : ""
                                                                             }`}
                                                                           placeholder={setting.is_secret ? "Enter secret" : "Value"}
+                                                                          disabled={!canManage}
                                                                         />
                                                                         {setting.is_secret && (
                                                                           <Button
@@ -991,7 +1020,7 @@ export default function SystemSettingsPage() {
                                     onCheckedChange={(checked) =>
                                       handleActiveToggle(setting, Boolean(checked))
                                     }
-                                    disabled={updateMutation.isPending}
+                                    disabled={updateMutation.isPending || !canManage}
                                     className="h-4 w-4 mx-auto"
                                   />
                                 </td>
@@ -1036,6 +1065,7 @@ export default function SystemSettingsPage() {
                                               input.select();
                                             }
                                           }}
+                                          disabled={!canManage}
                                           className="h-7 px-2 text-[10px] text-gray-700 bg-gray-100 hover:bg-gray-200"
                                         >
                                           Edit
@@ -1044,7 +1074,7 @@ export default function SystemSettingsPage() {
                                           variant="ghost"
                                           size="sm"
                                           onClick={() => handleDelete(setting)}
-                                          disabled={deleteMutation.isPending}
+                                          disabled={deleteMutation.isPending || !canManage}
                                           className="h-7 w-7 p-0 text-gray-400 hover:text-red-600"
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />

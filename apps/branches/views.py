@@ -29,7 +29,7 @@ class BranchViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action in ['list', 'retrieve', 'accessible', 'staff', 'managers', 'stats']:
+        if self.action in ['list', 'retrieve', 'staff', 'managers', 'stats']:
             return [IsAuthenticated(), HasPermission('view_branches')]
         elif self.action == 'create':
             return [IsAuthenticated(), HasPermission('manage_branches')]

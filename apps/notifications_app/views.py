@@ -6,6 +6,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.db.models import Count, Q
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+from apps.accounts.permissions import HasPermission
 
 from .models import NotificationTemplate, Notification, NotificationPreference, NotificationLog
 from .serializers import (
@@ -34,6 +35,14 @@ class NotificationTemplateViewSet(viewsets.ModelViewSet):
     """
     queryset = NotificationTemplate.objects.all()
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve', 'by_type']:
+            return [IsAuthenticated(), HasPermission('manage_notification_templates')]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'test_send']:
+            return [IsAuthenticated(), HasPermission('manage_notification_templates')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['template_type', 'channel', 'is_active']
     search_fields = ['name', 'subject', 'body']
@@ -107,6 +116,14 @@ class NotificationViewSet(viewsets.ModelViewSet):
     """
     queryset = Notification.objects.select_related('recipient', 'template')
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['create', 'bulk_send', 'resend']:
+            return [IsAuthenticated(), HasPermission('send_notifications')]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), HasPermission('manage_notifications')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['notification_type', 'channel', 'status', 'priority', 'is_read', 'related_object_type', 'related_object_id']
     search_fields = ['title', 'message']

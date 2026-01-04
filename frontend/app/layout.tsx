@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "../styles/print.css";
 import { Providers } from "./providers";
 import { ThemeScript } from "./theme-script";
 

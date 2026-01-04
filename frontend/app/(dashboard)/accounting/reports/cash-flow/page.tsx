@@ -12,6 +12,10 @@ import { useCurrency } from "@/lib/hooks/useCurrency";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
+import { exportToCSV, generateFilenameWithTimestamp } from "@/lib/utils/export-utils";
+import { exportToExcel } from "@/lib/utils/excel-export";
+import { ExportDropdown } from "@/components/ui/export-dropdown";
+import { COMPANY_NAME } from "@/lib/constants";
 
 export default function CashFlowPage() {
     const [startDate, setStartDate] = useState(format(startOfYear(new Date()), "yyyy-MM-dd"));
@@ -23,8 +27,93 @@ export default function CashFlowPage() {
         queryFn: () => accountingApi.getCashFlowStatement(startDate, endDate),
     });
 
-    const handleExport = () => {
-        alert("Export feature coming soon");
+    const handleExportCSV = () => {
+        if (!report) return;
+
+        const rows: any[][] = [];
+        rows.push(['Cash Flow Statement']);
+        rows.push([`Period: ${startDate} to ${endDate}`]);
+        rows.push([]);
+        rows.push(['Opening Balance', report.opening_balance]);
+        rows.push([]);
+
+        // Operating Activities
+        rows.push(['Operating Activities']);
+        rows.push(['Cash Inflows', report.operating_activities.inflows]);
+        rows.push(['Cash Outflows', report.operating_activities.outflows]);
+        rows.push(['Net Cash from Operating', report.operating_activities.net]);
+        rows.push([]);
+
+        // Investing Activities
+        rows.push(['Investing Activities']);
+        rows.push(['Cash Inflows', report.investing_activities.inflows]);
+        rows.push(['Cash Outflows', report.investing_activities.outflows]);
+        rows.push(['Net Cash from Investing', report.investing_activities.net]);
+        rows.push([]);
+
+        // Financing Activities
+        rows.push(['Financing Activities']);
+        rows.push(['Cash Inflows', report.financing_activities.inflows]);
+        rows.push(['Cash Outflows', report.financing_activities.outflows]);
+        rows.push(['Net Cash from Financing', report.financing_activities.net]);
+        rows.push([]);
+
+        rows.push(['Net Increase/Decrease in Cash', report.net_increase_decrease]);
+        rows.push(['Closing Balance', report.closing_balance]);
+
+        const filename = generateFilenameWithTimestamp('cash-flow', 'csv');
+        exportToCSV(rows, filename, ['Item', 'Amount']);
+    };
+
+    const handleExportExcel = () => {
+        if (!report) return;
+
+        const rows: any[][] = [];
+
+        // Summary
+        rows.push(['Opening Balance', report.opening_balance]);
+        rows.push([]);
+
+        // Operating Activities
+        rows.push(['OPERATING ACTIVITIES', '']);
+        rows.push(['Cash Inflows', report.operating_activities.inflows]);
+        rows.push(['Cash Outflows', report.operating_activities.outflows]);
+        rows.push(['Net Cash from Operating', report.operating_activities.net]);
+        rows.push([]);
+
+        // Investing Activities
+        rows.push(['INVESTING ACTIVITIES', '']);
+        rows.push(['Cash Inflows', report.investing_activities.inflows]);
+        rows.push(['Cash Outflows', report.investing_activities.outflows]);
+        rows.push(['Net Cash from Investing', report.investing_activities.net]);
+        rows.push([]);
+
+        // Financing Activities
+        rows.push(['FINANCING ACTIVITIES', '']);
+        rows.push(['Cash Inflows', report.financing_activities.inflows]);
+        rows.push(['Cash Outflows', report.financing_activities.outflows]);
+        rows.push(['Net Cash from Financing', report.financing_activities.net]);
+        rows.push([]);
+
+        rows.push(['Net Increase/Decrease in Cash', report.net_increase_decrease]);
+        rows.push(['Closing Balance', report.closing_balance]);
+
+        const filename = generateFilenameWithTimestamp('cash-flow', 'xlsx');
+        exportToExcel(rows, filename, {
+            sheetName: 'Cash Flow',
+            reportTitle: 'Statement of Cash Flows',
+            dateInfo: `Period: ${format(new Date(startDate), 'MMM d, yyyy')} - ${format(new Date(endDate), 'MMM d, yyyy')}`,
+            boldRows: [0, 2, 7, 12, rows.length - 2, rows.length - 1],
+            currencyColumns: [1],
+            colorRows: [
+                { row: 2, color: '3B82F6' },
+                { row: 7, color: '10B981' },
+                { row: 12, color: 'F59E0B' }
+            ],
+            freezePane: { row: 1, col: 0 },
+            showTimestamp: true,
+            companyName: COMPANY_NAME
+        });
     };
 
     const ActivitySection = ({ title, data }: { title: string, data: any }) => (
@@ -78,10 +167,11 @@ export default function CashFlowPage() {
                         onChange={(e) => setEndDate(e.target.value)}
                         className="w-40"
                     />
-                    <Button variant="outline" onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                    </Button>
+                    <ExportDropdown
+                        onExportCSV={handleExportCSV}
+                        onExportExcel={handleExportExcel}
+                        disabled={!report}
+                    />
                 </div>
             </div>
 

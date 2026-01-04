@@ -33,6 +33,9 @@ from .serializers import (
 )
 
 
+from .filters import WorkOrderFilter
+
+
 class WorkOrderViewSet(viewsets.ModelViewSet):
     """
     Work Order management with comprehensive workflow actions
@@ -43,11 +46,9 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
-    filterset_fields = [
-        'status', 'priority', 'customer', 'vehicle', 'primary_technician',
-        'is_customer_waiting', 'requires_approval', 'approved_by_customer',
-        'quality_check_required', 'quality_check_completed', 'is_warranty', 'is_recall'
-    ]
+    # Use custom filterset class instead of filterset_fields
+    filterset_class = WorkOrderFilter
+
     search_fields = [
         'work_order_number', 'customer__user__first_name', 'customer__user__last_name',
         'vehicle__vin', 'vehicle__license_plate', 'customer_concerns', 'diagnosis_notes'
@@ -59,6 +60,19 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     ]
     ordering = ['-created_at']
 
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated(), HasPermission('view_workorders')]
+        elif self.action == 'create':
+            return [IsAuthenticated(), HasPermission('create_workorders')]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), HasPermission('edit_workorders')]
+        elif self.action == 'destroy':
+            return [IsAuthenticated(), HasPermission('delete_workorders')]
+        elif self.action == 'dashboard_stats':
+            return [IsAuthenticated(), HasPermission('view_workorders')]
+        return [IsAuthenticated()]
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         """

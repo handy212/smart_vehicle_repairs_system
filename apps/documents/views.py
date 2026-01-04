@@ -76,6 +76,14 @@ class DocumentCategoryViewSet(viewsets.ModelViewSet):
     queryset = DocumentCategory.objects.all()
     serializer_class = DocumentCategorySerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve', 'tree']:
+            return [IsAuthenticated(), HasPermission('view_documents')]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), HasPermission('manage_document_categories')]
+        return [IsAuthenticated()]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]
     search_fields = ['name', 'slug', 'description']
     ordering_fields = ['name', 'display_order', 'created_at']

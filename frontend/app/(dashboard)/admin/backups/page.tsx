@@ -15,10 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function BackupsPage() {
-    const { formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -162,10 +163,12 @@ export default function BackupsPage() {
           <Button variant="ghost" size="sm" onClick={() => refetch()} className="h-8 w-8 p-0" title="Refresh">
             <RefreshCw className="w-4 h-4 text-gray-500" />
           </Button>
-          <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs">
-            <Plus className="w-3.5 h-3.5 mr-1.5" />
-            Create Backup
-          </Button>
+          <PermissionGuard permission="manage_settings">
+            <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs">
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              Create Backup
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -276,38 +279,44 @@ export default function BackupsPage() {
                           <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {backup.status === "completed" && (
                               <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => downloadMutation.mutate(backup.id)}
-                                  disabled={downloadMutation.isPending}
-                                  title="Download"
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <Download className="w-3.5 h-3.5 text-blue-600" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleRestore(backup)}
-                                  disabled={restoreMutation.isPending}
-                                  title="Restore"
-                                  className="h-7 w-7 p-0"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5 text-orange-600" />
-                                </Button>
+                                <PermissionGuard permission="manage_settings">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => downloadMutation.mutate(backup.id)}
+                                    disabled={downloadMutation.isPending}
+                                    title="Download"
+                                    className="h-7 w-7 p-0"
+                                  >
+                                    <Download className="w-3.5 h-3.5 text-blue-600" />
+                                  </Button>
+                                </PermissionGuard>
+                                <PermissionGuard permission="manage_settings">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRestore(backup)}
+                                    disabled={restoreMutation.isPending}
+                                    title="Restore"
+                                    className="h-7 w-7 p-0"
+                                  >
+                                    <RotateCcw className="w-3.5 h-3.5 text-orange-600" />
+                                  </Button>
+                                </PermissionGuard>
                               </>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(backup)}
-                              disabled={deleteMutation.isPending}
-                              title="Delete"
-                              className="h-7 w-7 p-0 hover:text-red-600"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
+                            <PermissionGuard permission="manage_settings">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(backup)}
+                                disabled={deleteMutation.isPending}
+                                title="Delete"
+                                className="h-7 w-7 p-0 hover:text-red-600"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </PermissionGuard>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -317,18 +326,21 @@ export default function BackupsPage() {
               </Table>
             </div>
           </Card>
-        </div>
-      )}
+        </div >
+      )
+      }
 
-      {isCreateDialogOpen && (
-        <CreateBackupDialog
-          open={isCreateDialogOpen}
-          onClose={() => setIsCreateDialogOpen(false)}
-          onCreate={(data) => createMutation.mutate(data)}
-          isCreating={createMutation.isPending}
-        />
-      )}
-    </div>
+      {
+        isCreateDialogOpen && (
+          <CreateBackupDialog
+            open={isCreateDialogOpen}
+            onClose={() => setIsCreateDialogOpen(false)}
+            onCreate={(data) => createMutation.mutate(data)}
+            isCreating={createMutation.isPending}
+          />
+        )
+      }
+    </div >
   );
 }
 

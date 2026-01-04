@@ -38,7 +38,7 @@ export default function FundTransfersPage() {
         queryKey: ["fund-transfers"],
         queryFn: async () => {
             const response = await apiClient.get("/accounting/fund-transfers/");
-            return response.data;
+            return response.data.results || response.data;
         }
     });
 
@@ -235,7 +235,7 @@ export default function FundTransfersPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {transfers?.results?.map((transfer: any) => (
+                                {((Array.isArray(transfers) ? transfers : transfers?.results) || []).map((transfer: any) => (
                                     <TableRow key={transfer.id}>
                                         <TableCell className="font-medium">{transfer.transfer_number}</TableCell>
                                         <TableCell>{format(new Date(transfer.transfer_date), "MMM d, yyyy")}</TableCell>
@@ -249,7 +249,7 @@ export default function FundTransfersPage() {
                                         <TableCell className="font-semibold">{formatCurrency(transfer.amount)}</TableCell>
                                         <TableCell>{getStatusBadge(transfer.status)}</TableCell>
                                         <TableCell>
-                                            {transfer.status === 'draft' && (
+                                            {['draft', 'pending'].includes(transfer.status) && (
                                                 <Button
                                                     size="sm"
                                                     onClick={() => completeMutation.mutate(transfer.id)}
@@ -267,7 +267,7 @@ export default function FundTransfersPage() {
                                         </TableCell>
                                     </TableRow>
                                 ))}
-                                {(!transfers?.results || transfers.results.length === 0) && (
+                                {(!transfers || (Array.isArray(transfers) && transfers.length === 0) || (transfers.results && transfers.results.length === 0)) && (
                                     <TableRow>
                                         <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                                             No fund transfers found. Create your first transfer to get started.

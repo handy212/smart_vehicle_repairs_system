@@ -19,6 +19,15 @@ export interface User {
   role: string;
   phone?: string;
   profile_picture?: string;
+  date_of_birth?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  country?: string;
+  employee_id?: string;
+  hire_date?: string;
+  branch_name?: string;
   permissions?: string[];
   customer_profile?: {
     id: number;
@@ -33,6 +42,12 @@ export interface UpdateProfileData {
   last_name: string;
   email: string;
   phone?: string;
+  date_of_birth?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  country?: string;
 }
 
 export const authApi = {

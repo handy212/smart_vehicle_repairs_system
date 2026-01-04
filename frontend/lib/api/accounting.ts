@@ -131,6 +131,10 @@ export const accountingApi = {
     getBankStatements: async (accountId?: string): Promise<any[]> => {
         const params = accountId ? { bank_account: accountId } : {};
         const response = await apiClient.get("/accounting/bank-statements/", { params });
+        // Handle pagination
+        if (response.data.results) {
+            return response.data.results;
+        }
         return response.data;
     },
 
@@ -161,6 +165,10 @@ export const accountingApi = {
         if (endDate) params.end_date = endDate;
 
         const response = await apiClient.get("/accounting/transactions/unreconciled/", { params });
+        // Handle pagination
+        if (response.data.results) {
+            return response.data.results;
+        }
         return response.data;
     },
 
@@ -186,4 +194,44 @@ export const accountingApi = {
         const response = await apiClient.get("/accounting/reports/management-dashboard/", { params });
         return response.data;
     },
+
+    exportBoardPack: async (startDate: string, endDate: string): Promise<Blob> => {
+        const response = await apiClient.post("/accounting/reports/management-dashboard/", {
+            action: 'export_pdf',
+            start_date: startDate,
+            end_date: endDate
+        }, {
+            responseType: 'blob'
+        });
+        return response.data;
+    },
+
+    // Accruals
+    getAccruals: async (filters?: any): Promise<any[]> => {
+        const response = await apiClient.get("/accounting/accruals/", { params: filters });
+        if (response.data.results) return response.data.results;
+        return response.data;
+    },
+
+    getAccrualCandidates: async (cutoffDate?: string): Promise<any[]> => {
+        const params = cutoffDate ? { cutoff_date: cutoffDate } : {};
+        const response = await apiClient.get("/accounting/accruals/candidates/", { params });
+        return response.data;
+    },
+
+    createAccrual: async (data: any): Promise<any> => {
+        const response = await apiClient.post("/accounting/accruals/", data);
+        return response.data;
+    },
+
+    reverseAccrual: async (id: number): Promise<any> => {
+        const response = await apiClient.post(`/accounting/accruals/${id}/reverse/`);
+        return response.data;
+    },
+
+    getAnalyticsSnapshot: async (params?: any): Promise<any> => {
+        const queryParams = new URLSearchParams(params).toString();
+        const response = await apiClient.get(`/accounting/analytics/dashboard/?${queryParams}`);
+        return response.data;
+    }
 };

@@ -2,25 +2,51 @@
 
 {% block title %}Work Order {{ document.work_order_number }}{% endblock %}
 
+{% block page_size %}A4 landscape{% endblock %}
+
 {% block document_type %}Work Order{% endblock %}
 
 {% block document_number %}{{ document.work_order_number }}{% endblock %}
 
 {% block document_meta %}
-<div>Date: {{ document.created_at|date:"F d, Y" }}</div>
-<div>Priority: <span
-        class="font-bold uppercase {% if document.priority == 'urgent' or document.priority == 'high' %}text-danger{% endif %}">{{
-        document.priority }}</span></div>
-<div>Status: <span class="font-bold uppercase">{{ document.get_status_display }}</span></div>
+<div>Created: {{ document.created_at|date:"M d, Y H:i" }}</div>
+<div>Status: <span
+        class="font-bold uppercase {% if document.status == 'completed' %}text-success{% elif document.status == 'paused' %}text-danger{% endif %}">{{
+        document.get_status_display }}</span></div>
 {% if document.service_coordinator %}
 <div>Coordinator: {{ document.service_coordinator.get_full_name }}</div>
 {% endif %}
 {% endblock %}
 
 {% block content %}
-<!-- Top Section: Customer & Vehicle -->
-<div class="grid-2-col mb-8">
-    <!-- Customer Info -->
+<!-- Priority & Timeline Bar -->
+<div class="bg-gray-100 p-4 mb-6 rounded"
+    style="border-left: 4px solid {% if document.priority == 'urgent' %}#dc2626{% elif document.priority == 'high' %}#f59e0b{% else %}#3b82f6{% endif %};">
+    <div class="grid-2-col text-sm">
+        <div>
+            <span class="font-bold">Priority:</span>
+            <span
+                class="uppercase font-semibold {% if document.priority == 'urgent' or document.priority == 'high' %}text-danger{% endif %}">
+                {{ document.get_priority_display }}
+            </span>
+            {% if document.primary_technician %}
+            | <span class="font-bold">Lead Tech:</span> {{ document.primary_technician.get_full_name }}
+            {% endif %}
+        </div>
+        <div class="text-right">
+            {% if document.estimated_completion %}
+            <span class="font-bold">Est. Completion:</span> {{ document.estimated_completion|date:"M d, Y" }}
+            {% endif %}
+            {% if document.started_at %}
+            | <span class="font-bold">Started:</span> {{ document.started_at|date:"M d H:i" }}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Customer & Vehicle Info -->
+<div class="grid-2-col mb-6">
+    <!-- Customer -->
     <div class="col-1-2">
         <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Customer</div>
         {% with customer=document.customer %}
@@ -28,7 +54,7 @@
         {% endwith %}
     </div>
 
-    <!-- Vehicle Info -->
+    <!-- Vehicle -->
     <div class="col-1-2">
         {% if document.vehicle %}
         <div class="text-sm font-semibold text-gray-500 uppercase mb-2">Vehicle Details</div>
@@ -53,12 +79,12 @@
             {% endif %}
             <div class="info-item">
                 <div class="info-label">Odometer In</div>
-                <div class="info-value">{{ document.odometer_in|default:"-" }}</div>
+                <div class="info-value font-semibold">{{ document.odometer_in|default:"—" }}</div>
             </div>
             {% if document.odometer_out %}
             <div class="info-item">
                 <div class="info-label">Odometer Out</div>
-                <div class="info-value">{{ document.odometer_out }}</div>
+                <div class="info-value font-semibold">{{ document.odometer_out }}</div>
             </div>
             {% endif %}
         </div>
@@ -66,7 +92,68 @@
     </div>
 </div>
 
-<!-- Customer Concerns & Notes -->
+<!-- Service Timeline -->
+{% if document.started_at or document.completed_at or document.diagnosis_completed_at %}
+<div class="mb-6">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Service Timeline</div>
+    <div class="flex justify-between text-xs p-3 bg-gray-50 rounded" style="gap: 10px;">
+        <div class="text-center flex-1">
+            <div class="font-bold text-gray-700">Created</div>
+            <div class="text-gray-600">{{ document.created_at|date:"M d, H:i" }}</div>
+        </div>
+        {% if document.diagnosis_completed_at %}
+        <div class="text-center flex-1">
+            <div class="font-bold text-gray-700">Diagnosis</div>
+            <div class="text-gray-600">{{ document.diagnosis_completed_at|date:"M d, H:i" }}</div>
+        </div>
+        {% endif %}
+        {% if document.approved_at %}
+        <div class="text-center flex-1">
+            <div class="font-bold text-success">Approved</div>
+            <div class="text-gray-600">{{ document.approved_at|date:"M d, H:i" }}</div>
+        </div>
+        {% endif %}
+        {% if document.started_at %}
+        <div class="text-center flex-1">
+            <div class="font-bold text-primary">Started</div>
+            <div class="text-gray-600">{{ document.started_at|date:"M d, H:i" }}</div>
+        </div>
+        {% endif %}
+        {% if document.completed_at %}
+        <div class="text-center flex-1">
+            <div class="font-bold text-success">Completed</div>
+            <div class="text-gray-600">{{ document.completed_at|date:"M d, H:i" }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Cost Estimate Summary (Right Aligned) -->
+{% if document.estimated_labor_cost or document.estimated_parts_cost or document.estimated_total %}
+<div class="mb-6">
+    <div class="financial-summary" style="max-width: 300px;">
+        <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Cost Estimate</div>
+        {% if document.estimated_labor_hours %}
+        <div class="summary-item">
+            <div class="summary-label">Labor ({{ document.estimated_labor_hours }} hrs)</div>
+            <div class="summary-value">${{ document.estimated_labor_cost|floatformat:2|default:"0.00" }}</div>
+        </div>
+        {% endif %}
+        <div class="summary-item">
+            <div class="summary-label">Parts & Materials</div>
+            <div class="summary-value">${{ document.estimated_parts_cost|floatformat:2|default:"0.00" }}</div>
+        </div>
+        <div class="summary-item total">
+            <div class="summary-label">Total Estimate</div>
+            <div class="summary-value">${{ document.estimated_total|floatformat:2|default:"0.00" }}</div>
+        </div>
+    </div>
+    <div class="clearfix"></div>
+</div>
+{% endif %}
+
+<!-- Customer Concerns -->
 <div class="mb-6">
     <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Customer Concerns</div>
     <div class="text-sm text-gray-700 leading-relaxed p-2 bg-gray-50 rounded">
@@ -74,11 +161,61 @@
     </div>
 </div>
 
+<!-- Special Instructions -->
+{% if document.special_instructions %}
+<div class="mb-6">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">⚠️ Special Instructions</div>
+    <div class="text-sm text-gray-700 leading-relaxed p-2"
+        style="background-color: #fef3c7; border-left: 3px solid #f59e0b;">
+        {{ document.special_instructions|linebreaks }}
+    </div>
+</div>
+{% endif %}
+
+<!-- Diagnosis -->
 {% if document.diagnosis_notes %}
 <div class="mb-6">
-    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Diagnosis Notes</div>
-    <div class="text-sm text-gray-700 leading-relaxed">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">
+        Diagnosis
+        {% if document.diagnosis_by %}
+        <span class="font-normal text-xs text-gray-500">by {{ document.diagnosis_by.get_full_name }}</span>
+        {% endif %}
+    </div>
+    <div class="text-sm text-gray-700 leading-relaxed p-2 bg-gray-50 rounded">
         {{ document.diagnosis_notes|linebreaks }}
+    </div>
+</div>
+{% endif %}
+
+<!-- Approval Status -->
+{% if document.requires_approval %}
+<div class="mb-6">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Customer Approval</div>
+    <div class="info-card {% if document.approved_by_customer %}bg-green-50{% else %}bg-yellow-50{% endif %}">
+        <div class="info-item">
+            <div class="info-label">Status</div>
+            <div
+                class="info-value font-bold {% if document.approved_by_customer %}text-success{% else %}text-danger{% endif %}">
+                {% if document.approved_by_customer %}✓ Approved{% else %}⏳ Pending Approval{% endif %}
+            </div>
+        </div>
+        {% if document.approved_at %}
+        <div class="info-item">
+            <div class="info-label">Approved Date</div>
+            <div class="info-value">{{ document.approved_at|date:"F d, Y H:i" }}</div>
+        </div>
+        {% endif %}
+        {% if document.approval_method %}
+        <div class="info-item">
+            <div class="info-label">Method</div>
+            <div class="info-value capitalize">{{ document.get_approval_method_display }}</div>
+        </div>
+        {% endif %}
+        {% if document.approval_notes %}
+        <div class="info-item mt-2 pt-2 border-t">
+            <div class="text-xs text-gray-700">{{ document.approval_notes }}</div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endif %}
@@ -89,10 +226,11 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 50%;">Task Description</th>
-                <th style="width: 20%;">Technician</th>
-                <th style="width: 15%; text-align: center;">Status</th>
-                <th style="width: 15%; text-align: right;">Est. Hours</th>
+                <th style="width: 45%;">Task Description</th>
+                <th style="width: 18%;">Technician</th>
+                <th style="width: 12%; text-align: center;">Status</th>
+                <th style="width: 10%; text-align: right;">Est. Hrs</th>
+                <th style="width: 15%; text-align: right;">Completed</th>
             </tr>
         </thead>
         <tbody>
@@ -105,19 +243,26 @@
                     {% endif %}
                 </td>
                 <td>{{ task.assigned_to.get_full_name|default:"Unassigned" }}</td>
-                <td class="text-center capitalize">{{ task.get_status_display }}</td>
+                <td class="text-center">
+                    <span class="capitalize {% if task.status == 'completed' %}text-success font-bold{% endif %}">
+                        {{ task.get_status_display }}
+                    </span>
+                </td>
                 <td class="text-right">{{ task.estimated_hours|floatformat:1 }}</td>
+                <td class="text-right text-xs">
+                    {% if task.completed_at %}{{ task.completed_at|date:"M d, H:i" }}{% else %}—{% endif %}
+                </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="4" class="text-center text-gray-400 py-4">No service tasks assigned</td>
+                <td colspan="5" class="text-center text-gray-400 py-4">No service tasks assigned</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<!-- Parts -->
+<!-- Parts & Materials -->
 {% if document.parts.exists %}
 <div class="mb-6">
     <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Parts & Materials</div>
@@ -125,9 +270,10 @@
         <thead>
             <tr>
                 <th style="width: 15%;">Part #</th>
-                <th style="width: 50%;">Description</th>
-                <th style="width: 15%; text-align: center;">Qty</th>
-                <th style="width: 20%; text-align: center;">Status</th>
+                <th style="width: 40%;">Description</th>
+                <th style="width: 12%; text-align: center;">Qty</th>
+                <th style="width: 18%; text-align: center;">Status</th>
+                <th style="width: 15%; text-align: center;">ETA</th>
             </tr>
         </thead>
         <tbody>
@@ -136,9 +282,20 @@
                 <td>{{ part.part_number }}</td>
                 <td>
                     <div class="font-medium text-gray-900">{{ part.part_name }}</div>
+                    {% if part.supplier %}
+                    <div class="row-notes">Supplier: {{ part.supplier }}</div>
+                    {% endif %}
                 </td>
                 <td class="text-center">{{ part.quantity|floatformat:0 }}</td>
-                <td class="text-center capitalize">{{ part.get_status_display }}</td>
+                <td class="text-center">
+                    <span
+                        class="capitalize {% if part.status == 'installed' %}text-success font-bold{% elif part.status == 'on_order' %}text-primary{% endif %}">
+                        {{ part.get_status_display }}
+                    </span>
+                </td>
+                <td class="text-center text-xs">
+                    {% if part.eta %}{{ part.eta|date:"M d" }}{% else %}—{% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -146,24 +303,40 @@
 </div>
 {% endif %}
 
+<!-- Internal Notes -->
+{% if document.notes.exists %}
+<div class="mb-6">
+    <div class="text-sm font-semibold text-gray-900 border-b mb-2 pb-1">Internal Notes</div>
+    {% for note in document.notes.all %}
+    <div class="text-xs p-2 mb-2 border-l-2 border-gray-400 bg-gray-50">
+        <div class="font-bold">{{ note.created_by.get_full_name }} - {{ note.created_at|date:"M d, Y H:i" }}</div>
+        <div class="text-gray-700 mt-1">{{ note.note|linebreaks }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
 <!-- Signatures -->
 <div class="grid-2-col mt-12 pt-8" style="page-break-inside: avoid;">
     <div class="col-1-2 pr-4">
-        <div class="border-t border-gray-400 pt-2">
+        <div class="border-t-2 border-gray-400 pt-2">
             <div class="font-bold text-sm">Service Advisor / Manager</div>
+            <div class="text-xs text-gray-500 mt-1">Signature: _____________________________</div>
             <div class="text-xs text-gray-500 mt-1">Date: _________________</div>
         </div>
     </div>
     <div class="col-1-2 pl-4">
-        <div class="border-t border-gray-400 pt-2">
-            <div class="font-bold text-sm">Technician Completion</div>
+        <div class="border-t-2 border-gray-400 pt-2">
+            <div class="font-bold text-sm">Lead Technician Completion</div>
+            <div class="text-xs text-gray-500 mt-1">Signature: _____________________________</div>
             <div class="text-xs text-gray-500 mt-1">Date: _________________</div>
         </div>
     </div>
 </div>
 
 <!-- Footer Notes -->
-<div class="clear-both mt-8 text-xs text-gray-500 text-center">
-    This work order is an internal document. Not valid as an invoice.
+<div class="clear-both mt-8 text-xs text-gray-500 text-center border-t pt-4">
+    <strong>INTERNAL DOCUMENT</strong> - This work order is for shop use only. Not valid as customer invoice.
+    {% if document.branch %}| Branch: {{ document.branch.name }}{% endif %}
 </div>
 {% endblock %}

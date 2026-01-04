@@ -6,6 +6,7 @@ from .models import Technician, Skill, TimeOffRequest, Shift, Certification
 from .serializers import TechnicianSerializer, SkillSerializer, TimeOffRequestSerializer, ShiftSerializer, TechnicianJobHistorySerializer, CertificationSerializer
 from django.db import models
 from apps.branches.utils import filter_queryset_for_user_branches
+from apps.accounts.permissions import HasPermission
 
 class SkillViewSet(viewsets.ModelViewSet):
     queryset = Skill.objects.filter(is_active=True)
@@ -16,6 +17,17 @@ class TechnicianViewSet(viewsets.ModelViewSet):
     queryset = Technician.objects.all()
     serializer_class = TechnicianSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['my_profile', 'job_history', 'shifts', 'performance_metrics', 'update_location']:
+            # Allow technicians to view their own profile/stats
+            return [permissions.IsAuthenticated()]
+        elif self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated(), HasPermission('view_users')]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAuthenticated(), HasPermission('manage_branch_staff')]
+        return [permissions.IsAuthenticated()]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_queryset(self):
@@ -197,6 +209,10 @@ class TimeOffRequestViewSet(viewsets.ModelViewSet):
     serializer_class = TimeOffRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    # Reverting strict permissions for TimeOff/Shift to allow Technicians to view/manage their own via get_queryset
+    # def get_permissions(self):
+    #     ...
+
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
@@ -223,6 +239,11 @@ class ShiftViewSet(viewsets.ModelViewSet):
     queryset = Shift.objects.all()
     serializer_class = ShiftSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated(), HasPermission('view_users')]
+        return [permissions.IsAuthenticated(), HasPermission('manage_technicians')]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -325,6 +346,11 @@ class CertificationViewSet(viewsets.ModelViewSet):
     queryset = Certification.objects.all()
     serializer_class = CertificationSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve', 'expiring_soon']:
+            return [permissions.IsAuthenticated(), HasPermission('view_users')]
+        return [permissions.IsAuthenticated(), HasPermission('manage_technicians')]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def get_queryset(self):

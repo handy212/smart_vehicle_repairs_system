@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Loader2, Check, X, TrendingUp, Eye } from "lucide-react";
+import { Plus, Loader2, Check, X, TrendingUp, Eye, Edit } from "lucide-react";
 import { format } from "date-fns";
 import apiClient from "@/lib/api/client";
 import Link from "next/link";
@@ -33,7 +33,7 @@ export default function BudgetsPage() {
         queryKey: ["budgets"],
         queryFn: async () => {
             const response = await apiClient.get("/accounting/budgets/");
-            return response.data;
+            return response.data.results || response.data;
         }
     });
 
@@ -42,7 +42,7 @@ export default function BudgetsPage() {
         queryKey: ["branches"],
         queryFn: async () => {
             const response = await apiClient.get("/branches/");
-            return response.data;
+            return response.data.results || response.data;
         }
     });
 
@@ -282,7 +282,13 @@ export default function BudgetsPage() {
                                                     <Link href={`/accounting/budgets/${budget.id}/report`}>
                                                         <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-500 hover:text-gray-700">
                                                             <Eye className="w-3 h-3 mr-1" />
-                                                            View Report
+                                                            Report
+                                                        </Button>
+                                                    </Link>
+                                                    <Link href={`/accounting/budgets/${budget.id}`}>
+                                                        <Button size="sm" variant="ghost" className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                                            <Edit className="w-3 h-3 mr-1" />
+                                                            Manage
                                                         </Button>
                                                     </Link>
                                                 </div>

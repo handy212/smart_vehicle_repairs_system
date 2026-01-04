@@ -46,7 +46,7 @@ const navigationGroups = [
       { name: "Appointments", href: "/appointments", icon: Calendar, permission: "view_appointments" },
       { name: "Work Orders", href: "/workorders", icon: Wrench, permission: "view_workorders" },
       { name: "Roadside", href: "/roadside", icon: Truck, permission: "view_roadside" },
-      { name: "Technicians", href: "/technicians", icon: UserCog, permission: "view_technicians" },
+      { name: "Technicians", href: "/technicians", icon: UserCog, permission: "view_users" },
     ],
   },
   {

@@ -135,7 +135,7 @@ export default function BankReconciliationPage() {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                statements?.map((statement: any) => (
+                                (Array.isArray(statements) ? statements : (statements as any)?.results || []).map((statement: any) => (
                                     <TableRow key={statement.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
                                         <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
                                             <div className="flex items-center">

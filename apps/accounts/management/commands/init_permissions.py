@@ -207,6 +207,20 @@ class Command(BaseCommand):
                 'manage_backups': ('system', 'Manage Backups', 'Create and restore system backups'),
                 'view_system_status': ('system', 'View System Status', 'View system health and status'),
                 'manage_api_keys': ('system', 'Manage API Keys', 'Manage API keys and integrations'),
+                
+                # ==================== ACCOUNTING ====================
+                'view_accounting': ('accounting', 'View Accounting', 'View accounting dashboard and reports'),
+                'manage_chart_of_accounts': ('accounting', 'Manage Chart of Accounts', 'Create and edit GL accounts'),
+                'view_journal_entries': ('accounting', 'View Journal Entries', 'View general ledger transactions'),
+                'create_journal_entries': ('accounting', 'Create Journal Entries', 'Post manual journal entries'),
+                'manage_accounting_periods': ('accounting', 'Manage Periods', 'Lock/Unlock accounting periods'),
+                'view_bank_statements': ('accounting', 'View Bank Statements', 'View bank statements and reconciliations'),
+                'reconcile_bank_statements': ('accounting', 'Reconcile Bank Statements', 'Perform bank reconciliations'),
+                'view_budgets': ('accounting', 'View Budgets', 'View budgets provided they have branch access'),
+                'manage_budgets': ('accounting', 'Manage Budgets', 'Create and edit budgets'),
+                'approve_budgets': ('accounting', 'Approve Budgets', 'Approve budgets'),
+                'view_transfer_requests': ('accounting', 'View Transfers', 'View fund transfer requests'),
+                'manage_transfers': ('accounting', 'Manage Transfers', 'Create and manage fund transfers'),
             }
             
             # Create all permissions

@@ -140,13 +140,6 @@ export function UserMenu() {
                 </DropdownMenuItem>
 
                 <DropdownMenuItem asChild>
-                    <Link href="/admin" className="cursor-pointer">
-                        <Settings className="w-4 h-4 mr-2" />
-                        Administration
-                    </Link>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem asChild>
                     <Link href="/notifications/preferences" className="cursor-pointer">
                         <Settings className="w-4 h-4 mr-2" />
                         Notification Preferences

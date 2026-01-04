@@ -184,6 +184,20 @@ class Admin(AbstractUserRole):
         'manage_backups': True,
         'view_system_status': True,
         'manage_api_keys': True,
+        
+        # Accounting
+        'view_accounting': True,
+        'manage_chart_of_accounts': True,
+        'view_journal_entries': True,
+        'create_journal_entries': True,
+        'manage_accounting_periods': True,
+        'view_bank_statements': True,
+        'reconcile_bank_statements': True,
+        'view_budgets': True,
+        'manage_budgets': True,
+        'approve_budgets': True,
+        'view_transfer_requests': True,
+        'manage_transfers': True,
     }
 
 
@@ -331,6 +345,9 @@ class Manager(AbstractUserRole):
         # System
         'view_branches': True,
         'view_branch_data': True,
+        
+        # Accounting (Branch Manager View)
+        'view_budgets': True,
     }
 
 
@@ -580,6 +597,21 @@ class Accountant(AbstractUserRole):
         # Documents
         'view_documents': True,
         'download_documents': True,
+        
+        # Settings
+        'view_settings': True,
+        
+        # Accounting (Core Role)
+        'view_accounting': True,
+        'manage_chart_of_accounts': True,
+        'view_journal_entries': True,
+        'create_journal_entries': True,
+        'view_bank_statements': True,
+        'reconcile_bank_statements': True,
+        'view_budgets': True,
+        'manage_budgets': True,
+        'view_transfer_requests': True,
+        'manage_transfers': True,
     }
 
 

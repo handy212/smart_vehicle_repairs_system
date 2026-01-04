@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 interface Skill {
     id: number;
@@ -169,10 +170,12 @@ export default function SkillsManagementPage() {
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Skills & Certifications</h1>
                     <p className="text-sm text-muted-foreground mt-1">Manage technician skills and expertise areas</p>
                 </div>
-                <Button size="sm" onClick={() => handleOpenDialog()} className="h-8">
-                    <Plus className="w-3.5 h-3.5 mr-1.5" />
-                    Add Skill
-                </Button>
+                <PermissionGuard permission="manage_settings">
+                    <Button size="sm" onClick={() => handleOpenDialog()} className="h-8">
+                        <Plus className="w-3.5 h-3.5 mr-1.5" />
+                        Add Skill
+                    </Button>
+                </PermissionGuard>
             </div>
 
             <Card className="mx-4">
@@ -220,20 +223,24 @@ export default function SkillsManagementPage() {
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleOpenDialog(skill)}
-                                                    >
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleDelete(skill)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4 text-red-500" />
-                                                    </Button>
+                                                    <PermissionGuard permission="manage_settings">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleOpenDialog(skill)}
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                    </PermissionGuard>
+                                                    <PermissionGuard permission="manage_settings">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleDelete(skill)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                        </Button>
+                                                    </PermissionGuard>
                                                 </div>
                                             </TableCell>
                                         </TableRow>

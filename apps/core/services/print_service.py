@@ -12,6 +12,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+from apps.accounts.settings_utils import get_company_info, get_branding_settings
+
 class DocumentPrinter:
     """Unified document printing service"""
     
@@ -53,17 +55,48 @@ class DocumentPrinter:
             HttpResponse with PDF content
         """
         try:
-            # Add default context
+            # Add default context and keys from system settings
+            system_settings = {}
+            system_settings.update(get_company_info())
+            system_settings.update(get_branding_settings())
+            
+            # Convert logo_path to absolute file:// URL for WeasyPrint
+            if 'logo_path' in system_settings and system_settings['logo_path']:
+                logo_path = system_settings['logo_path']
+                # Only convert if not already an absolute URL
+                if not logo_path.startswith(('http://', 'https://', 'file://')):
+                    import os
+                    media_root = getattr(settings, 'MEDIA_ROOT', '/app/media')
+                    
+                    # Handle both /media/path and relative path formats
+                    if logo_path.startswith('/media/'):
+                        file_path = os.path.join(media_root, logo_path.replace('/media/', ''))
+                    elif logo_path.startswith('/static/'):
+                        static_root = getattr(settings, 'STATIC_ROOT', '/app/staticfiles')
+                        file_path = os.path.join(static_root, logo_path.replace('/static/', ''))
+                    else:
+                        # Treat as relative path within MEDIA_ROOT
+                        file_path = os.path.join(media_root, logo_path)
+                    
+                    # Convert to file:// URL
+                    system_settings['logo_path'] = f'file://{file_path}'
+                    logger.info(f"Converted logo path: {logo_path} -> file://{file_path}")
+            
             context.update({
                 'document_type': self.document_type,
                 'settings': settings,
+                **system_settings, # Flatten settings into context (company_name, logo_path etc)
             })
             
             # Render HTML
             html_string = render_to_string(self.template, context)
             
             # Generate PDF with custom CSS
-            pdf_file = HTML(string=html_string).write_pdf(
+            # Determine base_url for relative paths (images)
+            # Use internal container URL for reliable access
+            base_url = getattr(settings, 'INTERNAL_API_URL', 'http://localhost:8001')
+            
+            pdf_file = HTML(string=html_string, base_url=base_url).write_pdf(
                 stylesheets=[CSS(string=self._get_custom_css())]
             )
             

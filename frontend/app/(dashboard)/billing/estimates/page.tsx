@@ -27,6 +27,7 @@ import { CreditCard, Ban } from "lucide-react"; // Added missing icons
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function EstimatesPage() {
+  const { hasPermission } = usePermissions();
   const { formatCurrency } = useCurrency();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -368,17 +369,19 @@ export default function EstimatesPage() {
                 />
                 <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-20">
                   <div className="py-1">
-                    <button
-                      onClick={() => {
-                        handleExport();
-                        setShowActionsMenu(false);
-                      }}
-                      disabled={!data?.results || data.results.length === 0}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      Export CSV
-                    </button>
+                    <PermissionGuard permission="export_estimates">
+                      <button
+                        onClick={() => {
+                          handleExport();
+                          setShowActionsMenu(false);
+                        }}
+                        disabled={!data?.results || data.results.length === 0}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export CSV
+                      </button>
+                    </PermissionGuard>
                   </div>
                 </div>
               </>
@@ -615,9 +618,9 @@ export default function EstimatesPage() {
       <BulkActionToolbar
         selectedCount={bulkSelection.selectedCount}
         onClearSelection={bulkSelection.clearSelection}
-        onBulkDelete={handleBulkDelete}
-        onBulkSend={handleBulkSend}
-        onBulkStatusUpdate={handleBulkStatusUpdate}
+        onBulkDelete={hasPermission("delete_estimates") ? handleBulkDelete : undefined}
+        onBulkSend={hasPermission("create_estimates") ? handleBulkSend : undefined}
+        onBulkStatusUpdate={hasPermission("edit_estimates") ? handleBulkStatusUpdate : undefined}
         showBulkSend={true}
         showStatusUpdate={true}
       />
@@ -710,11 +713,13 @@ export default function EstimatesPage() {
                             </Button>
                           </Link>
                           {estimate.status === 'draft' && (
-                            <Link href={`/billing/estimates/${estimate.id}/edit`}>
-                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-green-600 hover:bg-green-50">
-                                <Edit className="w-3.5 h-3.5" />
-                              </Button>
-                            </Link>
+                            <PermissionGuard permission="edit_estimates">
+                              <Link href={`/billing/estimates/${estimate.id}/edit`}>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-green-600 hover:bg-green-50">
+                                  <Edit className="w-3.5 h-3.5" />
+                                </Button>
+                              </Link>
+                            </PermissionGuard>
                           )}
                           <Button
                             variant="ghost"
@@ -790,79 +795,87 @@ export default function EstimatesPage() {
                         View
                       </Link>
                       {estimate.status === 'draft' && (
-                        <Link
-                          href={`/billing/estimates/${estimate.id}/edit`}
-                          onClick={() => {
-                            setOpenMenuId(null);
-                            setMenuPosition(null);
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Edit
-                        </Link>
+                        <PermissionGuard permission="edit_estimates">
+                          <Link
+                            href={`/billing/estimates/${estimate.id}/edit`}
+                            onClick={() => {
+                              setOpenMenuId(null);
+                              setMenuPosition(null);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          >
+                            <Edit className="w-4 h-4" />
+                            Edit
+                          </Link>
+                        </PermissionGuard>
                       )}
-                      <button
-                        onClick={async () => {
-                          setOpenMenuId(null);
-                          setMenuPosition(null);
-                          try {
-                            const duplicated = await billingApi.estimates.duplicate(estimate.id);
-                            queryClient.invalidateQueries({ queryKey: ["estimates"] });
-                            toast({
-                              title: "Success",
-                              description: "Estimate duplicated successfully",
-                            });
-                            window.location.href = `/billing/estimates/${duplicated.id}/edit`;
-                          } catch (error: any) {
-                            toast({
-                              title: "Error",
-                              description: error.response?.data?.error || error.response?.data?.detail || "Failed to duplicate estimate",
-                              variant: "destructive",
-                            });
-                          }
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                      >
-                        <Copy className="w-4 h-4" />
-                        Duplicate
-                      </button>
-                      {(estimate.status === 'draft' || estimate.status === 'sent') && (
+                      <PermissionGuard permission="create_estimates">
                         <button
                           onClick={async () => {
                             setOpenMenuId(null);
                             setMenuPosition(null);
                             try {
-                              await billingApi.estimates.send(estimate.id);
+                              const duplicated = await billingApi.estimates.duplicate(estimate.id);
                               queryClient.invalidateQueries({ queryKey: ["estimates"] });
-                              toast({ title: "Success", description: "Estimate sent successfully" });
+                              toast({
+                                title: "Success",
+                                description: "Estimate duplicated successfully",
+                              });
+                              window.location.href = `/billing/estimates/${duplicated.id}/edit`;
                             } catch (error: any) {
                               toast({
                                 title: "Error",
-                                description: error.response?.data?.error || "Failed to send estimate",
+                                description: error.response?.data?.error || error.response?.data?.detail || "Failed to duplicate estimate",
                                 variant: "destructive",
                               });
                             }
                           }}
                           className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                         >
-                          <Mail className="w-4 h-4" />
-                          Send
+                          <Copy className="w-4 h-4" />
+                          Duplicate
                         </button>
+                      </PermissionGuard>
+                      {(estimate.status === 'draft' || estimate.status === 'sent') && (
+                        <PermissionGuard permission="edit_estimates">
+                          <button
+                            onClick={async () => {
+                              setOpenMenuId(null);
+                              setMenuPosition(null);
+                              try {
+                                await billingApi.estimates.send(estimate.id);
+                                queryClient.invalidateQueries({ queryKey: ["estimates"] });
+                                toast({ title: "Success", description: "Estimate sent successfully" });
+                              } catch (error: any) {
+                                toast({
+                                  title: "Error",
+                                  description: error.response?.data?.error || "Failed to send estimate",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                          >
+                            <Mail className="w-4 h-4" />
+                            Send
+                          </button>
+                        </PermissionGuard>
                       )}
                       <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                      <button
-                        onClick={() => {
-                          setOpenMenuId(null);
-                          setMenuPosition(null);
-                          handleDelete(estimate);
-                        }}
-                        disabled={deleteMutation.isPending}
-                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                      </button>
+                      <PermissionGuard permission="delete_estimates">
+                        <button
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            setMenuPosition(null);
+                            handleDelete(estimate);
+                          }}
+                          disabled={deleteMutation.isPending}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </PermissionGuard>
                     </div>
                   );
                 })()}

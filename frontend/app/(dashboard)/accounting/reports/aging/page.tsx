@@ -20,6 +20,10 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { exportToCSV, generateFilenameWithTimestamp } from "@/lib/utils/export-utils";
+import { exportToExcel } from "@/lib/utils/excel-export";
+import { ExportDropdown } from "@/components/ui/export-dropdown";
+import { COMPANY_NAME } from "@/lib/constants";
 
 export default function AgingReportPage() {
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -31,8 +35,72 @@ export default function AgingReportPage() {
         queryFn: () => accountingApi.getAgingReport(activeTab as 'ar' | 'ap', date),
     });
 
-    const handleExport = () => {
-        alert("Export feature coming soon");
+    const handleExportCSV = () => {
+        if (!report) return;
+
+        const rows: any[][] = [];
+        rows.push([`${activeTab.toUpperCase()} Aging Report`]);
+        rows.push([`As of: ${date}`]);
+        rows.push([]);
+
+        // Summary
+        rows.push(['Summary']);
+        rows.push(['Current', report.summary.current]);
+        rows.push(['1-30 Days', report.summary['1-30']]);
+        rows.push(['31-60 Days', report.summary['31-60']]);
+        rows.push(['61-90 Days', report.summary['61-90']]);
+        rows.push(['90+ Days', report.summary['90+']]);
+        rows.push(['Total', report.summary.total]);
+        rows.push([]);
+
+        // Details
+        rows.push(['Details']);
+        report.details.forEach((item: any) => {
+            rows.push([item.number, item.entity, item.date, item.due_date || 'N/A', item.bucket, item.amount]);
+        });
+
+        const filename = generateFilenameWithTimestamp(`aging-${activeTab}`, 'csv');
+        exportToCSV(rows, filename, ['Number', 'Entity', 'Date', 'Due Date', 'Bucket', 'Amount']);
+    };
+
+    const handleExportExcel = () => {
+        if (!report) return;
+
+        const rows: any[][] = [];
+
+        // Summary section
+        rows.push(['SUMMARY', '', '', '', '', '']);
+        rows.push(['Aging Bucket', 'Amount', '', '', '', '']);
+        rows.push(['Current', report.summary.current, '', '', '', '']);
+        rows.push(['1-30 Days', report.summary['1-30'], '', '', '', '']);
+        rows.push(['31-60 Days', report.summary['31-60'], '', '', '', '']);
+        rows.push(['61-90 Days', report.summary['61-90'], '', '', '', '']);
+        rows.push(['90+ Days', report.summary['90+'], '', '', '', '']);
+        rows.push(['Total', report.summary.total, '', '', '', '']);
+        rows.push([]);
+
+        // Details section
+        rows.push(['DETAILS', '', '', '', '', '']);
+        rows.push(['Number', 'Entity', 'Date', 'Due Date', 'Bucket', 'Amount']);
+        report.details.forEach((item: any) => {
+            rows.push([item.number, item.entity, item.date, item.due_date || 'N/A', item.bucket, item.amount]);
+        });
+
+        const filename = generateFilenameWithTimestamp(`aging-${activeTab}`, 'xlsx');
+        exportToExcel(rows, filename, {
+            sheetName: `${activeTab.toUpperCase()} Aging`,
+            reportTitle: `${activeTab.toUpperCase()} Aging Report`,
+            dateInfo: `As of: ${format(new Date(date), 'MMMM d, yyyy')}`,
+            boldRows: [0, 1, 9, 10],
+            currencyColumns: [1, 5],
+            colorRows: [
+                { row: 0, color: '6366F1' },
+                { row: 9, color: '6366F1' }
+            ],
+            freezePane: { row: 1, col: 0 },
+            showTimestamp: true,
+            companyName: COMPANY_NAME
+        });
     };
 
     return (
@@ -58,10 +126,11 @@ export default function AgingReportPage() {
                         onChange={(e) => setDate(e.target.value)}
                         className="w-40"
                     />
-                    <Button variant="outline" onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                    </Button>
+                    <ExportDropdown
+                        onExportCSV={handleExportCSV}
+                        onExportExcel={handleExportExcel}
+                        disabled={!report}
+                    />
                 </div>
             </div>
 

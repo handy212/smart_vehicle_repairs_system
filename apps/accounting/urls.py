@@ -9,6 +9,7 @@ router.register(r'bank-statement-lines', views.BankStatementLineViewSet, basenam
 router.register(r'fund-transfers', views.FundTransferViewSet, basename='fundtransfer')
 router.register(r'budgets', views.BudgetViewSet, basename='budget')
 router.register(r'budget-lines', views.BudgetLineViewSet, basename='budgetline')
+router.register(r'accruals', views.AccrualViewSet, basename='accrual')
 
 urlpatterns = [
     # Financial Reports
@@ -21,6 +22,7 @@ urlpatterns = [
     path('reports/job-profitability/', views.JobProfitabilityView.as_view(), name='job-profitability'),
     path('reports/budget-vs-actual/', views.BudgetVsActualView.as_view(), name='budget-vs-actual'),
     path('reports/management-dashboard/', views.ManagementDashboardView.as_view(), name='management-dashboard'),
+    path('analytics/dashboard/', views.AnalyticsDashboardView.as_view(), name='analytics-dashboard'),
     
     # Journal Entries
     path('journal-entries/', views.JournalEntryListView.as_view(), name='journal-entries'),

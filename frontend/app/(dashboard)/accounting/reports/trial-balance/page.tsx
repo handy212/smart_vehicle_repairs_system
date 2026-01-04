@@ -18,6 +18,10 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
+import { exportToCSV, generateFilenameWithTimestamp } from "@/lib/utils/export-utils";
+import { exportToExcel } from "@/lib/utils/excel-export";
+import { ExportDropdown } from "@/components/ui/export-dropdown";
+import { COMPANY_NAME } from "@/lib/constants";
 
 export default function TrialBalancePage() {
     const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -28,9 +32,63 @@ export default function TrialBalancePage() {
         queryFn: () => accountingApi.getTrialBalance(date),
     });
 
-    const handleExport = () => {
-        // TODO: Implement PDF/CSV export
-        alert("Export feature coming soon");
+    const handleExportCSV = () => {
+        if (!report) return;
+
+        const rows: any[][] = [];
+        rows.push(['Trial Balance']);
+        rows.push([`As of: ${date}`]);
+        rows.push([]);
+
+        report.accounts.forEach((account: any) => {
+            rows.push([
+                account.code,
+                account.name,
+                account.type,
+                Number(account.debit) > 0 ? account.debit : 0,
+                Number(account.credit) > 0 ? account.credit : 0
+            ]);
+        });
+
+        rows.push(['', '', 'Totals', report.totals.debits, report.totals.credits]);
+
+        const filename = generateFilenameWithTimestamp('trial-balance', 'csv');
+        exportToCSV(rows, filename, ['Code', 'Account Name', 'Type', 'Debit', 'Credit']);
+    };
+
+    const handleExportExcel = () => {
+        if (!report) return;
+
+        const rows: any[][] = [];
+
+        // Headers
+        rows.push(['Code', 'Account Name', 'Type', 'Debit', 'Credit']);
+
+        // Data
+        report.accounts.forEach((account: any) => {
+            rows.push([
+                account.code,
+                account.name,
+                account.type,
+                Number(account.debit) > 0 ? account.debit : 0,
+                Number(account.credit) > 0 ? account.credit : 0
+            ]);
+        });
+
+        // Totals
+        rows.push(['', '', 'TOTALS', report.totals.debits, report.totals.credits]);
+
+        const filename = generateFilenameWithTimestamp('trial-balance', 'xlsx');
+        exportToExcel(rows, filename, {
+            sheetName: 'Trial Balance',
+            reportTitle: 'Trial Balance',
+            dateInfo: `As of: ${format(new Date(date), 'MMMM d, yyyy')}`,
+            boldRows: [0, rows.length - 1],
+            currencyColumns: [3, 4],
+            freezePane: { row: 1, col: 0 },
+            showTimestamp: true,
+            companyName: COMPANY_NAME
+        });
     };
 
     if (isLoading) {
@@ -68,10 +126,11 @@ export default function TrialBalancePage() {
                         onChange={(e) => setDate(e.target.value)}
                         className="w-40"
                     />
-                    <Button variant="outline" onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                    </Button>
+                    <ExportDropdown
+                        onExportCSV={handleExportCSV}
+                        onExportExcel={handleExportExcel}
+                        disabled={!report}
+                    />
                 </div>
             </div>
 

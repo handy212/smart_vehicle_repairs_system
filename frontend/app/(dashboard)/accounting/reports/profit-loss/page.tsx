@@ -19,6 +19,10 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { exportToCSV, generateFilenameWithTimestamp } from "@/lib/utils/export-utils";
+import { exportToExcel } from "@/lib/utils/excel-export";
+import { ExportDropdown } from "@/components/ui/export-dropdown";
+import { COMPANY_NAME } from "@/lib/constants";
 
 export default function ProfitLossPage() {
     const { formatCurrency } = useCurrency();
@@ -35,6 +39,92 @@ export default function ProfitLossPage() {
     const totalExpenses = report?.expenses?.reduce((sum: number, item: any) => sum + parseFloat(item.balance || 0), 0) || 0;
     const netIncome = totalIncome - totalExpenses;
 
+    const handleExportCSV = () => {
+        if (!report) return;
+
+        const rows: any[][] = [];
+
+        // Add header info
+        rows.push(['Profit & Loss Statement']);
+        rows.push([`Period: ${startDate} to ${endDate}`]);
+        rows.push([]);
+
+        // Income section
+        rows.push(['INCOME']);
+        report.income?.forEach((item: any) => {
+            rows.push([item.code, item.name, parseFloat(item.balance || 0)]);
+        });
+        rows.push(['', 'Total Income', totalIncome]);
+        rows.push([]);
+
+        // Expenses section
+        rows.push(['EXPENSES']);
+        report.expenses?.forEach((item: any) => {
+            rows.push([item.code, item.name, parseFloat(item.balance || 0)]);
+        });
+        rows.push(['', 'Total Expenses', totalExpenses]);
+        rows.push([]);
+
+        // Net income
+        rows.push(['', 'NET INCOME', netIncome]);
+
+        const filename = generateFilenameWithTimestamp('profit-loss', 'csv');
+        exportToCSV(rows, filename, ['Account Code', 'Account Name', 'Amount']);
+    };
+
+    const handleExportExcel = () => {
+        if (!report) return;
+
+        const rows: any[][] = [];
+
+        // Title and date
+        rows.push(['Profit & Loss Statement']);
+        rows.push([`Period: ${startDate} to ${endDate}`]);
+        rows.push([]);
+
+        // Income section
+        rows.push(['INCOME', '', '']);
+        rows.push(['Account Code', 'Account Name', 'Amount']);
+        report.income?.forEach((item: any) => {
+            rows.push([item.code, item.name, parseFloat(item.balance || 0)]);
+        });
+        rows.push(['', 'Total Income', totalIncome]);
+        rows.push([]);
+
+        // Expenses section
+        rows.push(['EXPENSES', '', '']);
+        rows.push(['Account Code', 'Account Name', 'Amount']);
+        report.expenses?.forEach((item: any) => {
+            rows.push([item.code, item.name, parseFloat(item.balance || 0)]);
+        });
+        rows.push(['', 'Total Expenses', totalExpenses]);
+        rows.push([]);
+
+        // Net income
+        rows.push(['', 'NET INCOME', netIncome]);
+
+        const filename = generateFilenameWithTimestamp('profit-loss', 'xlsx');
+
+        // Bold rows: title, headers, totals
+        const boldRows = [0, 4, 3 + report.income.length + 2, 3 + report.income.length + 2 + 1, rows.length - 1];
+
+        exportToExcel(rows, filename, {
+            sheetName: 'Profit & Loss',
+            reportTitle: 'Profit & Loss Statement',
+            dateInfo: `Period: ${startDate} to ${endDate}`,
+            boldRows,
+            currencyColumns: [2],
+            colorRows: [
+                { row: 0, color: '3B82F6' },  // Blue for title
+                { row: 3, color: '10B981' },  // Green for income header
+                { row: 3 + report.income.length + 2, color: 'EF4444' }, // Red for expenses header
+            ],
+            freezePane: { row: 1, col: 0 },
+            showTimestamp: true,
+            companyName: COMPANY_NAME
+        });
+    };
+
     return (
         <div className="space-y-4">
             {/* Compact Header */}
@@ -45,10 +135,11 @@ export default function ProfitLossPage() {
                         Income statement for the selected period
                     </p>
                 </div>
-                <Button onClick={() => alert("Export coming soon")} variant="outline" size="sm" className="h-9">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                </Button>
+                <ExportDropdown
+                    onExportCSV={handleExportCSV}
+                    onExportExcel={handleExportExcel}
+                    disabled={!report}
+                />
             </div>
 
             {/* Filters - Compact */}
@@ -100,7 +191,7 @@ export default function ProfitLossPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {report?.income?.map((item: any) => (
-                                        <TableRow key={item.account_id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+                                        <TableRow key={item.code} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
                                             <TableCell className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">
                                                 {item.name}
                                             </TableCell>
@@ -137,7 +228,7 @@ export default function ProfitLossPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {report?.expenses?.map((item: any) => (
-                                        <TableRow key={item.account_id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
+                                        <TableRow key={item.code} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800">
                                             <TableCell className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">
                                                 {item.name}
                                             </TableCell>

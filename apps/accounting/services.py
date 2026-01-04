@@ -929,7 +929,7 @@ class ReportingService:
         }
 
     @classmethod
-    def get_profit_loss(cls, start_date, end_date):
+    def get_profit_loss(cls, start_date, end_date, branch_id=None):
         income = []
         expenses = []
         
@@ -938,20 +938,21 @@ class ReportingService:
         
         # 1. Income
         for account in Account.objects.filter(account_type='income', is_active=True):
-            bal = cls.get_account_balance(account, start_date=start_date, end_date=end_date)
+            bal = cls.get_account_balance(account, start_date=start_date, end_date=end_date, branch_id=branch_id)
             if bal != 0:
                 income.append({'code': account.code, 'name': account.name, 'balance': bal})
                 total_income += bal
                 
         # 2. Expenses
         for account in Account.objects.filter(account_type='expense', is_active=True):
-            bal = cls.get_account_balance(account, start_date=start_date, end_date=end_date)
+            bal = cls.get_account_balance(account, start_date=start_date, end_date=end_date, branch_id=branch_id)
             if bal != 0:
                 expenses.append({'code': account.code, 'name': account.name, 'balance': bal})
                 total_expenses += bal
                 
         return {
             'period': {'start': start_date, 'end': end_date},
+            'branch_id': branch_id,
             'income': income,
             'expenses': expenses,
             'totals': {
@@ -1538,6 +1539,90 @@ class ReportingService:
         }
 
 
+    @staticmethod
+    def get_budget_vs_actual(budget_id, start_date=None, end_date=None):
+        """
+        Compare budgeted amounts to actual spend.
+        """
+        from .models import Budget
+        
+        try:
+            budget = Budget.objects.get(id=budget_id)
+        except Budget.DoesNotExist:
+            return None
+            
+        # Default dates to budget dates if not provided
+        if not start_date:
+            start_date = budget.start_date
+        if not end_date:
+            end_date = budget.end_date
+            
+        results = []
+        total_budget = Decimal('0.00')
+        total_actual = Decimal('0.00')
+        
+        for line in budget.lines.select_related('account').all():
+            # Get actual balance for this account in the period
+            # Note: For expense accounts, debit is positive (normal balance)
+            # For income accounts, credit is positive (normal balance)
+            actual = ReportingService.get_account_balance(
+                line.account,
+                start_date=start_date,
+                end_date=end_date,
+                branch_id=budget.branch_id 
+            )
+            
+            # Variance calculation depends on account type
+            # For expenses: Over budget (Actual > Budget) is negative/bad
+            # For income: Under budget (Actual < Budget) is negative/bad
+            
+            variance = line.amount - actual # Positive means under budget (good for expenses)
+            
+            if line.account.account_type == 'income':
+                variance = actual - line.amount # Positive means over budget (good for income)
+                status = 'under' if variance < 0 else 'over'
+            else:
+                 # Expenses
+                variance = line.amount - actual # Positive means under budget (good)
+                status = 'over' if variance < 0 else 'under'
+
+            variance_pct = (variance / line.amount * 100) if line.amount != 0 else Decimal('0')
+            
+            results.append({
+                'account_code': line.account.code,
+                'account_name': line.account.name,
+                'account_type': line.account.account_type,
+                'period': line.period,
+                'budget': float(line.amount),
+                'actual': float(actual),
+                'variance': float(variance),
+                'variance_percent': float(variance_pct),
+                'status': status
+            })
+            
+            total_budget += line.amount
+            total_actual += actual
+
+        total_variance = total_budget - total_actual # Simple math for summary
+        total_variance_pct = (total_variance / total_budget * 100) if total_budget != 0 else Decimal('0')
+
+        return {
+            'budget': {
+                'name': budget.name,
+                'fiscal_year': budget.fiscal_year,
+                'branch_name': budget.branch.name if budget.branch else 'Company-wide'
+            },
+            'period': {'start': start_date, 'end': end_date},
+            'lines': results,
+            'summary': {
+                'total_budget': float(total_budget),
+                'total_actual': float(total_actual),
+                'total_variance': float(total_variance),
+                'variance_percent': float(total_variance_pct)
+            }
+        }
+
+
 class DashboardService:
     @staticmethod
     def get_management_metrics(start_date, end_date):
@@ -1578,6 +1663,45 @@ class DashboardService:
             } for e in expenses
         ]
 
+        
+        # Cash Burn & Runway
+        # Calculate 'Burn' as average monthly Operating Cash Outflow over the last 3 months
+        # Note: In a startup context, burn is usually net cash outflow. 
+        # Here we'll approximation using Operating Activities Net.
+        # If Net is positive, Burn is 0.
+        
+        # Get Cash Flow for the period
+        cf = ReportingService.get_cash_flow_statement(start_date, end_date)
+        net_operating_cash = cf['operating_activities']['net']
+        
+        # Burn Rate (Monthly average for the selected period)
+        # Calculate number of months in period
+        days = (end_date - start_date).days + 1
+        months = max(days / 30.0, 1.0)
+        
+        if net_operating_cash < 0:
+            monthly_burn = float(abs(net_operating_cash) / Decimal(months))
+        else:
+            monthly_burn = 0.0 # Generating cash, no burn
+            
+        runway_months = (float(cash_balance) / monthly_burn) if monthly_burn > 0 else 0
+        
+        # Branch Performance
+        # Group revenue/profit by branch.
+        # This requires iterating branches and running P&L.
+        # Optimization: Could potential do singular aggregation query if performance is issue.
+        from apps.branches.models import Branch
+        branch_performance = []
+        for branch in Branch.objects.filter(is_active=True):
+            b_pl = ReportingService.get_profit_loss(start_date, end_date, branch_id=branch.id)
+            branch_performance.append({
+                'id': branch.id,
+                'name': branch.name,
+                'revenue': float(b_pl['totals']['income']),
+                'net_income': float(b_pl['totals']['net_income']),
+                'margin': float(b_pl['totals']['net_income'] / b_pl['totals']['income'] * 100) if b_pl['totals']['income'] > 0 else 0
+            })
+
         return {
             'period': {'start': start_date, 'end': end_date},
             'kpis': {
@@ -1587,8 +1711,124 @@ class DashboardService:
                 'cash_balance': float(cash_balance),
                 'ar_outstanding': float(ar_aging['summary']['total']),
                 'ap_outstanding': float(ap_aging['summary']['total']),
-                'avg_job_margin': float(job_profit['totals']['avg_margin_percent'])
+                'avg_job_margin': float(job_profit['totals']['avg_margin_percent']),
+                'monthly_burn': monthly_burn,
+                'runway_months': runway_months
             },
             'top_expenses': formatted_expenses,
-            'top_jobs': top_jobs
+            'top_jobs': top_jobs,
+            'branch_performance': branch_performance
         }
+
+class ExportService:
+    @staticmethod
+    def generate_board_pack(start_date, end_date):
+        """
+        Generates a PDF Board Pack containing key financial reports and metrics.
+        Returns: BytesIO object containing the PDF
+        """
+        import io
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from django.conf import settings
+        
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = []
+        
+        # --- TITLE PAGE ---
+        title_style = ParagraphStyle(
+            'Title',
+            parent=styles['Heading1'],
+            fontSize=24,
+            alignment=1, # Center
+            spaceAfter=30
+        )
+        subtitle_style = ParagraphStyle(
+            'Subtitle',
+            parent=styles['Normal'],
+            fontSize=14,
+            alignment=1, # Center
+            spaceAfter=12
+        )
+        
+        story.append(Spacer(1, 2*inch))
+        story.append(Paragraph("Management Accounts Pack", title_style))
+        story.append(Paragraph(f"Period: {start_date} to {end_date}", subtitle_style))
+        story.append(Paragraph(f"Generated on {timezone.now().date()}", subtitle_style))
+        story.append(PageBreak())
+        
+        # --- EXECUTIVE SUMMARY (KPIs) ---
+        metrics = DashboardService.get_management_metrics(start_date, end_date)
+        
+        story.append(Paragraph("Executive Summary", styles['Heading1']))
+        story.append(Spacer(1, 0.2*inch))
+        
+        kpi_data = [
+            ['Metric', 'Value'],
+            ['Total Revenue', f"{metrics['kpis']['revenue']:,.2f}"],
+            ['Net Income', f"{metrics['kpis']['net_income']:,.2f}"],
+            ['Total Expenses', f"{metrics['kpis']['expenses']:,.2f}"],
+            ['Cash on Hand', f"{metrics['kpis']['cash_balance']:,.2f}"],
+            ['AR Outstanding', f"{metrics['kpis']['ar_outstanding']:,.2f}"],
+            ['AP Outstanding', f"{metrics['kpis']['ap_outstanding']:,.2f}"],
+            ['Avg Job Margin', f"{metrics['kpis']['avg_job_margin']:.1f}%"],
+        ]
+        
+        kpi_table = Table(kpi_data, colWidths=[3*inch, 2*inch])
+        kpi_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        story.append(kpi_table)
+        story.append(PageBreak())
+        
+        # --- PROFIT & LOSS SUMMARY ---
+        story.append(Paragraph("Profit & Loss Summary", styles['Heading1']))
+        story.append(Spacer(1, 0.2*inch))
+        
+        pl = ReportingService.get_profit_loss(start_date, end_date)
+        
+        pl_data = [['Account', 'Amount']]
+        # Income
+        pl_data.append(['INCOME', ''])
+        for item in pl['income']:
+            pl_data.append([item['name'], f"{item['balance']:,.2f}"])
+        pl_data.append(['Total Income', f"{pl['totals']['income']:,.2f}"])
+        
+        # Expenses
+        pl_data.append(['', ''])
+        pl_data.append(['EXPENSES', ''])
+        for item in pl['expenses']:
+             pl_data.append([item['name'], f"{item['balance']:,.2f}"])
+        pl_data.append(['Total Expenses', f"{pl['totals']['expenses']:,.2f}"])
+        
+        # Net Income
+        pl_data.append(['', ''])
+        pl_data.append(['NET INCOME', f"{pl['totals']['net_income']:,.2f}"])
+        
+        pl_table = Table(pl_data, colWidths=[4*inch, 2*inch])
+        pl_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'), # Net Income bold
+             # Highlight Totals
+            ('BACKGROUND', (0, len(pl['income'])+2), (1, len(pl['income'])+2), colors.lightgrey), # Total Income
+            ('BACKGROUND', (0, -3), (1, -3), colors.lightgrey), # Total Expenses
+            ('BACKGROUND', (0, -1), (1, -1), colors.lightgreen), # Net Income
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ]))
+        story.append(pl_table)
+        
+        doc.build(story)
+        buffer.seek(0)
+        return buffer

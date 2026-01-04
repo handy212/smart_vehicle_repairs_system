@@ -471,11 +471,13 @@ export default function CustomersPage() {
               </PermissionGuard>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Link href="/customers/new">
-            <Button size="sm" className="h-9 bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200">
-              <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Customer
-            </Button>
-          </Link>
+          <PermissionGuard permission="create_customers">
+            <Link href="/customers/new">
+              <Button size="sm" className="h-9 bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200">
+                <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Customer
+              </Button>
+            </Link>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -672,27 +674,37 @@ export default function CustomersPage() {
                                   <Eye className="w-4 h-4 mr-2" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}/edit`)}>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Edit Customer
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}#notes`)}>
-                                  <MessageSquare className="w-4 h-4 mr-2" />
-                                  Add Note
-                                </DropdownMenuItem>
+                                <PermissionGuard permission="edit_customers">
+                                  <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}/edit`)}>
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Edit Customer
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
+                                <PermissionGuard permission="edit_customers">
+                                  <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}#notes`)}>
+                                    <MessageSquare className="w-4 h-4 mr-2" />
+                                    Add Note
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => router.push(`/vehicles/new?customer=${customer.id}`)}>
-                                  <Package className="w-4 h-4 mr-2" />
-                                  Add Vehicle
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => router.push(`/appointments/new?customer=${customer.id}`)}>
-                                  <Calendar className="w-4 h-4 mr-2" />
-                                  Schedule Appointment
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => router.push(`/workorders/new?customer=${customer.id}`)}>
-                                  <Wrench className="w-4 h-4 mr-2" />
-                                  Create Work Order
-                                </DropdownMenuItem>
+                                <PermissionGuard permission="create_vehicles">
+                                  <DropdownMenuItem onClick={() => router.push(`/vehicles/new?customer=${customer.id}`)}>
+                                    <Package className="w-4 h-4 mr-2" />
+                                    Add Vehicle
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
+                                <PermissionGuard permission="create_appointments">
+                                  <DropdownMenuItem onClick={() => router.push(`/appointments/new?customer=${customer.id}`)}>
+                                    <Calendar className="w-4 h-4 mr-2" />
+                                    Schedule Appointment
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
+                                <PermissionGuard permission="create_work_orders">
+                                  <DropdownMenuItem onClick={() => router.push(`/workorders/new?customer=${customer.id}`)}>
+                                    <Wrench className="w-4 h-4 mr-2" />
+                                    Create Work Order
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
                                 <DropdownMenuSeparator />
                                 <PermissionGuard permission="delete_customers">
                                   <DropdownMenuItem onClick={() => { if (window.confirm(`Delete customer "${customer.full_name || customer.company_name || 'this customer'}"?`)) handleDelete(customer); }} disabled={deleteMutation.isPending} className="text-red-600 dark:text-red-400">
@@ -713,12 +725,14 @@ export default function CustomersPage() {
           ) : (
             <div className="text-center py-12">
               <p className="text-gray-500 dark:text-gray-400">No customers found.</p>
-              <Link href="/customers/new">
-                <Button className="mt-4" variant="secondary">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Your First Customer
-                </Button>
-              </Link>
+              <PermissionGuard permission="create_customers">
+                <Link href="/customers/new">
+                  <Button className="mt-4" variant="secondary">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Your First Customer
+                  </Button>
+                </Link>
+              </PermissionGuard>
             </div>
           )}
 

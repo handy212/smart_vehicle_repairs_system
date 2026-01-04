@@ -139,14 +139,14 @@ class UserAuthenticationAPITest(APITestCase):
 
         # Access protected endpoint
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
-           response = self.client.get('/api/auth/users/me/')
+        response = self.client.get('/api/auth/users/me/')
         # Should not return 401 (unauthorized)
         self.assertNotEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_protected_endpoint_without_token(self):
         """Test accessing protected endpoint without token."""
-           response = self.client.get('/api/auth/users/me/')
-           self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        response = self.client.get('/api/auth/users/me/')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 @pytest.mark.django_db

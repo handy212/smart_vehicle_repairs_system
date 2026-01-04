@@ -18,10 +18,14 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePermissions } from "@/lib/hooks/usePermissions";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 export default function EmailTemplatesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
+  const canManage = hasPermission("manage_settings");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [channelFilter, setChannelFilter] = useState<string>("email");
@@ -206,10 +210,12 @@ export default function EmailTemplatesPage() {
           </div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Email Templates</h1>
         </div>
-        <Button onClick={handleCreate} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700">
-          <Plus className="w-3.5 h-3.5 mr-1.5" />
-          Create Template
-        </Button>
+        <PermissionGuard permission="manage_settings">
+          <Button onClick={handleCreate} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700">
+            <Plus className="w-3.5 h-3.5 mr-1.5" />
+            Create Template
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Filters */}
@@ -286,7 +292,7 @@ export default function EmailTemplatesPage() {
                 <Switch
                   checked={template.is_active}
                   onCheckedChange={() => handleToggleActive(template)}
-                  disabled={toggleActiveMutation.isPending}
+                  disabled={toggleActiveMutation.isPending || !canManage}
                   className="scale-75 data-[state=checked]:bg-green-500"
                 />
               </div>
@@ -319,14 +325,16 @@ export default function EmailTemplatesPage() {
                     >
                       <Eye className="w-3.5 h-3.5" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(template)}
-                      className="h-6 w-6 p-0 hover:text-blue-600"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </Button>
+                    <PermissionGuard permission="manage_settings">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(template)}
+                        className="h-6 w-6 p-0 hover:text-blue-600"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </PermissionGuard>
                   </div>
                 </div>
               </div>
@@ -498,7 +506,7 @@ export default function EmailTemplatesPage() {
                 </Button>
                 <Button
                   onClick={handleSave}
-                  disabled={createMutation.isPending || updateMutation.isPending || !editForm.name || !editForm.subject || !editForm.body}
+                  disabled={createMutation.isPending || updateMutation.isPending || !editForm.name || !editForm.subject || !editForm.body || !canManage}
                   size="sm"
                   className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
                 >

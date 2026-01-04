@@ -43,6 +43,14 @@ class PartCategoryViewSet(viewsets.ModelViewSet):
     queryset = PartCategory.objects.prefetch_related('subcategories', 'parts')
     serializer_class = PartCategorySerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve', 'root_categories', 'dashboard_stats', 'subcategories', 'parts_list']:
+            return [IsAuthenticated(), HasPermission('view_inventory')]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), HasPermission('manage_categories')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['is_active', 'parent']
     search_fields = ['name', 'description']
@@ -857,6 +865,14 @@ class ServicePackageViewSet(viewsets.ModelViewSet):
     """
     queryset = ServicePackage.objects.select_related('category').prefetch_related('parts', 'parts__part')
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated(), HasPermission('view_inventory')]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), HasPermission('manage_inventory')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['category', 'is_active']
     search_fields = ['name', 'description']
@@ -1118,6 +1134,10 @@ class InventoryTransactionViewSet(viewsets.ReadOnlyModelViewSet):
     )
     serializer_class = InventoryTransactionSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        return [IsAuthenticated(), HasPermission('view_inventory')]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['part', 'transaction_type', 'purchase_order', 'work_order']
     ordering_fields = ['transaction_date', 'created_at']
@@ -1271,6 +1291,14 @@ class StockItemViewSet(viewsets.ModelViewSet):
     queryset = StockItem.objects.all().select_related('part', 'branch')
     serializer_class = StockItemSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated(), HasPermission('view_inventory')]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), HasPermission('manage_inventory')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['branch', 'is_low_stock', 'is_out_of_stock']
     search_fields = ['part__part_number', 'part__name', 'bin_location']
@@ -1308,6 +1336,14 @@ class TransferViewSet(viewsets.ModelViewSet):
     ).prefetch_related('items__part')
     
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated(), HasPermission('view_inventory')]
+        elif self.action in ['create', 'update', 'partial_update', 'destroy', 'approve', 'ship', 'receive']:
+            return [IsAuthenticated(), HasPermission('transfer_inventory')]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['status', 'source_branch', 'destination_branch']
     ordering = ['-created_at']
