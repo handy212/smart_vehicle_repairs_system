@@ -178,10 +178,18 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
 
 class CustomerUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating customer information"""
+    # User fields
+    first_name = serializers.CharField(required=False)
+    last_name = serializers.CharField(required=False)
+    email = serializers.EmailField(required=False)
+    phone = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = Customer
         fields = [
+            # User fields
+            'first_name', 'last_name', 'email', 'phone',
+            # Customer fields
             'company_name', 'business_type', 'tax_id', 'customer_type',
             'service_address', 'service_city', 'service_state', 'service_zip_code',
             'billing_address', 'billing_city', 'billing_state', 'billing_zip_code',
@@ -192,6 +200,30 @@ class CustomerUpdateSerializer(serializers.ModelSerializer):
             'insurance_policy_number', 'insurance_phone', 'notes', 'tags',
             'marketing_emails', 'marketing_sms'
         ]
+
+    def validate_email(self, value):
+        """Validate that email is unique, excluding current user"""
+        user = self.instance.user
+        if User.objects.filter(email=value).exclude(id=user.id).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def update(self, instance, validated_data):
+        # Update user fields if present
+        user_fields = ['first_name', 'last_name', 'email', 'phone']
+        user_data = {}
+        for field in user_fields:
+            if field in validated_data:
+                user_data[field] = validated_data.pop(field)
+        
+        if user_data:
+            user = instance.user
+            for key, value in user_data.items():
+                setattr(user, key, value)
+            user.save()
+            
+        # Update customer fields
+        return super().update(instance, validated_data)
 
 
 class CustomerNoteSerializer(serializers.ModelSerializer):
