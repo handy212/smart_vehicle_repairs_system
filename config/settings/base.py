@@ -334,7 +334,7 @@ PAYSTACK_PAYMENT_ENABLED = env.bool('PAYSTACK_PAYMENT_ENABLED', default=False)
 SITE_URL = env('SITE_URL', default='http://localhost:8000')
 
 # Frontend base URL (used for redirect-based payment success pages)
-FRONTEND_BASE_URL = env('FRONTEND_BASE_URL', default='http://localhost:3001')
+FRONTEND_BASE_URL = env('FRONTEND_BASE_URL', default='http://localhost:3000')
 
 # Role Permissions
 ROLEPERMISSIONS_MODULE = 'config.roles'

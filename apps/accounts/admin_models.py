@@ -43,6 +43,9 @@ class SystemSettings(models.Model):
         verbose_name = _('system setting')
         verbose_name_plural = _('system settings')
         ordering = ['category', 'key']
+        # Temporarily exclude from auditlog due to database encoding issue (SQL_ASCII vs UTF8)
+        # This will be re-enabled after database is converted to UTF8 encoding
+        # managed = True  # Keep this as True to ensure migrations work
     
     def __str__(self):
         return f"{self.category} - {self.key}"
@@ -91,6 +94,7 @@ class SystemSettings(models.Model):
     def save(self, *args, **kwargs):
         """Override save to clear cache when settings are updated"""
         from .settings_utils import clear_setting_cache
+        from django.db import connection
         # Get the old key before saving (in case key changed)
         old_key = None
         if self.pk:
@@ -100,7 +104,28 @@ class SystemSettings(models.Model):
             except SystemSettings.DoesNotExist:
                 pass
         
-        super().save(*args, **kwargs)
+        # Workaround for SQL_ASCII database encoding issue
+        # Temporarily set client encoding to match database encoding
+        original_encoding = None
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SHOW client_encoding")
+                original_encoding = cursor.fetchone()[0]
+                if original_encoding != 'SQL_ASCII':
+                    cursor.execute("SET client_encoding = 'SQL_ASCII'")
+        except Exception:
+            pass  # If setting encoding fails, continue anyway
+        
+        try:
+            super().save(*args, **kwargs)
+        finally:
+            # Restore original encoding
+            if original_encoding and original_encoding != 'SQL_ASCII':
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute(f"SET client_encoding = '{original_encoding}'")
+                except Exception:
+                    pass
         
         # Clear cache for both old and new keys
         if old_key and old_key != self.key:

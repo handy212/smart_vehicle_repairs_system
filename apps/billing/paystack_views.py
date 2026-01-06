@@ -144,19 +144,19 @@ def paystack_callback(request):
     
     if not reference:
         # Browser-friendly redirect
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3001").rstrip("/")
+        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
         return redirect(f"{frontend}/portal/payment/success?status=failed&reason=missing_reference")
     
     # Verify payment
     success, data = verify_payment(reference)
     
     if not success:
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3001").rstrip("/")
+        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
         return redirect(f"{frontend}/portal/payment/success?status=failed&reference={reference}")
     
     # Check payment status
     if data['status'] != 'success':
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3001").rstrip("/")
+        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
         qs = urlencode({"status": "failed", "reference": reference, "paystack_status": data.get("status")})
         return redirect(f"{frontend}/portal/payment/success?{qs}")
     
@@ -165,7 +165,7 @@ def paystack_callback(request):
     invoice_id = metadata.get('invoice_id')
     
     if not invoice_id:
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3001").rstrip("/")
+        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
         qs = urlencode({"status": "failed", "reference": reference, "reason": "missing_invoice_id"})
         return redirect(f"{frontend}/portal/payment/success?{qs}")
     
@@ -174,7 +174,7 @@ def paystack_callback(request):
         invoice = Invoice.objects.get(id=invoice_id)
         customer = invoice.customer
     except Invoice.DoesNotExist:
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3001").rstrip("/")
+        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
         qs = urlencode({"status": "failed", "reference": reference, "invoice_id": invoice_id, "reason": "invoice_not_found"})
         return redirect(f"{frontend}/portal/payment/success?{qs}")
     
@@ -185,7 +185,7 @@ def paystack_callback(request):
     ).first()
     
     if existing_payment:
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3001").rstrip("/")
+        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
         qs = urlencode({"status": "success", "invoice_id": invoice.id, "reference": reference})
         return redirect(f"{frontend}/portal/payment/success?{qs}")
     
@@ -193,7 +193,7 @@ def paystack_callback(request):
     invoice.refresh_from_db()
     if invoice.status == 'paid' or invoice.amount_due <= 0:
         logger.warning(f"Attempted to record payment for already paid invoice {invoice.id} (reference: {reference})")
-        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3001").rstrip("/")
+        frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
         qs = urlencode({"status": "success", "invoice_id": invoice.id, "reference": reference})
         return redirect(f"{frontend}/portal/payment/success?{qs}")
     
@@ -265,7 +265,7 @@ def paystack_callback(request):
         logger.error(f"Failed to send payment notification: {e}")
     
     # Redirect user to frontend success page (better UX than JSON)
-    frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3001").rstrip("/")
+    frontend = getattr(settings, "FRONTEND_BASE_URL", "http://localhost:3000").rstrip("/")
     qs = urlencode({"status": "success", "invoice_id": invoice.id, "reference": reference})
     return redirect(f"{frontend}/portal/payment/success?{qs}")
 

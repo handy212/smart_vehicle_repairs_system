@@ -28,7 +28,9 @@ from apps.notifications_app.models import NotificationTemplate
 # Register models for audit logging
 # Admin/System Models
 auditlog.register(User)
-auditlog.register(SystemSettings)
+# Temporarily disabled due to database encoding issue (SQL_ASCII vs UTF8)
+# TODO: Re-enable after database is converted to UTF8 encoding
+# auditlog.register(SystemSettings)
 auditlog.register(Role)
 auditlog.register(Permission)
 auditlog.register(SystemBackup)

@@ -3,7 +3,6 @@ Professional Print Service
 Handles PDF generation for all document types across the application
 """
 from typing import Dict, Any, Optional
-from weasyprint import HTML, CSS
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from django.conf import settings
@@ -90,15 +89,29 @@ class DocumentPrinter:
             
             # Render HTML
             html_string = render_to_string(self.template, context)
-            
-            # Generate PDF with custom CSS
-            # Determine base_url for relative paths (images)
-            # Use internal container URL for reliable access
-            base_url = getattr(settings, 'INTERNAL_API_URL', 'http://localhost:8001')
-            
-            pdf_file = HTML(string=html_string, base_url=base_url).write_pdf(
-                stylesheets=[CSS(string=self._get_custom_css())]
-            )
+
+            # Generate PDF:
+            # - Primary: WeasyPrint (HTML->PDF) when system libraries are available
+            # - Fallback: ReportLab (pure-Python) when WeasyPrint/Pango is not available
+            pdf_file = None
+            try:
+                # Local import so the app can still run when OS libs for WeasyPrint are missing
+                from weasyprint import HTML, CSS  # type: ignore
+
+                # Determine base_url for relative paths (images)
+                # Use internal container URL for reliable access
+                base_url = getattr(settings, 'INTERNAL_API_URL', 'http://localhost:8000')
+
+                pdf_file = HTML(string=html_string, base_url=base_url).write_pdf(
+                    stylesheets=[CSS(string=self._get_custom_css())]
+                )
+            except Exception as weasy_exc:
+                logger.warning(
+                    "WeasyPrint unavailable; falling back to simple PDF. Error: %s",
+                    weasy_exc,
+                    exc_info=True,
+                )
+                pdf_file = self._generate_simple_pdf(context)
             
             # Create response
             response = HttpResponse(pdf_file, content_type='application/pdf')
@@ -113,6 +126,89 @@ class DocumentPrinter:
         except Exception as e:
             logger.error(f"PDF generation failed for {self.document_type}: {e}", exc_info=True)
             raise
+
+    def _generate_simple_pdf(self, context: Dict[str, Any]) -> bytes:
+        """
+        Pure-Python fallback PDF generator.
+
+        This is used on environments where WeasyPrint's system dependencies (Pango/Cairo)
+        cannot be installed.
+        """
+        from io import BytesIO
+        from datetime import datetime
+
+        try:
+            from reportlab.lib.pagesizes import A4
+            from reportlab.pdfgen import canvas
+        except Exception as e:
+            # If ReportLab is missing, we must fail loudly
+            raise RuntimeError("ReportLab is required for PDF fallback but is not installed.") from e
+
+        buf = BytesIO()
+        c = canvas.Canvas(buf, pagesize=A4)
+        width, height = A4
+
+        y = height - 50
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(50, y, f"{self.document_type.replace('_', ' ').title()} (Simple PDF)")
+        y -= 25
+
+        c.setFont("Helvetica", 10)
+        c.drawString(50, y, f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
+        y -= 25
+
+        doc = context.get("document")
+        branch = context.get("branch")
+
+        def write_kv(key: str, value: Any) -> None:
+            nonlocal y
+            if y < 60:
+                c.showPage()
+                y = height - 50
+                c.setFont("Helvetica", 10)
+            c.setFont("Helvetica-Bold", 10)
+            c.drawString(50, y, f"{key}:")
+            c.setFont("Helvetica", 10)
+            c.drawString(180, y, str(value) if value is not None else "")
+            y -= 16
+
+        # Common fields
+        if doc is not None:
+            # Try to show a useful identifier
+            for attr in ("invoice_number", "estimate_number", "work_order_number", "inspection_number", "po_number", "payment_number", "id"):
+                if hasattr(doc, attr):
+                    write_kv("Document Number", getattr(doc, attr))
+                    break
+            if hasattr(doc, "status"):
+                write_kv("Status", getattr(doc, "status"))
+            if hasattr(doc, "created_at"):
+                write_kv("Created At", getattr(doc, "created_at"))
+
+        if branch is not None and hasattr(branch, "name"):
+            write_kv("Branch", getattr(branch, "name"))
+
+        # Work-order specific details (best-effort)
+        if self.document_type == "work_order" and doc is not None:
+            try:
+                customer = getattr(doc, "customer", None)
+                if customer is not None and getattr(customer, "user", None) is not None:
+                    write_kv("Customer", customer.user.get_full_name() or customer.user.username)
+            except Exception:
+                pass
+            try:
+                vehicle = getattr(doc, "vehicle", None)
+                if vehicle is not None:
+                    plate = getattr(vehicle, "license_plate", "") or ""
+                    make = getattr(vehicle, "make", "") or ""
+                    model = getattr(vehicle, "model", "") or ""
+                    year = getattr(vehicle, "year", "") or ""
+                    write_kv("Vehicle", f"{year} {make} {model} {plate}".strip())
+            except Exception:
+                pass
+
+        c.showPage()
+        c.save()
+        return buf.getvalue()
     
     def _get_custom_css(self) -> str:
         """Get custom CSS for PDF generation"""

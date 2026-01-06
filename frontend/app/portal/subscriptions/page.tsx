@@ -6,47 +6,19 @@ import { subscriptionsApi, packagesApi, Subscription, Package } from "@/lib/api/
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Package as PackageIcon, Calendar, Check, X, RefreshCw, ShoppingCart, CreditCard, Download, Car } from "lucide-react";
+import { Package as PackageIcon, Calendar, Check, X, RefreshCw, ShoppingCart, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/lib/hooks/useToast";
 import { authApi } from "@/lib/api/auth";
-import { vehiclesApi, Vehicle } from "@/lib/api/vehicles";
-import { useCurrency } from "@/lib/hooks/useCurrency";
-import { PortalPageHeader } from "../components/PortalPageHeader";
-import { PortalList } from "../components/PortalList";
-import { PortalCard } from "../components/PortalCard";
-
-const formatError = (error: any, defaultMessage: string) => {
-  const data = error.response?.data;
-  if (!data) return defaultMessage;
-  if (typeof data === 'string') return data;
-  if (data.detail) return data.detail;
-  if (data.message) return data.message;
-  if (typeof data === 'object') {
-    const messages = Object.entries(data)
-      .map(([key, value]) => {
-        const fieldName = key === 'non_field_errors' ? '' : `${key}: `;
-        const message = Array.isArray(value) ? value[0] : value;
-        return `${fieldName}${message}`;
-      })
-      .join('\n');
-    return messages || defaultMessage;
-  }
-  return defaultMessage;
-};
 
 export default function MySubscriptionsPage() {
-  const { formatCurrency } = useCurrency();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
   const [viewMode, setViewMode] = useState<"my-subscriptions" | "available-packages">("my-subscriptions");
 
   const { data: user } = useQuery({
@@ -66,16 +38,6 @@ export default function MySubscriptionsPage() {
     enabled: viewMode === "available-packages",
   });
 
-  const { data: userVehicles } = useQuery({
-    queryKey: ["my-vehicles"],
-    queryFn: () => {
-      const customerId = user?.customer_profile?.id || (user as any)?.customer?.id;
-      if (!customerId) return Promise.resolve({ count: 0, next: null, previous: null, results: [] });
-      return vehiclesApi.list({ owner: customerId });
-    },
-    enabled: !!user,
-  });
-
   const purchaseMutation = useMutation({
     mutationFn: (pkg: Package) => {
       const customerId = user?.customer_profile?.id || (user as any)?.customer?.id;
@@ -85,7 +47,6 @@ export default function MySubscriptionsPage() {
       return subscriptionsApi.create({
         customer: customerId,
         package: pkg.id,
-        vehicle: parseInt(selectedVehicleId),
         payment_status: "pending",
       });
     },
@@ -99,7 +60,7 @@ export default function MySubscriptionsPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: formatError(error, "Failed to purchase subscription"),
+        description: error.response?.data?.detail || "Failed to purchase subscription",
         variant: "destructive",
       });
     },
@@ -114,7 +75,7 @@ export default function MySubscriptionsPage() {
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: formatError(error, "Failed to renew subscription"),
+        description: error.response?.data?.detail || "Failed to renew subscription",
         variant: "destructive",
       });
     },
@@ -122,19 +83,12 @@ export default function MySubscriptionsPage() {
 
   const handlePurchase = (pkg: Package) => {
     setSelectedPackage(pkg);
-    setSelectedVehicleId("");
     setIsPurchaseDialogOpen(true);
   };
 
   const confirmPurchase = () => {
-    if (selectedPackage && selectedVehicleId) {
+    if (selectedPackage) {
       purchaseMutation.mutate(selectedPackage);
-    } else if (!selectedVehicleId) {
-      toast({
-        title: "Vehicle Required",
-        description: "Please select a vehicle for this subscription.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -147,6 +101,7 @@ export default function MySubscriptionsPage() {
       });
       return;
     }
+    
     if (subscription.days_remaining && subscription.days_remaining > 30) {
       toast({
         title: "Too Early",
@@ -155,200 +110,262 @@ export default function MySubscriptionsPage() {
       });
       return;
     }
+    
     if (confirm(`Renew subscription ${subscription.subscription_number}? An invoice will be created for payment.`)) {
       renewMutation.mutate(subscription);
     }
   };
 
-  const handlePayNow = async (e: React.MouseEvent, subscription: Subscription) => {
-    if (!subscription.invoice_id) {
-      e.preventDefault();
-      try {
-        const fullSub = await subscriptionsApi.get(subscription.id);
-        if (fullSub.invoice_id) {
-          window.location.href = `/portal/payment/${fullSub.invoice_id}`;
-        } else {
-          toast({
-            title: "Payment Unavailable",
-            description: "Invoice is being processed. Please try again in a moment.",
-            variant: "destructive",
-          });
-        }
-      } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error.response?.data?.detail || "Failed to load payment details",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  // Helper for status badge variant
-  const getStatusVariant = (status: string) => {
-    switch (status) {
-      case "active": return "success";
-      case "expired": return "danger";
-      case "cancelled": return "secondary";
-      default: return "secondary";
-    }
-  };
+  if (isLoadingSubscriptions && viewMode === "my-subscriptions") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <div className="space-y-4">
+          {[1, 2].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <Skeleton className="h-6 w-48 mb-4" />
+                <Skeleton className="h-4 w-full mb-2" />
+                <Skeleton className="h-4 w-3/4" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <PortalPageHeader
-        title="My Subscriptions"
-        description="Manage your subscription packages"
-        action={
-          <div className="flex gap-2">
-            <Button
-              variant={viewMode === "my-subscriptions" ? "default" : "outline"}
-              onClick={() => setViewMode("my-subscriptions")}
-              size="sm"
-            >
-              My Subscriptions
-            </Button>
-            <Button
-              variant={viewMode === "available-packages" ? "default" : "outline"}
-              onClick={() => setViewMode("available-packages")}
-              size="sm"
-            >
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              Browse Packages
-            </Button>
-          </div>
-        }
-      />
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">My Subscriptions</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Manage your subscription packages
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === "my-subscriptions" ? "default" : "outline"}
+            onClick={() => setViewMode("my-subscriptions")}
+          >
+            My Subscriptions
+          </Button>
+          <Button
+            variant={viewMode === "available-packages" ? "default" : "outline"}
+            onClick={() => setViewMode("available-packages")}
+          >
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            Browse Packages
+          </Button>
+        </div>
+      </div>
 
       {viewMode === "my-subscriptions" ? (
-        <div className="mt-6">
-          <PortalList
-            data={mySubscriptions || []}
-            isLoading={isLoadingSubscriptions}
-            emptyMessage="No active subscriptions found."
-            emptyAction={<Button variant="link" onClick={() => setViewMode("available-packages")}>Browse Packages</Button>}
-            columns={[
-              {
-                header: "Package",
-                cell: (sub) => (
-                  <div>
-                    <div className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                      <PackageIcon className="w-4 h-4 text-primary" />
-                      {sub.package_name}
-                    </div>
-                    <div className="text-xs text-gray-500 font-mono mt-0.5">
-                      {sub.subscription_number}
-                    </div>
-                  </div>
-                )
-              },
-              {
-                header: "Start Date",
-                className: "hidden md:table-cell",
-                cell: (sub) => <span className="text-sm text-gray-600 dark:text-gray-400">{format(new Date(sub.start_date), "MMM d, yyyy")}</span>
-              },
-              {
-                header: "End Date",
-                className: "hidden md:table-cell",
-                cell: (sub) => <span className="text-sm text-gray-600 dark:text-gray-400">{format(new Date(sub.end_date), "MMM d, yyyy")}</span>
-              },
-              {
-                header: "Remaining",
-                className: "hidden md:table-cell",
-                cell: (sub) => <span className="font-medium">{sub.days_remaining} days</span>
-              },
-              {
-                header: "Status",
-                cell: (sub) => (
-                  <div className="flex flex-col items-start gap-1">
-                    <Badge variant={getStatusVariant(sub.status)}>{sub.status}</Badge>
-                    {sub.payment_status === "pending" && (
-                      <Badge variant="warning" className="text-[10px] px-1.5 h-5">Payment Pending</Badge>
-                    )}
-                  </div>
-                )
-              },
-              {
-                header: "Action",
-                className: "text-right",
-                cell: (sub) => (
-                  <div className="flex justify-end items-center gap-2">
-                    {sub.payment_status === "pending" && (
-                      <Link
-                        href={sub.invoice_id ? `/portal/payment/${sub.invoice_id}` : "#"}
-                        onClick={(e) => handlePayNow(e, sub)}
+        <>
+          {/* My Subscriptions */}
+          {!mySubscriptions || mySubscriptions.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <PackageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Active Subscriptions</h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  You don't have any active subscriptions yet.
+                </p>
+                <Button onClick={() => setViewMode("available-packages")}>
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Browse Available Packages
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {mySubscriptions.map((subscription) => (
+                <Card key={subscription.id}>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <PackageIcon className="h-5 w-5" />
+                          {subscription.package_name}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {subscription.subscription_number}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={
+                          subscription.status === "active"
+                            ? "default"
+                            : subscription.status === "expired"
+                            ? "danger"
+                            : "secondary"
+                        }
                       >
-                        <Button size="sm" className="h-8 text-xs">Pay Now</Button>
-                      </Link>
+                        {subscription.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Start Date</p>
+                        <p className="font-medium">
+                          {format(new Date(subscription.start_date), "MMM dd, yyyy")}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">End Date</p>
+                        <p className="font-medium">
+                          {format(new Date(subscription.end_date), "MMM dd, yyyy")}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Days Remaining</p>
+                        <p className="font-medium">
+                          {subscription.days_remaining || 0} days
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Payment Status</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge
+                            variant={
+                              subscription.payment_status === "paid" ? "default" : "secondary"
+                            }
+                          >
+                            {subscription.payment_status}
+                          </Badge>
+                          {subscription.payment_status === "pending" && (
+                            <Link 
+                              href={subscription.invoice_id 
+                                ? `/portal/payment/${subscription.invoice_id}`
+                                : `/portal/subscriptions`
+                              }
+                              onClick={async (e) => {
+                                if (!subscription.invoice_id) {
+                                  e.preventDefault();
+                                  // Fetch full subscription details to get invoice_id
+                                  try {
+                                    const fullSub = await subscriptionsApi.get(subscription.id);
+                                    if (fullSub.invoice_id) {
+                                      window.location.href = `/portal/payment/${fullSub.invoice_id}`;
+                                    } else {
+                                      toast({
+                                        title: "Payment Unavailable",
+                                        description: "Invoice is being processed. Please try again in a moment.",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  } catch (error: any) {
+                                    toast({
+                                      title: "Error",
+                                      description: error.response?.data?.detail || "Failed to load payment details",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                }
+                              }}
+                            >
+                              <Button variant="default" size="sm" className="h-7 text-xs">
+                                <CreditCard className="h-3 w-3 mr-1" />
+                                Pay Now
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {subscription.remaining_allowances && Object.keys(subscription.remaining_allowances).length > 0 && (
+                      <div className="border-t pt-4">
+                        <p className="text-sm font-semibold mb-3">Remaining Allowances</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {Object.entries(subscription.remaining_allowances).map(([key, value]) => {
+                            const numValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
+                            const isLow = numValue <= 1 && numValue > 0;
+                            const isEmpty = numValue === 0;
+                            return (
+                              <div 
+                                key={key} 
+                                className={`p-2 rounded border ${
+                                  isEmpty 
+                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' 
+                                    : isLow 
+                                    ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                }`}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-muted-foreground capitalize">
+                                    {key.replace(/_/g, " ")}
+                                  </span>
+                                  <span className={`text-sm font-bold ${
+                                    isEmpty ? 'text-red-600 dark:text-red-400' 
+                                    : isLow ? 'text-yellow-600 dark:text-yellow-400'
+                                    : 'text-green-600 dark:text-green-400'
+                                  }`}>
+                                    {value}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
-                    {sub.status === "active" && sub.days_remaining !== undefined && sub.days_remaining <= 30 && (
-                      <Button variant="secondary" size="sm" className="h-8 text-xs" onClick={() => handleRenew(sub)} disabled={renewMutation.isPending}>
-                        <RefreshCw className="mr-1 h-3 w-3" />
-                        Renew
-                      </Button>
+
+                    {subscription.status === "active" && (
+                      <div className="flex gap-2 mt-4">
+                        {subscription.days_remaining !== undefined && subscription.days_remaining <= 30 && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleRenew(subscription)}
+                            disabled={renewMutation.isPending || subscription.days_remaining > 30}
+                          >
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            {renewMutation.isPending ? "Renewing..." : "Renew Now"}
+                          </Button>
+                        )}
+                      </div>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => subscriptionsApi.downloadCard(sub.id, sub.subscription_number)}
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )
-              }
-            ]}
-            renderMobileItem={(sub) => (
-              <PortalCard
-                key={sub.id}
-                // No href for general click, actions are specific
-                icon={<PackageIcon className="w-5 h-5 text-primary" />}
-                title={sub.package_name}
-                subtitle={`${format(new Date(sub.start_date), "MMM d")} - ${format(new Date(sub.end_date), "MMM d, yyyy")}`}
-                status={
-                  <Badge variant={getStatusVariant(sub.status)} className="text-[10px] h-5 px-1.5 capitalize">
-                    {sub.status}
-                  </Badge>
-                }
-              >
-                <div className="flex flex-col gap-3 mt-2">
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>{sub.days_remaining} days remaining</span>
-                    <span className="uppercase">{sub.payment_status}</span>
-                  </div>
-                  <div className="flex gap-2 justify-end relative z-20">
-                    {sub.payment_status === "pending" && (
-                      <Link
-                        href={sub.invoice_id ? `/portal/payment/${sub.invoice_id}` : "#"}
-                        onClick={(e) => handlePayNow(e, sub)}
-                        className="flex-1"
-                      >
-                        <Button size="sm" className="w-full h-8 text-xs">Pay Now</Button>
-                      </Link>
+                    {subscription.status === "expired" && (
+                      <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+                        <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                          This subscription has expired. Purchase a new subscription to continue using services.
+                        </p>
+                      </div>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 h-8 text-xs"
-                      onClick={() => subscriptionsApi.downloadCard(sub.id, sub.subscription_number)}
-                    >
-                      <Download className="mr-1 h-3 w-3" />
-                      Card
-                    </Button>
-                  </div>
-                </div>
-              </PortalCard>
-            )}
-          />
-        </div>
+                    {subscription.status === "cancelled" && (
+                      <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+                        <p className="text-sm text-red-800 dark:text-red-200">
+                          This subscription has been cancelled.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       ) : (
-        <div className="mt-6">
-          {/* Available Packages Grid - Preserving existing card layout as it works well for catalogs */}
+        <>
+          {/* Available Packages */}
           {isLoadingPackages ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <Card key={i}><CardContent className="p-6"><Skeleton className="h-6 w-48 mb-4" /><Skeleton className="h-4 w-full mb-2" /><Skeleton className="h-4 w-3/4" /></CardContent></Card>
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <Skeleton className="h-6 w-48 mb-4" />
+                    <Skeleton className="h-4 w-full mb-2" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </CardContent>
+                </Card>
               ))}
             </div>
           ) : !availablePackages || availablePackages.length === 0 ? (
@@ -356,156 +373,124 @@ export default function MySubscriptionsPage() {
               <CardContent className="p-12 text-center">
                 <PackageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Packages Available</h3>
-                <p className="text-gray-500 dark:text-gray-400">There are no subscription packages available at this time.</p>
+                <p className="text-gray-500 dark:text-gray-400">
+                  There are no subscription packages available at this time.
+                </p>
               </CardContent>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {availablePackages.map((pkg) => (
-                <Card key={pkg.id} className="flex flex-col hover:border-primary/50 transition-colors">
+                <Card key={pkg.id} className="flex flex-col">
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
                       <span>{pkg.name}</span>
-                      <Badge variant="info">{pkg.code}</Badge>
+                      <Badge variant="outline">{pkg.code}</Badge>
                     </CardTitle>
-                    <div className="mt-2 text-primary font-bold">
-                      <span className="text-3xl">{formatCurrency(parseFloat(pkg.price))}</span>
-                      <span className="text-muted-foreground text-sm font-normal"> / {pkg.duration_months} months</span>
+                    <div className="mt-2">
+                      <span className="text-3xl font-bold">${parseFloat(pkg.price).toFixed(2)}</span>
+                      <span className="text-muted-foreground"> / {pkg.duration_months} months</span>
                     </div>
                   </CardHeader>
-                  <CardContent className="flex-1 flex flex-col">
+                  <CardContent className="flex-1">
                     {pkg.description && (
-                      <p className="text-sm text-muted-foreground mb-4 flex-grow">{pkg.description}</p>
+                      <p className="text-sm text-muted-foreground mb-4">{pkg.description}</p>
                     )}
-                    <div className="space-y-2 mb-6">
+                    <div className="space-y-2 mb-4">
                       {pkg.features.kilometers && (
-                        <div className="flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-green-500" /><span>{pkg.features.kilometers} Kilometers</span></div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>{pkg.features.kilometers} Kilometers</span>
+                        </div>
                       )}
                       {pkg.features.call_out_charges && (
-                        <div className="flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-green-500" /><span>{pkg.features.call_out_charges} Call Out Charges</span></div>
-                      )}
-                      {pkg.features.free_inspections && (
-                        <div className="flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-green-500" /><span>{pkg.features.free_inspections} Free Inspections</span></div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>{pkg.features.call_out_charges} Call Out Charges</span>
+                        </div>
                       )}
                       {pkg.features.towing_services && (
-                        <div className="flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-green-500" /><span>{pkg.features.towing_services} Towing Services</span></div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>{pkg.features.towing_services} Towing Services</span>
+                        </div>
+                      )}
+                      {pkg.features.free_inspections && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>{pkg.features.free_inspections} Free Inspections</span>
+                        </div>
+                      )}
+                      {pkg.features.roadside_assistance && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>Roadside Assistance</span>
+                        </div>
+                      )}
+                      {pkg.features.discount_percentage && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-500" />
+                          <span>{pkg.features.discount_percentage}% Discount</span>
+                        </div>
                       )}
                     </div>
-                    <Button className="w-full" onClick={() => handlePurchase(pkg)}>
+                    <Button
+                      className="w-full"
+                      onClick={() => handlePurchase(pkg)}
+                    >
                       <ShoppingCart className="mr-2 h-4 w-4" />
-                      Purchase
+                      Purchase Package
                     </Button>
                   </CardContent>
                 </Card>
               ))}
             </div>
           )}
-        </div>
+        </>
       )}
 
-      {/* Purchase Dialog - Kept largely same */}
+      {/* Purchase Dialog */}
       <Dialog open={isPurchaseDialogOpen} onOpenChange={setIsPurchaseDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5 text-primary" />
-              Complete Your Purchase
-            </DialogTitle>
-            <DialogDescription>
-              Review your package selection and assign a vehicle.
-            </DialogDescription>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Purchase Subscription</DialogTitle>
           </DialogHeader>
-
           {selectedPackage && (
-            <div className="py-6 space-y-6">
-              <div className="bg-primary/5 dark:bg-primary/10 border border-primary/10 rounded-lg p-4 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-lg text-primary">{selectedPackage.name}</h3>
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                      {selectedPackage.description}
-                    </p>
-                  </div>
-                  <Badge variant="secondary" className="bg-background text-primary border border-primary/20">
-                    {selectedPackage.code}
-                  </Badge>
+            <div className="space-y-4">
+              <div>
+                <p className="font-semibold">{selectedPackage.name}</p>
+                <p className="text-sm text-muted-foreground">{selectedPackage.description}</p>
+              </div>
+              <div className="border-t pt-4">
+                <div className="flex justify-between mb-2">
+                  <span>Price:</span>
+                  <span className="font-bold">${parseFloat(selectedPackage.price).toFixed(2)}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Price</span>
-                    <span className="text-2xl font-bold flex items-baseline gap-1">
-                      {formatCurrency(parseFloat(selectedPackage.price))}
-                    </span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Duration</span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{selectedPackage.duration_months} Months</span>
-                    </div>
-                  </div>
+                <div className="flex justify-between">
+                  <span>Duration:</span>
+                  <span>{selectedPackage.duration_months} months</span>
                 </div>
               </div>
-
-              <div className="space-y-3">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <Car className="h-4 w-4 text-primary" />
-                  Assign Vehicle
-                </label>
-                <div className="relative">
-                  <Select
-                    value={selectedVehicleId}
-                    onChange={(e) => setSelectedVehicleId(e.target.value)}
-                    className="pl-2"
-                  >
-                    <option value="" disabled>Select a vehicle from your garage</option>
-                    {userVehicles?.results?.map((vehicle) => (
-                      <option key={vehicle.id} value={vehicle.id.toString()}>
-                        {vehicle.year} {vehicle.make} {vehicle.model} — {vehicle.license_plate}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                {!userVehicles?.results?.length ? (
-                  <p className="text-xs text-destructive flex items-center gap-1 mt-1">
-                    <X className="h-3 w-3" />
-                    No vehicles found. Please add a vehicle first.
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    This subscription will be linked to the selected vehicle.
-                  </p>
-                )}
-              </div>
-              <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200 p-3 rounded text-xs leading-relaxed">
-                <strong>Note:</strong> Payment will be processed in the next step via our secure invoice system. Your subscription will activate immediately upon confirmation.
-              </div>
+              <p className="text-sm text-muted-foreground">
+                After purchase, you will be able to use the subscription benefits. Payment will be processed separately.
+              </p>
             </div>
           )}
-
-          <DialogFooter className="pt-2 border-t mt-0">
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => {
                 setIsPurchaseDialogOpen(false);
                 setSelectedPackage(null);
-                setSelectedVehicleId("");
               }}
-              className="mt-2 sm:mt-0"
             >
               Cancel
             </Button>
             <Button
               onClick={confirmPurchase}
-              disabled={purchaseMutation.isPending || !selectedVehicleId}
-              className="w-full sm:w-auto min-w-[120px]"
+              disabled={purchaseMutation.isPending}
             >
-              {purchaseMutation.isPending ? (
-                <>
-                  <RefreshCw className="mr-2 h-3 w-3 animate-spin" />
-                  Processing
-                </>
-              ) : "Confirm Purchase"}
+              {purchaseMutation.isPending ? "Processing..." : "Confirm Purchase"}
             </Button>
           </DialogFooter>
         </DialogContent>

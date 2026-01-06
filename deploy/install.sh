@@ -62,7 +62,14 @@ apt install -y \
     python3-certbot-nginx \
     supervisor \
     ufw \
-    software-properties-common
+    software-properties-common \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf-2.0-0 \
+    libharfbuzz0b \
+    shared-mime-info
 
 # Install Node.js
 echo -e "${YELLOW}[3/10] Installing Node.js 20.x...${NC}"

@@ -161,8 +161,11 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
     'rest_framework.throttling.UserRateThrottle'
 ]
 REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
-    'anon': '100/hour',
-    'user': '1000/hour'
+    # NOTE: The dashboard polls multiple endpoints frequently (e.g. notifications),
+    # so the previous limits could lock out legitimate users.
+    # You can override these via env vars if needed.
+    'anon': os.getenv('DRF_THROTTLE_ANON', '1000/hour'),
+    'user': os.getenv('DRF_THROTTLE_USER', '50000/hour'),
 }
 
 # Disable debug toolbar and extensions in production

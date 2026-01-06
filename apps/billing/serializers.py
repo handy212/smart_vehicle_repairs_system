@@ -1313,29 +1313,16 @@ class BillSerializer(serializers.ModelSerializer):
             'terms', 'notes', 'status', 'currency',
             'subtotal', 'tax_amount', 'total', 
             'amount_paid', 'amount_due',
-            'line_items', 'ledger_bill', 'ledger_bill_url',
+            'line_items', 'ledger_bill_url',
             'created_by', 'created_by_name',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
             'bill_number', 'subtotal', 'total', 'amount_due',
-            'ledger_bill', 'created_by', 'created_at', 'updated_at'
+            'created_by', 'created_at', 'updated_at'
         ]
     
-    def get_ledger_bill_url(self, obj):
-        """Get URL to view bill in Django Ledger"""
-        if obj.ledger_bill and obj.branch and hasattr(obj.branch, 'ledger_entity') and obj.branch.ledger_entity:
-            entity_slug = obj.branch.ledger_entity.slug
-            # Get request from context
-            request = self.context.get('request')
-            if request:
-                base_url = request.build_absolute_uri('/').rstrip('/')
-                if '/api' in base_url:
-                    base_url = base_url.replace('/api', '')
-                if ':3000' in base_url:
-                    base_url = base_url.replace(':3000', ':8000')
-                return f"{base_url}/ledger/bill/{entity_slug}/detail/{obj.ledger_bill.uuid}/"
-        return None
+   
 
 
 class BillCreateSerializer(serializers.ModelSerializer):
