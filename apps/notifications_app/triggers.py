@@ -693,7 +693,7 @@ Please review and make payment when ready.'''
                     'vehicle_display': vehicle_display,
                     'work_order_number': work_order.work_order_number,
                     'company_name': self._get_company_name(),
-                    'invoice_link': f'/billing/invoices/{invoice.id}' if invoice else f'/workorders/{work_order.id}',  # TODO: Get actual URL
+                    'invoice_link': f'{self._get_base_url()}/billing/invoices/{invoice.id}' if invoice else f'{self._get_base_url()}/workorders/{work_order.id}',
                 })
                 if template and template.subject:
                     title = self.service._render_template(template.subject, {
@@ -798,6 +798,78 @@ Please review the work order and coordinate the diagnosis process.''',
             related_object_id=work_order.id
         )
         self.service.send_notification(email_notification)
+
+    def parts_estimate_requested(self, work_order, diagnosis, requested_by):
+        """Notify Parts Managers that a parts estimate is requested"""
+        from apps.accounts.models import User
+        
+        # Find parts managers in the same branch
+        # If branch filtering is strict, only show same branch
+        parts_managers = User.objects.filter(
+            branch=work_order.branch, 
+            role='parts_manager', 
+            is_active=True
+        )
+        
+        # Fallback to managers if no parts manager found
+        if not parts_managers.exists():
+             parts_managers = User.objects.filter(
+                managed_branches=work_order.branch, 
+                role='manager', 
+                is_active=True
+            )
+            
+        count = 0
+        for pm in parts_managers:
+            # Note: Explicitly using 'in_app' to avoid SMS as requested, but also 'email' for visibility
+            # The previous implementation only created 'in_app'. We'll stick to 'in_app' and 'email'.
+            
+            # 1. In-App Notification
+            notification_in_app = Notification.objects.create(
+                recipient=pm,
+                notification_type='work_order',
+                channel='in_app',
+                priority='high',
+                title=f"Parts Estimate Requested: WO #{work_order.work_order_number}",
+                message=f"Technician {requested_by.get_full_name()} has requested an estimate for parts on Work Order #{work_order.work_order_number}.",
+                data={
+                    'work_order_id': work_order.id,
+                    'diagnosis_id': diagnosis.id,
+                    'action': 'estimate_required'
+                },
+                related_object_type='work_order',
+                related_object_id=work_order.id
+            )
+            self.service.send_notification(notification_in_app)
+            
+            # 2. Email Notification (if they have email enabled)
+            # We don't have a specific template yet, so we'll construct a generic message
+            notification_email = Notification.objects.create(
+                recipient=pm,
+                notification_type='work_order',
+                channel='email',
+                priority='high',
+                title=f"Parts Estimate Requested: WO #{work_order.work_order_number}",
+                message=f'''Parts Estimate Requested
+                
+Work Order: {work_order.work_order_number}
+Technician: {requested_by.get_full_name()}
+
+Please review the parts required and provide an estimate.
+''',
+                data={
+                    'work_order_id': work_order.id,
+                    'diagnosis_id': diagnosis.id,
+                    'action': 'estimate_required'
+                },
+                related_object_type='work_order',
+                related_object_id=work_order.id
+            )
+            self.service.send_notification(notification_email)
+            
+            count += 1
+            
+        return count
         
         # Create push notification
         push_notification = Notification.objects.create(
@@ -1144,57 +1216,78 @@ Parts are now available for use.''',
     
     def inspection_completed(self, inspection):
         """Notify customer when vehicle inspection is completed"""
-        if not inspection.vehicle.customer.user:
+        if not inspection.vehicle.owner.user:
             return
         
+        from django.conf import settings
+        
         template = self._get_template('inspection_completed', 'email')
-        customer_name = self._build_customer_name(inspection.vehicle.customer)
+        customer_name = self._build_customer_name(inspection.vehicle.owner)
         vehicle_display = self._build_vehicle_display(inspection.vehicle)
+        
+        # Build portal link
+        frontend_url = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:3001')
+        portal_link = f"{frontend_url}/portal/inspections/{inspection.id}/"
+        
+        # Prepare context data
+        context_data = {
+            'customer_name': customer_name,
+            'inspection_number': inspection.inspection_number,
+            'vehicle_display': vehicle_display,
+            'inspection_date': str(inspection.inspection_date.date()) if hasattr(inspection, 'inspection_date') and inspection.inspection_date else "N/A",
+            'inspection_link': portal_link,
+            'portal_link': portal_link,
+            'overall_result': inspection.get_overall_result_display() if hasattr(inspection, 'get_overall_result_display') and inspection.overall_result else "Pending",
+            'overall_result_display': inspection.get_overall_result_display() if hasattr(inspection, 'get_overall_result_display') and inspection.overall_result else "Pending",
+            'company_name': self._get_company_name(),
+        }
         
         title = f'Inspection Completed - {inspection.inspection_number}'
         if template and template.subject:
-            title = self.service._render_template(template.subject, {
-                'inspection_number': inspection.inspection_number,
-            })
+            title = self.service._render_template(template.subject, context_data)
         
         message = f'''Your vehicle inspection is complete.
 
 Inspection: {inspection.inspection_number}
 Vehicle: {vehicle_display}
-Result: {inspection.get_result_display()}
+Result: {inspection.get_overall_result_display() if hasattr(inspection, 'get_overall_result_display') and inspection.overall_result else "Pending"}
 
-{inspection.summary or "See inspection report for details."}
+Please review and approve the inspection report by clicking the link below:
+{portal_link}
 
-{'⚠️ Some items require attention. Please review the full report.' if inspection.result == 'fail' else '✓ All items passed inspection.'}'''
+Thank you for choosing our service.'''
         if template and template.body:
-            message = self.service._render_template(template.body, {
-                'customer_name': customer_name,
-                'inspection_number': inspection.inspection_number,
-                'vehicle_display': vehicle_display,
-                'inspection_date': str(inspection.created_at.date()) if hasattr(inspection, 'created_at') else str(inspection.inspection_date) if hasattr(inspection, 'inspection_date') else "N/A",
-                'inspection_link': f'/inspections/{inspection.id}',  # TODO: Get actual URL from settings
-                'company_name': self._get_company_name(),
-            })
+            message = self.service._render_template(template.body, context_data)
         
-        notification = Notification.objects.create(
-            recipient=inspection.vehicle.customer.user,
+        # Create email notification
+        email_notification = Notification.objects.create(
+            recipient=inspection.vehicle.owner.user,
             notification_type='inspection',
             channel='email',
             priority='normal',
             template=template,
             title=title,
             message=message,
-            data={
-                'inspection_id': inspection.id,
-                'inspection_number': inspection.inspection_number,
-                'result': inspection.result,
-                'customer_name': customer_name,
-                'vehicle_display': vehicle_display,
-            },
+            data=context_data,
             related_object_type='inspection',
             related_object_id=inspection.id
         )
-        self.service.send_notification(notification)
+        self.service.send_notification(email_notification)
+        
+        # Create in-app notification
+        in_app_notification = Notification.objects.create(
+            recipient=inspection.vehicle.owner.user,
+            notification_type='inspection',
+            channel='in_app',
+            priority='normal',
+            template=None,  # In-app notifications don't use email templates
+            title=title,
+            message=message,
+            data=context_data,
+            related_object_type='inspection',
+            related_object_id=inspection.id
+        )
+        self.service.send_notification(in_app_notification)
     
     # ==================== ROADSIDE ASSISTANCE NOTIFICATIONS ====================
     

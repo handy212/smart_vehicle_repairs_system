@@ -1500,7 +1500,21 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
              # Usually resolve_branch returns *something* if logged in, but safe to handle.
              pass
              
+        # Explicit status filtering if provided (though filterset_fields handles this usually)
+        # But we ensure we DON'T filter by status unless asked
+        
         return queryset
+
+    @property
+    def paginator(self):
+        """
+        Disable pagination if 'work_order' is in query params
+        This ensures the frontend gets ALL parts for a diagnosis list.
+        """
+        self._paginator = super().paginator
+        if 'work_order' in self.request.query_params:
+            return None
+        return self._paginator
     
     def get_serializer_class(self):
         if self.action == 'create':

@@ -24,6 +24,7 @@ import {
   HelpCircle,
   BookOpen,
   UserCog,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,7 @@ const navigationGroups = [
     name: "System",
     items: [
       { name: "Administration", href: "/admin", icon: Settings, permission: "view_admin" },
+      { name: "SMS Console", href: "/sms", icon: MessageSquare, permission: "send_notifications" },
     ],
   },
 ];

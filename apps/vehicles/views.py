@@ -38,7 +38,12 @@ class VehicleViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
-        if self.action == 'list' or self.action == 'retrieve':
+        user = self.request.user
+        
+        # Customers can view their own vehicles without view_vehicles permission
+        if (self.action == 'list' or self.action == 'retrieve') and getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            return [IsAuthenticated()]
+        elif self.action == 'list' or self.action == 'retrieve':
             return [IsAuthenticated(), HasPermission('view_vehicles')]
         elif self.action == 'create':
             return [IsAuthenticated(), HasPermission('create_vehicles')]
@@ -56,9 +61,16 @@ class VehicleViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Get queryset with optimizations"""
-        return Vehicle.objects.select_related('owner', 'owner__user').prefetch_related(
+        queryset = Vehicle.objects.select_related('owner', 'owner__user').prefetch_related(
             'mileage_history', 'documents', 'photos'
-        ).all()
+        )
+        
+        # If user is a customer, only show their own vehicles
+        user = self.request.user
+        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            queryset = queryset.filter(owner=user.customer_profile)
+        
+        return queryset
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""

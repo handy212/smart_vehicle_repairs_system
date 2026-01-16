@@ -336,3 +336,52 @@ if __name__ == '__main__':
     print("HUBTEL_CLIENT_SECRET=your_client_secret")
     print("HUBTEL_SMS_ENABLED=True")
     print("=" * 50)
+
+
+def get_sms_balance():
+    """
+    Get SMS account balance from Hubtel
+    Returns: dict with balance info or error
+    """
+    if not is_hubtel_available():
+        return {
+            'success': False,
+            'error': 'Hubtel SMS not configured',
+            'balance': 0
+        }
+    
+    config = _get_hubtel_config()
+    
+    try:
+        # Hubtel balance endpoint
+        balance_url = 'https://smsc.hubtel.com/v1/account/balance'
+        
+        response = requests.get(
+            balance_url,
+            auth=(config['client_id'], config['client_secret']),
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            logger.info(f"SMS balance retrieved successfully: {data}")
+            return {
+                'success': True,
+                'balance': data.get('Balance', 0),
+                'currency': data.get('Currency', 'GHS')
+            }
+        else:
+            logger.error(f"Failed to get SMS balance: {response.status_code} - {response.text}")
+            return {
+                'success': False,
+                'error': f'API error: {response.status_code}',
+                'balance': 0
+            }
+            
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to get SMS balance: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'balance': 0
+        }

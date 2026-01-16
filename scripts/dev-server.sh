@@ -236,14 +236,14 @@ fi
 # fi
 
 # Create email notification templates
-# echo -e "${YELLOW}  - Creating email templates...${NC}"
-# python manage.py create_all_email_templates > /dev/null 2>&1
-# python manage.py setup_invoice_email_templates > /dev/null 2>&1
-# if [ $? -eq 0 ]; then
-#     echo -e "${GREEN}    ✓ Email templates created${NC}"
-# else
-#     echo -e "${YELLOW}    ⚠ Email templates already exist or failed${NC}"
-# fi
+echo -e "${YELLOW}  - Creating email templates...${NC}"
+python manage.py create_all_email_templates > /dev/null 2>&1
+python manage.py setup_invoice_email_templates > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}    ✓ Email templates created${NC}"
+else
+    echo -e "${YELLOW}    ⚠ Email templates already exist or failed${NC}"
+fi
 
 # Create inspection templates
 # echo -e "${YELLOW}  - Creating inspection templates...${NC}"

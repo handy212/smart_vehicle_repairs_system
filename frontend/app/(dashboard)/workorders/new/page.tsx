@@ -276,9 +276,9 @@ export default function NewWorkOrderPage() {
 
   const createMutation = useMutation({
     mutationFn: (data: WorkOrderFormData) => workordersApi.create(data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["workorders"] });
-      router.push("/workorders");
+      router.push(`/workorders/${data.id}`);
     },
     onError: (error: any) => {
       console.log(">>> onError handler called");

@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 import { useBranchStore } from "@/store/branchStore";
+import { queueRequest } from "@/lib/offline/queue";
 
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api",
@@ -8,10 +9,31 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor for auth token
+// Request interceptor for auth token and offline handling
 apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
+  async (config: InternalAxiosRequestConfig) => {
     if (typeof window !== "undefined") {
+      // Check if offline
+      const isOnline = navigator.onLine;
+      const method = (config.method || "get").toUpperCase();
+      
+      // For write operations (POST, PATCH, PUT, DELETE), queue if offline
+      if (!isOnline && ["POST", "PATCH", "PUT", "DELETE"].includes(method)) {
+        const action = method === "DELETE" ? "delete" : method === "POST" ? "create" : "update";
+        const endpoint = config.url || "";
+        
+        // Queue the request
+        await queueRequest(action, endpoint, method, config.data);
+        
+        // Return a mock response that indicates the request was queued
+        return Promise.reject({
+          isOffline: true,
+          queued: true,
+          message: "Request queued for offline sync",
+          config,
+        } as any);
+      }
+
       // If sending FormData, remove Content-Type header to let browser set it with boundary
       if (config.data instanceof FormData && config.headers) {
         // Axios v1.x uses AxiosHeaders which requires .delete()
@@ -69,10 +91,20 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Response interceptor for token refresh
+// Response interceptor for token refresh and offline handling
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
+  async (error: AxiosError | any) => {
+    // Handle offline queued requests
+    if (error?.isOffline && error?.queued) {
+      return Promise.reject({
+        ...error,
+        response: {
+          status: 202,
+          data: { message: "Request queued for offline sync", queued: true },
+        },
+      });
+    }
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };

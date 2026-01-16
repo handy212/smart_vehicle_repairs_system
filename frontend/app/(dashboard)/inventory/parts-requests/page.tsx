@@ -214,6 +214,12 @@ export default function PartsRequestsPage() {
                                             {activeStatus === "received" && <CheckCircle className="w-3.5 h-3.5 text-blue-600" />}
                                         </div>
                                     </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setActiveStatus("ready")}>
+                                        <div className="flex items-center justify-between w-full">
+                                            Ready (Allocated)
+                                            {activeStatus === "ready" && <CheckCircle className="w-3.5 h-3.5 text-blue-600" />}
+                                        </div>
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setActiveStatus("all")}>
                                         <div className="flex items-center justify-between w-full">
                                             All Statuses

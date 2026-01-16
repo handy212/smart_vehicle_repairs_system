@@ -14,16 +14,11 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { useState, useEffect } from "react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { SignaturePad } from "@/components/inspections/SignaturePad";
 import { VehicleDamageMarker, DamageMark } from "@/components/inspections/VehicleDamageMarker";
 import { InspectionItemCard } from "@/components/inspections/InspectionItemCard";
+import { InspectionItemRow } from "@/components/inspections/InspectionItemRow";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
@@ -147,6 +142,8 @@ export default function PerformInspectionPage() {
     mutationFn: (data?: { technician_signature?: string }) =>
       inspectionsApi.complete(inspectionId, data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
+      queryClient.invalidateQueries({ queryKey: ["inspections"] });
       toast({
         title: "Completed",
         description: "Inspection completed",
@@ -222,7 +219,20 @@ export default function PerformInspectionPage() {
       formData.append("image", file);
       return inspectionsApi.results.addPhoto(targetResultId, formData);
     },
-    onSuccess: () => {
+    onSuccess: async (data, variables) => {
+      // Update local results state with the new photo
+      setResults((prev) => {
+        const itemId = variables.itemId;
+        const currentResult = prev[itemId] || {};
+        const currentPhotos = currentResult.photos || [];
+        return {
+          ...prev,
+          [itemId]: {
+            ...currentResult,
+            photos: [...currentPhotos, data],
+          },
+        };
+      });
       queryClient.invalidateQueries({ queryKey: ["inspection", inspectionId] });
       toast({ title: "Photo added", variant: "success" });
     },
@@ -408,129 +418,141 @@ export default function PerformInspectionPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center space-x-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
-            <span className="text-gray-300">/</span>
-            <Link href="/inspections" className="hover:text-blue-600 transition-colors">Inspections</Link>
-            <span className="text-gray-300">/</span>
-            <Link href={`/inspections/${inspectionId}`} className="hover:text-blue-600 transition-colors">#{inspection.inspection_number}</Link>
-            <span className="text-gray-300">/</span>
-            <span className="text-gray-900 dark:text-gray-100">Perform</span>
+            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
+            <span className="text-muted-foreground">/</span>
+            <Link href="/inspections" className="hover:text-primary transition-colors">Inspections</Link>
+            <span className="text-muted-foreground">/</span>
+            <Link href={`/inspections/${inspectionId}`} className="hover:text-primary transition-colors">#{inspection.inspection_number}</Link>
+            <span className="text-muted-foreground">/</span>
+            <span className="text-foreground">Perform</span>
           </div>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl font-black text-foreground tracking-tight">
             Perform Inspection
           </h1>
         </div>
       </div>
 
-      {/* Summary Card */}
-      <Card className="mb-8 border-none bg-gray-900 text-white overflow-hidden shadow-xl">
-        <CardContent className="p-0">
-          <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-white/10">
-            <div className="p-6">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 block mb-1">Vehicle</span>
-              <span className="text-sm font-bold truncate block">{inspection.vehicle_info || "N/A"}</span>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge className="bg-white/10 text-white/80 hover:bg-white/20 border-none text-[10px]">
-                  {typeof inspection.vehicle === 'object' ? inspection.vehicle.license_plate : 'N/A'}
-                </Badge>
-              </div>
-            </div>
-            <div className="p-6">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 block mb-1">Template</span>
-              <span className="text-sm font-bold truncate block">{templateData?.name}</span>
-              <span className="text-[10px] text-white/60 mt-2 block">{categories.length} Categories • {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)} Items</span>
-            </div>
-            <div className="p-6 md:col-span-2 flex flex-col justify-center">
-              <div className="flex justify-between items-end mb-2">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 block mb-1">Overall Progress</span>
-                  <span className="text-2xl font-black text-blue-400">{inspection.completion_percentage}%</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 block mb-1">Checks Done</span>
-                  <span className="text-sm font-bold text-white/80">{getFilledResults().length} / {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)}</span>
-                </div>
-              </div>
-              <Progress value={inspection.completion_percentage} className="h-2 bg-white/10" />
+      {/* Summary Card - Compact */}
+      <div className="mb-6 bg-card border rounded-lg p-4 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Vehicle</span>
+            <span className="text-sm font-semibold text-foreground truncate block">{inspection.vehicle_info || "N/A"}</span>
+            <div className="flex items-center gap-2 mt-1.5">
+              <Badge variant="outline" className="text-[10px] h-4 px-1.5">
+                {typeof inspection.vehicle === 'object' ? inspection.vehicle.license_plate : 'N/A'}
+              </Badge>
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Template</span>
+            <span className="text-sm font-semibold text-foreground truncate block">{templateData?.name}</span>
+            <span className="text-[10px] text-muted-foreground mt-1.5 block">{categories.length} Categories • {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)} Items</span>
+          </div>
+          <div className="md:col-span-2">
+            <div className="flex justify-between items-end mb-2">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Overall Progress</span>
+                <span className="text-2xl font-bold text-primary">{inspection.completion_percentage}%</span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block mb-1">Checks Done</span>
+                <span className="text-sm font-semibold text-foreground">{getFilledResults().length} / {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)}</span>
+              </div>
+            </div>
+            <Progress value={inspection.completion_percentage} className="h-1.5 bg-muted" />
+          </div>
+        </div>
+      </div>
 
-      {/* Categories & Vehicle Damage */}
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="w-full space-y-6"
-      >
-        <div className="sticky top-0 z-30 bg-gray-50/95 dark:bg-gray-950/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 -mx-6 px-6 py-2">
-          <TabsList className="bg-transparent h-auto p-0 flex space-x-6 overflow-x-auto scrollbar-none">
-            {categories.map((cat) => (
-              <TabsTrigger
-                key={cat.id}
-                value={String(cat.id)}
-                className="relative h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 font-bold text-xs uppercase tracking-widest transition-all px-0"
+      {/* Categories & Vehicle Damage - Subnav Style */}
+      <div className="flex gap-6">
+        {/* Sidebar Navigation */}
+        <div className="w-64 flex-shrink-0">
+          <div className="sticky top-4 bg-card border rounded-lg p-2 shadow-sm">
+            <div className="space-y-1">
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveTab(String(cat.id))}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                    activeTab === String(cat.id)
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  <span>{cat.name}</span>
+                  <Badge variant="secondary" className="h-5 min-w-[20px] justify-center px-1.5 text-[10px]">
+                    {cat.item_count}
+                  </Badge>
+                </button>
+              ))}
+              <button
+                onClick={() => setActiveTab("vehicle-damage")}
+                className={cn(
+                  "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  activeTab === "vehicle-damage"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted"
+                )}
               >
-                {cat.name}
-                <Badge variant="secondary" className="ml-2 h-5 min-w-[20px] justify-center px-1 text-[10px]">
-                  {cat.item_count}
+                <span>Vehicle Damage</span>
+                <Badge variant="secondary" className="h-5 min-w-[20px] justify-center px-1.5 text-[10px]">
+                  {vehicleDamage.length}
                 </Badge>
-              </TabsTrigger>
-            ))}
-            <TabsTrigger
-              value="vehicle-damage"
-              className="relative h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 font-bold text-xs uppercase tracking-widest transition-all px-0"
-            >
-              Vehicle Damage
-              <Badge variant="secondary" className="ml-2 h-5 min-w-[20px] justify-center px-1 text-[10px]">
-                {vehicleDamage.length}
-              </Badge>
-            </TabsTrigger>
-          </TabsList>
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Vehicle Damage Tab */}
-        <TabsContent value="vehicle-damage" className="mt-0">
-          <Card className="border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-            <CardContent className="p-0">
-              <VehicleDamageMarker
-                damage={vehicleDamage}
-                onChange={setVehicleDamage}
-                disabled={inspection.status === "completed"}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {categories.map((cat) => (
-          <TabsContent key={cat.id} value={String(cat.id)} className="mt-0 outline-none">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {(cat.items || []).map((item) => (
-                <InspectionItemCard
-                  key={item.id}
-                  item={item}
-                  result={results[item.id] || {}}
-                  onUpdate={(field: string, value: any) => updateResult(item.id, field, value)}
-                  onAddPhoto={(itemId, file, resultId) => {
-                    addPhotoMutation.mutate({ itemId, file, resultId });
-                  }}
-                  onDeletePhoto={(photoId) => deletePhotoMutation.mutate(photoId)}
-                  showNotes={showNotes[item.id] || false}
-                  onToggleNotes={() => setShowNotes(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
-                  isCriticalRemaining={item.is_critical && !results[item.id]?.result}
+        {/* Content Area */}
+        <div className="flex-1 min-w-0">
+          {/* Vehicle Damage */}
+          {activeTab === "vehicle-damage" && (
+            <Card className="border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
+              <CardContent className="p-0">
+                <VehicleDamageMarker
+                  damage={vehicleDamage}
+                  onChange={setVehicleDamage}
+                  disabled={inspection.status === "completed"}
                 />
-              ))}
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Category Content */}
+          {categories.map((cat) => (
+            activeTab === String(cat.id) && (
+              <div key={cat.id} className="space-y-1 bg-card rounded-lg border overflow-hidden">
+                {(cat.items || []).map((item, index) => (
+                  <InspectionItemRow
+                    key={item.id}
+                    item={item}
+                    result={results[item.id] || {}}
+                    onUpdate={(field: string, value: any) => updateResult(item.id, field, value)}
+                    onAddPhoto={(itemId: number, file: File, resultId?: number) => {
+                      addPhotoMutation.mutate({ itemId, file, resultId });
+                    }}
+                    onDeletePhoto={(photoId: number) => deletePhotoMutation.mutate(photoId)}
+                    showNotes={showNotes[item.id] || false}
+                    onToggleNotes={() => setShowNotes(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                    isCriticalRemaining={item.is_critical && !results[item.id]?.result}
+                    isLast={index === (cat.items || []).length - 1}
+                  />
+                ))}
+              </div>
+            )
+          ))}
+        </div>
+      </div>
 
       {/* Sticky Footer */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 p-4 shadow-2xl transition-all">
+      <div className="fixed bottom-0 left-0 right-0 lg:left-64 z-30 bg-background/80 backdrop-blur-md border-t p-4 shadow-2xl transition-all duration-300">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="hidden sm:flex items-center gap-4">
             {hasUncheckedCritical ? (
-              <div className="flex items-center gap-2 text-red-600">
+              <div className="flex items-center gap-2 text-destructive">
                 <AlertCircle className="w-5 h-5 animate-pulse" />
                 <span className="text-[11px] font-black uppercase tracking-tighter italic">
                   Critical items pending: {uncheckedCriticalItems.length}
@@ -549,7 +571,7 @@ export default function PerformInspectionPage() {
               variant="outline"
               size="lg"
               onClick={save}
-              className="flex-1 sm:flex-none h-12 px-8 text-xs font-black uppercase tracking-widest border-2 hover:bg-gray-50 transition-all active:scale-95"
+              className="flex-1 sm:flex-none h-12 px-8 text-xs font-black uppercase tracking-widest border-2 hover:bg-muted transition-all active:scale-95"
               disabled={saveMutation.isPending || saveDamageMutation.isPending}
             >
               {saveMutation.isPending || saveDamageMutation.isPending ? (
@@ -564,7 +586,7 @@ export default function PerformInspectionPage() {
               onClick={saveAndComplete}
               className={cn(
                 "flex-1 sm:flex-none h-12 px-10 text-xs font-black uppercase tracking-widest shadow-lg transition-all active:scale-95",
-                hasUncheckedCritical ? "bg-gray-400 hover:bg-gray-500" : "bg-blue-600 hover:bg-blue-700"
+                hasUncheckedCritical ? "bg-muted text-muted-foreground" : ""
               )}
               disabled={completeMutation.isPending}
             >
@@ -581,30 +603,58 @@ export default function PerformInspectionPage() {
 
       {/* Completion Dialog with Signature */}
       <Dialog open={showCompleteDialog} onOpenChange={setShowCompleteDialog}>
-        <DialogContent className="max-w-xl p-0 border-none overflow-hidden shadow-2xl">
-          <div className="bg-gray-900 p-8 text-white relative">
-            <button
-              onClick={() => setShowCompleteDialog(false)}
-              className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-600 rounded-lg">
-                <CheckCircle className="w-6 h-6" />
+        <DialogContent className="max-w-lg p-0 sm:max-w-lg">
+          <DialogHeader className="px-4 pt-4 pb-3 sm:px-6 sm:pt-6">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-primary" />
+                <DialogTitle className="text-lg font-semibold">Complete Inspection</DialogTitle>
               </div>
-              <h2 className="text-2xl font-black tracking-tight">Complete Inspection</h2>
+              <button
+                onClick={() => {
+                  setShowCompleteDialog(false);
+                  setTechnicianSignature(null);
+                }}
+                className="text-muted-foreground hover:text-foreground transition-colors rounded-sm p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <p className="text-gray-400 text-sm">
-              You are about to finalize this inspection report. Once completed, it will be ready for review and transmission to the customer.
-            </p>
-          </div>
+            <DialogDescription className="text-sm mt-2">
+              Finalize this inspection report. Once completed, it will be ready for review.
+            </DialogDescription>
+          </DialogHeader>
 
-          <div className="p-8 space-y-6">
+          <div className="px-4 pb-4 sm:px-6 sm:pb-6 space-y-4">
+            {/* Inspection Summary - Compact */}
+            <div className="grid grid-cols-2 gap-3 p-3 bg-muted rounded-md">
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Progress</p>
+                <p className="text-base font-semibold">{inspection.completion_percentage}%</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Items Checked</p>
+                <p className="text-base font-semibold">
+                  {getFilledResults().length} / {categories.reduce((acc, cat) => acc + (cat.item_count || 0), 0)}
+                </p>
+              </div>
+            </div>
+
+            {/* Signature Section */}
             {templateData?.requires_technician_signature && (
-              <div className="space-y-4">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Technician Authentication</Label>
-                <div className="border-2 border-dashed border-gray-200 rounded-xl overflow-hidden bg-gray-50 group hover:border-blue-400 transition-colors">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">
+                    Technician Signature
+                    <span className="text-destructive ml-1">*</span>
+                  </Label>
+                  {technicianSignature && (
+                    <Badge variant="outline" className="text-xs">
+                      Signed
+                    </Badge>
+                  )}
+                </div>
+                <div className="border-2 border-dashed rounded-md overflow-hidden bg-muted/50">
                   <SignaturePad
                     value={technicianSignature || undefined}
                     onChange={setTechnicianSignature}
@@ -612,13 +662,34 @@ export default function PerformInspectionPage() {
                     required
                   />
                 </div>
+                {!technicianSignature && (
+                  <p className="text-xs text-muted-foreground">
+                    Please provide your signature to complete the inspection
+                  </p>
+                )}
               </div>
             )}
 
-            <div className="flex items-center gap-4">
+            {/* Warning for unchecked critical items */}
+            {hasUncheckedCritical && (
+              <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-destructive mb-0.5">
+                    Critical Items Pending
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {uncheckedCriticalItems.length} critical item{uncheckedCriticalItems.length !== 1 ? 's' : ''} still need to be checked.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <DialogFooter className="gap-2 sm:gap-3 pt-4 border-t">
               <Button
                 variant="outline"
-                className="flex-1 h-12 text-xs font-bold uppercase tracking-widest border-2"
+                className="flex-1 sm:flex-none"
                 onClick={() => {
                   setShowCompleteDialog(false);
                   setTechnicianSignature(null);
@@ -627,13 +698,27 @@ export default function PerformInspectionPage() {
                 Cancel
               </Button>
               <Button
-                className="flex-[2] h-12 text-xs font-black uppercase tracking-widest bg-blue-600 hover:bg-blue-700 shadow-lg"
+                className="flex-1 sm:flex-none"
                 onClick={handleCompleteWithSignature}
-                disabled={templateData?.requires_technician_signature && !technicianSignature}
+                disabled={
+                  (templateData?.requires_technician_signature && !technicianSignature) ||
+                  hasUncheckedCritical ||
+                  completeMutation.isPending
+                }
               >
-                Sign & Finalize Report
+                {completeMutation.isPending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                    Finalizing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    {templateData?.requires_technician_signature ? "Sign & Complete" : "Complete"}
+                  </>
+                )}
               </Button>
-            </div>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>

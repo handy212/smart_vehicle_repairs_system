@@ -1,11 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { adminApi, AuditLog } from "@/lib/api/admin";
+import { useToast } from "@/lib/hooks/useToast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search, Filter, Eye, RotateCcw } from "lucide-react";
+import { ArrowLeft, Search, Filter, Eye, RotateCcw, Download, Archive, Settings } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -22,6 +23,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -34,12 +36,17 @@ const ACTION_CHOICES = [
 ];
 
 export default function AuditLogPage() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [archiveDays, setArchiveDays] = useState(90);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const { data: logsData, isLoading } = useQuery({
     queryKey: ["admin", "audit-logs", actionFilter, searchTerm, dateFrom, dateTo, page],
@@ -79,6 +86,80 @@ export default function AuditLogPage() {
     setDateFrom("");
     setDateTo("");
     setPage(1);
+  };
+
+  const archiveMutation = useMutation({
+    mutationFn: (days: number) => adminApi.auditLogs.archive(days),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "audit-logs"] });
+      toast({
+        title: "Success",
+        description: data.message,
+      });
+      setShowArchiveDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to archive logs",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDownload = async (format: 'csv' | 'json') => {
+    setIsDownloading(true);
+    try {
+      const blob = await adminApi.auditLogs.download({
+        format,
+        action: actionFilter !== "all" ? actionFilter : undefined,
+        search: searchTerm || undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+      });
+
+      // Verify blob is valid
+      if (!blob || blob.size === 0) {
+        throw new Error("Received empty file");
+      }
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit_logs_${new Date().toISOString().split('T')[0]}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Success",
+        description: `Audit logs downloaded as ${format.toUpperCase()}`,
+      });
+    } catch (error: any) {
+      const errorMessage = error?.message || error?.response?.data?.error || error?.response?.data?.detail || "Failed to download logs";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      console.error("Download error:", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleArchive = () => {
+    if (archiveDays < 1) {
+      toast({
+        title: "Error",
+        description: "Days must be at least 1",
+        variant: "destructive",
+      });
+      return;
+    }
+    archiveMutation.mutate(archiveDays);
   };
 
   return (
@@ -129,6 +210,45 @@ export default function AuditLogPage() {
             </Card>
           </div>
         )}
+
+        {/* Actions Bar */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownload('csv')}
+                  disabled={isDownloading}
+                  className="h-8 text-xs"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  Download CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownload('json')}
+                  disabled={isDownloading}
+                  className="h-8 text-xs"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  Download JSON
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowArchiveDialog(true)}
+                  className="h-8 text-xs"
+                >
+                  <Archive className="w-3.5 h-3.5 mr-1.5" />
+                  Archive Logs
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Filters */}
         <Card>
@@ -444,6 +564,64 @@ export default function AuditLogPage() {
             )}
           </DialogContent>
         </Dialog>
+
+      {/* Archive Dialog */}
+      <Dialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="w-5 h-5 text-orange-600" />
+              Archive Audit Logs
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Archive logs older than the specified number of days. This will permanently delete logs older than the cutoff date.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Archive logs older than (days)
+              </label>
+              <Input
+                type="number"
+                min="1"
+                value={archiveDays}
+                onChange={(e) => setArchiveDays(parseInt(e.target.value) || 90)}
+                className="h-9"
+                placeholder="90"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Logs older than {archiveDays} days will be permanently deleted.
+              </p>
+            </div>
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                <strong>Warning:</strong> This action cannot be undone. Make sure to download logs before archiving if you need to keep a record.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowArchiveDialog(false)}
+              disabled={archiveMutation.isPending}
+              className="h-8 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleArchive}
+              disabled={archiveMutation.isPending}
+              className="h-8 text-xs bg-orange-600 hover:bg-orange-700"
+            >
+              {archiveMutation.isPending ? "Archiving..." : "Archive Logs"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
     </PermissionGuard>
 

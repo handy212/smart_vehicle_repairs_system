@@ -240,7 +240,7 @@ export interface BranchCreate {
   timezone?: string;
 }
 
-export interface BranchUpdate extends Partial<BranchCreate> {}
+export interface BranchUpdate extends Partial<BranchCreate> { }
 
 export interface SystemBackupListResponse {
   count: number;
@@ -304,7 +304,7 @@ export const adminApi = {
       const response = await apiClient.get("/accounts/users/technicians/");
       return response.data;
     },
-    
+
     serviceCoordinators: async (): Promise<User[]> => {
       const response = await apiClient.get("/accounts/users/service_coordinators/");
       return response.data;
@@ -394,7 +394,7 @@ export const adminApi = {
     uploadFile: async (settingId: number, file: File): Promise<{ message: string; file_path: string; file_url: string; setting: SystemSetting }> => {
       const formData = new FormData();
       formData.append('file', file);
-      
+
       // Request interceptor will handle FormData Content-Type automatically
       const response = await apiClient.post(
         `/accounts/admin/settings/${settingId}/upload_file/`,
@@ -435,6 +435,58 @@ export const adminApi = {
     }> => {
       const response = await apiClient.get("/accounts/admin/audit-logs/stats/", { params });
       return response.data;
+    },
+
+    archive: async (days: number): Promise<{
+      message: string;
+      archived_count: number;
+      cutoff_date: string;
+    }> => {
+      const response = await apiClient.post("/accounts/admin/audit-logs/archive/", { days });
+      return response.data;
+    },
+
+    download: async (params?: {
+      format?: 'csv' | 'json';
+      action?: string;
+      model_name?: string;
+      user?: number;
+      search?: string;
+      date_from?: string;
+      date_to?: string;
+    }): Promise<Blob> => {
+      const format = params?.format || 'csv';
+      // Map format to file_format for backend to avoid DRF content negotiation issues
+      const { format: _, ...rest } = params || {};
+      const queryParams = { ...rest, file_format: format };
+      try {
+        const response = await apiClient.get("/accounts/admin/audit-logs/download/", {
+          params: queryParams,
+          responseType: 'blob',
+        });
+
+        // Check if the response is actually an error (JSON error in blob format)
+        if (response.data.type === 'application/json') {
+          const text = await response.data.text();
+          const errorData = JSON.parse(text);
+          throw new Error(errorData.error || errorData.detail || 'Failed to download logs');
+        }
+
+        return response.data;
+      } catch (error: any) {
+        // If it's already an Error, rethrow it
+        if (error instanceof Error) {
+          throw error;
+        }
+        // If it's an axios error with blob response, try to parse it
+        if (error.response?.data instanceof Blob && error.response.data.type === 'application/json') {
+          const text = await error.response.data.text();
+          const errorData = JSON.parse(text);
+          throw new Error(errorData.error || errorData.detail || 'Failed to download logs');
+        }
+        // Otherwise, throw the original error
+        throw error;
+      }
     },
   },
 

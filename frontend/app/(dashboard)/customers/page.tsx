@@ -686,6 +686,12 @@ export default function CustomersPage() {
                                     Add Note
                                   </DropdownMenuItem>
                                 </PermissionGuard>
+                                <PermissionGuard permission="send_notifications">
+                                  <DropdownMenuItem onClick={() => router.push(`/sms?recipient_id=${customer.user?.id}&recipient_name=${encodeURIComponent(customer.full_name || customer.company_name || '')}&phone=${customer.user?.phone || ''}`)}>
+                                    <MessageSquare className="w-4 h-4 mr-2" />
+                                    Send SMS
+                                  </DropdownMenuItem>
+                                </PermissionGuard>
                                 <DropdownMenuSeparator />
                                 <PermissionGuard permission="create_vehicles">
                                   <DropdownMenuItem onClick={() => router.push(`/vehicles/new?customer=${customer.id}`)}>

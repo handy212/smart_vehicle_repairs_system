@@ -244,8 +244,8 @@ export const inspectionsApi = {
     const response = await apiClient.post(`/inspections/inspections/${id}/complete/`, data || {});
     return response.data.inspection;
   },
-  approve: async (id: number): Promise<VehicleInspection> => {
-    const response = await apiClient.post(`/inspections/inspections/${id}/approve/`);
+  approve: async (id: number, data?: { customer_signature?: string }): Promise<VehicleInspection> => {
+    const response = await apiClient.post(`/inspections/inspections/${id}/approve/`, data || {});
     return response.data;
   },
   reject: async (id: number): Promise<VehicleInspection> => {

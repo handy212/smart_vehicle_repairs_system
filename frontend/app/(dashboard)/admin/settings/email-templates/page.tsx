@@ -31,6 +31,7 @@ export default function EmailTemplatesPage() {
   const [channelFilter, setChannelFilter] = useState<string>("email");
   const [editingTemplate, setEditingTemplate] = useState<NotificationTemplateType | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<NotificationTemplateType | null>(null);
+  const [deletingTemplate, setDeletingTemplate] = useState<NotificationTemplateType | null>(null);
   const [creatingTemplate, setCreatingTemplate] = useState<boolean>(false);
   const [editForm, setEditForm] = useState<Partial<NotificationTemplateType>>({});
   const [activeTab, setActiveTab] = useState<"plain" | "html">("plain");
@@ -105,6 +106,25 @@ export default function EmailTemplatesPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => notificationsApi.templates.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notification-templates"] });
+      setDeletingTemplate(null);
+      toast({
+        title: "Success",
+        description: "Template deleted successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to delete template",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreate = () => {
     setCreatingTemplate(true);
     setEditForm({
@@ -150,6 +170,16 @@ export default function EmailTemplatesPage() {
     });
   };
 
+  const handleDelete = (template: NotificationTemplateType) => {
+    setDeletingTemplate(template);
+  };
+
+  const confirmDelete = () => {
+    if (deletingTemplate) {
+      deleteMutation.mutate(deletingTemplate.id);
+    }
+  };
+
   const templates = (data as any)?.results || (Array.isArray(data) ? data : []) || [];
   const filteredTemplates = templates.filter((template: NotificationTemplateType) => {
     if (search) {
@@ -179,7 +209,10 @@ export default function EmailTemplatesPage() {
       work_order_completed: [...common, "{work_order_number}", "{vehicle}", "{completion_date}", "{total_amount}"],
       work_order_approved: [...common, "{work_order_number}", "{vehicle}", "{estimate_amount}"],
       vehicle_ready: [...common, "{vehicle}", "{work_order_number}", "{pickup_location}", "{ready_time}"],
-      inspection_completed: [...common, "{inspection_number}", "{vehicle}", "{inspection_date}", "{inspection_link}"],
+      inspection_completed: [...common, "{inspection_number}", "{vehicle_display}", "{vehicle}", "{inspection_date}", "{inspection_link}", "{portal_link}"],
+      inspection_approved: [...common, "{inspection_number}", "{vehicle_display}", "{vehicle}", "{inspection_date}", "{inspection_link}", "{portal_link}", "{overall_result}"],
+      inspection_rejected: [...common, "{inspection_number}", "{vehicle_display}", "{vehicle}", "{inspection_date}", "{inspection_link}", "{portal_link}", "{rejection_reason}"],
+      inspection_sent_to_customer: [...common, "{inspection_number}", "{vehicle_display}", "{vehicle}", "{inspection_date}", "{inspection_link}", "{portal_link}", "{overall_result}"],
       user_welcome: ["{user_name}", "{email}", "{username}", "{password}", "{role}", "{login_url}", "{branch_info}", "{company_name}"],
       password_reset: ["{user_name}", "{email}", "{username}", "{new_password}", "{login_url}", "{company_name}"],
       password_reset_link: ["{user_name}", "{email}", "{username}", "{reset_link}", "{company_name}"],
@@ -245,10 +278,25 @@ export default function EmailTemplatesPage() {
               <option value="payment_received">Payment Received</option>
               <option value="appointment_reminder">Appointment Reminder</option>
               <option value="appointment_confirmation">Appointment Confirmation</option>
+              <option value="appointment_cancelled">Appointment Cancelled</option>
               <option value="work_order_created">Work Order Created</option>
               <option value="work_order_completed">Work Order Completed</option>
+              <option value="work_order_approved">Work Order Approved</option>
+              <option value="inspection_completed">Inspection Completed</option>
+              <option value="inspection_approved">Inspection Approved</option>
+              <option value="inspection_rejected">Inspection Rejected</option>
+              <option value="inspection_sent_to_customer">Inspection Sent to Customer</option>
+              <option value="vehicle_ready">Vehicle Ready</option>
+              <option value="parts_arrived">Parts Arrived</option>
+              <option value="estimate_sent">Estimate Sent</option>
+              <option value="estimate_approved">Estimate Approved</option>
+              <option value="estimate_declined">Estimate Declined</option>
+              <option value="low_stock_alert">Low Stock Alert</option>
+              <option value="service_due">Service Due</option>
               <option value="user_welcome">User Welcome</option>
               <option value="password_reset">Password Reset</option>
+              <option value="password_reset_link">Password Reset Link</option>
+              <option value="custom">Custom</option>
             </Select>
 
             {(search || typeFilter) && (
@@ -334,6 +382,14 @@ export default function EmailTemplatesPage() {
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(template)}
+                        className="h-6 w-6 p-0 hover:text-red-600"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
                     </PermissionGuard>
                   </div>
                 </div>
@@ -401,14 +457,45 @@ export default function EmailTemplatesPage() {
                       disabled={!!editingTemplate}
                     >
                       <option value="">Select type...</option>
-                      <option value="invoice_generated">Invoice Generated</option>
-                      <option value="invoice_due">Invoice Due</option>
-                      <option value="invoice_overdue">Invoice Overdue</option>
-                      <option value="payment_received">Payment Received</option>
-                      <option value="appointment_reminder">Appointment Reminder</option>
-                      <option value="user_welcome">User Welcome</option>
-                      <option value="password_reset">Password Reset</option>
-                      <option value="custom">Custom</option>
+                      <optgroup label="Invoices & Payments">
+                        <option value="invoice_generated">Invoice Generated</option>
+                        <option value="invoice_due">Invoice Due</option>
+                        <option value="invoice_overdue">Invoice Overdue</option>
+                        <option value="payment_received">Payment Received</option>
+                      </optgroup>
+                      <optgroup label="Appointments">
+                        <option value="appointment_reminder">Appointment Reminder</option>
+                        <option value="appointment_confirmation">Appointment Confirmation</option>
+                        <option value="appointment_cancelled">Appointment Cancelled</option>
+                      </optgroup>
+                      <optgroup label="Work Orders">
+                        <option value="work_order_created">Work Order Created</option>
+                        <option value="work_order_completed">Work Order Completed</option>
+                        <option value="work_order_approved">Work Order Approved</option>
+                      </optgroup>
+                      <optgroup label="Inspections">
+                        <option value="inspection_completed">Inspection Completed</option>
+                        <option value="inspection_approved">Inspection Approved</option>
+                        <option value="inspection_rejected">Inspection Rejected</option>
+                        <option value="inspection_sent_to_customer">Inspection Sent to Customer</option>
+                      </optgroup>
+                      <optgroup label="Estimates">
+                        <option value="estimate_sent">Estimate Sent</option>
+                        <option value="estimate_approved">Estimate Approved</option>
+                        <option value="estimate_declined">Estimate Declined</option>
+                        <option value="estimate_expiring_soon">Estimate Expiring Soon</option>
+                        <option value="estimate_expired">Estimate Expired</option>
+                      </optgroup>
+                      <optgroup label="Other">
+                        <option value="vehicle_ready">Vehicle Ready</option>
+                        <option value="parts_arrived">Parts Arrived</option>
+                        <option value="low_stock_alert">Low Stock Alert</option>
+                        <option value="service_due">Service Due</option>
+                        <option value="user_welcome">User Welcome</option>
+                        <option value="password_reset">Password Reset</option>
+                        <option value="password_reset_link">Password Reset Link</option>
+                        <option value="custom">Custom</option>
+                      </optgroup>
                     </Select>
                   </div>
                 </div>
@@ -562,6 +649,43 @@ export default function EmailTemplatesPage() {
             </div>
             <DialogFooter className="px-6 py-3 border-t border-gray-100">
               <Button variant="secondary" size="sm" onClick={() => setPreviewTemplate(null)} className="h-8 text-xs">Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deletingTemplate && (
+        <Dialog open={!!deletingTemplate} onOpenChange={() => !deleteMutation.isPending && setDeletingTemplate(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-red-600" />
+                Delete Template
+              </DialogTitle>
+              <DialogDescription className="pt-2">
+                Are you sure you want to delete the template <strong>"{deletingTemplate.name}"</strong>? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeletingTemplate(null)}
+                disabled={deleteMutation.isPending}
+                className="h-8 text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={confirmDelete}
+                disabled={deleteMutation.isPending}
+                className="h-8 text-xs bg-red-600 hover:bg-red-700"
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

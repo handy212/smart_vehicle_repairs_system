@@ -49,6 +49,7 @@ export interface NotificationPreference {
   digest_enabled: boolean;
   digest_frequency?: string;
   phone_number?: string;
+  whatsapp_manual_enabled: boolean;
 }
 
 export interface NotificationListResponse {
@@ -172,6 +173,15 @@ export const notificationsApi = {
     delete: async (id: number): Promise<void> => {
       await apiClient.delete(`/notifications/templates/${id}/`);
     },
+  },
+
+  renderTemplate: async (data: {
+    template_type: string;
+    object_id: number;
+    channel?: string;
+  }): Promise<{ message: string; phone_number: string; template_used: string }> => {
+    const response = await apiClient.post("/notifications/render-template/", data);
+    return response.data;
   },
 };
 

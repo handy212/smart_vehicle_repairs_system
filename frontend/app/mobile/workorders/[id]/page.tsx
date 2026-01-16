@@ -1,0 +1,580 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { workordersApi, WorkOrder } from "@/lib/api/workorders";
+import { workOrderTasksApi, ServiceTask } from "@/lib/api/workorder-tasks";
+import { workOrderPartsApi, WorkOrderPart } from "@/lib/api/workorder-parts";
+import { useOfflineStore } from "@/store/offlineStore";
+import { workOrdersDB } from "@/lib/offline/db";
+import { queueRequest } from "@/lib/offline/queue";
+import { useToast } from "@/lib/hooks/useToast";
+import apiClient from "@/lib/api/client";
+import {
+  ArrowLeft,
+  Clock,
+  CheckCircle,
+  CheckCircle2,
+  Circle,
+  AlertCircle,
+  Play,
+  Pause,
+  CheckCheck,
+  User,
+  Car,
+  FileText,
+  Package,
+  AlertTriangle,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+
+export default function MobileWorkOrderDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const workOrderId = parseInt(params.id as string);
+  const { isOnline } = useOfflineStore();
+  const { toast } = useToast();
+  const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
+  const [tasks, setTasks] = useState<ServiceTask[]>([]);
+  const [parts, setParts] = useState<WorkOrderPart[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdditionalWorkDialog, setShowAdditionalWorkDialog] = useState(false);
+  const [additionalWorkNotes, setAdditionalWorkNotes] = useState("");
+
+  useEffect(() => {
+    loadWorkOrder();
+  }, [workOrderId]);
+
+  const loadWorkOrder = async () => {
+    setLoading(true);
+    try {
+      if (isOnline) {
+        const [wo, tasksData, partsData] = await Promise.all([
+          workordersApi.get(workOrderId),
+          workOrderTasksApi.list({ work_order: workOrderId }),
+          workOrderPartsApi.list({ work_order: workOrderId }),
+        ]);
+        setWorkOrder(wo);
+        setTasks(tasksData);
+        setParts(partsData);
+
+        // Cache work order
+        await workOrdersDB.set(wo.id, wo, true);
+      } else {
+        // Load from cache
+        const cached = await workOrdersDB.get(workOrderId);
+        if (cached) {
+          setWorkOrder(cached);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load work order:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!workOrder) return;
+
+    try {
+      if (isOnline) {
+        await workordersApi.updateStatus(workOrder.id, newStatus);
+        await loadWorkOrder();
+        toast({
+          title: "Success",
+          description: "Status updated successfully",
+        });
+      } else {
+        // Queue for offline sync
+        const updated = { ...workOrder, status: newStatus };
+        await workOrdersDB.set(workOrder.id, updated, false);
+        await queueRequest(
+          "update",
+          `/workorders/work-orders/${workOrder.id}/`,
+          "PATCH",
+          { status: newStatus }
+        );
+        setWorkOrder(updated);
+        toast({
+          title: "Queued",
+          description: "Status change will sync when online",
+        });
+      }
+    } catch (error: any) {
+      console.error("Failed to update status:", error);
+      const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to update status";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAdditionalWork = async () => {
+    if (!workOrder) return;
+
+    try {
+      if (isOnline) {
+        await workordersApi.updateStatus(workOrder.id, "additional_work_found");
+        // Create note if provided
+        if (additionalWorkNotes.trim()) {
+          // Note: workOrderNotesApi not imported yet, will add in next iteration
+          console.log("Additional work notes:", additionalWorkNotes);
+        }
+        await loadWorkOrder();
+        setShowAdditionalWorkDialog(false);
+        setAdditionalWorkNotes("");
+        toast({
+          title: "Success",
+          description: "Additional work flagged - customer approval required",
+        });
+      } else {
+        const updated = { ...workOrder, status: "additional_work_found" };
+        await workOrdersDB.set(workOrder.id, updated, false);
+        await queueRequest(
+          "update",
+          `/workorders/work-orders/${workOrder.id}/`,
+          "PATCH",
+          { status: "additional_work_found" }
+        );
+        setWorkOrder(updated);
+        setShowAdditionalWorkDialog(false);
+        setAdditionalWorkNotes("");
+        toast({
+          title: "Queued",
+          description: "Additional work will be flagged when online",
+        });
+      }
+    } catch (error: any) {
+      console.error("Failed to flag additional work:", error);
+      const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to flag additional work";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleTask = async (task: ServiceTask) => {
+    const newStatus = task.status === "completed" ? "in_progress" : "completed";
+    try {
+      if (isOnline) {
+        // Use patch and only send the status field
+        await apiClient.patch(`/workorders/tasks/${task.id}/`, {
+          status: newStatus
+        });
+        await loadWorkOrder();
+      } else {
+        // Update locally and queue
+        const updatedTasks = tasks.map((t) =>
+          t.id === task.id ? { ...t, status: newStatus } : t
+        );
+        setTasks(updatedTasks);
+        await queueRequest(
+          "update",
+          `/workorders/tasks/${task.id}/`,
+          "PATCH",
+          { status: newStatus }
+        );
+      }
+    } catch (error: any) {
+      console.error("Failed to toggle task:", error);
+      const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to update task";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-4 flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!workOrder) {
+    return (
+      <div className="p-4 text-center">
+        <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <p className="text-gray-500">Work order not found</p>
+        <Link href="/mobile/workorders">
+          <Button className="mt-4">Back to Work Orders</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Use actual backend statuses
+  const canStart = ["assigned", "approved"].includes(workOrder.status);
+  const canPause = workOrder.status === "in_progress";
+  const canRequestQC = workOrder.status === "in_progress";
+  const canComplete = workOrder.status === "quality_check";
+  const canResume = workOrder.status === "paused";
+  const canFlagAdditionalWork = workOrder.status === "in_progress";
+
+  const getPartStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      draft: "bg-gray-100 text-gray-700",
+      pending: "bg-yellow-100 text-yellow-700",
+      ordered: "bg-blue-100 text-blue-700",
+      ready: "bg-green-100 text-green-700",
+      received: "bg-green-100 text-green-700",
+      installed: "bg-green-100 text-green-700",
+      returned: "bg-red-100 text-red-700",
+    };
+    return colors[status] || "bg-gray-100 text-gray-700";
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <Link href="/mobile/workorders">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+        </Link>
+        {!isOnline && (
+          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+            Offline
+          </Badge>
+        )}
+      </div>
+
+      {/* Work Order Info */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">
+              {workOrder.work_order_number || `WO #${workOrder.id}`}
+            </CardTitle>
+            <Badge
+              className={cn(
+                "text-xs",
+                workOrder.status === "in_progress" &&
+                "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+                workOrder.status === "assigned" &&
+                "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
+                workOrder.status === "approved" &&
+                "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                workOrder.status === "completed" &&
+                "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                workOrder.status === "paused" &&
+                "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
+              )}
+            >
+              {workOrder.status?.replace("_", " ").toUpperCase()}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-start gap-2">
+            <User className="h-4 w-4 text-gray-500 mt-0.5" />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                {workOrder.customer_name || "Customer"}
+              </div>
+              {workOrder.primary_technician_name && (
+                <div className="text-xs text-gray-500">
+                  Tech: {workOrder.primary_technician_name}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2">
+            <Car className="h-4 w-4 text-gray-500 mt-0.5" />
+            <div className="text-sm text-gray-700 dark:text-gray-300">
+              {workOrder.vehicle_display || workOrder.vehicle_info || "Vehicle"}
+            </div>
+          </div>
+
+          {workOrder.customer_concerns && (
+            <div className="flex items-start gap-2">
+              <FileText className="h-4 w-4 text-gray-500 mt-0.5" />
+              <div className="text-sm text-gray-700 dark:text-gray-300">
+                {workOrder.customer_concerns}
+              </div>
+            </div>
+          )}
+
+          {(workOrder.estimated_total || workOrder.total_cost) && (
+            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Estimated Total</span>
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  ${workOrder.estimated_total || workOrder.total_cost}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Link to Photos */}
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+            <Link href={`/mobile/workorders/${workOrderId}/photos`}>
+              <Button variant="outline" size="sm" className="w-full">
+                <Package className="h-4 w-4 mr-2" />
+                View/Add Photos
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {canStart && (
+            <Button
+              className="w-full"
+              onClick={() => handleStatusChange("in_progress")}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Start Work
+            </Button>
+          )}
+
+          {canResume && (
+            <Button
+              className="w-full"
+              onClick={() => handleStatusChange("in_progress")}
+            >
+              <Play className="h-4 w-4 mr-2" />
+              Resume Work
+            </Button>
+          )}
+
+          {canPause && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleStatusChange("paused")}
+            >
+              <Pause className="h-4 w-4 mr-2" />
+              Pause
+            </Button>
+          )}
+
+          {canRequestQC && (
+            <Button
+              className="w-full"
+              onClick={() => handleStatusChange("quality_check")}
+            >
+              <CheckCheck className="h-4 w-4 mr-2" />
+              Request Quality Check
+            </Button>
+          )}
+
+          {canComplete && (
+            <Button
+              className="w-full bg-green-600 hover:bg-green-700"
+              onClick={() => handleStatusChange("completed")}
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Mark Complete
+            </Button>
+          )}
+
+          {canFlagAdditionalWork && (
+            <Button
+              variant="outline"
+              className="w-full border-orange-300 text-orange-700 hover:bg-orange-50"
+              onClick={() => setShowAdditionalWorkDialog(true)}
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Flag Additional Work
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Parts */}
+      {parts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center justify-between">
+              <span>Parts Required ({parts.length})</span>
+              <Package className="h-4 w-4 text-gray-500" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {parts.map((part) => (
+              <div
+                key={part.id}
+                className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+              >
+                <div className="flex items-start justify-between mb-1">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {part.part_name}
+                    </div>
+                    {part.part_number && (
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        #{part.part_number}
+                      </div>
+                    )}
+                  </div>
+                  <Badge className={cn("text-xs ml-2", getPartStatusColor(part.status))}>
+                    {part.status.replace("_", " ").toUpperCase()}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between mt-2 text-xs">
+                  <span className="text-gray-500">Qty: {part.quantity}</span>
+                  {part.total_cost && (
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      ${part.total_cost}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tasks */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center justify-between">
+            <span>Tasks ({tasks.length})</span>
+            <Clock className="h-4 w-4 text-gray-500" />
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {tasks.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">
+              No tasks assigned yet
+            </p>
+          ) : (
+            tasks.map((task) => (
+              <div
+                key={task.id}
+                className={cn(
+                  "p-3 rounded-lg border transition-colors cursor-pointer",
+                  task.status === "completed"
+                    ? "bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800"
+                    : "bg-white border-gray-200 dark:bg-gray-900 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                )}
+                onClick={() => handleToggleTask(task)}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5">
+                    {task.status === "completed" ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-gray-400" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className={cn(
+                        "text-sm font-medium",
+                        task.status === "completed"
+                          ? "line-through text-gray-500"
+                          : "text-gray-900 dark:text-white"
+                      )}
+                    >
+                      {task.description}
+                    </div>
+                    {task.detailed_notes && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {task.detailed_notes}
+                      </div>
+                    )}
+                    {task.estimated_hours && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Est. {task.estimated_hours}h
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Offline Warning */}
+      {!isOnline && (
+        <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950 dark:border-orange-800">
+          <CardContent className="pt-4 flex items-start gap-2">
+            <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-orange-900 dark:text-orange-200">
+                Offline Mode
+              </div>
+              <div className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                Changes will sync automatically when you're back online.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Additional Work Dialog */}
+      <Dialog open={showAdditionalWorkDialog} onOpenChange={setShowAdditionalWorkDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Flag Additional Work</DialogTitle>
+            <DialogDescription>
+              Document additional issues found during repairs. This will require customer approval before proceeding.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="additional-work-notes">What additional work is needed?</Label>
+              <Textarea
+                id="additional-work-notes"
+                placeholder="Describe the additional issues discovered..."
+                value={additionalWorkNotes}
+                onChange={(e) => setAdditionalWorkNotes(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAdditionalWorkDialog(false);
+                setAdditionalWorkNotes("");
+              }}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAdditionalWork}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Flag for Approval
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

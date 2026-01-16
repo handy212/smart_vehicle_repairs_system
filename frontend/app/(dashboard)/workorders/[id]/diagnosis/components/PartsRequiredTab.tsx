@@ -29,6 +29,28 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { inventoryApi, Part } from "@/lib/api/inventory";
+import { ChevronsUpDown, Check } from "lucide-react";
+
+// Debounce hook for search
+function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    React.useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+    return debouncedValue;
+}
 
 interface PartsRequiredTabProps {
     diagnosis: any; // Type as needed
@@ -105,6 +127,11 @@ export function PartsRequiredTab({
                 description: response.message,
                 variant: "success",
             });
+
+            // Force refresh of notifications to ensure sound plays immediately
+            queryClient.invalidateQueries({ queryKey: ["notifications"] });
+            queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
+
             onRefresh(); // Refresh to show updated statuses
         } catch (error: any) {
             toast({
@@ -282,12 +309,42 @@ function PartFormDialog({
     onSuccess: () => void;
 }) {
     const { toast } = useToast();
+    const queryClient = useQueryClient();
     const [formData, setFormData] = useState({
         part_name: "",
         part_number: "",
         quantity: 1,
         description: "",
+        inventory_part: undefined as number | undefined,
     });
+
+    const [queuedParts, setQueuedParts] = useState<any[]>([]);
+
+    const [openCombobox, setOpenCombobox] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    const debouncedSearch = useDebounce(searchTerm, 300);
+    const [foundParts, setFoundParts] = useState<Part[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+
+    // Search inventory effect
+    React.useEffect(() => {
+        const searchInventory = async () => {
+            if (!debouncedSearch || debouncedSearch.length < 2) {
+                setFoundParts([]);
+                return;
+            }
+            setIsSearching(true);
+            try {
+                const response = await inventoryApi.list({ search: debouncedSearch });
+                setFoundParts(response.results);
+            } catch (error) {
+                console.error("Failed to search inventory", error);
+            } finally {
+                setIsSearching(false);
+            }
+        };
+        searchInventory();
+    }, [debouncedSearch]);
 
     React.useEffect(() => {
         if (initialData) {
@@ -296,21 +353,54 @@ function PartFormDialog({
                 part_number: initialData.part_number || "",
                 quantity: typeof initialData.quantity === 'number' ? initialData.quantity : parseFloat(initialData.quantity as any),
                 description: initialData.description || "",
+                inventory_part: (initialData as any).inventory_part,
             });
+            // If editing an existing part, we might not want to prepopulate search unless it's linked
+            if ((initialData as any).inventory_part_details) {
+                setSearchTerm((initialData as any).inventory_part_details.name);
+            }
         } else {
-            setFormData({ part_name: "", part_number: "", quantity: 1, description: "" });
+            setFormData({ part_name: "", part_number: "", quantity: 1, description: "", inventory_part: undefined });
+            setSearchTerm("");
         }
     }, [initialData, open]);
 
     const mutation = useMutation({
-        mutationFn: (data: any) => {
-            if (initialData) {
-                return workordersApi.parts.update(initialData.id, data);
+        mutationFn: async (data: any) => {
+            // Check if we are doing bulk submit
+            if (!initialData && queuedParts.length > 0) {
+                // Bulk create
+                const itemsToCreate = [...queuedParts];
+                if (data.part_name) {
+                    itemsToCreate.push(data);
+                }
+
+                // Create all sequentially or parallel
+                const promises = itemsToCreate.map(item => {
+                    const payload = { ...item, work_order: workOrderId, status: 'draft' };
+                    return workordersApi.parts.create(payload);
+                });
+
+                return Promise.all(promises);
             }
-            return workordersApi.parts.create({ ...data, work_order: workOrderId, status: 'draft' }); // Explicitly draft
+
+            const payload = { ...data, work_order: workOrderId, status: 'draft' };
+            if (initialData) {
+                return workordersApi.parts.update(initialData.id, payload);
+            }
+            return workordersApi.parts.create(payload);
         },
         onSuccess: () => {
-            toast({ title: initialData ? "Part updated" : "Part requested", variant: "default" });
+            // Invalidate notifications query to force immediate sound check
+            queryClient.invalidateQueries({ queryKey: ["notifications"] });
+            queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
+
+            toast({
+                title: initialData ? "Part updated" : "Parts requested",
+                description: initialData ? undefined : `${queuedParts.length + (formData.part_name ? 1 : 0)} items added to work order.`,
+                variant: "default"
+            });
+            setQueuedParts([]);
             onSuccess();
             onOpenChange(false);
         },
@@ -323,70 +413,253 @@ function PartFormDialog({
         },
     });
 
+    const handleAddToQueue = () => {
+        if (!formData.part_name || !formData.quantity) return;
+        setQueuedParts([...queuedParts, { ...formData }]);
+        // Reset form but keep quantity 1
+        setFormData({
+            part_name: "",
+            part_number: "",
+            quantity: 1,
+            description: "",
+            inventory_part: undefined
+        });
+        setSearchTerm("");
+    };
+
+    const handleRemoveFromQueue = (index: number) => {
+        const newQueue = [...queuedParts];
+        newQueue.splice(index, 1);
+        setQueuedParts(newQueue);
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.part_name) return;
+        // If queue has items, allow submit even if form is empty
+        if (queuedParts.length === 0 && !formData.part_name) return;
         mutation.mutate(formData);
+    };
+
+    const handleSelectPart = (part: Part) => {
+        setFormData({
+            ...formData,
+            part_name: part.name,
+            part_number: part.part_number,
+            description: part.description || "",
+            inventory_part: part.id,
+        });
+        setOpenCombobox(false);
+        setSearchTerm(""); // Clear search to avoid confusion, or keep it?
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-xl sm:rounded-xl">
-                <DialogHeader>
-                    <DialogTitle>{initialData ? "Edit Part Request" : "Request Part"}</DialogTitle>
-                    <DialogDescription>
-                        {initialData ? "Update details for this part request." : "Specify details for the part required."}
+            <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-xl sm:rounded-xl">
+                <DialogHeader className="pb-2 border-b">
+                    <DialogTitle className="text-lg">{initialData ? "Edit Part Request" : "Request Part"}</DialogTitle>
+                    <DialogDescription className="text-xs text-gray-500">
+                        {initialData ? "Update details for this part request." : "Select from inventory or enter details manually."}
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="part_name">Part Name <span className="text-red-500">*</span></Label>
-                        <Input
-                            id="part_name"
-                            placeholder="e.g. Oil Filter, Brake Pads"
-                            value={formData.part_name}
-                            onChange={(e) => setFormData({ ...formData, part_name: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="part_number">Part Number (Optional)</Label>
+
+                <div className="py-4 space-y-4">
+                    {/* Items Queue List (Only for new requests) */}
+                    {!initialData && queuedParts.length > 0 && (
+                        <div className="rounded-md border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20 overflow-hidden">
+                            <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-100/50 dark:bg-gray-800/50 flex justify-between items-center">
+                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Parts to Submit ({queuedParts.length})</span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 text-[10px] text-red-500 hover:text-red-600 hover:bg-red-50"
+                                    onClick={() => setQueuedParts([])}
+                                >
+                                    Clear All
+                                </Button>
+                            </div>
+                            <div className="max-h-[150px] overflow-y-auto">
+                                <table className="w-full text-xs text-left">
+                                    <thead className="text-gray-500 bg-gray-50 dark:bg-gray-800 sticky top-0">
+                                        <tr>
+                                            <th className="px-3 py-2 font-medium">Name</th>
+                                            <th className="px-3 py-2 font-medium">Qty</th>
+                                            <th className="px-3 py-2 font-medium w-[40px]"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                        {queuedParts.map((item, idx) => (
+                                            <tr key={idx} className="group hover:bg-white dark:hover:bg-gray-800/50">
+                                                <td className="px-3 py-2">
+                                                    <div className="font-medium text-gray-900 dark:text-gray-100">{item.part_name}</div>
+                                                    <div className="text-[10px] text-gray-500 truncate max-w-[200px]">{item.description}</div>
+                                                </td>
+                                                <td className="px-3 py-2 text-gray-600">{item.quantity}</td>
+                                                <td className="px-3 py-2 text-right">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveFromQueue(idx)}
+                                                        className="text-gray-400 hover:text-red-500 transition-colors"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Top Section: Inventory Search & Basic Info */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Left Column: Inventory Search (if new) or Name */}
+                            <div className="space-y-3">
+                                {!initialData && (
+                                    <div className="space-y-1.5">
+                                        <Label className="text-xs font-semibold text-gray-700">Search Inventory</Label>
+                                        <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    aria-expanded={openCombobox}
+                                                    className="w-full justify-between h-9 text-sm"
+                                                >
+                                                    {formData.inventory_part
+                                                        ? "Item Selected"
+                                                        : "Search parts..."}
+                                                    <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[300px] p-0" align="start">
+                                                <div className="flex items-center border-b px-3">
+                                                    <Search className="mr-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                                                    <Input
+                                                        className="flex h-9 w-full rounded-md bg-transparent py-2 text-xs outline-none placeholder:text-muted-foreground border-none shadow-none focus-visible:ring-0"
+                                                        placeholder="Type to search..."
+                                                        value={searchTerm}
+                                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="max-h-[200px] overflow-y-auto p-1">
+                                                    {isSearching && (
+                                                        <div className="py-4 text-center text-xs text-muted-foreground">Searching...</div>
+                                                    )}
+                                                    {!isSearching && foundParts.length === 0 && searchTerm.length >= 2 && (
+                                                        <div className="py-4 text-center text-xs text-muted-foreground">No parts found.</div>
+                                                    )}
+                                                    {!isSearching && foundParts.length === 0 && searchTerm.length < 2 && (
+                                                        <div className="py-4 text-center text-xs text-muted-foreground">Type 2+ chars</div>
+                                                    )}
+
+                                                    {!isSearching && foundParts.map((part) => (
+                                                        <div
+                                                            key={part.id}
+                                                            className="flex flex-col cursor-pointer rounded-sm px-2 py-1.5 text-xs hover:bg-accent hover:text-accent-foreground"
+                                                            onClick={() => handleSelectPart(part)}
+                                                        >
+                                                            <div className="font-medium truncate">{part.name}</div>
+                                                            <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+                                                                <span>#{part.part_number}</span>
+                                                                <span>Qty: {part.quantity_in_stock}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                )}
+
+                                <div className="space-y-1.5">
+                                    <Label htmlFor="part_name" className="text-xs font-semibold text-gray-700">Part Name <span className="text-red-500">*</span></Label>
+                                    <Input
+                                        id="part_name"
+                                        className="h-9 text-sm"
+                                        placeholder="e.g. Oil Filter"
+                                        value={formData.part_name}
+                                        onChange={(e) => setFormData({ ...formData, part_name: e.target.value })}
+                                        required={!(!initialData && queuedParts.length > 0 && !formData.part_name)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Right Column: Qty & Part Number */}
+                            <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="quantity" className="text-xs font-semibold text-gray-700">Qty <span className="text-red-500">*</span></Label>
+                                        <Input
+                                            id="quantity"
+                                            type="number"
+                                            min="1"
+                                            className="h-9 text-sm"
+                                            value={formData.quantity}
+                                            onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="part_number" className="text-xs font-semibold text-gray-700">Part No.</Label>
+                                        <Input
+                                            id="part_number"
+                                            className="h-9 text-sm"
+                                            placeholder="Optional"
+                                            value={formData.part_number}
+                                            onChange={(e) => setFormData({ ...formData, part_number: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Full Width: Description */}
+                        <div className="space-y-1.5">
+                            <Label htmlFor="description" className="text-xs font-semibold text-gray-700">Description / Notes</Label>
                             <Input
-                                id="part_number"
-                                placeholder="Manufacturer PN"
-                                value={formData.part_number}
-                                onChange={(e) => setFormData({ ...formData, part_number: e.target.value })}
+                                id="description"
+                                className="h-9 text-sm"
+                                placeholder="Additional details, brands, etc."
+                                value={formData.description}
+                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             />
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="quantity">Quantity <span className="text-red-500">*</span></Label>
-                            <Input
-                                id="quantity"
-                                type="number"
-                                min="1"
-                                value={formData.quantity}
-                                onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
-                                required
-                            />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="description">Notes / Description</Label>
-                        <Input
-                            id="description"
-                            placeholder="Additional details, brands, etc."
-                            value={formData.description}
-                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        />
-                    </div>
-                    <DialogFooter className="pt-2">
-                        <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-                        <Button type="submit" disabled={mutation.isPending}>
-                            {mutation.isPending ? "Saving..." : (initialData ? "Update Part" : "Request Part")}
-                        </Button>
-                    </DialogFooter>
-                </form>
+
+                        <DialogFooter className="pt-2 border-t mt-4 flex justify-between items-center sm:justify-between">
+                            <div className="flex gap-2">
+                                {!initialData && (
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={handleAddToQueue}
+                                        disabled={!formData.part_name}
+                                        className="border-dashed border-gray-300 dark:border-gray-700"
+                                    >
+                                        <Plus className="w-3.5 h-3.5 mr-1.5" />
+                                        Add to List
+                                    </Button>
+                                )}
+                            </div>
+
+                            <div className="flex gap-2">
+                                <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+                                <Button
+                                    type="submit"
+                                    size="sm"
+                                    disabled={mutation.isPending || (queuedParts.length === 0 && !formData.part_name)}
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                    {mutation.isPending ? "Saving..." : (
+                                        initialData ? "Update Part" : (queuedParts.length > 0 ? `Submit All (${queuedParts.length + (formData.part_name ? 1 : 0)})` : "Request Part")
+                                    )}
+                                </Button>
+                            </div>
+                        </DialogFooter>
+                    </form>
+                </div>
             </DialogContent>
         </Dialog>
     );

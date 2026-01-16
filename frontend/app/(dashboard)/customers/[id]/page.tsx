@@ -15,6 +15,7 @@ import { ProfileView } from "./components/views/ProfileView";
 import { ContactsView } from "./components/views/ContactsView";
 import { RemindersView } from "./components/views/RemindersView";
 import { DataTable } from "@/components/shared/DataTable";
+import { WhatsAppButton } from "@/components/shared/WhatsAppButton";
 import { InvoicesView } from "./components/views/InvoicesView";
 import { EstimatesView } from "./components/views/EstimatesView";
 import { StatementView } from "./components/views/StatementView";
@@ -181,6 +182,12 @@ export default function CustomerDetailPage() {
                   Edit Customer
                 </Button>
               </Link>
+              <WhatsAppButton
+                templateType="custom"
+                objectId={customerId}
+                label="WhatsApp"
+                size="sm"
+              />
             </div>
           }
         />

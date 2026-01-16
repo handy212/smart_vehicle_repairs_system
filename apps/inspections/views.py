@@ -6,6 +6,7 @@ from apps.accounts.permissions import HasPermission
 from django.db.models import Count, Q, Avg
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+from django.conf import settings
 
 from apps.inspections.models import (
     InspectionTemplate, InspectionCategory, InspectionItem,
@@ -261,6 +262,14 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
+        user = self.request.user
+        
+        # Customers can view and approve/reject their own inspections without special permissions
+        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            if self.action in ['list', 'retrieve', 'approve', 'reject']:
+                return [IsAuthenticated()]
+        
+        # Staff permissions
         if self.action == 'list' or self.action == 'retrieve':
             return [IsAuthenticated(), HasPermission('view_inspections')]
         elif self.action == 'create':
@@ -269,6 +278,8 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasPermission('edit_inspections')]
         elif self.action == 'destroy':
             return [IsAuthenticated(), HasPermission('delete_inspections')]
+        elif self.action in ['approve', 'reject']:
+            return [IsAuthenticated(), HasPermission('edit_inspections')]
         return [IsAuthenticated()]
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -280,6 +291,13 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter inspections by active branch from session"""
         queryset = super().get_queryset()
+        
+        # If user is a customer, only show inspections for their vehicles
+        user = self.request.user
+        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            queryset = queryset.filter(vehicle__owner=user.customer_profile)
+            return queryset
+        
         # Check if user wants to see all branches (for admins) or just active branch
         show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
         return filter_queryset_for_user_branches(
@@ -398,16 +416,8 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Calculate overall result based on results
-        fail_count = inspection.fail_count
-        advisory_count = inspection.advisory_count
-        
-        if fail_count > 0:
-            inspection.overall_result = 'fail'
-        elif advisory_count > 0:
-            inspection.overall_result = 'pass_with_advisory'
-        else:
-            inspection.overall_result = 'pass'
+        # Recalculate overall result using the model method
+        inspection.recalculate_overall_result()
         
         inspection.status = 'completed'
         inspection.completed_at = timezone.now()
@@ -422,6 +432,15 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     def approve(self, request, pk=None):
         """Approve inspection"""
         inspection = self.get_object()
+        
+        # Check if customer is trying to approve - ensure it's their vehicle
+        user = request.user
+        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            if inspection.vehicle.owner != user.customer_profile:
+                return Response(
+                    {'error': 'You can only approve inspections for your own vehicles'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         
         if inspection.status != 'completed':
             return Response(
@@ -451,6 +470,11 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
             # Allow but warn - this is informational, not blocking
             pass
         
+        # Save customer signature if provided
+        customer_signature = request.data.get('customer_signature')
+        if customer_signature:
+            inspection.customer_signature = customer_signature
+        
         inspection.status = 'approved'
         inspection.approved_by = request.user
         inspection.save()
@@ -464,6 +488,15 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     def reject(self, request, pk=None):
         """Reject inspection"""
         inspection = self.get_object()
+        
+        # Check if customer is trying to reject - ensure it's their vehicle
+        user = request.user
+        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            if inspection.vehicle.owner != user.customer_profile:
+                return Response(
+                    {'error': 'You can only reject inspections for your own vehicles'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         
         inspection.status = 'rejected'
         inspection.notes = request.data.get('reason', inspection.notes)
@@ -566,6 +599,12 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
                 'errors': errors
             }, status=status.HTTP_207_MULTI_STATUS)  # Multi-Status for partial success
         
+        # Recalculate overall_result if inspection is completed
+        inspection.refresh_from_db()
+        if inspection.status == 'completed':
+            inspection.recalculate_overall_result()
+            inspection.save(update_fields=['overall_result'])
+        
         return Response({
             'message': f'Successfully saved {len(saved_results)} results',
             'results': saved_results
@@ -574,6 +613,9 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def send_to_customer(self, request, pk=None):
         """Send inspection report to customer"""
+        from apps.notifications_app.triggers import NotificationTriggers
+        from django.conf import settings
+        
         inspection = self.get_object()
         
         # Allow both 'completed' and 'approved' statuses
@@ -583,20 +625,117 @@ class VehicleInspectionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Note: Customer signature is collected AFTER sending, not before
-        # The customer will sign the inspection when they receive and review it
+        # Check if customer has user account
+        if not inspection.vehicle.owner.user:
+            return Response(
+                {'error': 'Customer does not have a user account to receive notifications'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        # In a real implementation, this would:
-        # 1. Generate PDF report
-        # 2. Send email/SMS to customer with link to view/sign
-        # 3. Create notification
-        
+        # Update sent timestamp
         inspection.sent_to_customer_at = timezone.now()
         inspection.save()
+        
+        # Send notification to customer with portal link
+        try:
+            notification_triggers = NotificationTriggers()
+            
+            # Build portal link - use portal route from Django URLs
+            frontend_url = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:3001')
+            # Portal inspection detail route: /portal/inspections/<id>/ (plural)
+            portal_link = f"{frontend_url}/portal/inspections/{inspection.id}/"
+            
+            # Create and send notification
+            template = notification_triggers._get_template('inspection_completed', 'email')
+            customer_name = notification_triggers._build_customer_name(inspection.vehicle.owner)
+            vehicle_display = notification_triggers._build_vehicle_display(inspection.vehicle)
+            
+            # Prepare context data for template rendering
+            context_data = {
+                'customer_name': customer_name,
+                'inspection_number': inspection.inspection_number,
+                'vehicle_display': vehicle_display,
+                'inspection_date': str(inspection.inspection_date.date()) if inspection.inspection_date else "N/A",
+                'inspection_link': portal_link,
+                'portal_link': portal_link,
+                'company_name': notification_triggers._get_company_name(),
+            }
+            
+            # Render subject
+            title = f'Inspection Completed - {inspection.inspection_number}'
+            if template and template.subject:
+                title = notification_triggers.service._render_template(template.subject, context_data)
+            
+            # Render message body
+            message = f'''Your vehicle inspection is complete and ready for review.
+
+Inspection: {inspection.inspection_number}
+Vehicle: {vehicle_display}
+
+Please review and approve the inspection report by clicking the link below:
+{portal_link}
+
+Thank you for choosing our service.'''
+            
+            if template and template.body:
+                message = notification_triggers.service._render_template(template.body, context_data)
+            
+            from apps.notifications_app.models import Notification
+            
+            # Create email notification
+            email_notification = Notification.objects.create(
+                recipient=inspection.vehicle.owner.user,
+                notification_type='inspection',
+                channel='email',
+                priority='normal',
+                template=template,
+                title=title,
+                message=message,
+                data=context_data,
+                related_object_type='inspection',
+                related_object_id=inspection.id
+            )
+            notification_triggers.service.send_notification(email_notification)
+            
+            # Create in-app notification
+            in_app_notification = Notification.objects.create(
+                recipient=inspection.vehicle.owner.user,
+                notification_type='inspection',
+                channel='in_app',
+                priority='normal',
+                template=None,  # In-app notifications don't use email templates
+                title=title,
+                message=message,
+                data=context_data,
+                related_object_type='inspection',
+                related_object_id=inspection.id
+            )
+            notification_triggers.service.send_notification(in_app_notification)
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send inspection notification: {str(e)}")
+            # Don't fail the request if notification fails, just log it
         
         return Response({
             'message': 'Inspection report sent to customer',
             'sent_at': inspection.sent_to_customer_at
+        })
+    
+    @action(detail=True, methods=['post'])
+    def recalculate_result(self, request, pk=None):
+        """Recalculate the overall_result for an inspection"""
+        inspection = self.get_object()
+        old_result = inspection.overall_result
+        new_result = inspection.recalculate_overall_result()
+        inspection.save(update_fields=['overall_result'])
+        
+        return Response({
+            'message': 'Overall result recalculated',
+            'old_result': old_result,
+            'new_result': new_result,
+            'inspection': VehicleInspectionDetailSerializer(inspection).data
         })
     
     @action(detail=False, methods=['get'])

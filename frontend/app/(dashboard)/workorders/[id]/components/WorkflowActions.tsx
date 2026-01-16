@@ -1262,10 +1262,7 @@ export default function WorkflowActions({
       <Dialog open={showInspectionDialog} onOpenChange={setShowInspectionDialog}>
         <DialogContent className="dark:bg-gray-800 dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle className="dark:text-gray-100">Create Initial Inspection</DialogTitle>
-            <DialogDescription className="dark:text-gray-400">
-              Create a new inspection for this work order
-            </DialogDescription>
+            <DialogTitle className="dark:text-gray-100">Create Initial Inspection</DialogTitle>           
           </DialogHeader>
           <CreateInspectionForm
             workOrder={currentWorkOrder}
@@ -2570,9 +2567,7 @@ function CreateInspectionForm({
   isSubmitting: boolean;
 }) {
   const [templateId, setTemplateId] = useState<number | "">("");
-  const [inspectionDate, setInspectionDate] = useState(new Date().toISOString().slice(0, 16));
-  const [odometerReading, setOdometerReading] = useState("");
-  const [notes, setNotes] = useState("");
+  const [inspectionDate] = useState(new Date().toISOString().slice(0, 16));
 
   // Fetch templates
   const { data: templatesData } = useQuery({
@@ -2598,14 +2593,6 @@ function CreateInspectionForm({
       work_order: workOrder?.id,
       inspection_date: inspectionDate,
     };
-
-    if (odometerReading && odometerReading.trim()) {
-      data.odometer_reading = parseInt(odometerReading);
-    }
-
-    if (notes && notes.trim()) {
-      data.notes = notes.trim();
-    }
 
     onSubmit(data);
   };
@@ -2648,38 +2635,9 @@ function CreateInspectionForm({
               id="inspection_date"
               type="datetime-local"
               value={inspectionDate}
-              onChange={(e) => setInspectionDate(e.target.value)}
+              readOnly
               required
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="odometer_reading" className="block mb-2 dark:text-gray-300">
-              Odometer Reading (Optional)
-            </Label>
-            <Input
-              id="odometer_reading"
-              type="number"
-              value={odometerReading}
-              onChange={(e) => setOdometerReading(e.target.value)}
-              placeholder="Current mileage"
-              min={0}
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="notes" className="block mb-2 dark:text-gray-300">
-              Notes (Optional)
-            </Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes about this inspection"
-              rows={3}
-              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
             />
           </div>
 

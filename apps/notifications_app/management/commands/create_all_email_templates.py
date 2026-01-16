@@ -272,36 +272,47 @@ Best regards,
             },
             'inspection_completed': {
                 'name': 'Default Inspection Completed Email',
-                'subject': 'Inspection #{inspection_number} Completed',
+                'subject': 'Inspection #{inspection_number} Completed - Ready for Review',
                 'body': '''Dear {customer_name},
 
-Your vehicle inspection has been completed.
+Your vehicle inspection has been completed and is ready for your review.
 
 INSPECTION DETAILS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Inspection Number: {inspection_number}
-Vehicle: {vehicle}
+Vehicle: {vehicle_display}
 Inspection Date: {inspection_date}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-View your inspection report here: {inspection_link}
+Please review and approve the inspection report by clicking the link below:
+{portal_link}
 
-If you have any questions, please don't hesitate to contact us.
+You can access your customer portal to view the full inspection report, including detailed results, photos, and recommendations.
+
+If you have any questions or concerns, please don't hesitate to contact us.
+
+Thank you for choosing our service.
 
 Best regards,
 {company_name} Team''',
                 'html_body': '''<html><body>
 <p>Dear {customer_name},</p>
-<p>Your vehicle inspection has been completed.</p>
+<p>Your vehicle inspection has been completed and is ready for your review.</p>
 <h3>INSPECTION DETAILS:</h3>
 <hr>
 <p><strong>Inspection Number:</strong> {inspection_number}</p>
-<p><strong>Vehicle:</strong> {vehicle}</p>
+<p><strong>Vehicle:</strong> {vehicle_display}</p>
 <p><strong>Inspection Date:</strong> {inspection_date}</p>
 <hr>
-<p>View your inspection report here: <a href="{inspection_link}">View Report</a></p>
-<p>If you have any questions, please don't hesitate to contact us.</p>
+<p>Please review and approve the inspection report by clicking the link below:</p>
+<p style="margin: 20px 0;">
+    <a href="{portal_link}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Review Inspection Report</a>
+</p>
+<p>Or copy and paste this link: <a href="{portal_link}">{portal_link}</a></p>
+<p>You can access your customer portal to view the full inspection report, including detailed results, photos, and recommendations.</p>
+<p>If you have any questions or concerns, please don't hesitate to contact us.</p>
+<p>Thank you for choosing our service.</p>
 <p>Best regards,<br>{company_name} Team</p>
 </body></html>''',
             },
@@ -736,6 +747,8 @@ Best regards,
                         'inspection_number': 'Inspection number',
                         'inspection_date': 'Inspection date',
                         'inspection_link': 'URL to view inspection',
+                        'portal_link': 'URL to customer portal inspection page',
+                        'vehicle_display': 'Vehicle display (year, make, model)',
                         'part_name': 'Part name',
                         'part_number': 'Part number',
                         'current_stock': 'Current stock level',

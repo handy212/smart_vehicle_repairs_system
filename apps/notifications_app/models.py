@@ -19,6 +19,9 @@ class NotificationTemplate(models.Model):
         ('invoice_overdue', 'Invoice Overdue'),
         ('payment_received', 'Payment Received'),
         ('inspection_completed', 'Inspection Completed'),
+        ('inspection_approved', 'Inspection Approved'),
+        ('inspection_rejected', 'Inspection Rejected'),
+        ('inspection_sent_to_customer', 'Inspection Sent to Customer'),
         ('low_stock_alert', 'Low Stock Alert'),
         ('service_due', 'Service Due'),
         ('vehicle_ready', 'Vehicle Ready'),
@@ -39,6 +42,7 @@ class NotificationTemplate(models.Model):
         ('sms', 'SMS'),
         ('push', 'Push Notification'),
         ('in_app', 'In-App Notification'),
+        ('whatsapp_manual', 'WhatsApp (Manual)'),
     ]
     
     name = models.CharField(max_length=200)
@@ -112,6 +116,7 @@ class Notification(models.Model):
         ('sms', 'SMS'),
         ('push', 'Push Notification'),
         ('in_app', 'In-App Notification'),
+        ('whatsapp_manual', 'WhatsApp (Manual)'),
     ]
     
     STATUS_CHOICES = [
@@ -225,6 +230,7 @@ class NotificationPreference(models.Model):
     sms_enabled = models.BooleanField(default=False)
     push_enabled = models.BooleanField(default=True)
     in_app_enabled = models.BooleanField(default=True)
+    whatsapp_manual_enabled = models.BooleanField(default=True)
     sound_enabled = models.BooleanField(default=True, help_text="Play sound for in-app notifications")
     
     # Notification type preferences
@@ -287,6 +293,7 @@ class NotificationPreference(models.Model):
             'sms': self.sms_enabled,
             'push': self.push_enabled,
             'in_app': self.in_app_enabled,
+            'whatsapp_manual': self.whatsapp_manual_enabled,
         }.get(channel, True)
         
         if not channel_enabled:
@@ -316,6 +323,41 @@ class NotificationPreference(models.Model):
         return True
 
 
+class WebPushSubscription(models.Model):
+    """
+    Web Push API subscription for sending push notifications
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='web_push_subscriptions'
+    )
+    
+    endpoint = models.URLField(max_length=500, help_text="Push service endpoint URL")
+    p256dh = models.CharField(max_length=200, help_text="User public key")
+    auth = models.CharField(max_length=100, help_text="User auth secret")
+    
+    # Device information
+    user_agent = models.TextField(blank=True)
+    device_name = models.CharField(max_length=200, blank=True)
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    last_used = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['user', 'endpoint']
+        indexes = [
+            models.Index(fields=['user', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"Push subscription for {self.user.email}"
+
+
 class NotificationLog(models.Model):
     """
     Log of all notification attempts for auditing and debugging
@@ -334,6 +376,7 @@ class NotificationLog(models.Model):
         ('failed', 'Failed'),
         ('read', 'Read'),
         ('retried', 'Retried'),
+        ('opened_link', 'Opened Link'),
     ]
     
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)

@@ -436,6 +436,140 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Returning empty to prevent error until custom action types are implemented
         return Response([])
+    
+    @action(detail=False, methods=['post'])
+    def archive(self, request):
+        """
+        Archive audit logs older than specified days.
+        This deletes logs older than the specified number of days.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        days = request.data.get('days', 90)  # Default to 90 days
+        try:
+            days = int(days)
+            if days < 1:
+                return Response(
+                    {'error': 'Days must be at least 1'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except (ValueError, TypeError):
+            return Response(
+                {'error': 'Invalid days value'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Calculate cutoff date
+        cutoff_date = timezone.now() - timedelta(days=days)
+        
+        # Get logs to archive
+        logs_to_archive = LogEntry.objects.filter(timestamp__lt=cutoff_date)
+        count = logs_to_archive.count()
+        
+        # Delete the logs
+        logs_to_archive.delete()
+        
+        return Response({
+            'message': f'Archived {count} audit log(s) older than {days} days',
+            'archived_count': count,
+            'cutoff_date': cutoff_date.isoformat(),
+        })
+    
+    @action(detail=False, methods=['get'])
+    def download(self, request):
+        """
+        Download audit logs as CSV or JSON.
+        Supports same filters as list endpoint.
+        """
+        import csv
+        import json
+        from django.http import HttpResponse
+        from django.utils import timezone
+        import io
+        
+        # Get format (csv or json)
+        format_type = request.query_params.get('file_format', 'csv').lower()
+        if format_type not in ['csv', 'json']:
+            return Response(
+                {'error': 'Format must be csv or json'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get filtered queryset
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Apply date filters if provided
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        
+        if date_from:
+            queryset = queryset.filter(timestamp__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(timestamp__lte=date_to + ' 23:59:59')
+        
+        # Limit to reasonable number for download (e.g., 10000)
+        max_records = 10000
+        total_count = queryset.count()
+        if total_count > max_records:
+            queryset = queryset[:max_records]
+        
+        # Get serializer
+        serializer_class = self.get_serializer_class()
+        logs = serializer_class(queryset, many=True).data
+        
+        # Generate filename
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'audit_logs_{timestamp}.{format_type}'
+        
+        if format_type == 'csv':
+            # Create in-memory buffer
+            output = io.StringIO()
+            
+            if not logs:
+                # Return empty CSV
+                response = HttpResponse('', content_type='text/csv')
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                return response
+            
+            # Get all possible field names from logs
+            fieldnames = set()
+            for log in logs:
+                fieldnames.update(log.keys())
+            
+            # Order fields logically
+            ordered_fields = [
+                'id', 'timestamp', 'user_name', 'user_email', 'action',
+                'model_name', 'object_id', 'object_repr', 'ip_address',
+                'changes'
+            ]
+            # Add any remaining fields
+            for field in sorted(fieldnames):
+                if field not in ordered_fields:
+                    ordered_fields.append(field)
+            
+            writer = csv.DictWriter(output, fieldnames=ordered_fields, extrasaction='ignore')
+            writer.writeheader()
+            
+            for log in logs:
+                # Convert changes dict to string for CSV
+                row = log.copy()
+                if 'changes' in row and isinstance(row['changes'], dict):
+                    row['changes'] = json.dumps(row['changes'])
+                writer.writerow(row)
+            
+            # Create HTTP response with CSV content
+            response = HttpResponse(output.getvalue(), content_type='text/csv; charset=utf-8')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+        
+        else:  # JSON
+            response = HttpResponse(
+                json.dumps(logs, indent=2, default=str),
+                content_type='application/json; charset=utf-8'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
 
 
 class SystemBackupViewSet(viewsets.ModelViewSet):

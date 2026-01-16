@@ -248,6 +248,38 @@ class VehicleInspection(models.Model):
             inspection_item__is_critical=True,
             result__in=['fail', 'critical']
         ).exists()
+    
+    def recalculate_overall_result(self):
+        """
+        Recalculate the overall_result based on current results.
+        Excludes 'not_checked' and 'not_applicable' from calculation.
+        """
+        # Only count actual inspection results: 'pass', 'fail', 'advisory'
+        checked_results = self.results.exclude(result__in=['not_checked', 'not_applicable'])
+        fail_count = checked_results.filter(result='fail').count()
+        advisory_count = checked_results.filter(result='advisory').count()
+        pass_count = checked_results.filter(result='pass').count()
+        total_checked = checked_results.count()
+        
+        # Only set overall_result if there are checked results
+        if total_checked > 0:
+            if fail_count > 0:
+                # Any fail = overall fail
+                self.overall_result = 'fail'
+            elif advisory_count > 0:
+                # Any advisory (but no fails) = pass with advisory
+                self.overall_result = 'pass_with_advisory'
+            elif pass_count > 0:
+                # Only passes = pass
+                self.overall_result = 'pass'
+            else:
+                # This shouldn't happen, but if it does, default to pass
+                self.overall_result = 'pass'
+        else:
+            # No checked results - set overall_result to null
+            self.overall_result = None
+        
+        return self.overall_result
 
 
 class InspectionResult(models.Model):

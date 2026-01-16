@@ -2,12 +2,19 @@ from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings as django_settings
 from django.utils import timezone
 from decimal import Decimal
+import json
 from string import Formatter
 import logging
 
-from .models import Notification, NotificationLog
+from .models import Notification, NotificationLog, WebPushSubscription
 from .firebase import send_push_notification, is_firebase_available
 from apps.accounts.settings_utils import get_setting, get_email_settings, get_notification_settings
+
+try:
+    from pywebpush import webpush, WebPushException
+    WEBPUSH_AVAILABLE = True
+except Exception:
+    WEBPUSH_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +48,7 @@ class NotificationService:
                 'email': notification_settings.get('notification_email_enabled', 'true').lower() == 'true',
                 'sms': notification_settings.get('notification_sms_enabled', 'true').lower() == 'true',
                 'push': notification_settings.get('notification_push_enabled', 'true').lower() == 'true',
+                'in_app': notification_settings.get('notification_in_app_enabled', 'true').lower() == 'true',
             }.get(notification.channel, True)
             
             if not channel_enabled:
@@ -48,30 +56,32 @@ class NotificationService:
                 self._log_action(notification, 'failed', f'Channel {notification.channel} disabled globally')
                 return False
             
-            # Check system quiet hours
-            quiet_hours_start = notification_settings.get('notification_quiet_hours_start', '22:00')
-            quiet_hours_end = notification_settings.get('notification_quiet_hours_end', '08:00')
-            
-            if quiet_hours_start and quiet_hours_end:
-                from datetime import datetime, time
-                try:
-                    start_time = datetime.strptime(quiet_hours_start, '%H:%M').time()
-                    end_time = datetime.strptime(quiet_hours_end, '%H:%M').time()
-                    current_time = timezone.now().time()
-                    
-                    # Handle overnight quiet hours (e.g., 22:00 to 08:00)
-                    if start_time > end_time:  # Overnight
-                        if current_time >= start_time or current_time <= end_time:
-                            notification.mark_as_failed("Notification blocked by system quiet hours")
-                            self._log_action(notification, 'failed', f'Blocked by quiet hours ({quiet_hours_start}-{quiet_hours_end})')
-                            return False
-                    else:  # Same day
-                        if start_time <= current_time <= end_time:
-                            notification.mark_as_failed("Notification blocked by system quiet hours")
-                            self._log_action(notification, 'failed', f'Blocked by quiet hours ({quiet_hours_start}-{quiet_hours_end})')
-                            return False
-                except (ValueError, AttributeError):
-                    pass  # Skip quiet hours check if parsing fails
+            # Check system quiet hours (skip for custom/urgent notifications)
+            # Custom notifications from SMS Console should bypass quiet hours
+            if notification.notification_type not in ['custom', 'system']:
+                quiet_hours_start = notification_settings.get('notification_quiet_hours_start', '22:00')
+                quiet_hours_end = notification_settings.get('notification_quiet_hours_end', '08:00')
+                
+                if quiet_hours_start and quiet_hours_end:
+                    from datetime import datetime, time
+                    try:
+                        start_time = datetime.strptime(quiet_hours_start, '%H:%M').time()
+                        end_time = datetime.strptime(quiet_hours_end, '%H:%M').time()
+                        current_time = timezone.now().time()
+                        
+                        # Handle overnight quiet hours (e.g., 22:00 to 08:00)
+                        if start_time > end_time:  # Overnight
+                            if current_time >= start_time or current_time <= end_time:
+                                notification.mark_as_failed("Notification blocked by system quiet hours")
+                                self._log_action(notification, 'failed', f'Blocked by quiet hours ({quiet_hours_start}-{quiet_hours_end})')
+                                return False
+                        else:  # Same day
+                            if start_time <= current_time <= end_time:
+                                notification.mark_as_failed("Notification blocked by system quiet hours")
+                                self._log_action(notification, 'failed', f'Blocked by quiet hours ({quiet_hours_start}-{quiet_hours_end})')
+                                return False
+                    except (ValueError, AttributeError):
+                        pass  # Skip quiet hours check if parsing fails
             
             # Check user preferences
             if hasattr(notification.recipient, 'notification_preferences'):
@@ -207,13 +217,16 @@ class NotificationService:
             
             # Fallback to Twilio (if configured)
             # TODO: Add Twilio integration
-            logger.info(f"SMS would be sent to {phone_number}: {message}")
+            # For now, if Hubtel is not available/failed and Twilio is not configured, we must FAIL.
             
-            notification.mark_as_sent()
-            notification.mark_as_delivered()
-            self._log_action(notification, 'sent', f'SMS sent to {phone_number}')
-            
-            return True
+            error_msg = "No SMS provider available or configured"
+            if is_hubtel_available():
+                error_msg = "Hubtel SMS failed and no fallback available"
+                
+            logger.error(f"SMS failed to {phone_number}: {error_msg}")
+            notification.mark_as_failed(error_msg)
+            self._log_action(notification, 'failed', error_msg)
+            return False
             
         except Exception as e:
             logger.error(f"Failed to send SMS: {str(e)}")
@@ -223,9 +236,14 @@ class NotificationService:
     
     def _send_push(self, notification):
         """
-        Send push notification via Firebase Cloud Messaging
+        Send push notification via Web Push or Firebase Cloud Messaging
         """
         try:
+            # Try Web Push first (PWA)
+            webpush_result = self._send_web_push(notification)
+            if webpush_result:
+                return True
+
             # Check if Firebase is available
             if not is_firebase_available():
                 notification.mark_as_failed("Firebase not configured")
@@ -294,6 +312,92 @@ class NotificationService:
             self._log_action(notification, 'failed', f'Push failed: {str(e)}')
             return False
     
+    def _send_web_push(self, notification):
+        """
+        Send Web Push notifications to all active subscriptions
+        """
+        if not WEBPUSH_AVAILABLE:
+            logger.info("Web Push not available (pywebpush not installed)")
+            return False
+
+        try:
+            subscriptions = WebPushSubscription.objects.filter(
+                user=notification.recipient,
+                is_active=True
+            )
+
+            if not subscriptions.exists():
+                logger.info(f"No web push subscriptions for {notification.recipient.email}")
+                return False
+
+            vapid_private_key = getattr(django_settings, 'VAPID_PRIVATE_KEY', None)
+            vapid_email = getattr(django_settings, 'VAPID_EMAIL', None) or django_settings.DEFAULT_FROM_EMAIL
+
+            if not vapid_private_key:
+                logger.warning("VAPID_PRIVATE_KEY not configured")
+                return False
+
+            # Prepare notification content
+            if notification.template and notification.template.push_title:
+                title = self._render_template(notification.template.push_title, notification.data)
+                body = self._render_template(notification.template.push_body, notification.data)
+            else:
+                title = notification.title
+                body = notification.message[:200]
+
+            payload = {
+                "title": title,
+                "body": body,
+                "icon": "/icons/icon-192x192.png",
+                "badge": "/icons/icon-72x72.png",
+                "data": {
+                    "notification_id": str(notification.id),
+                    "type": notification.notification_type,
+                    "url": notification.data.get("url") if notification.data else None,
+                }
+            }
+
+            success_count = 0
+            for subscription in subscriptions:
+                subscription_info = {
+                    "endpoint": subscription.endpoint,
+                    "keys": {
+                        "p256dh": subscription.p256dh,
+                        "auth": subscription.auth,
+                    },
+                }
+
+                try:
+                    webpush(
+                        subscription_info=subscription_info,
+                        data=json.dumps(payload),
+                        vapid_private_key=vapid_private_key,
+                        vapid_claims={"sub": f"mailto:{vapid_email}"},
+                    )
+                    subscription.last_used = timezone.now()
+                    subscription.save(update_fields=["last_used", "updated_at"])
+                    success_count += 1
+                except WebPushException as e:
+                    status_code = getattr(e.response, "status_code", None)
+                    logger.warning(f"Web Push failed for {subscription.endpoint}: {e}")
+                    if status_code in (404, 410):
+                        subscription.is_active = False
+                        subscription.save(update_fields=["is_active", "updated_at"])
+                except Exception as e:
+                    logger.warning(f"Web Push error for {subscription.endpoint}: {e}")
+
+            if success_count > 0:
+                notification.mark_as_sent()
+                notification.mark_as_delivered()
+                self._log_action(notification, 'sent', f'Web Push sent to {success_count} devices')
+                logger.info(f"Web Push notification sent to {success_count} devices")
+                return True
+
+            return False
+        except Exception as e:
+            logger.error(f"Failed to send Web Push: {str(e)}")
+            return False
+
     def _send_in_app(self, notification):
         """
         Send in-app notification (just marks as delivered, already in database)

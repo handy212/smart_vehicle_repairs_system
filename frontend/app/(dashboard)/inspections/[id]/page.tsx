@@ -167,7 +167,7 @@ export default function InspectionDetailPage() {
               onClick={() => router.push(`/inspections/${inspectionId}/perform`)}
             >
               <CheckCircle className="w-3.5 h-3.5 mr-2" />
-              Perform Inspection
+              {inspection.results && inspection.results.length > 0 ? "Resume Inspection" : "Perform Inspection"}
             </Button>
           )}
 
@@ -192,20 +192,7 @@ export default function InspectionDetailPage() {
       </div>
 
       {/* Top Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gray-50/50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800">
-          <CardContent className="p-4 flex flex-col justify-center">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Overall Result</p>
-            {inspection.overall_result ? (
-              <div className="flex items-center gap-2">
-                <div className={cn("w-2 h-2 rounded-full", inspection.overall_result === 'pass' ? 'bg-green-500' : inspection.overall_result === 'fail' ? 'bg-red-500' : 'bg-yellow-500')} />
-                <span className="font-bold capitalize">{inspection.overall_result.replace('_', ' ')}</span>
-              </div>
-            ) : (
-              <span className="text-sm font-medium text-gray-400">Not rated</span>
-            )}
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4 flex flex-col justify-center">
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Progress</p>
@@ -260,7 +247,7 @@ export default function InspectionDetailPage() {
                     <p className="text-sm text-gray-500">Perform the inspection to see results here.</p>
                     {inspection.status === 'in_progress' && (
                       <Button className="mt-4" onClick={() => router.push(`/inspections/${inspectionId}/perform`)}>
-                        Start Inspection
+                        {inspection.results && inspection.results.length > 0 ? "Resume Inspection" : "Start Inspection"}
                       </Button>
                     )}
                   </CardContent>
@@ -376,19 +363,59 @@ export default function InspectionDetailPage() {
             </TabsContent>
 
             <TabsContent value="notes" className="mt-4 space-y-4">
+              {/* Inspection-level notes */}
               {inspection.notes && (
                 <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-base">Internal Notes</CardTitle></CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">Inspection Notes</CardTitle></CardHeader>
                   <CardContent><p className="text-sm whitespace-pre-wrap">{inspection.notes}</p></CardContent>
                 </Card>
               )}
+              
+              {/* Individual item notes */}
+              {inspection.results && inspection.results.filter((r: any) => r.notes && r.notes.trim()).length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Item Notes</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Notes from individual inspection items
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {inspection.results
+                      .filter((r: any) => r.notes && r.notes.trim())
+                      .map((result: any) => (
+                        <div key={result.id} className="border-l-2 border-blue-500 pl-4 py-2">
+                          <div className="flex items-start justify-between mb-1">
+                            <p className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                              {result.item_name || `Item #${result.inspection_item}`}
+                            </p>
+                            {result.category_name && (
+                              <Badge variant="outline" className="text-xs ml-2">
+                                {result.category_name}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            {result.notes}
+                          </p>
+                        </div>
+                      ))}
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Recommendations */}
               {inspection.recommendations && (
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-base text-blue-600">Recommendations</CardTitle></CardHeader>
                   <CardContent><p className="text-sm whitespace-pre-wrap">{inspection.recommendations}</p></CardContent>
                 </Card>
               )}
-              {!inspection.notes && !inspection.recommendations && (
+              
+              {/* Empty state */}
+              {!inspection.notes && 
+               (!inspection.results || inspection.results.filter((r: any) => r.notes && r.notes.trim()).length === 0) && 
+               !inspection.recommendations && (
                 <div className="text-center py-8 text-muted-foreground">No notes recorded</div>
               )}
             </TabsContent>

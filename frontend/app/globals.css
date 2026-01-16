@@ -1,8 +1,6 @@
-/* stylelint-disable at-rule-no-unknown */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
 @import "tailwindcss";
 
-/* stylelint-disable-next-line at-rule-no-unknown -- Tailwind CSS v4 directive */
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
@@ -108,6 +106,12 @@ aside {
 /* Ensure dark mode class is applied to html element */
 html.dark {
   color-scheme: dark;
+}
+
+/* Remove positioning from Next.js portal element */
+nextjs-portal {
+  left: unset !important;
+  top: unset !important;
 }
 
 /* stylelint-enable at-rule-no-unknown */

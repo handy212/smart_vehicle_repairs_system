@@ -5,6 +5,7 @@ import SignatureCanvas from "react-signature-canvas";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SignaturePadProps {
   value?: string; // Base64 encoded signature image
@@ -73,9 +74,11 @@ export function SignaturePad({
       </CardHeader>
       <CardContent>
         <div 
-          className={`border-2 border-dashed border-gray-300 rounded-lg bg-white ${
-            disabled ? "pointer-events-none opacity-50" : ""
-          }`}
+          className={cn(
+            "border-2 border-dashed rounded-lg bg-background",
+            disabled ? "pointer-events-none opacity-50" : "border-border",
+            !disabled && "border-gray-300 dark:border-gray-700"
+          )}
         >
           <SignatureCanvas
             ref={sigPadRef}
@@ -95,7 +98,7 @@ export function SignaturePad({
             <img
               src={value}
               alt="Signature preview"
-              className="max-w-xs border border-gray-200 rounded"
+              className="max-w-xs border border-border rounded"
             />
           </div>
         )}

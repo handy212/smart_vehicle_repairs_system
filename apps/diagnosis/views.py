@@ -511,37 +511,15 @@ class DiagnosisViewSet(viewsets.ModelViewSet):
         # Update draft parts to pending
         updated_count = parts.filter(status='draft').update(status='pending')
 
-        # Find parts managers in the same branch
-        parts_managers = User.objects.filter(
-            branch=work_order.branch, 
-            role='parts_manager', 
-            is_active=True
-        )
-        
-        # Fallback to managers if no parts manager found
-        if not parts_managers.exists():
-             parts_managers = User.objects.filter(
-                managed_branches=work_order.branch, 
-                role='manager', 
-                is_active=True
-            )
-
-        notification_count = 0
-        for pm in parts_managers:
-            Notification.objects.create(
-                recipient=pm,
-                notification_type='work_order',
-                channel='in_app',
-                title=f"Parts Estimate Requested: WO #{work_order.work_order_number}",
-                message=f"Technician {request.user.get_full_name()} has requested an estimate for {parts_count} part(s) on Work Order #{work_order.work_order_number}.",
-                priority='high',
-                data={
-                    'work_order_id': work_order.id,
-                    'diagnosis_id': diagnosis.id,
-                    'action': 'estimate_required'
-                }
-            )
-            notification_count += 1
+        # Use notification triggers to send notifications (Email/In-App only, as requested)
+        try:
+            from apps.notifications_app.triggers import NotificationTriggers
+            triggers = NotificationTriggers()
+            notification_count = triggers.parts_estimate_requested(work_order, diagnosis, request.user)
+        except Exception as e:
+            # Fallback or log error
+            print(f"Error sending parts estimate notification: {e}")
+            notification_count = 0
             
         return Response({
             "message": f"Parts estimate requested. Notified {notification_count} parts manager(s).",
