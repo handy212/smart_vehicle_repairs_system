@@ -26,7 +26,7 @@ interface VehicleDamageMarkerProps {
 }
 
 const damageTypeColors: Record<DamageMark["type"], string> = {
-  scratch: "bg-blue-600",
+  scratch: "bg-primary",
   dent: "bg-red-600",
   chip: "bg-yellow-500",
   crack: "bg-orange-600",
@@ -112,7 +112,7 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
         <div className="flex flex-wrap items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs">
           <div className="font-semibold text-gray-700">Legend:</div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-blue-600"></div>
+            <div className="w-3 h-3 rounded-full bg-primary"></div>
             <span>Scratch</span>
           </div>
           <div className="flex items-center gap-1">
@@ -253,7 +253,7 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
           {/* Temporary mark position indicator */}
           {tempMark && (
             <div
-              className="absolute w-12 h-12 border-4 border-blue-500 border-dashed rounded-full bg-blue-100/30 animate-pulse"
+              className="absolute w-12 h-12 border-4 border-primary border-dashed rounded-full bg-orange-100/30 animate-pulse"
               style={{
                 left: `${tempMark.x}%`,
                 top: `${tempMark.y}%`,
@@ -262,7 +262,7 @@ export function VehicleDamageMarker({ damage, onChange, disabled }: VehicleDamag
               }}
             >
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-primary rounded-full"></div>
               </div>
             </div>
           )}

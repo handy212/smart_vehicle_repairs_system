@@ -19,7 +19,7 @@ export default function AdminDashboardPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -47,72 +47,32 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Total Users</p>
-                <p className="text-2xl font-black text-gray-900 dark:text-white mt-1">{totalUsers}</p>
-              </div>
-              <div className="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/20 flex items-center justify-center">
-                <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              </div>
-            </div>
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-              <span className="font-medium">All registered accounts</span>
-            </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Users</span>
+            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{totalUsers}</span>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Active</p>
-                <p className="text-2xl font-black text-green-600 dark:text-green-400 mt-1">{activeUsers}</p>
-              </div>
-              <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-950/20 flex items-center justify-center">
-                <UserCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-              <span className="font-medium">Currently active users</span>
-            </div>
+        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
+            <span className="text-lg font-bold text-green-600 dark:text-green-400">{activeUsers}</span>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Inactive</p>
-                <p className="text-2xl font-black text-red-600 dark:text-red-400 mt-1">{inactiveUsers}</p>
-              </div>
-              <div className="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950/20 flex items-center justify-center">
-                <UserX className="w-5 h-5 text-red-600 dark:text-red-400" />
-              </div>
-            </div>
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-              <span className="font-medium">Disabled accounts</span>
-            </div>
+        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Inactive</span>
+            <span className="text-lg font-bold text-red-600 dark:text-red-400">{inactiveUsers}</span>
           </CardContent>
         </Card>
 
-        <Card className="border-gray-100 dark:border-gray-800 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Staff</p>
-                <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{staffCount}</p>
-              </div>
-              <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-              <span className="font-medium">Internal roles</span>
-            </div>
+        <Card className="shadow-sm border bg-white dark:bg-gray-800">
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Staff</span>
+            <span className="text-lg font-bold text-primary dark:text-primary">{staffCount}</span>
           </CardContent>
         </Card>
       </div>
@@ -127,8 +87,8 @@ export default function AdminDashboardPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Link href="/admin/users">
                 <Button variant="outline" className="w-full h-auto py-4 px-4 flex flex-col items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:scale-[1.02]">
-                  <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mb-1">
-                    <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <div className="w-8 h-8 rounded-full bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center mb-1">
+                    <Users className="h-4 w-4 text-primary dark:text-primary" />
                   </div>
                   <div className="text-center">
                     <span className="font-semibold text-sm block">Users</span>
@@ -212,7 +172,7 @@ export default function AdminDashboardPage() {
                       <div className="flex items-center space-x-2">
                         <span className={cn("w-2 h-2 rounded-full",
                           log.action === 'create' ? 'bg-green-500' :
-                            log.action === 'update' ? 'bg-blue-500' :
+                            log.action === 'update' ? 'bg-primary' :
                               log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
                         )}></span>
                         <span className="text-xs font-bold text-gray-900 dark:text-gray-100">{log.user_name || "System"}</span>

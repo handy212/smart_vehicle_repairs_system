@@ -62,7 +62,7 @@ export default function TechnicianProfilePage() {
     const getStatusColor = (status: Technician['current_status']) => {
         switch (status) {
             case 'available': return "text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400";
-            case 'busy': return "text-blue-600 bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400";
+            case 'busy': return "text-primary bg-orange-100 dark:bg-orange-900/30 dark:text-primary";
             case 'break': return "text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400";
             case 'offline': return "text-gray-600 bg-gray-100 dark:bg-gray-800 dark:text-gray-400";
             default: return "";
@@ -115,11 +115,11 @@ export default function TechnicianProfilePage() {
                 {/* Left Column: Info Card */}
                 <div className="md:col-span-1 space-y-6">
                     <Card className="overflow-hidden">
-                        <div className="h-32 bg-gradient-to-r from-blue-600 to-indigo-600 relative">
+                        <div className="h-32 bg-gradient-to-r from-primary to-indigo-600 relative">
                             <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
                                 <Avatar className="h-24 w-24 border-4 border-white dark:border-gray-950 shadow-lg">
                                     <AvatarImage src={technician.user_details?.profile_picture} />
-                                    <AvatarFallback className="text-2xl font-bold bg-white text-blue-600">
+                                    <AvatarFallback className="text-2xl font-bold bg-white text-primary">
                                         {technician.user_details?.first_name?.[0]}{technician.user_details?.last_name?.[0]}
                                     </AvatarFallback>
                                 </Avatar>
@@ -155,7 +155,7 @@ export default function TechnicianProfilePage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2">
-                                <Award className="h-4 w-4 text-blue-500" />
+                                <Award className="h-4 w-4 text-primary" />
                                 Skills & Expertise
                             </CardTitle>
                         </CardHeader>
@@ -177,7 +177,7 @@ export default function TechnicianProfilePage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-base flex items-center gap-2">
-                                <Briefcase className="h-4 w-4 text-blue-500" />
+                                <Briefcase className="h-4 w-4 text-primary" />
                                 Work Summary
                             </CardTitle>
                         </CardHeader>
@@ -216,9 +216,9 @@ export default function TechnicianProfilePage() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
-                                            <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">0</div>
-                                            <div className="text-sm text-blue-600 dark:text-blue-300">Active Jobs</div>
+                                        <div className="bg-primary/10 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-100 dark:border-orange-800">
+                                            <div className="text-2xl font-bold text-orange-700 dark:text-primary">0</div>
+                                            <div className="text-sm text-primary dark:text-orange-300">Active Jobs</div>
                                         </div>
                                         <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-100 dark:border-green-800">
                                             <div className="text-2xl font-bold text-green-700 dark:text-green-400">0</div>

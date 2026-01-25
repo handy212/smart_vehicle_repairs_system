@@ -90,9 +90,9 @@ export default function TransfersPage() {
                 <div className="flex justify-between items-center pt-2">
                     <div>
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-                            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+                            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
                             <span>/</span>
-                            <Link href="/inventory" className="hover:text-blue-600 transition-colors">Inventory</Link>
+                            <Link href="/inventory" className="hover:text-primary transition-colors">Inventory</Link>
                             <span>/</span>
                             <span className="text-gray-900 dark:text-gray-100 font-medium">Transfers</span>
                         </div>
@@ -204,7 +204,7 @@ export default function TransfersPage() {
                     </DropdownMenu>
 
                     <Link href="/inventory/transfers/new">
-                        <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                        <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
                             <Plus className="w-4 h-4 mr-2" />
                             New Transfer
                         </Button>
@@ -243,7 +243,7 @@ export default function TransfersPage() {
                                             <TableCell className="px-4 py-2">
                                                 <div className="flex flex-col text-sm">
                                                     <div className="flex items-center text-gray-900 dark:text-gray-100 font-medium">
-                                                        <MapPin className="w-3 h-3 mr-1.5 text-blue-500" />
+                                                        <MapPin className="w-3 h-3 mr-1.5 text-primary" />
                                                         {transfer.source_branch_name || "Unknown"}
                                                     </div>
                                                     <div className="flex items-center text-gray-500 dark:text-gray-400 text-xs mt-0.5 ml-4">

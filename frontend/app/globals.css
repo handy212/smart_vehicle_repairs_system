@@ -10,7 +10,7 @@
   --card-foreground: #171717;
   --border: #e5e7eb;
   --input: #ffffff;
-  --primary: #2563eb;
+  --primary: #ff8040;
   --primary-foreground: #ffffff;
   --secondary: #f3f4f6;
   --secondary-foreground: #111827;
@@ -29,7 +29,7 @@
   --card-foreground: #ededed;
   --border: #374151;
   --input: #1a1a1a;
-  --primary: #3b82f6;
+  --primary: #ff8040;
   --primary-foreground: #ffffff;
   --secondary: #1f2937;
   --secondary-foreground: #f9fafb;
@@ -46,6 +46,17 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }

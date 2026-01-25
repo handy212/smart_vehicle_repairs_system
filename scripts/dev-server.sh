@@ -187,10 +187,16 @@ source "$VENV_DIR/bin/activate"
 export DJANGO_SETTINGS_MODULE=config.settings.development
 
 # Ensure frontend dev env points to the dev backend (avoid accidental calls to :8000)
+# Ensure frontend dev env points to the dev backend (avoid accidental calls to :8000)
 FRONTEND_ENV_FILE="$FRONTEND_DIR/.env.local"
 echo -e "${YELLOW}Configuring frontend env: $FRONTEND_ENV_FILE${NC}"
+
+# Extract Google Client ID from backend .env
+GOOGLE_CLIENT_ID=$(grep "^GOOGLE_OAUTH_CLIENT_ID=" "$PROJECT_DIR/.env" | cut -d '=' -f2-)
+
 cat > "$FRONTEND_ENV_FILE" << EOF
 NEXT_PUBLIC_API_URL=http://localhost:$DJANGO_PORT/api
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
 EOF
 echo -e "${GREEN}✓ Frontend API URL set to http://localhost:$DJANGO_PORT/api${NC}"
 echo ""

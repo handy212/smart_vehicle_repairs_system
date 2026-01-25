@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -268,7 +268,7 @@ export default function DiagnosisPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -374,15 +374,15 @@ export default function DiagnosisPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">
+            <Link href="/dashboard" className="hover:text-primary transition-colors">
               Dashboard
             </Link>
             <span>/</span>
-            <Link href={`/workorders`} className="hover:text-blue-600 transition-colors">
+            <Link href={`/workorders`} className="hover:text-primary transition-colors">
               Work Orders
             </Link>
             <span>/</span>
-            <Link href={`/workorders/${workOrderId}`} className="hover:text-blue-600 transition-colors">
+            <Link href={`/workorders/${workOrderId}`} className="hover:text-primary transition-colors">
               #{workOrderId}
             </Link>
             <span>/</span>
@@ -468,7 +468,7 @@ export default function DiagnosisPage() {
             <div className="flex items-center gap-4">
               <Badge
                 variant="outline"
-                className={`text-sm py-1 px-3 ${diagnosis.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                className={`text-sm py-1 px-3 ${diagnosis.status === 'in_progress' ? 'bg-primary/10 text-orange-700 border-orange-200' :
                   diagnosis.status === 'paused' ? 'bg-orange-50 text-orange-700 border-orange-200' :
                     diagnosis.status === 'completed' ? 'bg-green-50 text-green-700 border-green-200' :
                       'bg-gray-100 text-gray-700 border-gray-200'
@@ -496,9 +496,9 @@ export default function DiagnosisPage() {
 
             {/* Compact Workflow Stages */}
             <div className="flex items-center gap-1 text-[10px] uppercase font-semibold tracking-wider text-gray-400">
-              <span className={diagnosis.status !== 'not_started' ? "text-blue-600" : ""}>Start</span>
+              <span className={diagnosis.status !== 'not_started' ? "text-primary" : ""}>Start</span>
               <span className="mx-1">→</span>
-              <span className={['in_progress', 'paused', 'completed'].includes(diagnosis.status) ? "text-blue-600" : ""}>In Progress</span>
+              <span className={['in_progress', 'paused', 'completed'].includes(diagnosis.status) ? "text-primary" : ""}>In Progress</span>
               <span className="mx-1">→</span>
               <span className={diagnosis.status === 'completed' ? "text-green-600" : ""}>Done</span>
             </div>
@@ -556,7 +556,7 @@ export default function DiagnosisPage() {
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Diagnostic Codes</span>
             <div className="flex items-end justify-between">
               <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{codesCount}</span>
-              <Code className="w-4 h-4 text-blue-500 mb-1" />
+              <Code className="w-4 h-4 text-primary mb-1" />
             </div>
           </CardContent>
         </Card>
@@ -596,14 +596,14 @@ export default function DiagnosisPage() {
           <TabsList className="flex w-full h-auto p-0 bg-transparent gap-6">
             <TabsTrigger
               value="complaint"
-              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
             >
               <MessageSquare className="w-4 h-4 mr-2" />
               Complaint
             </TabsTrigger>
             <TabsTrigger
               value="codes"
-              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
             >
               <Code className="w-4 h-4 mr-2" />
               Codes
@@ -615,7 +615,7 @@ export default function DiagnosisPage() {
             </TabsTrigger>
             <TabsTrigger
               value="tests"
-              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
             >
               <TestTube className="w-4 h-4 mr-2" />
               Tests
@@ -627,7 +627,7 @@ export default function DiagnosisPage() {
             </TabsTrigger>
             <TabsTrigger
               value="photos"
-              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
             >
               <Camera className="w-4 h-4 mr-2" />
               Photos
@@ -639,14 +639,14 @@ export default function DiagnosisPage() {
             </TabsTrigger>
             <TabsTrigger
               value="parts"
-              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
             >
               <Package className="w-4 h-4 mr-2" />
               Parts Required
             </TabsTrigger>
             <TabsTrigger
               value="recommendations"
-              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
             >
               <Wrench className="w-4 h-4 mr-2" />
               Recs
@@ -658,7 +658,7 @@ export default function DiagnosisPage() {
             </TabsTrigger>
             <TabsTrigger
               value="summary"
-              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
+              className="text-sm font-medium rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 py-3 transition-all"
             >
               <FileText className="w-4 h-4 mr-2" />
               Summary
@@ -1063,7 +1063,7 @@ function RecommendationsTab({
                     {unapprovedRecommendations.map((rec: any) => (
                       <div
                         key={rec.id}
-                        className={`group p-4 bg-white dark:bg-gray-900 border rounded-lg transition-all duration-200 hover:shadow-md ${selectedRecommendations.has(rec.id) ? "border-blue-500 ring-1 ring-blue-500 bg-blue-50/10" : "border-gray-100 dark:border-gray-800"
+                        className={`group p-4 bg-white dark:bg-gray-900 border rounded-lg transition-all duration-200 hover:shadow-md ${selectedRecommendations.has(rec.id) ? "border-primary ring-1 ring-primary bg-primary/5" : "border-gray-100 dark:border-gray-800"
                           }`}
                       >
                         <div className="flex items-start gap-3">
@@ -1154,7 +1154,7 @@ function RecommendationsTab({
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                className="h-7 px-2 text-primary hover:text-orange-700 hover:bg-primary/10"
                                 onClick={() => {
                                   setEditingRecommendation(rec);
                                   setShowAddDialog(true);
@@ -1244,7 +1244,7 @@ function RecommendationsTab({
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              className="h-7 px-2 text-primary hover:text-orange-700 hover:bg-primary/10"
                               onClick={() => {
                                 setEditingRecommendation(rec);
                                 setShowAddDialog(true);
@@ -1289,7 +1289,7 @@ function RecommendationsTab({
 
                         {rec.converted_to_task_id && (
                           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                            <Link href={`/workorders/${workOrderId}`} className="flex items-center text-xs font-medium text-blue-600 hover:underline">
+                            <Link href={`/workorders/${workOrderId}`} className="flex items-center text-xs font-medium text-primary hover:underline">
                               <span>View Task #{rec.converted_to_task_id}</span>
                               <ArrowRight className="w-3 h-3 ml-1" />
                             </Link>
@@ -1399,7 +1399,7 @@ function PhotosTab({
         <CardContent className="pt-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
           ) : error ? (
             <div className="p-4 bg-red-50 text-red-600 text-sm rounded-lg flex items-center justify-center">
@@ -1628,7 +1628,7 @@ function PhotoUploadDialog({
                 required
               />
               <div
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 group ${preview ? "border-blue-200 bg-blue-50/10" : "border-gray-200 hover:border-blue-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-blue-500 dark:hover:bg-gray-800"}`}
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 group ${preview ? "border-orange-200 bg-primary/5" : "border-gray-200 hover:border-orange-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-primary dark:hover:bg-gray-800"}`}
                 onClick={() => document.getElementById("photo")?.click()}
               >
                 {preview ? (
@@ -1660,8 +1660,8 @@ function PhotoUploadDialog({
                   </div>
                 ) : (
                   <div className="py-4">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <Camera className="w-8 h-8 text-blue-500 dark:text-blue-400" />
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                      <Camera className="w-8 h-8 text-primary dark:text-primary" />
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -1685,7 +1685,7 @@ function PhotoUploadDialog({
                   value={formData.caption}
                   onChange={(e) => setFormData({ ...formData, caption: e.target.value })}
                   placeholder="Describe what this photo shows..."
-                  className="h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500"
+                  className="h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-primary"
                 />
               </div>
 
@@ -1693,22 +1693,25 @@ function PhotoUploadDialog({
               <div className="space-y-2">
                 <Label htmlFor="photo_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">Photo Type <span className="text-red-500">*</span></Label>
                 <Select
-                  id="photo_type"
                   value={formData.photo_type}
-                  onChange={(e) =>
-                    setFormData({ ...formData, photo_type: e.target.value as any })
+                  onValueChange={(val) =>
+                    setFormData({ ...formData, photo_type: val as any })
                   }
                   required
-                  className="h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
                 >
-                  <option value="problem">Problem</option>
-                  <option value="evidence">Evidence</option>
-                  <option value="component">Component</option>
-                  <option value="before">Before Repair</option>
-                  <option value="after">After Repair</option>
-                  <option value="damage">Damage</option>
-                  <option value="test_result">Test Result</option>
-                  <option value="other">Other</option>
+                  <SelectTrigger id="photo_type" className="h-9 w-full bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="problem">Problem</SelectItem>
+                    <SelectItem value="evidence">Evidence</SelectItem>
+                    <SelectItem value="component">Component</SelectItem>
+                    <SelectItem value="before">Before Repair</SelectItem>
+                    <SelectItem value="after">After Repair</SelectItem>
+                    <SelectItem value="damage">Damage</SelectItem>
+                    <SelectItem value="test_result">Test Result</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
             </div>
@@ -1719,7 +1722,7 @@ function PhotoUploadDialog({
             <Button type="button" variant="ghost" onClick={handleClose} className="hover:bg-gray-200/50">
               Cancel
             </Button>
-            <Button type="submit" disabled={createMutation.isPending || !selectedFile} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[100px]">
+            <Button type="submit" disabled={createMutation.isPending || !selectedFile} className="bg-primary hover:bg-primary/90 text-white min-w-[100px]">
               {createMutation.isPending ? "Uploading..." : "Upload Photo"}
             </Button>
           </div>
@@ -1856,7 +1859,7 @@ function SummaryTab({
         <CardContent className="pt-6">
           <div className="grid grid-cols-3 gap-6">
             <div className="flex flex-col items-center justify-center p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
-              <div className="p-2 mb-3 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+              <div className="p-2 mb-3 rounded-full bg-primary/10 dark:bg-orange-900/20 text-primary dark:text-primary">
                 <Clock className="w-5 h-5" />
               </div>
               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Time Spent</p>
@@ -1904,7 +1907,7 @@ function SummaryTab({
               onClick={handleSave}
               disabled={isUpdating || isDisabled}
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 min-w-[100px]"
+              className="bg-primary hover:bg-primary/90 min-w-[100px]"
             >
               {isUpdating ? "Saving..." : "Save Notes"}
             </Button>

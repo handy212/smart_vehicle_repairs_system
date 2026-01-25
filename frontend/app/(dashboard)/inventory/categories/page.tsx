@@ -39,7 +39,7 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
   if (!stats) return null;
 
   const items = [
-    { label: "Total Categories", value: stats.total_categories, icon: FolderTree, color: "text-blue-600" },
+    { label: "Total Categories", value: stats.total_categories, icon: FolderTree, color: "text-primary" },
   ];
 
 };
@@ -110,9 +110,9 @@ export default function PartCategoriesPage() {
         <div className="flex justify-between items-center pt-2">
           <div>
             <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-              <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+              <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
               <span>/</span>
-              <Link href="/inventory" className="hover:text-blue-600 transition-colors">Inventory</Link>
+              <Link href="/inventory" className="hover:text-primary transition-colors">Inventory</Link>
               <span>/</span>
               <span className="text-gray-900 dark:text-gray-100 font-medium">Categories</span>
             </div>
@@ -167,7 +167,7 @@ export default function PartCategoriesPage() {
                 </DropdownMenu>
                 */}
           <Link href="/inventory/categories/new">
-            <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+            <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
               <Plus className="w-4 h-4 mr-2" />
               New Category
             </Button>

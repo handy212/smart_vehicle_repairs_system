@@ -117,7 +117,7 @@ export default function PaymentHistoryPage() {
             <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
               Total Payments
             </CardTitle>
-            <CreditCard className="h-5 w-5 text-blue-500" />
+            <CreditCard className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -229,7 +229,7 @@ export default function PaymentHistoryPage() {
                         {payment.invoice_number ? (
                           <Link
                             href={`/portal/invoices/${payment.invoice}`}
-                            className="text-blue-600 dark:text-blue-400 hover:underline"
+                            className="text-primary dark:text-primary hover:underline"
                           >
                             {payment.invoice_number}
                           </Link>

@@ -221,7 +221,7 @@ export default function BudgetsPage() {
                 <CardContent className="p-0">
                     {isLoading ? (
                         <div className="flex justify-center p-8">
-                            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         </div>
                     ) : budgets?.length > 0 ? (
                         <div className="overflow-x-auto">
@@ -286,7 +286,7 @@ export default function BudgetsPage() {
                                                         </Button>
                                                     </Link>
                                                     <Link href={`/accounting/budgets/${budget.id}`}>
-                                                        <Button size="sm" variant="ghost" className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                                        <Button size="sm" variant="ghost" className="h-7 text-xs text-primary hover:text-orange-700 hover:bg-primary/10">
                                                             <Edit className="w-3 h-3 mr-1" />
                                                             Manage
                                                         </Button>

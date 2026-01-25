@@ -231,3 +231,132 @@ class UserViewSet(viewsets.ModelViewSet):
         
         triggers = NotificationTriggers()
         triggers.password_reset_link(user, reset_link, request)
+
+
+class GoogleAuthView(viewsets.GenericViewSet):
+    """
+    API endpoint for Google OAuth authentication.
+    Accepts a Google ID token and returns JWT tokens.
+    """
+    permission_classes = [AllowAny]
+    
+    @action(detail=False, methods=['post'])
+    def login(self, request):
+        """
+        Authenticate with Google ID token and return JWT tokens.
+        
+        Expected request body:
+        {
+            "id_token": "google-id-token-from-frontend"
+        }
+        
+        Returns:
+        {
+            "user": {...},
+            "access": "jwt-access-token",
+            "refresh": "jwt-refresh-token"
+        }
+        """
+        from apps.accounts.google_auth import GoogleAuthSerializer, GoogleAuthResponseSerializer
+        
+        serializer = GoogleAuthSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Create/get user and generate tokens
+        auth_data = serializer.save()
+        
+        # Return response
+        response_serializer = GoogleAuthResponseSerializer(auth_data)
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'])
+    def complete_registration(self, request):
+        """
+        Finalize Google registration with extra info.
+        """
+        from apps.accounts.google_auth import GoogleRegistrationCompleteSerializer
+        
+        serializer = GoogleRegistrationCompleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        auth_data = serializer.save()
+        
+        from apps.accounts.google_auth import GoogleAuthResponseSerializer
+        response_serializer = GoogleAuthResponseSerializer(auth_data)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ManualRegistrationView(viewsets.GenericViewSet):
+    """
+    API endpoint for manual registration with OTP verification.
+    """
+    permission_classes = [AllowAny]
+    
+    @action(detail=False, methods=['post'])
+    def initiate(self, request):
+        """
+        Step 1: Validate input and send OTP.
+        """
+        from apps.accounts.serializers import ManualRegistrationInitiateSerializer
+        
+        serializer = ManualRegistrationInitiateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Determine strict or loose validation. 
+        # For initiation, we just want to ensure unique email and valid data.
+        # The OTP logic needs to be triggered here.
+        
+        email = serializer.validated_data['email']
+        
+        # Reuse the OTP logic from Google Auth (or move to a service)
+        import random
+        from apps.accounts.models import RegistrationOTP
+        from django.core.mail import send_mail
+        from django.conf import settings
+        
+        # Generate 6-digit code
+        code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
+        
+        # Save/Update OTP in DB
+        RegistrationOTP.objects.update_or_create(
+            email=email,
+            defaults={'otp_code': code, 'is_verified': False}
+        )
+        
+        # Send Email
+        try:
+            subject = f"Your Verification Code: {code}"
+            message = f"Hello {serializer.validated_data['first_name']},\n\nYour verification code for Smart Vehicle Repairs is: {code}\n\nPlease enter this code to complete your registration.\n\nThank you!"
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+        except Exception as e:
+             return Response({"detail": "Failed to send verification code."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+             
+        return Response({
+            "detail": "Verification code sent to your email.",
+            "email": email
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'])
+    def verify(self, request):
+        """
+        Step 2: Verify OTP and create account.
+        """
+        from apps.accounts.serializers import ManualRegistrationVerifySerializer
+        
+        serializer = ManualRegistrationVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        auth_data = serializer.save()
+        
+        # Return standard auth response
+        return Response({
+            'user': UserSerializer(auth_data['user']).data,
+            'access': auth_data['access'],
+            'refresh': auth_data['refresh']
+        }, status=status.HTTP_201_CREATED)

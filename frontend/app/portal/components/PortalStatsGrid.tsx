@@ -26,8 +26,8 @@ export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
             label: "My Vehicles",
             value: stats.total_vehicles,
             icon: Car,
-            color: "text-blue-600 dark:text-blue-400",
-            bg: "bg-blue-50 dark:bg-blue-900/20",
+            color: "text-primary dark:text-primary",
+            bg: "bg-primary/10 dark:bg-orange-900/20",
             href: "/portal/vehicles"
         },
         {

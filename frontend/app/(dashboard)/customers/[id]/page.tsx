@@ -129,7 +129,7 @@ export default function CustomerDetailPage() {
           <DataTable
             data={workOrders}
             columns={[
-              { header: "WO #", accessorKey: "work_order_number", cell: (item: any) => <Link href={`/workorders/${item.id}`} className="text-blue-600 hover:underline">{item.work_order_number}</Link> },
+              { header: "WO #", accessorKey: "work_order_number", cell: (item: any) => <Link href={`/workorders/${item.id}`} className="text-primary hover:underline">{item.work_order_number}</Link> },
               { header: "Status", accessorKey: "status", cell: (item: any) => <Badge>{item.status}</Badge> },
               { header: "Vehicle", accessorKey: "vehicle_info" },
               { header: "Technician", accessorKey: "primary_technician_name" },

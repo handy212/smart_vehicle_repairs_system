@@ -61,7 +61,7 @@ export function BillingSubmitActions({
         <div className="flex -space-x-px">
             <Button
                 type="button"
-                className="rounded-r-none focus:z-10 bg-blue-600 hover:bg-blue-700 w-full md:w-auto"
+                className="rounded-r-none focus:z-10 bg-primary hover:bg-primary/90 w-full md:w-auto"
                 onClick={handleClick}
                 disabled={isSubmitting}
             >
@@ -80,7 +80,7 @@ export function BillingSubmitActions({
                 <DropdownMenuTrigger asChild>
                     <Button
                         type="button"
-                        className="rounded-l-none border-l border-blue-700/50 bg-blue-600 hover:bg-blue-700 px-2 focus:z-10"
+                        className="rounded-l-none border-l border-orange-700/50 bg-primary hover:bg-primary/90 px-2 focus:z-10"
                         disabled={isSubmitting}
                     >
                         <ChevronDown className="h-4 w-4" />
@@ -88,7 +88,7 @@ export function BillingSubmitActions({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[200px]">
                     <DropdownMenuItem onClick={() => setLastAction("send")}>
-                        <Send className="mr-2 h-4 w-4 text-blue-600" />
+                        <Send className="mr-2 h-4 w-4 text-primary" />
                         <span>{getLabel("send")}</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setLastAction("save")}>

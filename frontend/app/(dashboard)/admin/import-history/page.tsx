@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Download, RefreshCw, FileText, CheckCircle2, AlertOctagon, XCircle } from "lucide-react";
@@ -120,16 +120,20 @@ export default function ImportHistoryPage() {
                 <Label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Model</Label>
                 <Select
                   value={modelFilter}
-                  onChange={(e) => {
-                    setModelFilter(e.target.value);
+                  onValueChange={(val) => {
+                    setModelFilter(val);
                     setPage(1);
                   }}
-                  className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900"
                 >
-                  <option value="">All Models</option>
-                  <option value="Customer">Customers</option>
-                  <option value="Vehicle">Vehicles</option>
-                  <option value="Part">Parts</option>
+                  <SelectTrigger className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900">
+                    <SelectValue placeholder="All Models" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Models</SelectItem>
+                    <SelectItem value="Customer">Customers</SelectItem>
+                    <SelectItem value="Vehicle">Vehicles</SelectItem>
+                    <SelectItem value="Part">Parts</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
 

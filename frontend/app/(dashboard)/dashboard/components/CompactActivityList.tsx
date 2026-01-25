@@ -35,14 +35,14 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                 <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-blue-500" />
+                            <Calendar className="w-4 h-4 text-primary" />
                             <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
                                 Today's Agenda
                             </CardTitle>
                         </div>
                         <Link
                             href="/appointments"
-                            className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 transition-colors"
+                            className="text-[10px] font-bold uppercase tracking-widest text-primary dark:text-primary hover:text-orange-800 dark:hover:text-orange-300 flex items-center gap-1 transition-colors"
                         >
                             Full Schedule
                             <ChevronRight className="w-3 h-3" />
@@ -59,7 +59,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                                     className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors group"
                                 >
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                        <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
                                             {apt.customer_name || "Guest Customer"}
                                         </p>
                                         <div className="flex items-center gap-2 mt-0.5">
@@ -113,7 +113,7 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                         </div>
                         <Link
                             href="/workorders"
-                            className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 transition-colors"
+                            className="text-[10px] font-bold uppercase tracking-widest text-primary dark:text-primary hover:text-orange-800 dark:hover:text-orange-300 flex items-center gap-1 transition-colors"
                         >
                             All Orders
                             <ChevronRight className="w-3 h-3" />
@@ -131,10 +131,10 @@ export function CompactActivityList({ appointments, workOrders }: CompactActivit
                                 >
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-mono text-[10px] font-bold text-gray-400 group-hover:text-blue-500 transition-colors">
+                                            <span className="font-mono text-[10px] font-bold text-gray-400 group-hover:text-primary transition-colors">
                                                 #{wo.work_order_number}
                                             </span>
-                                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                            <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
                                                 {wo.customer_name || "N/A"}
                                             </p>
                                         </div>

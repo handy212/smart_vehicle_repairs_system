@@ -12,9 +12,10 @@ import { appointmentsApi } from "@/lib/api/appointments";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, AlertCircle } from "lucide-react";
+import { PremiumIcons } from "@/components/ui/icons";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { AxiosError } from "axios";
@@ -372,21 +373,29 @@ export default function NewWorkOrderPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
-            <span>/</span>
-            <Link href="/workorders" className="hover:text-blue-600 transition-colors">Work Orders</Link>
-            <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">New</span>
+          {/* Premium Header - Removed manual breadcrumbs */}
+          <div className="flex flex-col gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+              className="w-fit -ml-2 h-8 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+            >
+              <PremiumIcons.ArrowLeft className="w-4 h-4 mr-1" />
+              Back
+            </Button>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2">
+              <PremiumIcons.PlusCircle className="w-6 h-6 text-primary dark:text-primary" />
+              <span className="font-semibold text-lg">New Work Order</span>
+            </h1>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">New Work Order</h1>
         </div>
       </div>
 
       {appointment && (
-        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+        <Card className="bg-primary/10 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
           <CardContent className="pt-6">
-            <p className="text-sm text-blue-800 dark:text-blue-400">
+            <p className="text-sm text-orange-800 dark:text-primary">
               Creating work order from appointment: <strong>{appointment.appointment_number}</strong>
             </p>
           </CardContent>
@@ -529,9 +538,12 @@ export default function NewWorkOrderPage() {
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
             {/* Customer & Vehicle */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Customer & Vehicle</CardTitle>
+            <Card className="border-none shadow-sm bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
+              <CardHeader className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-gray-100/50 dark:border-gray-800/50">
+                <CardTitle className="flex items-center gap-2">
+                  <PremiumIcons.Users className="w-5 h-5 text-gray-500" />
+                  Customer & Vehicle
+                </CardTitle>
                 <CardDescription>Select customer and vehicle</CardDescription>
               </CardHeader>
 
@@ -550,16 +562,14 @@ export default function NewWorkOrderPage() {
                       </label>
 
                       <Select
-                        id="customer"
-                        {...register("customer", { valueAsNumber: true })}
-                        className={`w-full ${errors.customer ? "border-red-500" : ""}`}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          setValue("customer", val);
-                          setSelectedCustomer(val);
+                        value={customer?.toString() || ""}
+                        onValueChange={(val) => {
+                          const customerId = parseInt(val);
+                          setValue("customer", customerId);
+                          setSelectedCustomer(customerId);
 
                           // Update selected customer data
-                          const customerData = customersData?.results?.find((c) => c.id === val);
+                          const customerData = customersData?.results?.find((c) => c.id === customerId);
                           if (customerData) {
                             setSelectedCustomerData({
                               id: customerData.id,
@@ -574,12 +584,16 @@ export default function NewWorkOrderPage() {
                           }
                         }}
                       >
-                        <option value="">Select a customer</option>
-                        {customersData?.results?.map((customer) => (
-                          <option key={customer.id} value={customer.id}>
-                            {customer.full_name || `${customer.user?.first_name || ''} ${customer.user?.last_name || ''}`.trim() || 'Unknown'}
-                          </option>
-                        ))}
+                        <SelectTrigger id="customer" className={`w-full ${errors.customer ? "border-red-500" : ""}`}>
+                          <SelectValue placeholder="Select a customer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customersData?.results?.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id.toString()}>
+                              {customer.full_name || `${customer.user?.first_name || ''} ${customer.user?.last_name || ''}`.trim() || 'Unknown'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
 
                       {errors.customer && (
@@ -632,24 +646,26 @@ export default function NewWorkOrderPage() {
                       </label>
 
                       <Select
-                        id="vehicle"
-                        {...register("vehicle", { valueAsNumber: true })}
-                        className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}
+                        value={vehicle?.toString() || ""}
+                        onValueChange={(val) => setValue("vehicle", parseInt(val))}
                         disabled={!selectedCustomer || !vehiclesData?.results?.length}
                       >
-                        <option value="">
-                          {!selectedCustomer
-                            ? "Select a customer first"
-                            : !vehiclesData?.results?.length
-                              ? "No vehicles found"
-                              : "Select a vehicle"}
-                        </option>
-
-                        {vehiclesData?.results?.map((vehicle) => (
-                          <option key={vehicle.id} value={vehicle.id}>
-                            {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
-                          </option>
-                        ))}
+                        <SelectTrigger id="vehicle" className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}>
+                          <SelectValue placeholder={
+                            !selectedCustomer
+                              ? "Select a customer first"
+                              : !vehiclesData?.results?.length
+                                ? "No vehicles found"
+                                : "Select a vehicle"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {vehiclesData?.results?.map((vehicle) => (
+                            <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                              {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
 
                       {errors.vehicle && (
@@ -695,9 +711,12 @@ export default function NewWorkOrderPage() {
 
 
             {/* Work Order Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Work Order Details</CardTitle>
+            <Card className="border-none shadow-sm bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
+              <CardHeader className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-gray-100/50 dark:border-gray-800/50">
+                <CardTitle className="flex items-center gap-2">
+                  <PremiumIcons.FileText className="w-5 h-5 text-gray-500" />
+                  Work Order Details
+                </CardTitle>
                 <CardDescription>Priority and description</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -707,13 +726,18 @@ export default function NewWorkOrderPage() {
                       Priority
                     </label>
                     <Select
-                      id="priority"
-                      {...register("priority")}
+                      defaultValue="normal"
+                      onValueChange={(val) => setValue("priority", val as any)}
                     >
-                      <option value="low">Low</option>
-                      <option value="normal">Normal</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
+                      <SelectTrigger id="priority">
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
                   <div>
@@ -760,7 +784,7 @@ export default function NewWorkOrderPage() {
                                   setValue("customer_concerns", "");
                                 }
                               }}
-                              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                              className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
                             />
                             <span className="text-sm text-gray-700 dark:text-gray-300">{concern.label}</span>
                           </label>

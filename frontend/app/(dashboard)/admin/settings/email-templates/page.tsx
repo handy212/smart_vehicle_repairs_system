@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
@@ -226,7 +226,7 @@ export default function EmailTemplatesPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -237,14 +237,14 @@ export default function EmailTemplatesPage() {
       <div className="flex items-center justify-between px-4 pt-4">
         <div>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/admin/settings" className="hover:text-blue-600 transition-colors">Settings</Link>
+            <Link href="/admin/settings" className="hover:text-primary transition-colors">Settings</Link>
             <span>/</span>
             <span className="text-gray-900 dark:text-gray-100 font-medium">Templates</span>
           </div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Email Templates</h1>
         </div>
         <PermissionGuard permission="manage_settings">
-          <Button onClick={handleCreate} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700">
+          <Button onClick={handleCreate} size="sm" className="bg-primary hover:bg-primary/90 text-white dark:bg-primary dark:hover:bg-primary/90">
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             Create Template
           </Button>
@@ -268,35 +268,39 @@ export default function EmailTemplatesPage() {
 
             <Select
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="h-8 w-[180px] text-xs bg-white dark:bg-gray-900"
+              onValueChange={(val) => setTypeFilter(val)}
             >
-              <option value="">All Types</option>
-              <option value="invoice_generated">Invoice Generated</option>
-              <option value="invoice_due">Invoice Due</option>
-              <option value="invoice_overdue">Invoice Overdue</option>
-              <option value="payment_received">Payment Received</option>
-              <option value="appointment_reminder">Appointment Reminder</option>
-              <option value="appointment_confirmation">Appointment Confirmation</option>
-              <option value="appointment_cancelled">Appointment Cancelled</option>
-              <option value="work_order_created">Work Order Created</option>
-              <option value="work_order_completed">Work Order Completed</option>
-              <option value="work_order_approved">Work Order Approved</option>
-              <option value="inspection_completed">Inspection Completed</option>
-              <option value="inspection_approved">Inspection Approved</option>
-              <option value="inspection_rejected">Inspection Rejected</option>
-              <option value="inspection_sent_to_customer">Inspection Sent to Customer</option>
-              <option value="vehicle_ready">Vehicle Ready</option>
-              <option value="parts_arrived">Parts Arrived</option>
-              <option value="estimate_sent">Estimate Sent</option>
-              <option value="estimate_approved">Estimate Approved</option>
-              <option value="estimate_declined">Estimate Declined</option>
-              <option value="low_stock_alert">Low Stock Alert</option>
-              <option value="service_due">Service Due</option>
-              <option value="user_welcome">User Welcome</option>
-              <option value="password_reset">Password Reset</option>
-              <option value="password_reset_link">Password Reset Link</option>
-              <option value="custom">Custom</option>
+              <SelectTrigger className="h-8 w-[180px] text-xs bg-white dark:bg-gray-900">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="invoice_generated">Invoice Generated</SelectItem>
+                <SelectItem value="invoice_due">Invoice Due</SelectItem>
+                <SelectItem value="invoice_overdue">Invoice Overdue</SelectItem>
+                <SelectItem value="payment_received">Payment Received</SelectItem>
+                <SelectItem value="appointment_reminder">Appointment Reminder</SelectItem>
+                <SelectItem value="appointment_confirmation">Appointment Confirmation</SelectItem>
+                <SelectItem value="appointment_cancelled">Appointment Cancelled</SelectItem>
+                <SelectItem value="work_order_created">Work Order Created</SelectItem>
+                <SelectItem value="work_order_completed">Work Order Completed</SelectItem>
+                <SelectItem value="work_order_approved">Work Order Approved</SelectItem>
+                <SelectItem value="inspection_completed">Inspection Completed</SelectItem>
+                <SelectItem value="inspection_approved">Inspection Approved</SelectItem>
+                <SelectItem value="inspection_rejected">Inspection Rejected</SelectItem>
+                <SelectItem value="inspection_sent_to_customer">Inspection Sent to Customer</SelectItem>
+                <SelectItem value="vehicle_ready">Vehicle Ready</SelectItem>
+                <SelectItem value="parts_arrived">Parts Arrived</SelectItem>
+                <SelectItem value="estimate_sent">Estimate Sent</SelectItem>
+                <SelectItem value="estimate_approved">Estimate Approved</SelectItem>
+                <SelectItem value="estimate_declined">Estimate Declined</SelectItem>
+                <SelectItem value="low_stock_alert">Low Stock Alert</SelectItem>
+                <SelectItem value="service_due">Service Due</SelectItem>
+                <SelectItem value="user_welcome">User Welcome</SelectItem>
+                <SelectItem value="password_reset">Password Reset</SelectItem>
+                <SelectItem value="password_reset_link">Password Reset Link</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
             </Select>
 
             {(search || typeFilter) && (
@@ -369,7 +373,7 @@ export default function EmailTemplatesPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handlePreview(template)}
-                      className="h-6 w-6 p-0 hover:text-blue-600"
+                      className="h-6 w-6 p-0 hover:text-primary"
                     >
                       <Eye className="w-3.5 h-3.5" />
                     </Button>
@@ -378,7 +382,7 @@ export default function EmailTemplatesPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEdit(template)}
-                        className="h-6 w-6 p-0 hover:text-blue-600"
+                        className="h-6 w-6 p-0 hover:text-primary"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </Button>
@@ -420,7 +424,7 @@ export default function EmailTemplatesPage() {
           <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 gap-0">
             <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${creatingTemplate ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${creatingTemplate ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-primary'}`}>
                   {creatingTemplate ? <Plus className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
                 </div>
                 <div>
@@ -452,50 +456,41 @@ export default function EmailTemplatesPage() {
                     <Label htmlFor="type" className="text-xs font-semibold">Type <span className="text-red-500">*</span></Label>
                     <Select
                       value={editForm.template_type || ""}
-                      onChange={(e) => setEditForm({ ...editForm, template_type: e.target.value })}
-                      className="h-8 w-full text-sm"
+                      onValueChange={(val) => setEditForm({ ...editForm, template_type: val })}
                       disabled={!!editingTemplate}
                     >
-                      <option value="">Select type...</option>
-                      <optgroup label="Invoices & Payments">
-                        <option value="invoice_generated">Invoice Generated</option>
-                        <option value="invoice_due">Invoice Due</option>
-                        <option value="invoice_overdue">Invoice Overdue</option>
-                        <option value="payment_received">Payment Received</option>
-                      </optgroup>
-                      <optgroup label="Appointments">
-                        <option value="appointment_reminder">Appointment Reminder</option>
-                        <option value="appointment_confirmation">Appointment Confirmation</option>
-                        <option value="appointment_cancelled">Appointment Cancelled</option>
-                      </optgroup>
-                      <optgroup label="Work Orders">
-                        <option value="work_order_created">Work Order Created</option>
-                        <option value="work_order_completed">Work Order Completed</option>
-                        <option value="work_order_approved">Work Order Approved</option>
-                      </optgroup>
-                      <optgroup label="Inspections">
-                        <option value="inspection_completed">Inspection Completed</option>
-                        <option value="inspection_approved">Inspection Approved</option>
-                        <option value="inspection_rejected">Inspection Rejected</option>
-                        <option value="inspection_sent_to_customer">Inspection Sent to Customer</option>
-                      </optgroup>
-                      <optgroup label="Estimates">
-                        <option value="estimate_sent">Estimate Sent</option>
-                        <option value="estimate_approved">Estimate Approved</option>
-                        <option value="estimate_declined">Estimate Declined</option>
-                        <option value="estimate_expiring_soon">Estimate Expiring Soon</option>
-                        <option value="estimate_expired">Estimate Expired</option>
-                      </optgroup>
-                      <optgroup label="Other">
-                        <option value="vehicle_ready">Vehicle Ready</option>
-                        <option value="parts_arrived">Parts Arrived</option>
-                        <option value="low_stock_alert">Low Stock Alert</option>
-                        <option value="service_due">Service Due</option>
-                        <option value="user_welcome">User Welcome</option>
-                        <option value="password_reset">Password Reset</option>
-                        <option value="password_reset_link">Password Reset Link</option>
-                        <option value="custom">Custom</option>
-                      </optgroup>
+                      <SelectTrigger className="h-8 w-full text-sm">
+                        <SelectValue placeholder="Select type..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="invoice_generated">Invoice Generated</SelectItem>
+                        <SelectItem value="invoice_due">Invoice Due</SelectItem>
+                        <SelectItem value="invoice_overdue">Invoice Overdue</SelectItem>
+                        <SelectItem value="payment_received">Payment Received</SelectItem>
+                        <SelectItem value="appointment_reminder">Appointment Reminder</SelectItem>
+                        <SelectItem value="appointment_confirmation">Appointment Confirmation</SelectItem>
+                        <SelectItem value="appointment_cancelled">Appointment Cancelled</SelectItem>
+                        <SelectItem value="work_order_created">Work Order Created</SelectItem>
+                        <SelectItem value="work_order_completed">Work Order Completed</SelectItem>
+                        <SelectItem value="work_order_approved">Work Order Approved</SelectItem>
+                        <SelectItem value="inspection_completed">Inspection Completed</SelectItem>
+                        <SelectItem value="inspection_approved">Inspection Approved</SelectItem>
+                        <SelectItem value="inspection_rejected">Inspection Rejected</SelectItem>
+                        <SelectItem value="inspection_sent_to_customer">Inspection Sent to Customer</SelectItem>
+                        <SelectItem value="estimate_sent">Estimate Sent</SelectItem>
+                        <SelectItem value="estimate_approved">Estimate Approved</SelectItem>
+                        <SelectItem value="estimate_declined">Estimate Declined</SelectItem>
+                        <SelectItem value="estimate_expiring_soon">Estimate Expiring Soon</SelectItem>
+                        <SelectItem value="estimate_expired">Estimate Expired</SelectItem>
+                        <SelectItem value="vehicle_ready">Vehicle Ready</SelectItem>
+                        <SelectItem value="parts_arrived">Parts Arrived</SelectItem>
+                        <SelectItem value="low_stock_alert">Low Stock Alert</SelectItem>
+                        <SelectItem value="service_due">Service Due</SelectItem>
+                        <SelectItem value="user_welcome">User Welcome</SelectItem>
+                        <SelectItem value="password_reset">Password Reset</SelectItem>
+                        <SelectItem value="password_reset_link">Password Reset Link</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -561,7 +556,7 @@ export default function EmailTemplatesPage() {
                           navigator.clipboard.writeText(variable);
                           toast({ title: "Copied!", description: variable, duration: 1000 });
                         }}
-                        className="w-full text-left px-3 py-2 text-[10px] font-mono text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors flex items-center justify-between group border border-transparent hover:border-blue-100"
+                        className="w-full text-left px-3 py-2 text-[10px] font-mono text-gray-600 hover:bg-primary/10 hover:text-primary rounded transition-colors flex items-center justify-between group border border-transparent hover:border-orange-100"
                       >
                         {variable}
                         <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100" />
@@ -569,8 +564,8 @@ export default function EmailTemplatesPage() {
                     ))}
                   </div>
                 </ScrollArea>
-                <div className="p-3 bg-blue-50 border-t border-blue-100">
-                  <p className="text-[10px] text-blue-700 leading-tight">
+                <div className="p-3 bg-primary/10 border-t border-orange-100">
+                  <p className="text-[10px] text-orange-700 leading-tight">
                     Click to copy variables to clipboard.
                   </p>
                 </div>
@@ -595,7 +590,7 @@ export default function EmailTemplatesPage() {
                   onClick={handleSave}
                   disabled={createMutation.isPending || updateMutation.isPending || !editForm.name || !editForm.subject || !editForm.body || !canManage}
                   size="sm"
-                  className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                  className="h-8 text-xs bg-primary hover:bg-primary/90 text-white"
                 >
                   {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Save Template"}
                 </Button>

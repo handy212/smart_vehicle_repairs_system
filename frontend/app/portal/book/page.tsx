@@ -252,10 +252,10 @@ export default function BookAppointmentPage() {
               </div>
 
               {/* Info Box */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
-                  <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-800 dark:text-blue-300">
+                  <AlertCircle className="w-5 h-5 text-primary dark:text-primary flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-orange-800 dark:text-orange-300">
                     <p className="font-medium mb-1">What happens next?</p>
                     <ul className="list-disc list-inside space-y-1">
                       <li>Your appointment request will be reviewed by our team</li>

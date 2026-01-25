@@ -23,7 +23,7 @@ export default function SupplierDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -154,7 +154,7 @@ export default function SupplierDetailPage() {
                   href={supplier.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-primary hover:text-orange-800"
                 >
                   {supplier.website}
                 </a>

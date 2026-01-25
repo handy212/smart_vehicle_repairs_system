@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Tag, CheckCircle, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -170,7 +170,7 @@ export default function AssetCategoriesPage() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         );
     }
@@ -180,9 +180,9 @@ export default function AssetCategoriesPage() {
             <div className="flex items-center justify-between px-4 pt-4">
                 <div>
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-                        <Link href="/admin" className="hover:text-blue-600 transition-colors">Admin</Link>
+                        <Link href="/admin" className="hover:text-primary transition-colors">Admin</Link>
                         <span>/</span>
-                        <Link href="/admin/settings" className="hover:text-blue-600 transition-colors">Settings</Link>
+                        <Link href="/admin/settings" className="hover:text-primary transition-colors">Settings</Link>
                         <span>/</span>
                         <span className="text-gray-900 dark:text-gray-100 font-medium">Asset Categories</span>
                     </div>
@@ -199,7 +199,7 @@ export default function AssetCategoriesPage() {
             <Card className="mx-4">
                 <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
-                        <Tag className="h-5 w-5 text-blue-500" />
+                        <Tag className="h-5 w-5 text-primary" />
                         All Categories ({categories.length})
                     </CardTitle>
                 </CardHeader>
@@ -328,14 +328,18 @@ export default function AssetCategoriesPage() {
                             <div className="space-y-2">
                                 <Label htmlFor="default_depreciation_method">Default Depreciation Method</Label>
                                 <Select
-                                    id="default_depreciation_method"
                                     value={formData.default_depreciation_method}
-                                    onChange={(e) => setFormData({ ...formData, default_depreciation_method: e.target.value })}
+                                    onValueChange={(val) => setFormData({ ...formData, default_depreciation_method: val })}
                                 >
-                                    <option value="straight_line">Straight Line</option>
-                                    <option value="declining_balance">Declining Balance</option>
-                                    <option value="double_declining">Double Declining</option>
-                                    <option value="sum_of_years_digits">Sum of Years Digits</option>
+                                    <SelectTrigger id="default_depreciation_method">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="straight_line">Straight Line</SelectItem>
+                                        <SelectItem value="declining_balance">Declining Balance</SelectItem>
+                                        <SelectItem value="double_declining">Double Declining</SelectItem>
+                                        <SelectItem value="sum_of_years_digits">Sum of Years Digits</SelectItem>
+                                    </SelectContent>
                                 </Select>
                             </div>
                             <div className="flex items-center space-x-2">

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/lib/hooks/useToast";
 import { Package } from "lucide-react";
@@ -145,17 +145,20 @@ export function RecommendationDialog({
                                 Quick Select (Service Package)
                             </Label>
                             <Select
-                                id="service_package"
-                                value={formData.service_package_id?.toString() || ""}
-                                onChange={(e) => handlePackageChange(e.target.value)}
-                                className="h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+                                value={formData.service_package_id?.toString() || "none"}
+                                onValueChange={(val) => handlePackageChange(val)}
                             >
-                                <option value="">-- Select a Service Package --</option>
-                                {servicePackages?.results.map((pkg: any) => (
-                                    <option key={pkg.id} value={pkg.id}>
-                                        {pkg.name} ({pkg.estimated_labor_hours}h)
-                                    </option>
-                                ))}
+                                <SelectTrigger id="service_package" className="h-9 w-full bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                    <SelectValue placeholder="-- Select a Service Package --" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">-- Select a Service Package --</SelectItem>
+                                    {servicePackages?.results.map((pkg: any) => (
+                                        <SelectItem key={pkg.id} value={pkg.id.toString()}>
+                                            {pkg.name} ({pkg.estimated_labor_hours}h)
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
                             </Select>
                         </div>
 
@@ -165,18 +168,21 @@ export function RecommendationDialog({
                                     Type <span className="text-red-500">*</span>
                                 </Label>
                                 <Select
-                                    id="recommendation_type"
                                     value={formData.recommendation_type}
-                                    onChange={(e) => setFormData({ ...formData, recommendation_type: e.target.value as any })}
+                                    onValueChange={(val) => setFormData({ ...formData, recommendation_type: val as any })}
                                     required
-                                    className="h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
                                 >
-                                    <option value="repair">Repair</option>
-                                    <option value="replace">Replace</option>
-                                    <option value="service">Service</option>
-                                    <option value="adjust">Adjust</option>
-                                    <option value="clean">Clean</option>
-                                    <option value="inspect">Inspect</option>
+                                    <SelectTrigger id="recommendation_type" className="h-9 w-full bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                        <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="repair">Repair</SelectItem>
+                                        <SelectItem value="replace">Replace</SelectItem>
+                                        <SelectItem value="service">Service</SelectItem>
+                                        <SelectItem value="adjust">Adjust</SelectItem>
+                                        <SelectItem value="clean">Clean</SelectItem>
+                                        <SelectItem value="inspect">Inspect</SelectItem>
+                                    </SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-2">
@@ -184,16 +190,19 @@ export function RecommendationDialog({
                                     Priority <span className="text-red-500">*</span>
                                 </Label>
                                 <Select
-                                    id="priority"
                                     value={formData.priority}
-                                    onChange={(e) => setFormData({ ...formData, priority: e.target.value as any })}
+                                    onValueChange={(val) => setFormData({ ...formData, priority: val as any })}
                                     required
-                                    className="h-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
                                 >
-                                    <option value="critical">Critical</option>
-                                    <option value="necessary">Necessary</option>
-                                    <option value="recommended">Recommended</option>
-                                    <option value="advisory">Advisory</option>
+                                    <SelectTrigger id="priority" className="h-9 w-full bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                                        <SelectValue placeholder="Select priority" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="critical">Critical</SelectItem>
+                                        <SelectItem value="necessary">Necessary</SelectItem>
+                                        <SelectItem value="recommended">Recommended</SelectItem>
+                                        <SelectItem value="advisory">Advisory</SelectItem>
+                                    </SelectContent>
                                 </Select>
                             </div>
                         </div>
@@ -207,18 +216,18 @@ export function RecommendationDialog({
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                 placeholder="Describe the recommended repair or service..."
-                                className="min-h-[120px] resize-none bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:ring-1 focus:ring-blue-500"
+                                className="min-h-[120px] resize-none bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:ring-1 focus:ring-primary"
                                 required
                             />
                         </div>
 
-                        <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-lg p-3 flex gap-3">
+                        <div className="bg-primary/5 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800 rounded-lg p-3 flex gap-3">
                             <div className="shrink-0 mt-0.5">
-                                <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                <Package className="w-5 h-5 text-primary dark:text-primary" />
                             </div>
                             <div>
-                                <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-0.5">Parts & Labor</h4>
-                                <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                                <h4 className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-0.5">Parts & Labor</h4>
+                                <p className="text-xs text-orange-700 dark:text-orange-300 leading-relaxed">
                                     {formData.parts_needed.length > 0 ? (
                                         <span className="font-semibold">
                                             Included: {formData.parts_needed.length} parts and {formData.estimated_labor_hours} hours labor.
@@ -235,7 +244,7 @@ export function RecommendationDialog({
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="hover:bg-gray-200/50">
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[100px]">
+                        <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90 text-white min-w-[100px]">
                             {isLoading ? "Saving..." : recommendation ? "Update" : "Add Recommendation"}
                         </Button>
                     </div>

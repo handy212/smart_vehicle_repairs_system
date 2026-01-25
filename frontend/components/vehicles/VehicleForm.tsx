@@ -8,7 +8,7 @@ import { customersApi } from "@/lib/api/customers";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertCircle, X, Image as ImageIcon, CheckCircle2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import Image from "next/image";
@@ -256,13 +256,19 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Status</label>
                                 <Select
-                                    {...register("status")}
+                                    value={watch("status")}
+                                    onValueChange={(val) => setValue("status", val as any)}
                                 >
-                                    <option value="active">Active</option>
-                                    <option value="in_service">In Service</option>
-                                    <option value="sold">Sold</option>
-                                    <option value="totaled">Totaled</option>
-                                    <option value="inactive">Inactive</option>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="active">Active</SelectItem>
+                                        <SelectItem value="in_service">In Service</SelectItem>
+                                        <SelectItem value="sold">Sold</SelectItem>
+                                        <SelectItem value="totaled">Totaled</SelectItem>
+                                        <SelectItem value="inactive">Inactive</SelectItem>
+                                    </SelectContent>
                                 </Select>
                             </div>
                         </CardContent>
@@ -304,28 +310,40 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Body Style <span className="text-red-500">*</span></label>
                                 <Select
-                                    {...register("vehicle_type")}
+                                    value={watch("vehicle_type")}
+                                    onValueChange={(val) => setValue("vehicle_type", val as any)}
                                 >
-                                    <option value="saloon">Saloon/Sedan</option>
-                                    <option value="suv">SUV</option>
-                                    <option value="pickup">Pick-Up</option>
-                                    <option value="minivan">Mini Van</option>
-                                    <option value="motorcycle">Motorcycle</option>
-                                    <option value="truck">Truck</option>
-                                    <option value="other">Other</option>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select body style" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="saloon">Saloon/Sedan</SelectItem>
+                                        <SelectItem value="suv">SUV</SelectItem>
+                                        <SelectItem value="pickup">Pick-Up</SelectItem>
+                                        <SelectItem value="minivan">Mini Van</SelectItem>
+                                        <SelectItem value="motorcycle">Motorcycle</SelectItem>
+                                        <SelectItem value="truck">Truck</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
                                 </Select>
                             </div>
 
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Engine Type</label>
                                 <Select
-                                    {...register("engine_type")}
+                                    value={watch("engine_type")}
+                                    onValueChange={(val) => setValue("engine_type", val as any)}
                                 >
-                                    <option value="gasoline">Gasoline</option>
-                                    <option value="diesel">Diesel</option>
-                                    <option value="electric">Electric</option>
-                                    <option value="hybrid">Hybrid</option>
-                                    <option value="plug_in_hybrid">Plug-in Hybrid</option>
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select engine type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="gasoline">Gasoline</SelectItem>
+                                        <SelectItem value="diesel">Diesel</SelectItem>
+                                        <SelectItem value="electric">Electric</SelectItem>
+                                        <SelectItem value="hybrid">Hybrid</SelectItem>
+                                        <SelectItem value="plug_in_hybrid">Plug-in Hybrid</SelectItem>
+                                    </SelectContent>
                                 </Select>
                             </div>
 
@@ -364,20 +382,24 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Owner <span className="text-red-500">*</span></label>
                                 <Select
-                                    {...register("owner", { valueAsNumber: true })}
-                                    className={errors.owner ? "border-red-500" : ""}
+                                    value={watch("owner")?.toString()}
+                                    onValueChange={(val) => setValue("owner", parseInt(val))}
                                 >
-                                    <option value="">Select Customer</option>
-                                    {customersData?.results?.map((customer) => {
-                                        const displayName = customer.full_name ||
-                                            customer.company_name ||
-                                            (customer.user?.first_name ? `${customer.user.first_name} ${customer.user.last_name || ''}` : customer.customer_number);
-                                        return (
-                                            <option key={customer.id} value={customer.id}>
-                                                {displayName}
-                                            </option>
-                                        );
-                                    })}
+                                    <SelectTrigger className={errors.owner ? "border-red-500 w-full" : "w-full"}>
+                                        <SelectValue placeholder="Select Customer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {customersData?.results?.map((customer) => {
+                                            const displayName = customer.full_name ||
+                                                customer.company_name ||
+                                                (customer.user?.first_name ? `${customer.user.first_name} ${customer.user.last_name || ''}` : customer.customer_number);
+                                            return (
+                                                <SelectItem key={customer.id} value={customer.id.toString()}>
+                                                    {displayName}
+                                                </SelectItem>
+                                            );
+                                        })}
+                                    </SelectContent>
                                 </Select>
                                 {errors.owner && <p className="text-xs text-red-500">{errors.owner.message}</p>}
                             </div>
@@ -386,9 +408,9 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
 
                     {/* VIN Decoded Information Block */}
                     {vinOtherInfo && (
-                        <Card className="border-blue-100 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-900/10">
+                        <Card className="border-orange-100 dark:border-orange-900 bg-primary/5 dark:bg-orange-900/10">
                             <CardHeader className="pb-3">
-                                <CardTitle className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                <CardTitle className="text-sm font-medium text-orange-800 dark:text-orange-300">
                                     Additional VIN Details
                                 </CardTitle>
                             </CardHeader>

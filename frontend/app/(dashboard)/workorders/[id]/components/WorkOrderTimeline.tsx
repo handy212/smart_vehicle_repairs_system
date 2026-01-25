@@ -27,7 +27,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                         {/* Work Order Created */}
                         {workOrder.created_at && (
                             <div className="relative flex items-start">
-                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-blue-500 border-2 border-white dark:border-gray-800 shadow-sm"></div>
+                                <div className="absolute -left-10 w-3 h-3 rounded-full bg-primary border-2 border-white dark:border-gray-800 shadow-sm"></div>
                                 <div className="flex-1 pt-0.5">
                                     <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                                         Work Order Created
@@ -189,7 +189,7 @@ export default function WorkOrderTimeline({ workOrder, notes }: TimelineProps) {
                                         <div key={note.id} className="relative flex items-start">
                                             <div
                                                 className={`absolute -left-10 w-3 h-3 rounded-full border-2 border-white dark:border-gray-800 shadow-sm ${note.note_type === "customer"
-                                                        ? "bg-blue-400"
+                                                        ? "bg-orange-400"
                                                         : note.is_important
                                                             ? "bg-red-500"
                                                             : "bg-gray-400"

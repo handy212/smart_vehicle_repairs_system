@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, Image as ImageIcon, X, Eye } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
@@ -132,7 +132,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -173,7 +173,7 @@ export default function PhotosTab({ workOrderId }: PhotosTabProps) {
               <p className="text-sm text-gray-500 mb-4">
                 Document work progress with before, during, and after photos.
               </p>
-              <Button onClick={() => setIsUploadDialogOpen(true)}variant="secondary">
+              <Button onClick={() => setIsUploadDialogOpen(true)} variant="secondary">
                 <Plus className="w-4 h-4 mr-2" />
                 Upload First Photo
               </Button>
@@ -393,15 +393,19 @@ function UploadPhotoDialog({
               </label>
               <Select
                 value={photoType}
-                onChange={(e) => setPhotoType(e.target.value)}
+                onValueChange={(val) => setPhotoType(val)}
                 disabled={isUploading}
-                className="w-full"
               >
-                <option value="before">Before</option>
-                <option value="during">During</option>
-                <option value="after">After</option>
-                <option value="part">Part</option>
-                <option value="other">Other</option>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="before">Before</SelectItem>
+                  <SelectItem value="during">During</SelectItem>
+                  <SelectItem value="after">After</SelectItem>
+                  <SelectItem value="part">Part</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
               </Select>
             </div>
 
@@ -436,7 +440,7 @@ function UploadPhotoDialog({
         <DialogFooter>
           <Button
             type="button"
-           variant="secondary"
+            variant="secondary"
             onClick={() => onOpenChange(false)}
             disabled={isUploading}
           >

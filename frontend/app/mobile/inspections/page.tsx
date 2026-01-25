@@ -46,7 +46,7 @@ export default function MobileInspectionsPage() {
     return (
       <div className="p-4 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -123,7 +123,7 @@ export default function MobileInspectionsPage() {
                       inspection.status === "completed" &&
                         "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
                       inspection.status === "in_progress" &&
-                        "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+                        "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
                       inspection.status === "draft" &&
                         "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
                     )}

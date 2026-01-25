@@ -187,7 +187,7 @@ export default function CloseTillPage() {
                                 </div>
                                 <div>
                                     <p className="text-sm text-muted-foreground">Counted Total</p>
-                                    <p className="text-3xl font-bold text-blue-600">{formatCurrency(total)}</p>
+                                    <p className="text-3xl font-bold text-primary">{formatCurrency(total)}</p>
                                 </div>
                                 <div className="pt-4 border-t">
                                     <p className="text-sm text-muted-foreground">Duration</p>

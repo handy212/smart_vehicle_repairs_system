@@ -40,7 +40,6 @@ export const computeGhanaTaxBreakdown = ({
   const vatRate = parseFloat(config.vat_rate || "0");
   const nhilRate = parseFloat(config.nhil_rate || "0");
   const getfundRate = parseFloat(config.getfund_rate || "0");
-  const covidRate = parseFloat(config.covid_rate || "0");
 
   const discountRatio = subtotal > 0 ? discountAmount / subtotal : 0;
   const taxableDiscount = round2(taxableTotal * discountRatio);
@@ -48,8 +47,11 @@ export const computeGhanaTaxBreakdown = ({
 
   const nhilAmount = round2(taxableAfterDiscount * (nhilRate / 100));
   const getfundAmount = round2(taxableAfterDiscount * (getfundRate / 100));
-  const hrlAmount = round2(taxableAfterDiscount * (covidRate / 100));
-  const vatBase = taxableAfterDiscount + nhilAmount + getfundAmount + hrlAmount;
+  // COVID levy removed in 2026 reforms
+  const hrlAmount = 0;
+
+  // VAT reform 2026: VAT is decoupled from levies, calculated on base value
+  const vatBase = taxableAfterDiscount;
   const vatAmount = round2(vatBase * (vatRate / 100));
   const totalTax = round2(nhilAmount + getfundAmount + hrlAmount + vatAmount);
 
@@ -76,12 +78,14 @@ export const calculateGhanaTax = (
   const vatRate = parseFloat(config.vat_rate || "0");
   const nhilRate = parseFloat(config.nhil_rate || "0");
   const getfundRate = parseFloat(config.getfund_rate || "0");
-  const covidRate = parseFloat(config.covid_rate || "0");
 
   const nhil = round2(taxableSubtotal * (nhilRate / 100));
   const getfund = round2(taxableSubtotal * (getfundRate / 100));
-  const hrl = round2(taxableSubtotal * (covidRate / 100));
-  const vatBase = taxableSubtotal + nhil + getfund + hrl;
+  // COVID levy removed in 2026 reforms
+  const hrl = 0;
+
+  // VAT reform 2026: VAT is decoupled from levies, calculated on base value
+  const vatBase = taxableSubtotal;
   const vat = round2(vatBase * (vatRate / 100));
   const total = round2(nhil + getfund + hrl + vat);
 

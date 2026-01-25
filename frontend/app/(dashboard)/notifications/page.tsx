@@ -123,7 +123,7 @@ export default function NotificationsPage() {
       case "high":
         return "border-l-orange-500";
       case "normal":
-        return "border-l-blue-500";
+        return "border-l-primary";
       case "low":
         return "border-l-gray-400";
       default:
@@ -172,7 +172,7 @@ export default function NotificationsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </div>
     );
   }
@@ -283,7 +283,7 @@ export default function NotificationsPage() {
                   "group relative pl-4 pr-3 py-3 rounded-lg border-l-4 transition-all",
                   getPriorityColor(notification.priority),
                   isUnread
-                    ? "bg-blue-50/50 dark:bg-blue-950/20 border-r border-t border-b border-blue-200/50 dark:border-blue-800/50"
+                    ? "bg-primary/5 dark:bg-orange-950/20 border-r border-t border-b border-orange-200/50 dark:border-orange-800/50"
                     : "bg-white dark:bg-gray-800/50 border-r border-t border-b border-gray-200 dark:border-gray-700",
                   isClickable && "cursor-pointer hover:shadow-sm hover:scale-[1.01] dark:hover:bg-gray-800"
                 )}
@@ -291,7 +291,7 @@ export default function NotificationsPage() {
               >
                 {/* Unread Dot */}
                 {isUnread && (
-                  <div className="absolute left-1.5 top-5 w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400" />
+                  <div className="absolute left-1.5 top-5 w-2 h-2 rounded-full bg-primary dark:bg-orange-400" />
                 )}
 
                 <div className="flex items-start gap-3">
@@ -332,10 +332,10 @@ export default function NotificationsPage() {
                           e.stopPropagation();
                           markAsReadMutation.mutate(notification.id);
                         }}
-                        className="h-7 w-7 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                        className="h-7 w-7 p-0 hover:bg-orange-100 dark:hover:bg-orange-900/20"
                         title="Mark as read"
                       >
-                        <CheckCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        <CheckCircle className="w-4 h-4 text-primary dark:text-primary" />
                       </Button>
                     )}
                   </div>

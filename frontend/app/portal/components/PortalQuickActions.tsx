@@ -17,9 +17,9 @@ export function PortalQuickActions() {
             desc: "Schedule appointment",
             icon: Calendar,
             href: "/portal/book",
-            color: "text-blue-600 dark:text-blue-400",
-            hoverBg: "hover:bg-blue-50 dark:hover:bg-blue-900/20",
-            borderColor: "hover:border-blue-200 dark:hover:border-blue-800"
+            color: "text-primary dark:text-primary",
+            hoverBg: "hover:bg-primary/10 dark:hover:bg-orange-900/20",
+            borderColor: "hover:border-orange-200 dark:hover:border-orange-800"
         },
         {
             title: "Add Vehicle",

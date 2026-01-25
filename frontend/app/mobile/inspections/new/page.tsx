@@ -36,7 +36,7 @@ export default function NewInspectionPage() {
       const inspectionData = {
         ...formData,
         vehicle: parseInt(formData.vehicle),
-        status: "draft",
+        status: "in_progress" as const,
       };
 
       if (isOnline) {

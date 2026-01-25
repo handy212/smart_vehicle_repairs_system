@@ -23,7 +23,7 @@ export function WorkOrdersView({ customerId }: WorkOrdersViewProps) {
     const workOrders = response.results || [];
 
     const columns = [
-        { header: "Order #", accessorKey: "order_number", cell: (item: any) => <Link href={`/workorders/${item.id}`} className="text-blue-600 hover:underline">{item.order_number}</Link> },
+        { header: "Order #", accessorKey: "order_number", cell: (item: any) => <Link href={`/workorders/${item.id}`} className="text-primary hover:underline">{item.order_number}</Link> },
         { header: "Vehicle", accessorKey: "vehicle_display" },
         { header: "Status", accessorKey: "status", cell: (item: any) => <Badge>{item.status}</Badge> },
         { header: "Created", accessorKey: "created_at", cell: (item: any) => format(new Date(item.created_at), "MMM dd, yyyy") },

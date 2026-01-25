@@ -187,7 +187,7 @@ export default function NewSupplierPage() {
                   <input
                     type="checkbox"
                     {...register("is_active")}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
                   />
                   <label className="ml-2 text-sm text-gray-700">Active</label>
                 </div>
@@ -195,7 +195,7 @@ export default function NewSupplierPage() {
                   <input
                     type="checkbox"
                     {...register("is_preferred")}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
                   />
                   <label className="ml-2 text-sm text-gray-700">Preferred</label>
                 </div>

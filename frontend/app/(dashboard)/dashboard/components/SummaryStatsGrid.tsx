@@ -35,7 +35,7 @@ export function SummaryStatsGrid({ stats }: SummaryStatsGridProps) {
                 maximumFractionDigits: 2,
             })}`,
             icon: DollarSign,
-            iconColor: "text-blue-500",
+            iconColor: "text-primary",
             link: "/billing",
         },
         {
@@ -78,17 +78,17 @@ export function SummaryStatsGrid({ stats }: SummaryStatsGridProps) {
                 const Icon = stat.icon;
                 return (
                     <Link key={stat.label} href={stat.link} className="block group">
-                        <Card className="shadow-none border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-blue-200 dark:hover:border-blue-900/50 hover:shadow-md hover:shadow-blue-500/5 transition-all duration-300 cursor-pointer h-full">
+                        <Card className="shadow-none border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-orange-200 dark:hover:border-orange-900/50 hover:shadow-md hover:shadow-primary/5 transition-all duration-300 cursor-pointer h-full">
                             <CardContent className="p-4 flex flex-col gap-1">
                                 <div className="flex items-center justify-between mb-1">
                                     <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                                         {stat.label}
                                     </span>
-                                    <div className={`p-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 transition-colors`}>
+                                    <div className={`p-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 group-hover:bg-primary/10 dark:group-hover:bg-orange-900/20 transition-colors`}>
                                         <Icon className={`w-3.5 h-3.5 ${stat.iconColor} group-hover:scale-110 transition-transform`} />
                                     </div>
                                 </div>
-                                <div className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                <div className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
                                     {stat.value}
                                 </div>
                             </CardContent>

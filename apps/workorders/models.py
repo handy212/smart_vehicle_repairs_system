@@ -1116,13 +1116,13 @@ class ServiceTask(models.Model):
         max_digits=5,
         decimal_places=2,
         default=0,
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0'))]
     )
     actual_hours = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         default=0,
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0'))]
     )
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -1138,7 +1138,7 @@ class ServiceTask(models.Model):
         max_digits=10,
         decimal_places=2,
         default=0,
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0'))]
     )
     
     # Workflow tracking
@@ -1312,19 +1312,19 @@ class WorkOrderPart(models.Model):
         max_digits=10,
         decimal_places=2,
         default=1,
-        validators=[MinValueValidator(0.01)]
+        validators=[MinValueValidator(Decimal('0.01'))]
     )
     unit_cost = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0'))]
     )
     total_cost = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0'))]
     )
     
     # Markup
@@ -1332,22 +1332,23 @@ class WorkOrderPart(models.Model):
         max_digits=5,
         decimal_places=2,
         default=0,
-        validators=[MinValueValidator(0), MaxValueValidator(100)]
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))]
     )
     selling_price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0'))]
     )
     
     # Status
     STATUS_CHOICES = [
         ('draft', 'Draft (Not Submitted)'),
         ('pending', 'Pending Order'),
-        ('ordered', 'Ordered'),
-        ('ready', 'Ready for Install'),
+        ('po_created', 'PO Created'),
+        ('awaiting_stock', 'Awaiting Stock'),
         ('received', 'Received'),
+        ('ready', 'Allocated'),
         ('installed', 'Installed'),
         ('returned', 'Returned'),
     ]
@@ -1427,7 +1428,7 @@ class TechnicianTimeLog(models.Model):
         max_digits=5,
         decimal_places=2,
         default=0,
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0'))]
     )
     
     # Details
@@ -1444,7 +1445,7 @@ class TechnicianTimeLog(models.Model):
         max_digits=10,
         decimal_places=2,
         default=0,
-        validators=[MinValueValidator(0)]
+        validators=[MinValueValidator(Decimal('0'))]
     )
     
     # Flags

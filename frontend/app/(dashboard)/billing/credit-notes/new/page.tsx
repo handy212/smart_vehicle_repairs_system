@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
 import Link from "next/link";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 const creditNoteSchema = z.object({
@@ -152,18 +152,21 @@ export default function NewCreditNotePage() {
                                 {/* Fallback to simple Select for customers */}
                                 <Select
                                     value={selectedCustomerId?.toString() || ""}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
+                                    onValueChange={(val) => {
                                         setValue("customer", val ? parseInt(val) : 0);
                                         setValue("invoice", null); // Reset invoice when customer changes
                                     }}
                                 >
-                                    <option value="">Select Customer</option>
-                                    {customers?.results?.map((c: any) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.first_name} {c.last_name} {c.company_name ? `(${c.company_name})` : ''}
-                                        </option>
-                                    ))}
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select Customer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {customers?.results?.map((c: any) => (
+                                            <SelectItem key={c.id} value={c.id.toString()}>
+                                                {c.first_name} {c.last_name} {c.company_name ? `(${c.company_name})` : ''}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
                                 </Select>
                                 {errors.customer && <p className="text-sm text-red-500">{errors.customer.message}</p>}
                             </div>
@@ -172,18 +175,22 @@ export default function NewCreditNotePage() {
                                 <Label>Original Invoice (Optional)</Label>
                                 <Select
                                     value={watch("invoice")?.toString() || ""}
-                                    onChange={(e) => {
-                                        const val = e.target.value;
+                                    onValueChange={(val) => {
                                         setValue("invoice", val ? parseInt(val) : null);
                                     }}
                                     disabled={!selectedCustomerId}
                                 >
-                                    <option value="">None</option>
-                                    {customerInvoices?.results.map((inv) => (
-                                        <option key={inv.id} value={inv.id}>
-                                            #{inv.invoice_number} - {inv.invoice_date} (${inv.total})
-                                        </option>
-                                    ))}
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="None" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">None</SelectItem>
+                                        {customerInvoices?.results.map((inv) => (
+                                            <SelectItem key={inv.id} value={inv.id.toString()}>
+                                                #{inv.invoice_number} - {inv.invoice_date} (${inv.total})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
                                 </Select>
                             </div>
 

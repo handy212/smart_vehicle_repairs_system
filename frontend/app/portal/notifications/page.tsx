@@ -170,7 +170,7 @@ export default function NotificationsPage() {
             <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
               Total Notifications
             </CardTitle>
-            <Bell className="h-5 w-5 text-blue-500" />
+            <Bell className="h-5 w-5 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -249,7 +249,7 @@ export default function NotificationsPage() {
                 key={notification.id}
                 className={cn(
                   "transition-all hover:shadow-md",
-                  !isRead && "border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-900/10"
+                  !isRead && "border-l-4 border-l-primary bg-primary/5 dark:bg-orange-900/10"
                 )}
               >
                 <CardContent className="p-6">
@@ -258,7 +258,7 @@ export default function NotificationsPage() {
                       className={cn(
                         "p-3 rounded-lg",
                         !isRead
-                          ? "bg-blue-100 dark:bg-blue-900/30"
+                          ? "bg-orange-100 dark:bg-orange-900/30"
                           : "bg-gray-100 dark:bg-gray-800"
                       )}
                     >
@@ -266,7 +266,7 @@ export default function NotificationsPage() {
                         className={cn(
                           "w-5 h-5",
                           !isRead
-                            ? "text-blue-600 dark:text-blue-400"
+                            ? "text-primary dark:text-primary"
                             : "text-gray-600 dark:text-gray-400"
                         )}
                       />
@@ -284,7 +284,7 @@ export default function NotificationsPage() {
                               {notification.title}
                             </h3>
                             {!isRead && (
-                              <Circle className="w-2 h-2 fill-blue-600 text-blue-600" />
+                              <Circle className="w-2 h-2 fill-primary text-primary" />
                             )}
                             {notification.priority && notification.priority !== "normal" && (
                               <Badge variant={getPriorityColor(notification.priority) as any}>

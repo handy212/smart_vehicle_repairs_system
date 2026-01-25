@@ -378,7 +378,7 @@ class Estimate(models.Model):
         self.taxable_subtotal = breakdown.taxable_subtotal
         self.tax_nhil_amount = breakdown.nhil_amount
         self.tax_getfund_amount = breakdown.getfund_amount
-        self.tax_hrl_amount = breakdown.hrl_amount
+        self.tax_hrl_amount = Decimal('0')  # COVID levy abolished in 2026
         self.tax_vat_amount = breakdown.vat_amount
         self.tax_amount = breakdown.total_tax
         self.tax_regime = breakdown.regime
@@ -767,7 +767,7 @@ class Invoice(models.Model):
         self.taxable_subtotal = breakdown.taxable_subtotal
         self.tax_nhil_amount = breakdown.nhil_amount
         self.tax_getfund_amount = breakdown.getfund_amount
-        self.tax_hrl_amount = breakdown.hrl_amount
+        self.tax_hrl_amount = Decimal('0')  # COVID levy abolished in 2026
         self.tax_vat_amount = breakdown.vat_amount
         self.tax_amount = breakdown.total_tax
         self.tax_regime = breakdown.regime

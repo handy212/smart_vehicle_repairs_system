@@ -43,7 +43,7 @@ export function VehicleSidebar({ vehicleId, activeView, onViewChange }: VehicleS
     ];
 
     return (
-        <div className="w-full md:w-64 flex-shrink-0 space-y-2">
+        <div className="w-full md:w-72 flex-shrink-0 space-y-2">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div className="p-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
                     <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -63,11 +63,11 @@ export function VehicleSidebar({ vehicleId, activeView, onViewChange }: VehicleS
                                     className={cn(
                                         "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
                                         isActive
-                                            ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+                                            ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
                                             : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                                     )}
                                 >
-                                    <item.icon className={cn("mr-3 h-4 w-4", isActive ? "text-blue-500" : "text-gray-400")} />
+                                    <item.icon className={cn("mr-3 h-4 w-4", isActive ? "text-primary" : "text-gray-400")} />
                                     {item.label}
                                 </button>
                             );
@@ -81,11 +81,11 @@ export function VehicleSidebar({ vehicleId, activeView, onViewChange }: VehicleS
                                 className={cn(
                                     "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
                                     isActive
-                                        ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+                                        ? "bg-primary/10 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300"
                                         : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                                 )}
                             >
-                                <item.icon className={cn("mr-3 h-4 w-4", isActive ? "text-blue-500" : "text-gray-400")} />
+                                <item.icon className={cn("mr-3 h-4 w-4", isActive ? "text-primary" : "text-gray-400")} />
                                 {item.label}
                             </Link>
                         );

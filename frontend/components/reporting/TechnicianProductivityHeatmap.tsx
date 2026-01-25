@@ -32,7 +32,7 @@ export function TechnicianProductivityHeatmap({ data }: TechnicianProductivityHe
 
     // Define metrics we want to visualize in the "heatmap" grid
     const metrics = [
-        { key: "completed", label: "Volume", color: "bg-blue-500" },
+        { key: "completed", label: "Volume", color: "bg-primary" },
         { key: "revenue", label: "Revenue", color: "bg-green-500" },
         { key: "average_completion_hours", label: "Efficiency", color: "bg-purple-500", invert: true },
         { key: "success_rate", label: "Completion %", color: "bg-orange-500" },
@@ -77,7 +77,7 @@ export function TechnicianProductivityHeatmap({ data }: TechnicianProductivityHe
 
                             return (
                                 <div key={tech.technician.id} className="grid grid-cols-[150px_repeat(4,1fr)] gap-2 items-center group">
-                                    <div className="text-sm font-semibold truncate group-hover:text-blue-600 transition-colors">
+                                    <div className="text-sm font-semibold truncate group-hover:text-primary transition-colors">
                                         {tech.technician.name}
                                     </div>
                                     {metrics.map((m) => {

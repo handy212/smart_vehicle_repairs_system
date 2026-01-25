@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/lib/hooks/useToast";
 import { Plus, Edit, Trash2, Search, X, AlertTriangle, Info, AlertCircle as AlertCircleIcon, Code } from "lucide-react";
 import { format } from "date-fns";
@@ -57,13 +57,13 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
       const errorMessage = error.response?.data;
       let errorTitle = "Failed to add code";
       let errorDescription = error.response?.data?.message || error.message;
-      
+
       if (error.response?.status === 400) {
         // Check for duplicate code error
         if (errorMessage?.code_number) {
           errorTitle = "Duplicate code";
-          errorDescription = Array.isArray(errorMessage.code_number) 
-            ? errorMessage.code_number[0] 
+          errorDescription = Array.isArray(errorMessage.code_number)
+            ? errorMessage.code_number[0]
             : errorMessage.code_number;
         } else if (errorMessage?.non_field_errors) {
           errorTitle = "Validation error";
@@ -72,7 +72,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
             : errorMessage.non_field_errors;
         }
       }
-      
+
       toast({
         title: errorTitle,
         description: errorDescription,
@@ -122,7 +122,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
       case "warning":
         return <AlertCircleIcon className="w-4 h-4 text-yellow-500" />;
       default:
-        return <Info className="w-4 h-4 text-blue-500" />;
+        return <Info className="w-4 h-4 text-primary" />;
     }
   };
 
@@ -150,7 +150,7 @@ export function CodesTab({ diagnosisId, onRefresh, isDisabled = false }: CodesTa
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : codes.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
@@ -330,7 +330,7 @@ function CodeDialog({
   const handleLookupCode = async () => {
     // Trim the code number to remove any trailing/leading spaces
     const trimmedCodeNumber = formData.code_number.trim();
-    
+
     if (!trimmedCodeNumber || !formData.code_type) {
       toast({
         title: "Missing information",
@@ -408,7 +408,7 @@ function CodeDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (isDuplicate) {
       toast({
         title: "Duplicate code detected",
@@ -417,7 +417,7 @@ function CodeDialog({
       });
       return;
     }
-    
+
     onSave({
       ...formData,
       recorded_at: code?.recorded_at || new Date().toISOString(),
@@ -459,14 +459,14 @@ function CodeDialog({
                   </div>
                   <Button
                     type="button"
-                   variant="secondary"
+                    variant="secondary"
                     onClick={handleLookupCode}
                     disabled={!formData.code_number || isSearchingLibrary}
                     title="Lookup code in library (210+ codes available)"
                     className="shrink-0"
                   >
                     {isSearchingLibrary ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                     ) : (
                       <>
                         <Search className="w-4 h-4 mr-1" />
@@ -476,8 +476,8 @@ function CodeDialog({
                   </Button>
                 </div>
                 {libraryResults.length > 0 && (
-                  <div className="mt-2 border border-blue-200 rounded-lg bg-blue-50/50 max-h-48 overflow-y-auto shadow-sm">
-                    <div className="p-2 text-xs font-medium text-blue-800 border-b border-blue-200 bg-blue-100/50">
+                  <div className="mt-2 border border-orange-200 rounded-lg bg-primary/5 max-h-48 overflow-y-auto shadow-sm">
+                    <div className="p-2 text-xs font-medium text-orange-800 border-b border-orange-200 bg-orange-100/50">
                       {libraryResults.length} matching code{libraryResults.length !== 1 ? 's' : ''} found:
                     </div>
                     {libraryResults.map((libCode: any) => (
@@ -485,11 +485,11 @@ function CodeDialog({
                         key={libCode.id}
                         type="button"
                         onClick={() => handleSelectLibraryCode(libCode)}
-                        className="w-full text-left p-3 hover:bg-blue-100 border-b border-blue-200 last:border-b-0 transition-colors group"
+                        className="w-full text-left p-3 hover:bg-orange-100 border-b border-orange-200 last:border-b-0 transition-colors group"
                       >
                         <div className="flex items-start gap-2">
                           <div className="flex-1">
-                            <div className="font-mono font-semibold text-sm text-blue-900 group-hover:text-blue-700">
+                            <div className="font-mono font-semibold text-sm text-orange-900 group-hover:text-orange-700">
                               {libCode.code_number}
                             </div>
                             <div className="text-xs text-gray-700 mt-0.5 line-clamp-1 font-medium">
@@ -501,7 +501,7 @@ function CodeDialog({
                               </div>
                             )}
                           </div>
-                          <div className="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                             <Search className="w-4 h-4" />
                           </div>
                         </div>
@@ -518,25 +518,26 @@ function CodeDialog({
               <div className="space-y-2">
                 <Label htmlFor="code_type">Code Type *</Label>
                 <Select
-                  id="code_type"
                   value={formData.code_type}
-                  onChange={(e) => {
-                    setFormData({ ...formData, code_type: e.target.value as any });
+                  onValueChange={(val) => {
+                    setFormData({ ...formData, code_type: val as any });
                     setLibraryResults([]); // Clear results when type changes
                   }}
                   required
                 >
-                  <option value="" disabled>
-                    Select type
-                  </option>
-                  <option value="obd_ii">OBD-II</option>
-                  <option value="manufacturer">Manufacturer</option>
-                  <option value="abs">ABS</option>
-                  <option value="airbag">Airbag</option>
-                  <option value="transmission">Transmission</option>
-                  <option value="body">Body</option>
-                  <option value="chassis">Chassis</option>
-                  <option value="other">Other</option>
+                  <SelectTrigger id="code_type" className="w-full">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="obd_ii">OBD-II</SelectItem>
+                    <SelectItem value="manufacturer">Manufacturer</SelectItem>
+                    <SelectItem value="abs">ABS</SelectItem>
+                    <SelectItem value="airbag">Airbag</SelectItem>
+                    <SelectItem value="transmission">Transmission</SelectItem>
+                    <SelectItem value="body">Body</SelectItem>
+                    <SelectItem value="chassis">Chassis</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
             </div>
@@ -557,40 +558,42 @@ function CodeDialog({
               <div className="space-y-2">
                 <Label htmlFor="severity">Severity *</Label>
                 <Select
-                  id="severity"
                   value={formData.severity}
-                  onChange={(e) => setFormData({ ...formData, severity: e.target.value as any })}
+                  onValueChange={(val) => setFormData({ ...formData, severity: val as any })}
                   required
                 >
-                  <option value="" disabled>
-                    Select severity
-                  </option>
-                  <option value="critical">Critical</option>
-                  <option value="warning">Warning</option>
-                  <option value="info">Info</option>
+                  <SelectTrigger id="severity" className="w-full">
+                    <SelectValue placeholder="Select severity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="warning">Warning</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status *</Label>
                 <Select
-                  id="status"
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                  onValueChange={(val) => setFormData({ ...formData, status: val as any })}
                   required
                 >
-                  <option value="" disabled>
-                    Select status
-                  </option>
-                  <option value="active">Active</option>
-                  <option value="pending">Pending</option>
-                  <option value="resolved">Resolved</option>
+                  <SelectTrigger id="status" className="w-full">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="resolved">Resolved</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
             </div>
           </div>
 
           <DialogFooter className="mt-6">
-            <Button type="button"variant="secondary" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading || isDuplicate}>

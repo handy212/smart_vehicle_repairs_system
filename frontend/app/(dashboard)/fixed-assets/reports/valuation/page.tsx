@@ -87,7 +87,7 @@ export default function AssetValuationReportPage() {
             accessor: "net_book_value" as const,
             className: "w-36 text-right",
             cell: (asset: FixedAsset) => (
-                <div className="text-right font-mono text-sm font-bold text-blue-600">
+                <div className="text-right font-mono text-sm font-bold text-primary">
                     {formatCurrency(asset.net_book_value)}
                 </div>
             ),
@@ -158,7 +158,7 @@ export default function AssetValuationReportPage() {
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-blue-600">
+                            <div className="text-2xl font-bold text-primary">
                                 {formatCurrency(stats.total_net_book_value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </div>
                             <p className="text-xs text-muted-foreground">Current asset value</p>

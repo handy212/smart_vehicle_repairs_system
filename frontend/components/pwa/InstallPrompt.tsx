@@ -71,7 +71,7 @@ export function InstallPrompt() {
     <div className="fixed bottom-20 left-4 right-4 z-50 md:left-auto md:right-4 md:w-96">
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg p-4">
         <div className="flex items-start gap-3">
-          <div className="bg-blue-600 p-2 rounded-lg">
+          <div className="bg-primary p-2 rounded-lg">
             <Download className="h-5 w-5 text-white" />
           </div>
           <div className="flex-1">

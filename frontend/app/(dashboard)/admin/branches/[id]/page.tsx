@@ -107,7 +107,7 @@ export default function BranchDetailPage() {
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{branch.name}</h1>
               {branch.is_headquarters && (
-                <Badge variant="default" className="bg-blue-600">
+                <Badge variant="default" className="bg-primary">
                   Headquarters
                 </Badge>
               )}
@@ -249,7 +249,7 @@ export default function BranchDetailPage() {
                         <br />
                         <a
                           href={`mailto:${branch.email}`}
-                          className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                          className="text-primary dark:text-primary hover:underline flex items-center gap-1"
                         >
                           <Mail className="w-3 h-3" />
                           {branch.email}
@@ -287,7 +287,7 @@ export default function BranchDetailPage() {
             <CardContent>
               {isLoadingStaff ? (
                 <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
                 </div>
               ) : staff && staff.length > 0 ? (
                 <div className="space-y-2">
@@ -329,7 +329,7 @@ export default function BranchDetailPage() {
             <CardContent>
               {isLoadingManagers ? (
                 <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
                 </div>
               ) : managers && managers.length > 0 ? (
                 <div className="space-y-2">

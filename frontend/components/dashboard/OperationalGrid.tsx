@@ -37,7 +37,7 @@ export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
                                 key={idx}
                                 className={`p-3 rounded-lg border text-sm ${insight.type === 'danger' ? 'bg-rose-50 border-rose-100 text-rose-800' :
                                     insight.type === 'warning' ? 'bg-amber-50 border-amber-100 text-amber-800' :
-                                        'bg-blue-50 border-blue-100 text-blue-800'
+                                        'bg-primary/10 border-orange-100 text-orange-800'
                                     }`}
                             >
                                 <p className="font-semibold mb-1">{insight.title}</p>
@@ -57,7 +57,7 @@ export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
             <Card className="shadow-sm border-none ring-1 ring-gray-200 dark:ring-gray-800 h-full">
                 <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-blue-500" />
+                        <FileText className="w-4 h-4 text-primary" />
                         Top Performing Jobs
                     </CardTitle>
                 </CardHeader>
@@ -95,7 +95,7 @@ export function OperationalGrid({ insights, topJobs }: OperationalGridProps) {
                 </CardHeader>
                 <CardContent className="grid grid-cols-2 gap-3">
                     <Link href="/accounting/journal-entries/new">
-                        <Button variant="outline" className="w-full h-20 flex flex-col gap-2 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                        <Button variant="outline" className="w-full h-20 flex flex-col gap-2 hover:border-primary hover:text-primary hover:bg-primary/10 transition-all">
                             <FileText className="w-5 h-5" />
                             <span className="text-xs">New Journal Entry</span>
                         </Button>

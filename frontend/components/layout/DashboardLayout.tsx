@@ -91,9 +91,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     };
   }, [mounted]);
 
-  // Calculate margin: sidebar (256px = w-64 when expanded, 80px = w-20 when collapsed) + sub-nav (224px when expanded, 48px when collapsed)
+  // Calculate margin: sidebar (288px = w-72 when expanded, 80px = w-20 when collapsed) + sub-nav (224px when expanded, 48px when collapsed)
   // Use default collapsed state during SSR to avoid hydration mismatch
-  const sidebarWidthExpanded = 256; // w-64 = 16rem = 256px
+  const sidebarWidthExpanded = 288; // w-72 = 18rem = 288px
   const sidebarWidthCollapsed = 80; // w-20 = 5rem = 80px
   const sidebarCollapsed = mounted ? isSidebarCollapsed : false; // Default to expanded during SSR
   const sidebarWidth = sidebarCollapsed ? sidebarWidthCollapsed : sidebarWidthExpanded;

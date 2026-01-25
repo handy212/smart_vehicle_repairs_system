@@ -156,7 +156,7 @@ export default function InvoiceDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -363,7 +363,7 @@ export default function InvoiceDetailPage() {
                   {/* Bill To */}
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-2">Bill To</h3>
-                    <Link href={`/customers/${invoice.customer}`} className="text-base font-semibold text-gray-900 hover:text-blue-600 block">
+                    <Link href={`/customers/${invoice.customer}`} className="text-base font-semibold text-gray-900 hover:text-primary block">
                       {invoice.customer_name}
                     </Link>
                     {invoice.customer_email && <p className="text-sm text-gray-600">{invoice.customer_email}</p>}
@@ -403,7 +403,7 @@ export default function InvoiceDetailPage() {
                       {invoice.work_order_number && (
                         <div className="flex flex-col">
                           <span className="text-sm text-gray-500">Work Order</span>
-                          <Link href={`/workorders/${typeof invoice.work_order === 'object' ? invoice.work_order.id : invoice.work_order}`} className="text-sm font-medium text-blue-600 hover:underline">
+                          <Link href={`/workorders/${typeof invoice.work_order === 'object' ? invoice.work_order.id : invoice.work_order}`} className="text-sm font-medium text-primary hover:underline">
                             #{invoice.work_order_number}
                           </Link>
                         </div>
@@ -634,7 +634,7 @@ export default function InvoiceDetailPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-9 px-3 text-gray-600 hover:text-blue-600 hover:bg-blue-50 border-r rounded-none"
+                                  className="h-9 px-3 text-gray-600 hover:text-primary hover:bg-primary/10 border-r rounded-none"
                                   onClick={() => downloadPDF({
                                     documentType: 'receipt',
                                     documentId: payment.id,
@@ -646,7 +646,7 @@ export default function InvoiceDetailPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-9 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-none border-r"
+                                  className="h-9 px-3 text-primary hover:text-orange-700 hover:bg-primary/10 rounded-none border-r"
                                   onClick={() => setSelectedPaymentForAllocation(payment)}
                                 >
                                   <DollarSign className="w-4 h-4 mr-2" /> Allocate

@@ -174,7 +174,7 @@ export default function RoadsidePage() {
             <Card className="shadow-sm border bg-white dark:bg-gray-800">
                 <CardContent className="p-3 flex items-center justify-between">
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
-                    <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{stats?.active_requests || 0}</span>
+                    <span className="text-lg font-bold text-primary dark:text-primary">{stats?.active_requests || 0}</span>
                 </CardContent>
             </Card>
             <Card className="shadow-sm border bg-white dark:bg-gray-800">
@@ -308,7 +308,7 @@ export default function RoadsidePage() {
 
                     <PermissionGuard permission="manage_roadside">
                         <Link href="/roadside/new">
-                            <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                            <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
                                 <Plus className="w-4 h-4 mr-2" />
                                 New Request
                             </Button>
@@ -375,7 +375,7 @@ export default function RoadsidePage() {
                                         >
                                             <TableCell className="px-4 py-2">
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="font-mono text-xs font-medium text-blue-600 dark:text-blue-400">{request.request_number}</span>
+                                                    <span className="font-mono text-xs font-medium text-primary dark:text-primary">{request.request_number}</span>
                                                     {request.is_covered_by_subscription && (
                                                         <div className="flex items-center text-[10px] text-emerald-600 font-medium">
                                                             <ShieldCheck className="h-3 w-3 mr-0.5" />

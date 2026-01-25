@@ -29,7 +29,7 @@ export function Checkbox({
       checked={checked}
       onChange={handleChange}
       className={cn(
-        "h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2",
+        "h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary focus:ring-2",
         className
       )}
       {...props}

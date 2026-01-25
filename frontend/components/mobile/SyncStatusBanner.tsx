@@ -57,7 +57,7 @@ export function SyncStatusBanner() {
             className={cn(
                 "sticky top-0 z-50 border-b transition-colors",
                 isOnline
-                    ? "bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800"
+                    ? "bg-primary/10 border-orange-200 dark:bg-orange-950 dark:border-orange-800"
                     : "bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800"
             )}
         >
@@ -66,8 +66,8 @@ export function SyncStatusBanner() {
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                     {isOnline ? (
                         <>
-                            <Wifi className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                            <span className="text-sm font-medium text-blue-900 dark:text-blue-200">
+                            <Wifi className="h-4 w-4 text-primary dark:text-primary flex-shrink-0" />
+                            <span className="text-sm font-medium text-orange-900 dark:text-orange-200">
                                 Online
                             </span>
                         </>
@@ -87,7 +87,7 @@ export function SyncStatusBanner() {
                             className={cn(
                                 "ml-2 text-xs",
                                 isOnline
-                                    ? "bg-blue-100 text-blue-700 border-blue-300"
+                                    ? "bg-orange-100 text-orange-700 border-orange-300"
                                     : "bg-orange-100 text-orange-700 border-orange-300"
                             )}
                         >
@@ -120,7 +120,7 @@ export function SyncStatusBanner() {
                             className={cn(
                                 "h-7 text-xs",
                                 isOnline
-                                    ? "border-blue-300 hover:bg-blue-100"
+                                    ? "border-orange-300 hover:bg-orange-100"
                                     : "border-orange-300 hover:bg-orange-100"
                             )}
                         >

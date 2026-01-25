@@ -44,7 +44,7 @@ export function InvoicesView({ customerId }: InvoicesViewProps) {
             label: "Outstanding",
             value: formatCurrency(totalOutstanding),
             icon: CreditCard,
-            color: "text-blue-600 dark:text-blue-400"
+            color: "text-primary dark:text-primary"
         },
         {
             label: "Past Due",
@@ -61,7 +61,7 @@ export function InvoicesView({ customerId }: InvoicesViewProps) {
     ];
 
     const columns = [
-        { header: "Invoice #", accessorKey: "invoice_number", cell: (item: any) => <Link href={`/billing/invoices/${item.id}`} className="text-blue-600 hover:underline">{item.invoice_number}</Link> },
+        { header: "Invoice #", accessorKey: "invoice_number", cell: (item: any) => <Link href={`/billing/invoices/${item.id}`} className="text-primary hover:underline">{item.invoice_number}</Link> },
         { header: "Date", accessorKey: "invoice_date", cell: (item: any) => format(new Date(item.invoice_date), "MMM dd, yyyy") },
         { header: "Due Date", accessorKey: "due_date", cell: (item: any) => format(new Date(item.due_date), "MMM dd, yyyy") },
         { header: "Amount", accessorKey: "total", cell: (item: any) => formatCurrency(parseFloat(item.total)) },

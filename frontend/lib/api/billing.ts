@@ -6,7 +6,6 @@ export interface TaxConfig {
   vat_rate: string;
   nhil_rate: string;
   getfund_rate: string;
-  covid_rate: string;
 }
 
 export interface TaxBreakdown {

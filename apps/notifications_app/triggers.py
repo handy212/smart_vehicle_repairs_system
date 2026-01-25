@@ -5,7 +5,7 @@ This module provides functions to send notifications for key events.
 from django.utils import timezone
 from .services import NotificationService, NotificationHelper
 from .models import Notification, NotificationTemplate
-from apps.accounts.settings_utils import get_setting, get_company_info
+from apps.accounts.settings_utils import get_setting, get_company_info, get_whatsapp_settings
 
 
 class NotificationTriggers:
@@ -704,25 +704,44 @@ Please review and make payment when ready.'''
             except:
                 pass  # Fall back to default message if template rendering fails
         
-        notification = Notification.objects.create(
-            recipient=work_order.customer.user,
-            notification_type='work_order',
-            channel='email',
-            priority='normal',
-            template=template,  # Use template if available
-            title=title,
-            message=message,
-            data={
-                'work_order_id': work_order.id,
-                'work_order_number': work_order.work_order_number,
-                'total': total_amount,
-                'customer_name': customer_name,
-                'vehicle_display': vehicle_display,
-            },
-            related_object_type='work_order',
-            related_object_id=work_order.id
-        )
-        self.service.send_notification(notification)
+        
+        # Determine enabled channels
+        channels = ['email']
+        
+        # Check if WhatsApp is enabled globally and for the user
+        whatsapp_settings = get_whatsapp_settings()
+        whatsapp_enabled = whatsapp_settings.get('whatsapp_enabled', 'false').lower() == 'true'
+        
+        user_whatsapp_enabled = True
+        if hasattr(work_order.customer.user, 'notification_preferences'):
+            user_whatsapp_enabled = work_order.customer.user.notification_preferences.whatsapp_enabled
+            
+        if whatsapp_enabled and user_whatsapp_enabled:
+            channels.append('whatsapp')
+            
+        for channel in channels:
+            # Create notification for each channel
+            notification = Notification.objects.create(
+                recipient=work_order.customer.user,
+                notification_type='work_order',
+                channel=channel,
+                priority='normal',
+                template=self._get_template('invoice_generated', channel),  # Get template for specific channel
+                title=title,
+                message=message,
+                data={
+                    'work_order_id': work_order.id,
+                    'work_order_number': work_order.work_order_number,
+                    'total': total_amount,
+                    'customer_name': customer_name,
+                    'vehicle_display': vehicle_display,
+                    'invoice_pdf_url': f'{self._get_base_url()}/api/billing/invoices/{invoice.id}/pdf/' if hasattr(work_order, 'invoice') and work_order.invoice else None,
+                    'filename': f'Invoice_{invoice_number}.pdf' if hasattr(work_order, 'invoice') and work_order.invoice else None,
+                },
+                related_object_type='work_order',
+                related_object_id=work_order.id
+            )
+            self.service.send_notification(notification)
     
     def work_order_overdue(self, work_order):
         """Notify when work order becomes overdue"""

@@ -23,7 +23,7 @@ export function PerformanceMetrics({ technicianId }: PerformanceMetricsProps) {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         );
     }
@@ -194,14 +194,14 @@ interface MetricCardProps {
 
 function MetricCard({ title, value, icon: Icon, color }: MetricCardProps) {
     const colorClasses = {
-        blue: "from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30",
+        blue: "from-orange-50 to-cyan-50 dark:from-orange-950/30 dark:to-cyan-950/30",
         green: "from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30",
         orange: "from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30",
         purple: "from-purple-50 to-violet-50 dark:from-purple-950/30 dark:to-violet-950/30",
     };
 
     const iconColors = {
-        blue: "text-blue-500 dark:text-blue-400",
+        blue: "text-primary dark:text-primary",
         green: "text-green-500 dark:text-green-400",
         orange: "text-orange-500 dark:text-orange-400",
         purple: "text-purple-500 dark:text-purple-400",

@@ -309,9 +309,9 @@ export default function InvoicesPage() {
             <div className="flex items-center justify-between pt-2">
                 <div>
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-                        <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+                        <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
                         <span>/</span>
-                        <Link href="/billing" className="hover:text-blue-600 transition-colors">Billing</Link>
+                        <Link href="/billing" className="hover:text-primary transition-colors">Billing</Link>
                         <span>/</span>
                         <span className="text-gray-900 dark:text-gray-100 font-medium">Invoices</span>
                     </div>
@@ -403,7 +403,7 @@ export default function InvoicesPage() {
                     </CardContent>
                 </Card>
                 <Card
-                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'partial' ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
+                    className={`shadow-sm border transition-all cursor-pointer hover:shadow-md ${advancedFilters.status === 'partial' ? 'ring-2 ring-primary bg-primary/10 dark:bg-gray-800' : 'bg-white dark:bg-gray-800'}`}
                     onClick={() => {
                         const newStatus = advancedFilters.status === 'partial' ? null : 'partial';
                         setAdvancedFilters({ ...advancedFilters, status: newStatus });
@@ -413,8 +413,8 @@ export default function InvoicesPage() {
                     <CardContent className="p-3 flex items-center justify-between">
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Partially Paid</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-blue-600">{stats?.counts.partially_paid || 0}</span>
-                            <CreditCard className="w-4 h-4 text-blue-500/50" />
+                            <span className="text-lg font-bold text-primary">{stats?.counts.partially_paid || 0}</span>
+                            <CreditCard className="w-4 h-4 text-primary/50" />
                         </div>
                     </CardContent>
                 </Card>
@@ -616,7 +616,7 @@ export default function InvoicesPage() {
                                                     if (input) input.indeterminate = bulkSelection.isIndeterminate;
                                                 }}
                                                 onChange={bulkSelection.toggleSelectAll}
-                                                className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                className="h-3.5 w-3.5 text-primary focus:ring-primary border-gray-300 rounded"
                                             />
                                         </TableHead>
                                         <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500">Invoice #</TableHead>
@@ -642,7 +642,7 @@ export default function InvoicesPage() {
                                                     type="checkbox"
                                                     checked={bulkSelection.isSelected(invoice.id)}
                                                     onChange={() => bulkSelection.toggleSelection(invoice.id)}
-                                                    className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                    className="h-3.5 w-3.5 text-primary focus:ring-primary border-gray-300 rounded"
                                                 />
                                             </TableCell>
                                             <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700">
@@ -677,7 +677,7 @@ export default function InvoicesPage() {
                                             <TableCell className="px-4 py-2 text-right">
                                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Link href={`/billing/invoices/${invoice.id}`}>
-                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-blue-600">
+                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-primary">
                                                             <Eye className="w-3.5 h-3.5" />
                                                         </Button>
                                                     </Link>
@@ -773,7 +773,7 @@ export default function InvoicesPage() {
                             <div className="col-span-3">
                                 <select
                                     id="status"
-                                    className="flex h-10 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="flex h-10 w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
                                     value={bulkStatus}
                                     onChange={(e) => setBulkStatus(e.target.value)}
                                 >

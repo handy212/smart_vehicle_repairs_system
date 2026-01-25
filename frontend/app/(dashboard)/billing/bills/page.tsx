@@ -123,9 +123,9 @@ export default function BillsPage() {
             <div className="flex items-center justify-between pt-2">
                 <div>
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-                        <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+                        <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
                         <span>/</span>
-                        <Link href="/billing" className="hover:text-blue-600 transition-colors">Billing</Link>
+                        <Link href="/billing" className="hover:text-primary transition-colors">Billing</Link>
                         <span>/</span>
                         <span className="text-gray-900 dark:text-gray-100 font-medium">Bills</span>
                     </div>
@@ -298,7 +298,7 @@ export default function BillsPage() {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="px-4 py-2 text-right">
-                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-blue-600">
+                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-primary">
                                                     <Eye className="w-3.5 h-3.5" />
                                                 </Button>
                                             </TableCell>

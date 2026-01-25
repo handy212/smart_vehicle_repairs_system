@@ -3,14 +3,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Menu, X, LogOut, Settings, User } from "lucide-react";
+import { User, LogOut, Settings } from "lucide-react"; // Keep specialized icons for now if missing in Premium
+import { PremiumIcons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils/cn";
 import { authApi } from "@/lib/api/auth";
 import { Badge } from "@/components/ui/badge";
 import { NotificationDropdown } from "./NotificationDropdown";
-import { Car } from "lucide-react";
 
 interface PortalNavbarProps {
   onMenuToggle?: () => void;
@@ -45,7 +45,7 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, user }: PortalNavbar
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm backdrop-blur-sm bg-white/95 dark:bg-gray-900/95 sticky-navbar">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 border-b border-gray-200/50 dark:border-gray-800/50 shadow-sm backdrop-blur-xl sticky-navbar">
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left: Logo and Menu Toggle */}
@@ -56,11 +56,11 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, user }: PortalNavbar
               aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
               aria-expanded={isSidebarOpen}
             >
-              {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isSidebarOpen ? <PremiumIcons.X className="w-6 h-6" /> : <PremiumIcons.Menu className="w-6 h-6" />}
             </button>
             <Link href="/portal" className="flex items-center space-x-2" aria-label="Go to dashboard">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md" aria-hidden="true">
-                <Car className="w-5 h-5 text-white" />
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-lg shadow-primary/20" aria-hidden="true">
+                <PremiumIcons.Car className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 hidden sm:inline tracking-tight">
                 Smart Auto
@@ -80,9 +80,9 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, user }: PortalNavbar
             <div className="relative ml-2" ref={userMenuRef}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-transparent hover:border-gray-200 dark:hover:border-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-sm text-white text-xs font-bold tracking-wider ring-2 ring-white dark:ring-gray-900">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-sm text-white text-xs font-bold tracking-wider ring-2 ring-white dark:ring-gray-900">
                   {user?.first_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
                 </div>
                 <div className="hidden sm:block text-left mr-1">
@@ -105,9 +105,9 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, user }: PortalNavbar
                     <Link
                       href="/portal/profile"
                       onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg transition-colors group"
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary/10 dark:hover:bg-orange-900/20 hover:text-primary dark:hover:text-orange-400 rounded-lg transition-colors group"
                     >
-                      <User className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                      <User className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors" />
                       <span>My Profile</span>
                     </Link>
                   </div>

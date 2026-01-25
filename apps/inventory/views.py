@@ -956,6 +956,20 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                 {'error': 'Only draft purchase orders can be submitted'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+            
+        if not po.items.exists():
+             return Response(
+                 {'error': 'Cannot submit purchase order with no items'},
+                 status=status.HTTP_400_BAD_REQUEST
+             )
+             
+        # Check for invalid quantities (0 or less)
+        invalid_items = po.items.filter(quantity__lte=0)
+        if invalid_items.exists():
+             return Response(
+                 {'error': f'Cannot submit PO with invalid quantity items ({invalid_items.count()} items with 0 qty)'},
+                 status=status.HTTP_400_BAD_REQUEST
+             )
         
         po.status = 'submitted'
         po.submitted_by = request.user
@@ -1071,6 +1085,12 @@ class PurchaseOrderItemViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             quantity_received = serializer.validated_data['quantity_received']
             notes = serializer.validated_data.get('notes', '')
+            
+            if quantity_received <= 0:
+                return Response(
+                    {'error': 'Received quantity must be greater than 0'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
             if quantity_received > item.remaining_quantity:
                 return Response(

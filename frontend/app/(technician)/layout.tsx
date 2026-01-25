@@ -55,7 +55,7 @@ export default function TechnicianLayout({
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
                     <p className="mt-4 text-gray-600">Loading...</p>
                 </div>
             </div>
@@ -73,7 +73,7 @@ export default function TechnicianLayout({
                         </Button>
                     </Link>
                     <div className="flex items-center gap-2">
-                        <div className="bg-blue-600 p-1.5 rounded-lg">
+                        <div className="bg-primary p-1.5 rounded-lg">
                             <Wrench className="h-5 w-5 text-white" />
                         </div>
                         <h1 className="text-lg font-bold text-gray-900 dark:text-white hidden sm:block">Tech Mode</h1>

@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -164,14 +164,14 @@ export default function RolesPage() {
       <div className="flex items-center justify-between px-4 pt-4">
         <div>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/admin" className="hover:text-blue-600 transition-colors">Admin</Link>
+            <Link href="/admin" className="hover:text-primary transition-colors">Admin</Link>
             <span>/</span>
             <span className="text-gray-900 dark:text-gray-100 font-medium">Roles</span>
           </div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Roles & Permissions</h1>
         </div>
         <PermissionGuard permission="manage_roles">
-          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="h-8 dark:bg-blue-600 dark:hover:bg-blue-700">
+          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="h-8 dark:bg-primary dark:hover:bg-primary/90">
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             New Role
           </Button>
@@ -186,7 +186,7 @@ export default function RolesPage() {
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Total Roles</p>
               <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalRoles}</p>
             </div>
-            <Shield className="w-5 h-5 text-blue-500 opacity-80" />
+            <Shield className="w-5 h-5 text-primary opacity-80" />
           </CardContent>
         </Card>
         <Card className="shadow-sm">
@@ -243,21 +243,29 @@ export default function RolesPage() {
             </div>
             <Select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-[140px] h-8 text-sm bg-white dark:bg-gray-900"
+              onValueChange={(val) => setStatusFilter(val)}
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <SelectTrigger className="w-[140px] h-8 text-sm bg-white dark:bg-gray-900">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
             </Select>
             <Select
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-[140px] h-8 text-sm bg-white dark:bg-gray-900"
+              onValueChange={(val) => setTypeFilter(val)}
             >
-              <option value="all">All Types</option>
-              <option value="system">System</option>
-              <option value="custom">Custom</option>
+              <SelectTrigger className="w-[140px] h-8 text-sm bg-white dark:bg-gray-900">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="system">System</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
             </Select>
           </div>
         </CardContent>
@@ -273,7 +281,7 @@ export default function RolesPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
           ) : filteredRoles.length === 0 ? (
             <div className="text-center py-12">
@@ -359,7 +367,7 @@ export default function RolesPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => { setSelectedRole(role); setIsPermissionsDialogOpen(true); }}
-                              className="h-7 w-7 p-0 text-gray-500 hover:text-blue-600"
+                              className="h-7 w-7 p-0 text-gray-500 hover:text-primary"
                               title="Manage Permissions"
                             >
                               <Shield className="w-3.5 h-3.5" />
@@ -406,7 +414,7 @@ export default function RolesPage() {
           <CardHeader className="py-3 px-4 border-b flex flex-row items-center justify-between bg-gray-50/30">
             <CardTitle className="text-sm font-semibold text-gray-700">Recent Role Changes</CardTitle>
             <PermissionGuard permission="view_audit_logs">
-              <Link href="/admin/audit-log" className="text-xs text-blue-600 hover:underline">View All</Link>
+              <Link href="/admin/audit-log" className="text-xs text-primary hover:underline">View All</Link>
             </PermissionGuard>
           </CardHeader>
           <div className="divide-y divide-gray-100">
@@ -414,8 +422,8 @@ export default function RolesPage() {
               <div key={log.id} className="px-4 py-2 hover:bg-gray-50 transition-colors flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className={`w-1.5 h-1.5 rounded-full ${log.action === 'create' ? 'bg-green-500' :
-                      log.action === 'update' ? 'bg-blue-500' :
-                        log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
+                    log.action === 'update' ? 'bg-primary' :
+                      log.action === 'delete' ? 'bg-red-500' : 'bg-gray-500'
                     }`}></span>
                   <span className="text-xs font-medium text-gray-900">{log.object_repr}</span>
                   <span className="text-[10px] text-gray-500 uppercase tracking-wide px-1.5 bg-gray-100 rounded-sm">{log.action}</span>
@@ -755,7 +763,7 @@ function PermissionsDialog({
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="flex items-center justify-between">
             <span>Manage Permissions <span className="text-gray-400 font-normal mx-2">|</span> {role.name}</span>
-            <span className="text-xs font-normal bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">
+            <span className="text-xs font-normal bg-primary/10 text-orange-700 px-2 py-0.5 rounded-full border border-orange-100">
               {selectedCount} Selected
             </span>
           </DialogTitle>
@@ -776,15 +784,19 @@ function PermissionsDialog({
             </div>
             <Select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-[180px] h-8 text-sm"
+              onValueChange={(val) => setSelectedCategory(val)}
             >
-              <option value="all">All Categories</option>
-              {Object.keys(permissionsByCategory).map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
+              <SelectTrigger className="w-[180px] h-8 text-sm">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {Object.keys(permissionsByCategory).map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
             <Button
               type="button"
@@ -833,10 +845,10 @@ function PermissionsDialog({
                           className="h-6 w-6 p-0 hover:bg-gray-200"
                         >
                           {allSelected ? (
-                            <CheckSquare className="w-4 h-4 text-blue-600" />
+                            <CheckSquare className="w-4 h-4 text-primary" />
                           ) : selectedInCategory > 0 ? (
-                            <div className="w-4 h-4 bg-blue-100 border border-blue-400 rounded flex items-center justify-center">
-                              <span className="block w-2 h-2 bg-blue-600 rounded-sm"></span>
+                            <div className="w-4 h-4 bg-orange-100 border border-orange-400 rounded flex items-center justify-center">
+                              <span className="block w-2 h-2 bg-primary rounded-sm"></span>
                             </div>
                           ) : (
                             <Square className="w-4 h-4 text-gray-400" />
@@ -859,7 +871,7 @@ function PermissionsDialog({
                           {perms.map((perm) => (
                             <label
                               key={perm.id}
-                              className={`flex items-start space-x-2.5 p-2 rounded border cursor-pointer transition-all ${selectedPermissions.includes(perm.id) ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-gray-200 hover:border-blue-200'}`}
+                              className={`flex items-start space-x-2.5 p-2 rounded border cursor-pointer transition-all ${selectedPermissions.includes(perm.id) ? 'bg-primary/10 border-orange-200 shadow-sm' : 'bg-white border-gray-200 hover:border-orange-200'}`}
                             >
                               <Checkbox
                                 checked={selectedPermissions.includes(perm.id)}

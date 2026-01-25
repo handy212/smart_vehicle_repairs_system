@@ -277,7 +277,7 @@ export default function AuditLogPage() {
                     setActionFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-2 py-1 h-8 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-950 dark:border-slate-800"
+                  className="w-full px-2 py-1 h-8 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary dark:bg-slate-950 dark:border-slate-800"
                 >
                   <option value="all">All</option>
                   {ACTION_CHOICES.map((action) => (
@@ -345,7 +345,7 @@ export default function AuditLogPage() {
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8">
                       <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -394,7 +394,7 @@ export default function AuditLogPage() {
                           className="h-6 w-6 p-0"
                           onClick={() => setSelectedLog(log)}
                         >
-                          <Eye className="w-3.5 h-3.5 text-blue-600" />
+                          <Eye className="w-3.5 h-3.5 text-primary" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -482,7 +482,7 @@ export default function AuditLogPage() {
                   {/* Entity Info */}
                   <div className="mb-8">
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
-                      <span className="w-1 h-4 bg-blue-600 rounded-full mr-2"></span>
+                      <span className="w-1 h-4 bg-primary rounded-full mr-2"></span>
                       Affected Entity
                     </h4>
                     <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 border border-gray-200 dark:border-gray-800">

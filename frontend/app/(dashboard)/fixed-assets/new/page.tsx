@@ -221,7 +221,7 @@ export default function NewFixedAssetPage() {
                                                 <div className="text-[0.8rem] font-medium text-destructive mt-2 p-3 bg-destructive/10 rounded-md border border-destructive/20">
                                                     <p className="mb-1">⚠️ No asset categories available</p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        Please <Link href="/admin/settings/asset-categories" className="underline text-blue-600 font-semibold">create a category</Link> first to continue.
+                                                        Please <Link href="/admin/settings/asset-categories" className="underline text-primary font-semibold">create a category</Link> first to continue.
                                                     </p>
                                                 </div>
                                             )}

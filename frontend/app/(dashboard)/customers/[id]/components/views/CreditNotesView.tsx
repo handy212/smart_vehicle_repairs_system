@@ -23,7 +23,7 @@ export function CreditNotesView({ customerId }: CreditNotesViewProps) {
     const results = (creditNotes as any).results || [];
 
     const columns = [
-        { header: "Credit Note #", accessorKey: "credit_note_number", cell: (item: any) => <Link href={`/billing/credit-notes/${item.id}`} className="text-blue-600 hover:underline">{item.credit_note_number}</Link> },
+        { header: "Credit Note #", accessorKey: "credit_note_number", cell: (item: any) => <Link href={`/billing/credit-notes/${item.id}`} className="text-primary hover:underline">{item.credit_note_number}</Link> },
         { header: "Date", accessorKey: "credit_date", cell: (item: any) => format(new Date(item.credit_date), "MMM dd, yyyy") },
         { header: "Total", accessorKey: "total", cell: (item: any) => formatCurrency(parseFloat(item.total)) },
         { header: "Unused Amount", accessorKey: "unused_amount", cell: (item: any) => formatCurrency(parseFloat(item.unused_amount)) },

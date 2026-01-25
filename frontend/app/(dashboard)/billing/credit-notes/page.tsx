@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { useToast } from "@/lib/hooks/useToast";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -80,7 +80,7 @@ export default function CreditNotesPage() {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                        <FileText className="h-6 w-6 text-blue-600" />
+                        <FileText className="h-6 w-6 text-primary" />
                         Credit Notes
                     </h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -88,7 +88,7 @@ export default function CreditNotesPage() {
                     </p>
                 </div>
                 <Link href="/billing/credit-notes/new">
-                    <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Button className="bg-primary hover:bg-primary/90">
                         <Plus className="mr-2 h-4 w-4" /> New Credit Note
                     </Button>
                 </Link>
@@ -110,15 +110,19 @@ export default function CreditNotesPage() {
                             <Filter className="mr-2 h-4 w-4 text-gray-500" />
                             <Select
                                 value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="w-[180px]"
+                                onValueChange={(val) => setStatusFilter(val)}
                             >
-                                <option value="all">All Statuses</option>
-                                <option value="draft">Draft</option>
-                                <option value="issued">Issued</option>
-                                <option value="applied">Applied</option>
-                                <option value="refunded">Refunded</option>
-                                <option value="void">Void</option>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="All Statuses" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Statuses</SelectItem>
+                                    <SelectItem value="draft">Draft</SelectItem>
+                                    <SelectItem value="issued">Issued</SelectItem>
+                                    <SelectItem value="applied">Applied</SelectItem>
+                                    <SelectItem value="refunded">Refunded</SelectItem>
+                                    <SelectItem value="void">Void</SelectItem>
+                                </SelectContent>
                             </Select>
                         </div>
                     </div>
@@ -126,7 +130,7 @@ export default function CreditNotesPage() {
                 <CardContent>
                     {isLoading ? (
                         <div className="flex justify-center py-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                         </div>
                     ) : error ? (
                         <div className="bg-red-50 text-red-600 p-4 rounded-md">
@@ -154,7 +158,7 @@ export default function CreditNotesPage() {
                                 <TableBody>
                                     {data.results.map((cn) => (
                                         <TableRow key={cn.id}>
-                                            <TableCell className="font-medium text-blue-600">
+                                            <TableCell className="font-medium text-primary">
                                                 <Link href={`/billing/credit-notes/${cn.id}`}>
                                                     {cn.credit_note_number}
                                                 </Link>
@@ -167,7 +171,7 @@ export default function CreditNotesPage() {
                                             </TableCell>
                                             <TableCell>
                                                 {cn.invoice_number ? (
-                                                    <Link href={`/billing/invoices/${typeof cn.invoice === 'object' ? cn.invoice.id : cn.invoice}`} className="text-blue-600 hover:underline">
+                                                    <Link href={`/billing/invoices/${typeof cn.invoice === 'object' ? cn.invoice.id : cn.invoice}`} className="text-primary hover:underline">
                                                         {cn.invoice_number}
                                                     </Link>
                                                 ) : (

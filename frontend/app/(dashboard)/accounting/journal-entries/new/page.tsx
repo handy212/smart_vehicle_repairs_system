@@ -12,7 +12,7 @@ import { ArrowLeft, Plus, Trash2, Save, Loader2 } from "lucide-react";
 import { useToast } from "@/lib/hooks/useToast";
 import Link from "next/link";
 import {
-    Select,
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import {
     Table,
@@ -116,8 +116,9 @@ export default function NewJournalEntryPage() {
         <div className="space-y-6 p-6 max-w-5xl mx-auto">
             <div className="flex items-center gap-4">
                 <Link href="/accounting">
-                    <Button variant="ghost" size="icon">
-                        <ArrowLeft className="w-5 h-5" />
+                    <Button variant="ghost" size="sm" className="h-8 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100">
+                        <ArrowLeft className="w-4 h-4 mr-1" />
+                        Back
                     </Button>
                 </Link>
                 <div>
@@ -178,14 +179,18 @@ export default function NewJournalEntryPage() {
                                     <TableCell>
                                         <Select
                                             value={line.account_id}
-                                            onChange={(e) => updateLine(index, 'account_id', e.target.value)}
+                                            onValueChange={(val) => updateLine(index, 'account_id', val)}
                                         >
-                                            <option value="" disabled>Select Account</option>
-                                            {accounts?.map((acc: any) => (
-                                                <option key={acc.id} value={acc.id.toString()}>
-                                                    {acc.code} - {acc.name}
-                                                </option>
-                                            ))}
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select Account" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {accounts?.map((acc: any) => (
+                                                    <SelectItem key={acc.id} value={acc.id.toString()}>
+                                                        {acc.code} - {acc.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
                                         </Select>
                                     </TableCell>
                                     <TableCell>

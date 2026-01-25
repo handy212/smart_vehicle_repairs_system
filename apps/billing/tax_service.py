@@ -23,7 +23,6 @@ class TaxConfig:
     vat_rate: Decimal
     nhil_rate: Decimal
     getfund_rate: Decimal
-    covid_rate: Decimal
 
     def as_dict(self) -> Dict[str, str]:
         return {
@@ -32,7 +31,6 @@ class TaxConfig:
             'vat_rate': str(self.vat_rate),
             'nhil_rate': str(self.nhil_rate),
             'getfund_rate': str(self.getfund_rate),
-            'covid_rate': str(self.covid_rate),
         }
 
 
@@ -41,7 +39,6 @@ class TaxBreakdown:
     taxable_subtotal: Decimal
     nhil_amount: Decimal
     getfund_amount: Decimal
-    hrl_amount: Decimal
     vat_amount: Decimal
     total_tax: Decimal
     regime: str
@@ -51,7 +48,6 @@ class TaxBreakdown:
             'taxable_subtotal': str(self.taxable_subtotal),
             'nhil_amount': str(self.nhil_amount),
             'getfund_amount': str(self.getfund_amount),
-            'hrl_amount': str(self.hrl_amount),
             'vat_amount': str(self.vat_amount),
             'total_tax': str(self.total_tax),
             'regime': self.regime,
@@ -70,7 +66,6 @@ class TaxService:
         'vat_rate': Decimal('15.0'),
         'nhil_rate': Decimal('2.5'),
         'getfund_rate': Decimal('2.5'),
-        'covid_rate': Decimal('1.0'),
     }
 
     @classmethod
@@ -104,10 +99,6 @@ class TaxService:
             SystemSettings.get_setting('tax_getfund_rate', cls.DEFAULTS['getfund_rate']),
             cls.DEFAULTS['getfund_rate'],
         )
-        covid_rate = cls._parse_decimal(
-            SystemSettings.get_setting('tax_covid_rate', cls.DEFAULTS['covid_rate']),
-            cls.DEFAULTS['covid_rate'],
-        )
         regime = SystemSettings.get_setting('tax_regime', cls.DEFAULTS['regime']) or cls.DEFAULTS['regime']
 
         return TaxConfig(
@@ -116,7 +107,6 @@ class TaxService:
             vat_rate=vat_rate,
             nhil_rate=nhil_rate,
             getfund_rate=getfund_rate,
-            covid_rate=covid_rate,
         )
 
     @classmethod
@@ -136,7 +126,6 @@ class TaxService:
                 taxable_subtotal=taxable_subtotal.quantize(TWOPLACES),
                 nhil_amount=Decimal('0'),
                 getfund_amount=Decimal('0'),
-                hrl_amount=Decimal('0'),
                 vat_amount=Decimal('0'),
                 total_tax=Decimal('0'),
                 regime=config.regime,
@@ -144,18 +133,17 @@ class TaxService:
 
         nhil_amount = cls._quantize(taxable_subtotal * config.nhil_rate / Decimal('100'))
         getfund_amount = cls._quantize(taxable_subtotal * config.getfund_rate / Decimal('100'))
-        hrl_amount = cls._quantize(taxable_subtotal * config.covid_rate / Decimal('100'))
 
-        vat_base = taxable_subtotal + nhil_amount + getfund_amount + hrl_amount
+        # VAT reform 2026: VAT is decoupled from levies, calculated on base value
+        vat_base = taxable_subtotal
         vat_amount = cls._quantize(vat_base * config.vat_rate / Decimal('100'))
 
-        total_tax = nhil_amount + getfund_amount + hrl_amount + vat_amount
+        total_tax = nhil_amount + getfund_amount + vat_amount
 
         return TaxBreakdown(
             taxable_subtotal=taxable_subtotal.quantize(TWOPLACES),
             nhil_amount=nhil_amount,
             getfund_amount=getfund_amount,
-            hrl_amount=hrl_amount,
             vat_amount=vat_amount,
             total_tax=total_tax.quantize(TWOPLACES),
             regime=config.regime,

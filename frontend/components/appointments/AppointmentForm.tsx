@@ -9,7 +9,7 @@ import { vehiclesApi } from "@/lib/api/vehicles";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -114,25 +114,28 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Customer <span className="text-red-500">*</span></label>
                                 <Select
-                                    {...register("customer", { valueAsNumber: true })}
-                                    className={errors.customer ? "border-red-500" : ""}
-                                    onChange={(e) => {
-                                        setValue("customer", parseInt(e.target.value));
+                                    value={watch("customer")?.toString() || ""}
+                                    onValueChange={(val) => {
+                                        setValue("customer", parseInt(val), { shouldValidate: true });
                                         setValue("vehicle", 0); // Reset vehicle
                                     }}
                                 >
-                                    <option value="">Select Customer</option>
-                                    {customersData?.results?.map((c) => {
-                                        const displayName = c.full_name ||
-                                            c.company_name ||
-                                            (c.user ? `${c.user.first_name || ''} ${c.user.last_name || ''}`.trim() : '') ||
-                                            c.customer_number;
-                                        return (
-                                            <option key={c.id} value={c.id}>
-                                                {displayName}
-                                            </option>
-                                        );
-                                    })}
+                                    <SelectTrigger className={errors.customer ? "border-red-500" : ""}>
+                                        <SelectValue placeholder="Select Customer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {customersData?.results?.map((c) => {
+                                            const displayName = c.full_name ||
+                                                c.company_name ||
+                                                (c.user ? `${c.user.first_name || ''} ${c.user.last_name || ''}`.trim() : '') ||
+                                                c.customer_number;
+                                            return (
+                                                <SelectItem key={c.id} value={c.id.toString()}>
+                                                    {displayName}
+                                                </SelectItem>
+                                            );
+                                        })}
+                                    </SelectContent>
                                 </Select>
                                 {errors.customer && <p className="text-xs text-red-500">{errors.customer.message}</p>}
                             </div>
@@ -140,18 +143,20 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Vehicle <span className="text-red-500">*</span></label>
                                 <Select
-                                    {...register("vehicle", { valueAsNumber: true })}
-                                    className={errors.vehicle ? "border-red-500" : ""}
+                                    value={watch("vehicle")?.toString() || ""}
+                                    onValueChange={(val) => setValue("vehicle", parseInt(val), { shouldValidate: true })}
                                     disabled={!selectedCustomer}
                                 >
-                                    <option value="">
-                                        {!selectedCustomer ? "Select a customer first" : "Select Vehicle"}
-                                    </option>
-                                    {vehiclesData?.results?.map((v) => (
-                                        <option key={v.id} value={v.id}>
-                                            {v.year} {v.make} {v.model} ({v.vin})
-                                        </option>
-                                    ))}
+                                    <SelectTrigger className={errors.vehicle ? "border-red-500" : ""}>
+                                        <SelectValue placeholder={!selectedCustomer ? "Select a customer first" : "Select Vehicle"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {vehiclesData?.results?.map((v) => (
+                                            <SelectItem key={v.id} value={v.id.toString()}>
+                                                {v.year} {v.make} {v.model} ({v.vin})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
                                 </Select>
                                 {errors.vehicle && <p className="text-xs text-red-500">{errors.vehicle.message}</p>}
                             </div>
@@ -196,20 +201,36 @@ export function AppointmentForm({ initialData, customerId, vehicleId, onSubmit, 
                             <div className="grid sm:grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Service Type</label>
-                                    <Select {...register("service_type")}>
-                                        <option value="maintenance">Maintenance</option>
-                                        <option value="repair">Repair</option>
-                                        <option value="inspection">Inspection</option>
-                                        <option value="diagnostic">Diagnostic</option>
+                                    <Select
+                                        value={watch("service_type") || ""}
+                                        onValueChange={(val: any) => setValue("service_type", val, { shouldValidate: true })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="maintenance">Maintenance</SelectItem>
+                                            <SelectItem value="repair">Repair</SelectItem>
+                                            <SelectItem value="inspection">Inspection</SelectItem>
+                                            <SelectItem value="diagnostic">Diagnostic</SelectItem>
+                                        </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Priority</label>
-                                    <Select {...register("priority")}>
-                                        <option value="low">Low</option>
-                                        <option value="normal">Normal</option>
-                                        <option value="high">High</option>
-                                        <option value="urgent">Urgent</option>
+                                    <Select
+                                        value={watch("priority") || ""}
+                                        onValueChange={(val: any) => setValue("priority", val, { shouldValidate: true })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select priority" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="low">Low</SelectItem>
+                                            <SelectItem value="normal">Normal</SelectItem>
+                                            <SelectItem value="high">High</SelectItem>
+                                            <SelectItem value="urgent">Urgent</SelectItem>
+                                        </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">

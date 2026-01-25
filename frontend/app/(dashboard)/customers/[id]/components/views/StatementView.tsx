@@ -7,7 +7,7 @@ import { StatsGrid } from "@/components/shared/StatsGrid";
 import { format } from "date-fns";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { useState } from "react";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 
 interface StatementViewProps {
@@ -92,7 +92,7 @@ export function StatementView({ customerId }: StatementViewProps) {
 
     const stats = [
         { label: "Beginning Balance", value: formatCurrency(summary.beginning_balance) },
-        { label: "Invoiced Amount", value: formatCurrency(summary.invoiced), color: "text-blue-600 dark:text-blue-400" },
+        { label: "Invoiced Amount", value: formatCurrency(summary.invoiced), color: "text-primary dark:text-primary" },
         { label: "Payments Made", value: formatCurrency(summary.payments), color: "text-green-600 dark:text-green-400" },
         { label: "Balance Due", value: formatCurrency(summary.balance_due), color: "text-red-600 dark:text-red-400" }
     ];
@@ -103,13 +103,17 @@ export function StatementView({ customerId }: StatementViewProps) {
                 <h2 className="text-lg font-semibold">Account Statement</h2>
                 <Select
                     value={period}
-                    onChange={(e) => setPeriod(e.target.value)}
-                    className="w-[180px]"
+                    onValueChange={(val) => setPeriod(val)}
                 >
-                    <option value="this_month">This Month</option>
-                    <option value="last_month">Last Month</option>
-                    <option value="this_year">This Year</option>
-                    <option value="all_time">All Time</option>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="this_month">This Month</SelectItem>
+                        <SelectItem value="last_month">Last Month</SelectItem>
+                        <SelectItem value="this_year">This Year</SelectItem>
+                        <SelectItem value="all_time">All Time</SelectItem>
+                    </SelectContent>
                 </Select>
             </div>
 
@@ -155,7 +159,7 @@ export function StatementView({ customerId }: StatementViewProps) {
                                                 ) : '-'}
                                             </td>
                                             <td className="px-4 py-3 capitalize">
-                                                <span className={`inline-flex items-center gap-1 ${t.type === 'payment' ? 'text-green-600' : 'text-blue-600'}`}>
+                                                <span className={`inline-flex items-center gap-1 ${t.type === 'payment' ? 'text-green-600' : 'text-primary'}`}>
                                                     {t.type}
                                                 </span>
                                             </td>

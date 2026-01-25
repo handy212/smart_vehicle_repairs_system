@@ -35,7 +35,7 @@ export function SubscriptionsView({ customerId }: SubscriptionsViewProps) {
     ];
 
     const columns = [
-        { header: "Subscription #", accessorKey: "subscription_number", cell: (item: any) => <Link href={`/subscriptions/${item.id}`} className="text-blue-600 hover:underline">{item.subscription_number}</Link> },
+        { header: "Subscription #", accessorKey: "subscription_number", cell: (item: any) => <Link href={`/subscriptions/${item.id}`} className="text-primary hover:underline">{item.subscription_number}</Link> },
         { header: "Plan", accessorKey: "package_name" },
         { header: "Status", accessorKey: "status", cell: (item: any) => <Badge>{item.status}</Badge> },
         { header: "Start Date", accessorKey: "start_date", cell: (item: any) => format(new Date(item.start_date), "MMM dd, yyyy") },

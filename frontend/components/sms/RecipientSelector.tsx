@@ -140,7 +140,7 @@ export function RecipientSelector({ customers, onSelect, placeholder, className,
                                     className="w-full flex items-center gap-2 p-2 rounded-sm cursor-pointer hover:bg-accent hover:text-accent-foreground text-left text-sm"
                                     onClick={handleAddRawPhone}
                                 >
-                                    <div className="h-7 w-7 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                    <div className="h-7 w-7 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-primary dark:text-primary">
                                         <Plus className="h-4 w-4" />
                                     </div>
                                     <div>

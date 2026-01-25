@@ -8,6 +8,9 @@ import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { useQuery } from "@tanstack/react-query";
+import { adminApi, SystemSetting } from "@/lib/api/admin";
+import { useMemo } from "react";
 
 interface SubNavItem {
   name: string;
@@ -29,8 +32,32 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
   const isCollapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
 
   // Calculate left position based on sidebar state
-  // Sidebar: 256px (w-64) when expanded, 80px (w-20) when collapsed
-  const sidebarLeft = sidebarCollapsed ? 80 : 256;
+  // Sidebar: 288px (w-72) when expanded, 80px (w-20) when collapsed
+  const sidebarLeft = sidebarCollapsed ? 80 : 288;
+
+  const { data: brandingSettings } = useQuery<SystemSetting[]>({
+    queryKey: ["settings", "branding", "public"],
+    queryFn: () => adminApi.settings.publicBranding(),
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+  });
+
+  const branding = useMemo(() => {
+    if (!brandingSettings) {
+      return {
+        primary_color: "#ff8040", // Default orange
+      };
+    }
+
+    const getSetting = (key: string): string | null => {
+      const setting = brandingSettings.find((s) => s.key === key);
+      return setting?.value && setting.value.trim() !== "" ? setting.value : null;
+    };
+
+    return {
+      primary_color: getSetting("primary_color") || "#ff8040",
+    };
+  }, [brandingSettings]);
 
   const handleToggle = () => {
     const newState = !isCollapsed;
@@ -43,8 +70,9 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
   return (
     <aside
       className={cn(
-        "fixed top-16 bottom-0 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto z-10 transition-all duration-300",
-        isCollapsed ? "w-12" : "w-52"
+        "fixed top-16 bottom-0 z-10 transition-all duration-300",
+        "bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/60 dark:border-gray-800/60 shadow-lg", // Premium glass effect
+        isCollapsed ? "w-12" : "w-56" // Slightly wider for premium feel
       )}
       style={{ left: `${sidebarLeft}px` }}
     >
@@ -82,18 +110,38 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                  "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 relative overflow-hidden",
                   isActive
-                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",
+                    ? "font-semibold shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100",
                   isCollapsed && "justify-center"
                 )}
+                style={isActive ? {
+                  backgroundColor: `${branding.primary_color}15`, // 10% opacity hex
+                  color: branding.primary_color,
+                } : undefined}
                 title={isCollapsed ? item.name : undefined}
               >
+                {/* Active indicator background effect */}
+                {isActive && (
+                  <div
+                    className="absolute inset-0 opacity-5"
+                    style={{ backgroundColor: branding.primary_color }}
+                  />
+                )}
+
                 {isCollapsed ? (
                   <span className="text-xs font-bold">{item.name.charAt(0)}</span>
                 ) : (
-                  item.name
+                  <>
+                    <span className="relative z-10">{item.name}</span>
+                    {isActive && (
+                      <div
+                        className="w-1 h-1 rounded-full ml-auto absolute right-2 top-1/2 -translate-y-1/2"
+                        style={{ backgroundColor: branding.primary_color }}
+                      />
+                    )}
+                  </>
                 )}
               </Link>
             );
@@ -198,4 +246,3 @@ export function getSubNavConfig(pathname: string | null): { items: SubNavItem[];
 
   return null;
 }
-

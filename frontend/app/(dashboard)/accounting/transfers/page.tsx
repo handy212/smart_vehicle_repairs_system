@@ -219,7 +219,7 @@ export default function FundTransfersPage() {
                 <CardContent>
                     {isLoading ? (
                         <div className="flex justify-center p-8">
-                            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         </div>
                     ) : (
                         <Table>

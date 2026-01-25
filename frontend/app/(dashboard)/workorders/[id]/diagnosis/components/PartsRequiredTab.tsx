@@ -99,7 +99,7 @@ export function PartsRequiredTab({
             case "pending":
                 return { color: "text-yellow-600 bg-yellow-50", icon: Clock };
             case "ordered":
-                return { color: "text-blue-600 bg-blue-50", icon: Package };
+                return { color: "text-primary bg-primary/10", icon: Package };
             case "received":
                 return { color: "text-green-600 bg-green-50", icon: CheckCircle };
             case "installed":
@@ -159,7 +159,7 @@ export function PartsRequiredTab({
                             <Button
                                 onClick={handleSubmitRequest}
                                 size="sm"
-                                className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
+                                className="h-8 bg-primary hover:bg-primary/90 text-white"
                                 disabled={isDisabled || isSubmitting}
                             >
                                 {isSubmitting ? (
@@ -179,7 +179,7 @@ export function PartsRequiredTab({
                 <CardContent className="pt-0 px-0">
                     {isLoading ? (
                         <div className="flex items-center justify-center py-12">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                         </div>
                     ) : parts.length === 0 ? (
                         <div className="text-center py-16">
@@ -248,7 +248,7 @@ export function PartsRequiredTab({
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="h-8 w-8 p-0 text-gray-400 hover:text-blue-500"
+                                                            className="h-8 w-8 p-0 text-gray-400 hover:text-primary"
                                                             onClick={() => {
                                                                 setEditPart(part);
                                                                 setShowAddDialog(true);
@@ -650,7 +650,7 @@ function PartFormDialog({
                                     type="submit"
                                     size="sm"
                                     disabled={mutation.isPending || (queuedParts.length === 0 && !formData.part_name)}
-                                    className="bg-blue-600 hover:bg-blue-700"
+                                    className="bg-primary hover:bg-primary/90"
                                 >
                                     {mutation.isPending ? "Saving..." : (
                                         initialData ? "Update Part" : (queuedParts.length > 0 ? `Submit All (${queuedParts.length + (formData.part_name ? 1 : 0)})` : "Request Part")

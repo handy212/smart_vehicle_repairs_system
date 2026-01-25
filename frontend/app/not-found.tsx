@@ -23,15 +23,15 @@ export default function NotFound() {
             </p>
             <ul className="space-y-2 text-sm text-gray-600">
               <li className="flex items-start">
-                <span className="text-blue-600 mr-2">•</span>
+                <span className="text-primary mr-2">•</span>
                 Check the URL for typos
               </li>
               <li className="flex items-start">
-                <span className="text-blue-600 mr-2">•</span>
+                <span className="text-primary mr-2">•</span>
                 The page may have been deleted or moved
               </li>
               <li className="flex items-start">
-                <span className="text-blue-600 mr-2">•</span>
+                <span className="text-primary mr-2">•</span>
                 You may not have permission to access this page
               </li>
             </ul>
@@ -53,7 +53,7 @@ export default function NotFound() {
           <div className="pt-4">
             <Link
               href="/dashboard"
-              className="text-sm text-blue-600 hover:text-blue-800 inline-flex items-center"
+              className="text-sm text-primary hover:text-orange-800 inline-flex items-center"
             >
               <Search className="w-4 h-4 mr-1" />
               Or search for what you need

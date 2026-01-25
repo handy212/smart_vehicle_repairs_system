@@ -1,7 +1,8 @@
 "use client";
 
+import { PremiumIcons } from "@/components/ui/icons";
 import { useAuthStore } from "@/store/authStore";
-import { User, LogOut, Settings } from "lucide-react";
+import { User, LogOut, Settings } from "lucide-react"; // Keep for now if needed (though we're replacing usage below)
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -18,7 +19,7 @@ import { cn } from "@/lib/utils/cn";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { branchesApi, type Branch } from "@/lib/api/admin";
 import { useBranchStore } from "@/store/branchStore";
-import { Building2, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import {
     Select,
 } from "@/components/ui/select";
@@ -78,7 +79,7 @@ export function UserMenu() {
                     variant="ghost"
                     className="flex items-center space-x-2 h-auto px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white font-semibold shadow-sm">
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/90 flex items-center justify-center text-white font-semibold shadow-sm">
                         {user?.first_name?.[0] || user?.email?.[0] || "U"}
                     </div>
                     <div className="hidden md:block text-left">
@@ -97,7 +98,7 @@ export function UserMenu() {
                             {user?.first_name} {user?.last_name}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{user?.email}</p>
-                        <span className="inline-block mt-1.5 text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-medium capitalize">
+                        <span className="inline-block mt-1.5 text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full font-medium capitalize">
                             {user?.role}
                         </span>
                     </div>
@@ -109,7 +110,7 @@ export function UserMenu() {
                     <>
                         <DropdownMenuLabel className="pb-1">
                             <div className="flex items-center gap-2">
-                                <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                                <PremiumIcons.Building2 className="w-3.5 h-3.5 text-gray-400" />
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Switch Branch</span>
                             </div>
                         </DropdownMenuLabel>
@@ -118,7 +119,7 @@ export function UserMenu() {
                                 value={currentBranchId ? currentBranchId.toString() : ""}
                                 onChange={handleBranchChange}
                                 disabled={isBranchesLoading || sortedBranches.length === 0}
-                                className="w-full h-8 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-lg text-xs px-2 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer"
+                                className="w-full h-8 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-lg text-xs px-2 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
                             >
                                 {sortedBranches.map((branch) => (
                                     <option key={branch.id} value={branch.id}>
@@ -134,14 +135,14 @@ export function UserMenu() {
 
                 <DropdownMenuItem asChild>
                     <Link href="/admin/profile" className="cursor-pointer">
-                        <User className="w-4 h-4 mr-2" />
+                        <PremiumIcons.UserCog className="w-4 h-4 mr-2" />
                         Profile Settings
                     </Link>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem asChild>
                     <Link href="/notifications/preferences" className="cursor-pointer">
-                        <Settings className="w-4 h-4 mr-2" />
+                        <PremiumIcons.Settings className="w-4 h-4 mr-2" />
                         Notification Preferences
                     </Link>
                 </DropdownMenuItem>
@@ -152,7 +153,7 @@ export function UserMenu() {
                     onClick={handleLogout}
                     className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20 cursor-pointer"
                 >
-                    <LogOut className="w-4 h-4 mr-2" />
+                    <PremiumIcons.LogOut className="w-4 h-4 mr-2" />
                     Sign Out
                 </DropdownMenuItem>
             </DropdownMenuContent>

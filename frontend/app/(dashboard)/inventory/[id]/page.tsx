@@ -356,7 +356,7 @@ export default function PartDetailPage() {
             <CardContent className="p-4 space-y-3">
               <div>
                 <p className="text-xs text-muted-foreground">Preferred Supplier</p>
-                <p className="font-medium text-sm text-blue-600">{part.preferred_supplier_name || "None Set"}</p>
+                <p className="font-medium text-sm text-primary">{part.preferred_supplier_name || "None Set"}</p>
               </div>
               {part.manufacturer_part_number && (
                 <div>

@@ -85,7 +85,7 @@ export function InventoryTurnoverChart({ data }: InventoryTurnoverChartProps) {
                                 <p className="text-sm font-bold truncate max-w-[150px]">{item.part.name}</p>
                                 <p className="text-[10px] text-gray-500 uppercase font-medium">{item.part.part_number}</p>
                             </div>
-                            <div className="px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold">
+                            <div className="px-2 py-1 rounded bg-orange-100 dark:bg-orange-900/30 text-primary dark:text-primary text-[10px] font-bold">
                                 {item.metrics.turnover_rate.toFixed(1)}x Turn
                             </div>
                         </div>

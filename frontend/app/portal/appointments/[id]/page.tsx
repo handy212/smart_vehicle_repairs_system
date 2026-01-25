@@ -276,7 +276,7 @@ export default function AppointmentDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-start space-x-4">
-                <Car className="w-8 h-8 text-blue-500 mt-1" />
+                <Car className="w-8 h-8 text-primary mt-1" />
                 <div className="flex-1">
                   <p className="font-semibold text-lg text-gray-900 dark:text-gray-100">
                     {apt.vehicle_info || apt.vehicle_display || "N/A"}

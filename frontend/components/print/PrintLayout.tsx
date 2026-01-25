@@ -80,7 +80,7 @@ export function PrintLayout({
             {documentType && (
                 <div className="flex justify-between items-end mb-6 pb-2 border-b border-gray-200 print-section">
                     <div className="text-left">
-                        <div className="text-2xl font-bold uppercase text-blue-600 leading-none mb-1">{documentType}</div>
+                        <div className="text-2xl font-bold uppercase text-primary leading-none mb-1">{documentType}</div>
                         <div className="text-lg font-bold text-gray-900 leading-none"># {documentNumber}</div>
                     </div>
 

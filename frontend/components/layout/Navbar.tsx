@@ -1,7 +1,8 @@
 "use client";
 
+import { PremiumIcons } from "@/components/ui/icons";
 import { useAuthStore } from "@/store/authStore";
-import { Bell, User, LogOut, Search, ChevronDown, Settings, Car, Menu, X, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { User, LogOut, Settings } from "lucide-react"; // Keep User for avatar fallback if needed, or replace
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
@@ -200,7 +201,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
 
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm backdrop-blur-sm bg-white/95 dark:bg-gray-900/95 supports-[backdrop-filter]:bg-white/80 supports-[backdrop-filter]:dark:bg-gray-900/80">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 border-b border-gray-200/50 dark:border-gray-800/50 shadow-sm backdrop-blur-xl">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left: Menu Toggle + Logo/Brand */}
@@ -208,13 +209,13 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
             {/* Mobile Menu Toggle */}
             <button
               onClick={onMenuToggle}
-              className="lg:hidden p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="lg:hidden p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Toggle menu"
             >
               {isSidebarOpen ? (
-                <X className="w-6 h-6" />
+                <PremiumIcons.X className="w-6 h-6" />
               ) : (
-                <Menu className="w-6 h-6" />
+                <PremiumIcons.Menu className="w-6 h-6" />
               )}
             </button>
 
@@ -222,14 +223,14 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
             {onToggleCollapse && (
               <button
                 onClick={onToggleCollapse}
-                className="hidden lg:block p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="hidden lg:block p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
               >
                 {isSidebarCollapsed ? (
-                  <PanelLeftOpen className="w-5 h-5" />
+                  <PremiumIcons.PanelLeftOpen className="w-5 h-5 transition-transform duration-200" />
                 ) : (
-                  <PanelLeftClose className="w-5 h-5" />
+                  <PremiumIcons.PanelLeftClose className="w-5 h-5 transition-transform duration-200" />
                 )}
               </button>
             )}
@@ -258,7 +259,7 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
                         const parent = target.parentElement;
                         if (parent && !parent.querySelector(".fallback-icon")) {
                           const iconWrapper = document.createElement("div");
-                          iconWrapper.className = "fallback-icon absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg";
+                          iconWrapper.className = "fallback-icon absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary to-primary/90 rounded-lg";
                           const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
                           icon.setAttribute("class", "w-5 h-5 text-white");
                           icon.setAttribute("fill", "none");
@@ -296,12 +297,12 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
                   />
                 </div>
               ) : (
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-                  <Car className="w-5 h-5 text-white" />
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/90 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:shadow-primary/30 transition-all">
+                  <PremiumIcons.Car className="w-5 h-5 text-white" />
                 </div>
               )}
               <div className="hidden sm:block">
-                <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-primary dark:group-hover:text-orange-400 transition-colors">
                   {branding.siteName}
                 </h1>
                 {branding.tagline && (
@@ -324,9 +325,9 @@ export function Navbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSideba
               }}
               className="group flex items-center gap-3 px-4 py-2 w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-gray-700 transition-all text-sm shadow-sm hover:shadow-md"
             >
-              <Search className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
+              <PremiumIcons.Search className="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" />
               <span className="flex-1 text-left font-medium opacity-70">Search...</span>
-              <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 group-hover:border-blue-200 dark:group-hover:border-blue-900 transition-colors shadow-none">
+              <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 group-hover:border-orange-200 dark:group-hover:border-orange-900 transition-colors shadow-none">
                 <span className="text-[10px] font-bold uppercase tracking-tighter">Ctrl K</span>
               </div>
             </button>

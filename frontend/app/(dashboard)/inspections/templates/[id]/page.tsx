@@ -166,7 +166,7 @@ export default function TemplateDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -199,7 +199,7 @@ export default function TemplateDetailPage() {
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-bold text-gray-900">{template.name}</h1>
               {template.is_default && (
-                <Badge className="bg-blue-100 text-blue-800">Default</Badge>
+                <Badge className="bg-orange-100 text-orange-800">Default</Badge>
               )}
               <Badge
                 className={

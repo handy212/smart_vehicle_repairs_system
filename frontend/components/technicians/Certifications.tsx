@@ -223,7 +223,7 @@ export function Certifications({ technicianId }: CertificationsProps) {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         );
     }
@@ -244,7 +244,7 @@ export function Certifications({ technicianId }: CertificationsProps) {
                                 <p className="text-sm text-muted-foreground">Active Certifications</p>
                                 <p className="text-2xl font-bold">{activeCerts.length}</p>
                             </div>
-                            <Award className="h-8 w-8 text-blue-500 opacity-50" />
+                            <Award className="h-8 w-8 text-primary opacity-50" />
                         </div>
                     </CardContent>
                 </Card>
@@ -275,7 +275,7 @@ export function Certifications({ technicianId }: CertificationsProps) {
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
-                        <Award className="h-5 w-5 text-blue-500" />
+                        <Award className="h-5 w-5 text-primary" />
                         All Certifications ({allCerts.length})
                     </CardTitle>
                 </CardHeader>

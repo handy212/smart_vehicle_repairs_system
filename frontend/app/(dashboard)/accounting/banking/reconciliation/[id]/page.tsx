@@ -392,7 +392,7 @@ export default function ReconciliationDetailPage() {
                                     key={line.id}
                                     className={cn(
                                         "p-3 text-sm cursor-pointer transition-colors flex justify-between items-center group relative",
-                                        selectedBankLine?.id === line.id ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 pl-2" : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                                        selectedBankLine?.id === line.id ? "bg-primary/10 dark:bg-orange-900/20 border-l-4 border-primary pl-2" : "hover:bg-gray-50 dark:hover:bg-gray-800"
                                     )}
                                     onClick={() => setSelectedBankLine(selectedBankLine?.id === line.id ? null : line)}
                                 >
@@ -433,7 +433,7 @@ export default function ReconciliationDetailPage() {
                                             key={tx.id}
                                             className={cn(
                                                 "p-3 text-sm cursor-pointer transition-colors flex justify-between items-center",
-                                                selectedSysTx?.id === tx.id ? "bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 pl-2" : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                                                selectedSysTx?.id === tx.id ? "bg-primary/10 dark:bg-orange-900/20 border-l-4 border-primary pl-2" : "hover:bg-gray-50 dark:hover:bg-gray-800"
                                             )}
                                             onClick={() => setSelectedSysTx(selectedSysTx?.id === tx.id ? null : tx)}
                                         >
@@ -479,7 +479,7 @@ export default function ReconciliationDetailPage() {
                         <div className="text-sm">
                             Matching amounts...
                         </div>
-                        <Button onClick={handleMatch} disabled={isMatchLoading} size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        <Button onClick={handleMatch} disabled={isMatchLoading} size="sm" className="bg-primary hover:bg-primary/90">
                             {isMatchLoading ? "Matching..." : "Confirm Match"}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => { setSelectedBankLine(null); setSelectedSysTx(null); }}>

@@ -379,7 +379,7 @@ export default function InvoiceDetailPage() {
               {amountDue > 0 && (
                 <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
                   <span className="text-gray-900 dark:text-gray-100">Amount Due</span>
-                  <span className="text-blue-600 dark:text-blue-400">
+                  <span className="text-primary dark:text-primary">
                     ${amountDue.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,

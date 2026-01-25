@@ -256,7 +256,7 @@ export default function PaymentDetailPage() {
                                         allocations.map((alloc: PaymentAllocation) => (
                                             <TableRow key={alloc.id}>
                                                 <TableCell>
-                                                    <Link href={`/billing/invoices/${alloc.invoice}`} className="text-blue-600 hover:underline font-medium">
+                                                    <Link href={`/billing/invoices/${alloc.invoice}`} className="text-primary hover:underline font-medium">
                                                         {alloc.invoice_number}
                                                     </Link>
                                                 </TableCell>
@@ -285,11 +285,11 @@ export default function PaymentDetailPage() {
                         </CardHeader>
                         <CardContent>
                             <div className="flex items-center gap-3 mb-4">
-                                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                    <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                                    <User className="h-5 w-5 text-primary dark:text-primary" />
                                 </div>
                                 <div>
-                                    <Link href={payment.customer ? `/customers/${payment.customer}` : '#'} className="font-medium hover:text-blue-600 block">
+                                    <Link href={payment.customer ? `/customers/${payment.customer}` : '#'} className="font-medium hover:text-primary block">
                                         {payment.customer_name || 'Unknown Customer'}
                                     </Link>
                                 </div>

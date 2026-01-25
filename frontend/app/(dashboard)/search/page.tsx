@@ -195,7 +195,7 @@ export default function SearchPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
           </CardContent>
         </Card>
@@ -230,7 +230,7 @@ export default function SearchPage() {
                     <Link
                       key={`${result.type}-${result.id}`}
                       href={result.url}
-                      className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors"
+                      className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-orange-300 transition-colors"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">

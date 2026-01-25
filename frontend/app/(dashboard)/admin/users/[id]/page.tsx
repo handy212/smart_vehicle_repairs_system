@@ -7,7 +7,7 @@ import { branchesApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Edit, AlertCircle, Building2, Save, X, Info, RefreshCw, Copy, Eye, EyeOff, Mail, KeyRound, UserCheck, UserX } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -42,32 +42,32 @@ const userUpdateSchema = z.object({
   hire_date: z.string().optional(),
   hourly_rate: z.string().optional(),
 })
-.refine(
-  (data) => {
-    // Managers should have managed_branches, not branch
-    if (data.role === "manager") {
-      return !data.branch || (data.managed_branches && data.managed_branches.length > 0);
+  .refine(
+    (data) => {
+      // Managers should have managed_branches, not branch
+      if (data.role === "manager") {
+        return !data.branch || (data.managed_branches && data.managed_branches.length > 0);
+      }
+      return true;
+    },
+    {
+      message: "Managers must have at least one managed branch assigned",
+      path: ["managed_branches"],
     }
-    return true;
-  },
-  {
-    message: "Managers must have at least one managed branch assigned",
-    path: ["managed_branches"],
-  }
-)
-.refine(
-  (data) => {
-    // Staff roles should have a single branch
-    if (data.role && ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant"].includes(data.role)) {
-      return !!data.branch;
+  )
+  .refine(
+    (data) => {
+      // Staff roles should have a single branch
+      if (data.role && ["receptionist", "technician", "parts_manager", "service_coordinator", "accountant"].includes(data.role)) {
+        return !!data.branch;
+      }
+      return true;
+    },
+    {
+      message: "Staff members must be assigned to a branch",
+      path: ["branch"],
     }
-    return true;
-  },
-  {
-    message: "Staff members must be assigned to a branch",
-    path: ["branch"],
-  }
-);
+  );
 
 type UserUpdateFormData = z.infer<typeof userUpdateSchema>;
 
@@ -82,7 +82,7 @@ const ROLE_OPTIONS = [
 ];
 
 export default function UserDetailPage() {
-    const { formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -121,19 +121,19 @@ export default function UserDetailPage() {
     resolver: zodResolver(userUpdateSchema),
     values: user
       ? {
-          first_name: user.first_name,
-          last_name: user.last_name,
-          phone: user.phone || "",
-          email_notifications: user.email_notifications,
-          sms_notifications: user.sms_notifications,
-          is_active: user.is_active,
-          role: user.role as any,
-          branch: user.branch || null,
-          managed_branches: user.managed_branches || [],
-          employee_id: user.employee_id || "",
-          hire_date: user.hire_date || "",
-          hourly_rate: user.hourly_rate || "",
-        }
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone || "",
+        email_notifications: user.email_notifications,
+        sms_notifications: user.sms_notifications,
+        is_active: user.is_active,
+        role: user.role as any,
+        branch: user.branch || null,
+        managed_branches: user.managed_branches || [],
+        employee_id: user.employee_id || "",
+        hire_date: user.hire_date || "",
+        hourly_rate: user.hourly_rate || "",
+      }
       : undefined,
   });
 
@@ -201,7 +201,7 @@ export default function UserDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["admin", "user", userId] });
       toast({
         title: "Success",
-        description: data.email_sent 
+        description: data.email_sent
           ? "Password reset successfully and email sent to user"
           : "Password reset successfully",
       });
@@ -336,7 +336,7 @@ export default function UserDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -393,7 +393,7 @@ export default function UserDetailPage() {
             <>
               <Button
                 type="button"
-               variant="secondary"
+                variant="secondary"
                 onClick={() => {
                   setIsEditing(false);
                   reset();
@@ -408,7 +408,7 @@ export default function UserDetailPage() {
                 type="submit"
                 form="user-edit-form"
                 disabled={isSubmitting || updateMutation.isPending}
-                className="dark:bg-blue-600 dark:hover:bg-blue-700"
+                className="dark:bg-primary dark:hover:bg-primary/90"
               >
                 {isSubmitting || updateMutation.isPending ? (
                   <span className="flex items-center gap-2">
@@ -424,7 +424,7 @@ export default function UserDetailPage() {
               </Button>
             </>
           ) : (
-            <Button onClick={() => setIsEditing(true)} className="dark:bg-blue-600 dark:hover:bg-blue-700">
+            <Button onClick={() => setIsEditing(true)} className="dark:bg-primary dark:hover:bg-primary/90">
               <Edit className="w-4 h-4 mr-2" />
               Edit User
             </Button>
@@ -497,14 +497,19 @@ export default function UserDetailPage() {
                       Role <span className="text-red-500">*</span>
                     </label>
                     <Select
-                      {...register("role")}
-                      className={errors.role ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                      value={watch("role")}
+                      onValueChange={(val: any) => setValue("role", val, { shouldValidate: true })}
                     >
-                      {ROLE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
+                      <SelectTrigger className={errors.role ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}>
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ROLE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                     {errors.role && (
                       <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
@@ -519,7 +524,7 @@ export default function UserDetailPage() {
                       type="checkbox"
                       id="is_active"
                       {...register("is_active")}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                     />
                     <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       User is active
@@ -531,7 +536,7 @@ export default function UserDetailPage() {
                       type="checkbox"
                       id="email_notifications"
                       {...register("email_notifications")}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                     />
                     <label htmlFor="email_notifications" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Email Notifications
@@ -543,7 +548,7 @@ export default function UserDetailPage() {
                       type="checkbox"
                       id="sms_notifications"
                       {...register("sms_notifications")}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                     />
                     <label htmlFor="sms_notifications" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       SMS Notifications
@@ -555,10 +560,10 @@ export default function UserDetailPage() {
 
             {/* Branch Assignment and Employment Information - Combined */}
             {(isManager || isStaff) && (
-              <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-blue-500">
+              <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-primary">
                 <CardHeader>
                   <CardTitle className="dark:text-white flex items-center gap-2 text-lg">
-                    <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <Building2 className="w-5 h-5 text-primary dark:text-primary" />
                     Branch Assignment & Employment Information
                   </CardTitle>
                 </CardHeader>
@@ -581,7 +586,7 @@ export default function UserDetailPage() {
                                 return (
                                   <label
                                     key={branch.id}
-                                    className="flex items-center space-x-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 p-3 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors"
+                                    className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors"
                                   >
                                     <input
                                       type="checkbox"
@@ -597,7 +602,7 @@ export default function UserDetailPage() {
                                           );
                                         }
                                       }}
-                                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-5 h-5"
+                                      className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-5 h-5"
                                     />
                                     <div className="flex-1">
                                       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{branch.name}</span>
@@ -632,17 +637,19 @@ export default function UserDetailPage() {
                             Select the primary branch for this staff member
                           </p>
                           <Select
-                            {...register("branch", { 
-                              setValueAs: (v) => (v ? Number(v) : null),
-                            })}
-                            className={errors.branch ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                            value={watch("branch")?.toString() || ""}
+                            onValueChange={(val) => setValue("branch", val ? Number(val) : null, { shouldValidate: true })}
                           >
-                            <option value="">-- Select a branch --</option>
-                            {branches.map((branch) => (
-                              <option key={branch.id} value={branch.id}>
-                                {branch.name} {branch.code ? `(${branch.code})` : ""}
-                              </option>
-                            ))}
+                            <SelectTrigger className={errors.branch ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}>
+                              <SelectValue placeholder="-- Select a branch --" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {branches.map((branch) => (
+                                <SelectItem key={branch.id} value={branch.id.toString()}>
+                                  {branch.name} {branch.code ? `(${branch.code})` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
                           </Select>
                           {errors.branch && (
                             <p className="text-red-500 dark:text-red-400 text-xs mt-2 flex items-center gap-1">
@@ -717,7 +724,7 @@ export default function UserDetailPage() {
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
                       type="button"
-                     variant="secondary"
+                      variant="secondary"
                       onClick={() => setShowPasswordReset(true)}
                       className="dark:border-gray-600 dark:text-gray-300 flex-1"
                     >
@@ -726,7 +733,7 @@ export default function UserDetailPage() {
                     </Button>
                     <Button
                       type="button"
-                     variant="secondary"
+                      variant="secondary"
                       onClick={() => sendResetLinkMutation.mutate()}
                       disabled={sendResetLinkMutation.isPending}
                       className="dark:border-gray-600 dark:text-gray-300 flex-1"
@@ -770,7 +777,7 @@ export default function UserDetailPage() {
                         </div>
                         <Button
                           type="button"
-                         variant="secondary"
+                          variant="secondary"
                           onClick={handleGeneratePassword}
                           className="dark:border-gray-600 dark:text-gray-300"
                           title="Generate secure password"
@@ -780,7 +787,7 @@ export default function UserDetailPage() {
                         {newPassword && (
                           <Button
                             type="button"
-                           variant="secondary"
+                            variant="secondary"
                             onClick={handleCopyPassword}
                             className="dark:border-gray-600 dark:text-gray-300"
                             title="Copy password"
@@ -798,7 +805,7 @@ export default function UserDetailPage() {
                       <input
                         type="checkbox"
                         id="send_password_email"
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                        className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                       />
                       <label htmlFor="send_password_email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         Send new password to user via email
@@ -807,7 +814,7 @@ export default function UserDetailPage() {
                     <div className="flex gap-3">
                       <Button
                         type="button"
-                       variant="secondary"
+                        variant="secondary"
                         onClick={() => {
                           setShowPasswordReset(false);
                           setNewPassword("");
@@ -920,8 +927,8 @@ export default function UserDetailPage() {
                       {getRoleLabel(user.role)}
                     </Badge>
                   </div>
-                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                    <Building2 className="w-6 h-6 text-primary dark:text-primary" />
                   </div>
                 </div>
               </CardContent>
@@ -1022,10 +1029,10 @@ export default function UserDetailPage() {
           </div>
 
           {/* Branch & Employment Information */}
-          <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-blue-500">
+          <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-primary">
             <CardHeader>
               <CardTitle className="dark:text-white flex items-center gap-2 text-lg font-semibold">
-                <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <Building2 className="w-5 h-5 text-primary dark:text-primary" />
                 Branch & Employment Information
               </CardTitle>
             </CardHeader>
@@ -1038,7 +1045,7 @@ export default function UserDetailPage() {
                     Branch Assignment
                   </dt>
                   {user.role === "manager" && user.managed_branches_names && user.managed_branches_names.length > 0 ? (
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="p-4 bg-primary/10 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
                       <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
                         {user.managed_branches_names.join(", ")}
                       </p>
@@ -1047,7 +1054,7 @@ export default function UserDetailPage() {
                       </p>
                     </div>
                   ) : user.branch_name ? (
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="p-4 bg-primary/10 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
                       <p className="text-base font-semibold text-gray-900 dark:text-white">{user.branch_name}</p>
                     </div>
                   ) : (
@@ -1103,7 +1110,7 @@ export default function UserDetailPage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   type="button"
-                 variant="secondary"
+                  variant="secondary"
                   onClick={() => setShowPasswordReset(true)}
                   className="dark:border-gray-600 dark:text-gray-300"
                 >
@@ -1112,7 +1119,7 @@ export default function UserDetailPage() {
                 </Button>
                 <Button
                   type="button"
-                 variant="secondary"
+                  variant="secondary"
                   onClick={() => sendResetLinkMutation.mutate()}
                   disabled={sendResetLinkMutation.isPending}
                   className="dark:border-gray-600 dark:text-gray-300"
@@ -1156,7 +1163,7 @@ export default function UserDetailPage() {
                       </div>
                       <Button
                         type="button"
-                       variant="secondary"
+                        variant="secondary"
                         onClick={handleGeneratePassword}
                         className="dark:border-gray-600 dark:text-gray-300"
                         title="Generate secure password"
@@ -1166,7 +1173,7 @@ export default function UserDetailPage() {
                       {newPassword && (
                         <Button
                           type="button"
-                         variant="secondary"
+                          variant="secondary"
                           onClick={handleCopyPassword}
                           className="dark:border-gray-600 dark:text-gray-300"
                           title="Copy password"
@@ -1184,7 +1191,7 @@ export default function UserDetailPage() {
                     <input
                       type="checkbox"
                       id="send_password_email_view"
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                      className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                     />
                     <label htmlFor="send_password_email_view" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                       Send new password to user via email
@@ -1193,7 +1200,7 @@ export default function UserDetailPage() {
                   <div className="flex gap-3">
                     <Button
                       type="button"
-                     variant="secondary"
+                      variant="secondary"
                       onClick={() => {
                         setShowPasswordReset(false);
                         setNewPassword("");

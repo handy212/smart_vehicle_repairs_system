@@ -7,7 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { workOrderNotesApi } from "@/lib/api/workorder-notes";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -35,6 +35,7 @@ export default function AddNoteDialog({ workOrderId, open, onClose, onSuccess }:
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
     reset,
     setError,
@@ -108,12 +109,20 @@ export default function AddNoteDialog({ workOrderId, open, onClose, onSuccess }:
               <label htmlFor="note_type" className="block text-sm font-medium text-gray-700 mb-2">
                 Note Type *
               </label>
-              <Select id="note_type" {...register("note_type")} className="w-full">
-                <option value="internal">Internal</option>
-                <option value="customer_visible">Customer Visible</option>
-                <option value="phone_call">Phone Call</option>
-                <option value="email">Email</option>
-                <option value="meeting">Meeting</option>
+              <Select
+                value={watch("note_type")}
+                onValueChange={(val) => setValue("note_type", val as any)}
+              >
+                <SelectTrigger id="note_type" className="w-full">
+                  <SelectValue placeholder="Select note type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="internal">Internal</SelectItem>
+                  <SelectItem value="customer_visible">Customer Visible</SelectItem>
+                  <SelectItem value="phone_call">Phone Call</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="meeting">Meeting</SelectItem>
+                </SelectContent>
               </Select>
               {errors.note_type && (
                 <p className="mt-1 text-sm text-red-600">{errors.note_type.message}</p>
@@ -141,7 +150,7 @@ export default function AddNoteDialog({ workOrderId, open, onClose, onSuccess }:
                 <input
                   type="checkbox"
                   {...register("is_important")}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                 />
                 <span className="text-sm text-gray-700">Mark as Important</span>
               </label>
@@ -150,7 +159,7 @@ export default function AddNoteDialog({ workOrderId, open, onClose, onSuccess }:
                   <input
                     type="checkbox"
                     {...register("is_customer_visible")}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                   />
                   <span className="text-sm text-gray-700">Customer Visible</span>
                 </label>
@@ -159,7 +168,7 @@ export default function AddNoteDialog({ workOrderId, open, onClose, onSuccess }:
           </div>
         </form>
         <DialogFooter>
-          <Button type="button"variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>

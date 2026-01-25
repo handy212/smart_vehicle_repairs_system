@@ -319,7 +319,7 @@ export default function RoadsideRequestDetailPage() {
               </div>
               {req.dispatched_at && (
                 <div className="flex items-start gap-3">
-                  <User className="w-5 h-5 text-blue-500 mt-0.5" />
+                  <User className="w-5 h-5 text-primary mt-0.5" />
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Dispatched</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -360,7 +360,7 @@ export default function RoadsideRequestDetailPage() {
 
           {/* Customer Feedback */}
           {req.status === 'completed' && (
-            <Card className="border-none shadow-premium bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10">
+            <Card className="border-none shadow-premium bg-gradient-to-br from-orange-50 to-indigo-50 dark:from-orange-900/10 dark:to-indigo-900/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
@@ -400,7 +400,7 @@ export default function RoadsideRequestDetailPage() {
                       />
                     </div>
                     <Button
-                      className="w-full bg-blue-600 hover:bg-blue-700 font-bold gap-2"
+                      className="w-full bg-primary hover:bg-primary/90 font-bold gap-2"
                       onClick={() => feedbackMutation.mutate({ rating, customer_feedback: feedback })}
                       disabled={feedbackMutation.isPending}
                     >

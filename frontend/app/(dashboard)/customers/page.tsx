@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Filter, Trash2, Download, X, Upload, ChevronDown, FileDown, FileUp, MoreVertical, Eye, Edit, Mail, UserCheck, UserX, MessageSquare, Calendar, Wrench, Package, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -343,7 +343,7 @@ export default function CustomersPage() {
           <Card className="shadow-sm border bg-white dark:bg-gray-800">
             <CardContent className="p-3 flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active Contact</span>
-              <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{stats?.active_contacts || 0}</span>
+              <span className="text-lg font-bold text-primary dark:text-primary">{stats?.active_contacts || 0}</span>
             </CardContent>
           </Card>
           <Card className="shadow-sm border bg-white dark:bg-gray-800">
@@ -473,7 +473,7 @@ export default function CustomersPage() {
           </DropdownMenu>
           <PermissionGuard permission="create_customers">
             <Link href="/customers/new">
-              <Button size="sm" className="h-9 bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200">
+              <Button size="sm" className="h-9">
                 <Plus className="w-3.5 h-3.5 mr-1.5" /> Add Customer
               </Button>
             </Link>
@@ -511,7 +511,7 @@ export default function CustomersPage() {
                             if (input) input.indeterminate = bulkSelection.isIndeterminate;
                           }}
                           onChange={bulkSelection.toggleSelectAll}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                         />
                       </TableHead>
                     )}
@@ -591,14 +591,14 @@ export default function CustomersPage() {
                             type="checkbox"
                             checked={bulkSelection.isSelected(customer.id)}
                             onChange={() => bulkSelection.toggleSelection(customer.id)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                           />
                         </TableCell>
                       )}
                       {visibleColumns.has("name") && (
                         <TableCell className="px-4 py-2 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-blue-600 dark:bg-blue-700 flex items-center justify-center text-white font-medium text-xs flex-shrink-0">
+                            <div className="h-8 w-8 rounded-full bg-primary dark:bg-orange-700 flex items-center justify-center text-white font-medium text-xs flex-shrink-0">
                               {customer.user?.first_name?.[0]?.toUpperCase() || customer.full_name?.[0]?.toUpperCase() || customer.email?.[0]?.toUpperCase() || "C"}
                             </div>
                             <div className="ml-3">
@@ -797,11 +797,16 @@ export default function CustomersPage() {
             </label>
             <Select
               value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
+              onValueChange={(val) => setNewStatus(val)}
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="suspended">Suspended</option>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
             </Select>
           </div>
           <DialogFooter>

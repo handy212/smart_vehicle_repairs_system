@@ -6,7 +6,7 @@ import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, CheckCircle2, RefreshCw, Copy, Eye, EyeOff, Building2, User } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
@@ -127,7 +127,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                     <Card>
                         <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
                             <CardTitle className="text-base font-medium flex items-center gap-2">
-                                <User className="w-4 h-4 text-blue-500" />
+                                <User className="w-4 h-4 text-primary" />
                                 Personal Information
                             </CardTitle>
                         </CardHeader>
@@ -177,10 +177,10 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
 
                     {/* Business Info (Conditional) */}
                     {(customerType === "business" || customerType === "fleet") && (
-                        <Card className="border-l-4 border-l-blue-500">
+                        <Card className="border-l-4 border-l-primary">
                             <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800">
                                 <CardTitle className="text-base font-medium flex items-center gap-2">
-                                    <Building2 className="w-4 h-4 text-blue-500" />
+                                    <Building2 className="w-4 h-4 text-primary" />
                                     Business Details
                                 </CardTitle>
                             </CardHeader>
@@ -226,7 +226,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                     type="checkbox"
                                     id="grant_portal_access"
                                     {...register("grant_portal_access")}
-                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                    className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4"
                                 />
                                 <Label htmlFor="grant_portal_access" className="font-normal cursor-pointer">
                                     Grant portal access to customer
@@ -269,7 +269,7 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                                             type="checkbox"
                                             id="send_welcome_email"
                                             {...register("send_welcome_email")}
-                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                            className="rounded border-gray-300 text-primary focus:ring-primary w-4 h-4"
                                         />
                                         <Label htmlFor="send_welcome_email" className="font-normal cursor-pointer text-sm text-gray-600">
                                             Send welcome email with login details
@@ -290,28 +290,52 @@ export function CustomerForm({ initialData, onSubmit, isSubmitting, mode, onCanc
                         <CardContent className="pt-4 space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="customer_type">Customer Type</Label>
-                                <Select {...register("customer_type")}>
-                                    <option value="individual">Individual</option>
-                                    <option value="business">Business</option>
-                                    <option value="fleet">Fleet</option>
+                                <Select
+                                    value={watch("customer_type")}
+                                    onValueChange={(val) => setValue("customer_type", val as any)}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="individual">Individual</SelectItem>
+                                        <SelectItem value="business">Business</SelectItem>
+                                        <SelectItem value="fleet">Fleet</SelectItem>
+                                    </SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="status">Status</Label>
-                                <Select {...register("status")}>
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                    <option value="suspended">Suspended</option>
+                                <Select
+                                    value={watch("status")}
+                                    onValueChange={(val) => setValue("status", val as any)}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="active">Active</SelectItem>
+                                        <SelectItem value="inactive">Inactive</SelectItem>
+                                        <SelectItem value="suspended">Suspended</SelectItem>
+                                    </SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="payment_terms">Payment Terms</Label>
-                                <Select {...register("payment_terms")}>
-                                    <option value="due_on_receipt">Due on Receipt</option>
-                                    <option value="net_15">Net 15</option>
-                                    <option value="net_30">Net 30</option>
-                                    <option value="net_60">Net 60</option>
-                                    <option value="prepaid">Prepaid</option>
+                                <Select
+                                    value={watch("payment_terms")}
+                                    onValueChange={(val) => setValue("payment_terms", val as any)}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select terms" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="due_on_receipt">Due on Receipt</SelectItem>
+                                        <SelectItem value="net_15">Net 15</SelectItem>
+                                        <SelectItem value="net_30">Net 30</SelectItem>
+                                        <SelectItem value="net_60">Net 60</SelectItem>
+                                        <SelectItem value="prepaid">Prepaid</SelectItem>
+                                    </SelectContent>
                                 </Select>
                             </div>
                         </CardContent>

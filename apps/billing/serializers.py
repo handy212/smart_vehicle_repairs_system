@@ -775,7 +775,7 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
             invoice.taxable_subtotal = breakdown.taxable_subtotal
             invoice.tax_nhil_amount = breakdown.nhil_amount
             invoice.tax_getfund_amount = breakdown.getfund_amount
-            invoice.tax_hrl_amount = breakdown.hrl_amount
+            invoice.tax_hrl_amount = Decimal('0') # breakdown.hrl_amount removed
             invoice.tax_vat_amount = breakdown.vat_amount
             invoice.tax_amount = breakdown.total_tax
             invoice.tax_regime = breakdown.regime
@@ -930,7 +930,7 @@ class InvoiceUpdateSerializer(serializers.ModelSerializer):
                 instance.taxable_subtotal = breakdown.taxable_subtotal
                 instance.tax_nhil_amount = breakdown.nhil_amount
                 instance.tax_getfund_amount = breakdown.getfund_amount
-                instance.tax_hrl_amount = breakdown.hrl_amount
+                instance.tax_hrl_amount = Decimal('0')  # breakdown.hrl_amount removed
                 instance.tax_vat_amount = breakdown.vat_amount
                 instance.tax_amount = breakdown.total_tax
                 instance.tax_regime = breakdown.regime

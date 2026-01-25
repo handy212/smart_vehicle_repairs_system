@@ -153,7 +153,7 @@ export default function MyAppointmentsPage() {
                 <PortalCard
                   key={apt.id}
                   href={`/portal/appointments/${apt.id}`}
-                  icon={<Calendar className="w-5 h-5 text-blue-500" />}
+                  icon={<Calendar className="w-5 h-5 text-primary" />}
                   title={format(new Date(apt.appointment_date), "EEEE, MMM d")}
                   subtitle={
                     <span className="flex flex-col gap-1 mt-1">

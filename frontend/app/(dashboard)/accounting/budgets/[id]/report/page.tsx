@@ -54,7 +54,7 @@ export default function BudgetReportPage() {
                             <CardTitle className="text-sm font-medium text-muted-foreground">Total Budget</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-blue-600">
+                            <div className="text-2xl font-bold text-primary">
                                 {formatCurrency(report.summary.total_budget)}
                             </div>
                         </CardContent>
@@ -93,7 +93,7 @@ export default function BudgetReportPage() {
                 <CardContent>
                     {isLoading ? (
                         <div className="flex justify-center p-8">
-                            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         </div>
                     ) : (
                         <Table>

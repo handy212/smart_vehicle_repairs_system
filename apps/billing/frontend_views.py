@@ -852,7 +852,6 @@ def calculate_tax(request):
             'taxable_subtotal': float(breakdown.taxable_subtotal),
             'nhil_amount': float(breakdown.nhil_amount),
             'getfund_amount': float(breakdown.getfund_amount),
-            'hrl_amount': float(breakdown.hrl_amount),
             'vat_amount': float(breakdown.vat_amount),
             'tax_amount': float(breakdown.total_tax),
             'total_with_tax': float(breakdown.taxable_subtotal + breakdown.total_tax)

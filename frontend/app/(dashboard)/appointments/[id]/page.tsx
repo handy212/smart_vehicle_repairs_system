@@ -106,7 +106,7 @@ export default function AppointmentDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -163,9 +163,9 @@ export default function AppointmentDetailPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
             <span>/</span>
-            <Link href="/appointments" className="hover:text-blue-600 transition-colors">Appointments</Link>
+            <Link href="/appointments" className="hover:text-primary transition-colors">Appointments</Link>
             <span>/</span>
             <span className="text-gray-900 dark:text-gray-100 font-medium">#{appointment.appointment_number}</span>
           </div>
@@ -178,7 +178,7 @@ export default function AppointmentDetailPage() {
           </Button>
           <PermissionGuard permission="edit_appointments">
             <Link href={`/appointments/${appointmentId}/edit`}>
-              <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+              <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
                 <Edit className="w-3.5 h-3.5 mr-2" />
                 Edit Appointment
               </Button>
@@ -253,7 +253,7 @@ export default function AppointmentDetailPage() {
                   {appointment.customer ? (
                     <Link
                       href={`/customers/${typeof appointment.customer === 'object' && appointment.customer !== null ? appointment.customer.id : appointment.customer}`}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
+                      className="text-primary hover:text-orange-800 font-medium"
                     >
                       {appointment.customer_name || "View Customer"}
                     </Link>
@@ -269,7 +269,7 @@ export default function AppointmentDetailPage() {
                   {appointment.vehicle ? (
                     <Link
                       href={`/vehicles/${typeof appointment.vehicle === 'object' && appointment.vehicle !== null ? appointment.vehicle.id : appointment.vehicle}`}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
+                      className="text-primary hover:text-orange-800 font-medium"
                     >
                       {appointment.vehicle_info || "View Vehicle"}
                     </Link>

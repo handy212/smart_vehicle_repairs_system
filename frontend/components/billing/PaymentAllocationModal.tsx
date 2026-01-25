@@ -232,7 +232,7 @@ export function PaymentAllocationModal({
                         </div>
                         <div>
                             <Label className="text-xs text-gray-500">Remaining</Label>
-                            <div className={`text-lg font-bold ${remainingAmount < 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                            <div className={`text-lg font-bold ${remainingAmount < 0 ? 'text-red-600' : 'text-primary'}`}>
                                 {formatCurrency(remainingAmount)}
                             </div>
                         </div>
@@ -333,7 +333,7 @@ export function PaymentAllocationModal({
                             variant="outline"
                             onClick={() => autoAllocateMutation.mutate(paymentId)}
                             disabled={autoAllocateMutation.isPending || outstandingInvoices.length === 0}
-                            className="text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50"
+                            className="text-primary hover:text-orange-700 border-orange-200 hover:bg-primary/10"
                         >
                             {autoAllocateMutation.isPending ? "Auto-Allocating..." : "⚡ Auto-Allocate"}
                         </Button>

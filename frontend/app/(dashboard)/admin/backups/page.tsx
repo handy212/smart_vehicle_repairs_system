@@ -13,7 +13,7 @@ import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
@@ -129,7 +129,7 @@ export default function BackupsPage() {
   const getBackupTypeIcon = (type: string) => {
     switch (type) {
       case "full":
-        return <HardDrive className="w-3.5 h-3.5 text-blue-600" />;
+        return <HardDrive className="w-3.5 h-3.5 text-primary" />;
       case "database":
         return <Database className="w-3.5 h-3.5 text-purple-600" />;
       case "media":
@@ -164,7 +164,7 @@ export default function BackupsPage() {
             <RefreshCw className="w-4 h-4 text-gray-500" />
           </Button>
           <PermissionGuard permission="manage_settings">
-            <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs">
+            <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-primary hover:bg-primary/90 text-white h-8 text-xs">
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Create Backup
             </Button>
@@ -180,33 +180,41 @@ export default function BackupsPage() {
               <Label htmlFor="backup_type" className="text-xs font-medium text-gray-600">Type:</Label>
               <Select
                 value={backupTypeFilter}
-                onChange={(e) => {
-                  setBackupTypeFilter(e.target.value);
+                onValueChange={(val) => {
+                  setBackupTypeFilter(val);
                   setPage(1);
                 }}
-                className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900"
               >
-                <option value="all">All Types</option>
-                <option value="full">Full Backup</option>
-                <option value="database">Database Only</option>
-                <option value="media">Media Files Only</option>
+                <SelectTrigger className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900">
+                  <SelectValue placeholder="Filter Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="full">Full Backup</SelectItem>
+                  <SelectItem value="database">Database Only</SelectItem>
+                  <SelectItem value="media">Media Files Only</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             <div className="flex items-center gap-2">
               <Label htmlFor="status" className="text-xs font-medium text-gray-600">Status:</Label>
               <Select
                 value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
+                onValueChange={(val) => {
+                  setStatusFilter(val);
                   setPage(1);
                 }}
-                className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900"
               >
-                <option value="all">All Statuses</option>
-                <option value="completed">Completed</option>
-                <option value="in_progress">In Progress</option>
-                <option value="failed">Failed</option>
-                <option value="pending">Pending</option>
+                <SelectTrigger className="h-8 w-[140px] text-xs bg-white dark:bg-gray-900">
+                  <SelectValue placeholder="Filter Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
               </Select>
             </div>
           </div>
@@ -215,7 +223,7 @@ export default function BackupsPage() {
 
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       ) : (
         <div className="px-4 pb-8">
@@ -288,7 +296,7 @@ export default function BackupsPage() {
                                     title="Download"
                                     className="h-7 w-7 p-0"
                                   >
-                                    <Download className="w-3.5 h-3.5 text-blue-600" />
+                                    <Download className="w-3.5 h-3.5 text-primary" />
                                   </Button>
                                 </PermissionGuard>
                                 <PermissionGuard permission="manage_settings">
@@ -368,8 +376,8 @@ function CreateBackupDialog({
       <DialogContent className="max-w-md p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-              <Database className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center">
+              <Database className="w-5 h-5 text-primary dark:text-primary" />
             </div>
             <div>
               <DialogTitle className="text-lg font-bold">Create System Backup</DialogTitle>
@@ -385,14 +393,17 @@ function CreateBackupDialog({
               Backup Type
             </Label>
             <Select
-              id="backup_type"
               value={backupType}
-              onChange={(e) => setBackupType(e.target.value)}
-              className="w-full h-9 text-sm"
+              onValueChange={(val) => setBackupType(val)}
             >
-              <option value="full">Full Backup (Database + Media)</option>
-              <option value="database">Database Only (Faster)</option>
-              <option value="media">Media Files Only</option>
+              <SelectTrigger id="backup_type" className="w-full h-9 text-sm">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="full">Full Backup (Database + Media)</SelectItem>
+                <SelectItem value="database">Database Only (Faster)</SelectItem>
+                <SelectItem value="media">Media Files Only</SelectItem>
+              </SelectContent>
             </Select>
             <p className="text-[10px] text-gray-500">
               {backupType === 'full' && "Recommended for complete system restoration."}
@@ -419,7 +430,7 @@ function CreateBackupDialog({
           <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={isCreating} className="h-8">
             Cancel
           </Button>
-          <Button type="submit" size="sm" onClick={handleSubmit} disabled={isCreating} className="h-8 bg-blue-600 hover:bg-blue-700 text-white">
+          <Button type="submit" size="sm" onClick={handleSubmit} disabled={isCreating} className="h-8 bg-primary hover:bg-primary/90 text-white">
             {isCreating ? "Creating..." : "Start Backup"}
           </Button>
         </DialogFooter>

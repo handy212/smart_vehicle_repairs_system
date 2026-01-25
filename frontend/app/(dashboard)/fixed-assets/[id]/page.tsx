@@ -44,7 +44,7 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
             case "retired":
                 return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
             default:
-                return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+                return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
         }
     };
 

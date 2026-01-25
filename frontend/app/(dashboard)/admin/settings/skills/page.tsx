@@ -151,7 +151,7 @@ export default function SkillsManagementPage() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         );
     }
@@ -161,9 +161,9 @@ export default function SkillsManagementPage() {
             <div className="flex items-center justify-between px-4 pt-4">
                 <div>
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-                        <Link href="/admin" className="hover:text-blue-600 transition-colors">Admin</Link>
+                        <Link href="/admin" className="hover:text-primary transition-colors">Admin</Link>
                         <span>/</span>
-                        <Link href="/admin/settings" className="hover:text-blue-600 transition-colors">Settings</Link>
+                        <Link href="/admin/settings" className="hover:text-primary transition-colors">Settings</Link>
                         <span>/</span>
                         <span className="text-gray-900 dark:text-gray-100 font-medium">Skills</span>
                     </div>
@@ -181,7 +181,7 @@ export default function SkillsManagementPage() {
             <Card className="mx-4">
                 <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
-                        <Award className="h-5 w-5 text-blue-500" />
+                        <Award className="h-5 w-5 text-primary" />
                         All Skills ({skills?.length || 0})
                     </CardTitle>
                 </CardHeader>

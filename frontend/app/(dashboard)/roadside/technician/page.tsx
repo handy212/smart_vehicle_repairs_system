@@ -101,7 +101,7 @@ export default function TechnicianRoadsideDashboard() {
                 </div>
             )}
 
-            <div className="bg-blue-600 rounded-2xl p-6 text-white overflow-hidden relative">
+            <div className="bg-primary rounded-2xl p-6 text-white overflow-hidden relative">
                 <div className="relative z-10">
                     <h3 className="text-lg font-black mb-1">Safety First!</h3>
                     <p className="text-white/80 text-sm mb-4">Always wear your high-visibility vest and set up warning triangles immediately upon arrival.</p>
@@ -139,7 +139,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
 
     return (
         <Card className="overflow-hidden border-none shadow-premium bg-white dark:bg-gray-800">
-            <div className="h-1.5 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+            <div className="h-1.5 bg-gradient-to-r from-primary to-indigo-500"></div>
             <CardHeader className="pb-3 flex flex-row items-start justify-between">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -151,7 +151,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
                         <Clock className="h-3 w-3" /> {format(new Date(request.requested_at), "h:mm a")} • {request.customer_name}
                     </CardDescription>
                 </div>
-                <div className="h-10 w-10 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                <div className="h-10 w-10 rounded-full bg-primary/10 dark:bg-orange-900/30 flex items-center justify-center text-primary">
                     <Truck className="h-5 w-5" />
                 </div>
             </CardHeader>
@@ -167,7 +167,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
                                     href={`https://www.google.com/maps?q=${request.latitude},${request.longitude}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-xs text-blue-600 flex items-center gap-1 mt-1 font-bold"
+                                    className="text-xs text-primary flex items-center gap-1 mt-1 font-bold"
                                 >
                                     OPEN IN GOOGLE MAPS <ExternalLink className="h-3 w-3" />
                                 </a>
@@ -196,7 +196,7 @@ function TechnicianRequestCard({ request, onUpdate, isUpdating }: {
                 {nextAction && (
                     <Button
                         disabled={isUpdating}
-                        className={`w-full h-12 text-lg font-black gap-2 ${nextAction.color} shadow-lg shadow-blue-500/10`}
+                        className={`w-full h-12 text-lg font-black gap-2 ${nextAction.color} shadow-lg shadow-primary/10`}
                         onClick={() => onUpdate(nextAction.action)}
                     >
                         <nextAction.icon className="h-5 w-5" />

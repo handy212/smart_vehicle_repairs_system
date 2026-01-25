@@ -105,7 +105,7 @@ export default function MobileDashboardPage() {
     return (
       <div className="p-4 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -193,7 +193,7 @@ export default function MobileDashboardPage() {
                       className={cn(
                         'text-xs',
                         wo.status === 'in_progress'
-                          ? 'bg-blue-100 text-blue-700'
+                          ? 'bg-orange-100 text-orange-700'
                           : 'bg-yellow-100 text-yellow-700'
                       )}
                     >
@@ -238,7 +238,7 @@ export default function MobileDashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <div className="text-2xl font-bold text-primary dark:text-primary">
               {stats.in_progress}
             </div>
           </CardContent>
@@ -332,7 +332,7 @@ export default function MobileDashboardPage() {
                         className={cn(
                           "px-2 py-1 rounded text-xs font-medium",
                           wo.status === "in_progress" &&
-                          "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+                          "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
                           wo.status === "assigned" &&
                           "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
                           wo.status === "completed" &&

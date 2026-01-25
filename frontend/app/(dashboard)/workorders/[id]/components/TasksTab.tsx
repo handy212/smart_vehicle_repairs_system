@@ -137,14 +137,14 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
       <TableRow 
         key={task.id} 
         className={`
-          ${isWorkflow ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}
-          ${isCurrentPhase ? "ring-2 ring-blue-500 dark:ring-blue-400" : ""}
+          ${isWorkflow ? "bg-primary/5 dark:bg-orange-900/10" : ""}
+          ${isCurrentPhase ? "ring-2 ring-primary dark:ring-orange-400" : ""}
         `}
       >
         <TableCell>
           <div className="flex items-start gap-2">
             {isWorkflow && (
-              <TaskIcon className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <TaskIcon className="w-4 h-4 text-primary dark:text-primary mt-0.5 flex-shrink-0" />
             )}
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -169,8 +169,8 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
               )}
               {isWorkflow && taskInfo?.actionHint && task.status !== 'completed' && (
                 <div className="mt-1 flex items-start gap-1">
-                  <Info className="w-3 h-3 text-blue-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-blue-600 dark:text-blue-400 italic">
+                  <Info className="w-3 h-3 text-primary mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-primary dark:text-primary italic">
                     {taskInfo.actionHint}
                   </p>
                 </div>
@@ -261,7 +261,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
           ) : (
             <div className="flex items-center space-x-2">
               {task.status === "completed" ? (
-                <span className="text-xs text-blue-600 dark:text-blue-400 italic flex items-center gap-1">
+                <span className="text-xs text-primary dark:text-primary italic flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
                   Auto-completed
                 </span>
@@ -290,7 +290,7 @@ export default function WorkOrderTasksTab({ workOrderId, tasks, onRefresh, workO
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div className="flex items-center gap-2">
-                <Workflow className="w-5 h-5 text-blue-600" />
+                <Workflow className="w-5 h-5 text-primary" />
                 <CardTitle>Workflow Tasks</CardTitle>
               </div>
               <Badge variant="secondary" className="text-xs">

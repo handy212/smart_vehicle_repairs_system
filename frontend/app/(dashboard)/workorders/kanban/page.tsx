@@ -7,7 +7,7 @@ import { useAuthStore } from "@/store/authStore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Filter, RefreshCw, Eye, Edit, User as UserIcon } from "lucide-react";
+import { PremiumIcons } from "@/components/ui/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useEffect } from "react";
@@ -29,7 +29,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
@@ -48,12 +48,12 @@ function KanbanColumn({ status, workOrders }: KanbanColumnProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`min-w-[300px] max-w-[300px] bg-gray-50 rounded-lg p-4 border-2 ${isOver ? "border-blue-500" : "border-gray-200"
+      className={`min-w-[300px] max-w-[300px] bg-gray-50 rounded-lg p-4 border-2 ${isOver ? "border-primary" : "border-gray-200"
         } transition-colors`}
     >
       <div className="flex justify-between items-center mb-4 p-2 bg-white rounded border border-gray-200">
         <h6 className="text-sm font-semibold text-gray-900">{status.label}</h6>
-        <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-semibold">
+        <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-semibold">
           {workOrders.length}
         </div>
       </div>
@@ -66,7 +66,7 @@ function KanbanColumn({ status, workOrders }: KanbanColumnProps) {
           {workOrders.length === 0 ? (
             <div className="text-center text-gray-500 py-8">
               <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-                <span className="text-2xl">📋</span>
+                <PremiumIcons.ClipboardList className="w-8 h-8 text-gray-400" />
               </div>
               <p className="text-xs">No work orders</p>
             </div>
@@ -139,7 +139,7 @@ function WorkOrderCard({ workOrder }: WorkOrderCardProps) {
         <Link
           href={`/workorders/${workOrder.id}`}
           onClick={(e) => e.stopPropagation()}
-          className="text-sm font-semibold text-blue-600 hover:text-blue-800"
+          className="text-sm font-semibold text-primary hover:text-orange-800"
         >
           {workOrder.work_order_number}
         </Link>
@@ -150,7 +150,7 @@ function WorkOrderCard({ workOrder }: WorkOrderCardProps) {
 
       {/* Customer Info */}
       <div className="flex items-center my-2">
-        <div className="w-8 h-8 rounded-full bg-blue-500 text-white text-xs font-semibold flex items-center justify-center mr-2">
+        <div className="w-8 h-8 rounded-full bg-primary text-white text-xs font-semibold flex items-center justify-center mr-2">
           {customerName
             .split(" ")
             .map((n) => n[0])
@@ -172,7 +172,7 @@ function WorkOrderCard({ workOrder }: WorkOrderCardProps) {
       {/* Technician Info */}
       {workOrder.primary_technician_name && (
         <div className="text-xs text-gray-500 my-1 flex items-center gap-1">
-          <UserIcon className="w-3 h-3" />
+          <PremiumIcons.User className="w-3 h-3" />
           <span className="truncate">{workOrder.primary_technician_name}</span>
         </div>
       )}
@@ -188,10 +188,10 @@ function WorkOrderCard({ workOrder }: WorkOrderCardProps) {
           <Link
             href={`/workorders/${workOrder.id}`}
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center justify-center w-7 h-7 border border-blue-600 text-blue-600 rounded text-xs hover:bg-blue-50 transition-colors"
+            className="inline-flex items-center justify-center w-7 h-7 border border-primary text-primary rounded text-xs hover:bg-primary/10 transition-colors"
             title="View Details"
           >
-            <Eye className="w-3 h-3" />
+            <PremiumIcons.Eye className="w-3 h-3" />
           </Link>
           <Link
             href={`/workorders/${workOrder.id}/edit`}
@@ -199,7 +199,7 @@ function WorkOrderCard({ workOrder }: WorkOrderCardProps) {
             className="inline-flex items-center justify-center w-7 h-7 border border-gray-300 text-gray-600 rounded text-xs hover:bg-gray-50 transition-colors"
             title="Edit"
           >
-            <Edit className="w-3 h-3" />
+            <PremiumIcons.Edit className="w-3 h-3" />
           </Link>
         </div>
       </div>
@@ -315,7 +315,7 @@ export default function WorkOrderKanbanPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -326,28 +326,28 @@ export default function WorkOrderKanbanPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Link href="/workorders">
-            <Button variant="secondary">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+            <Button variant="secondary" size="sm">
+              <PremiumIcons.ArrowLeft className="w-4 h-4 mr-2" />
               Back to List
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Work Orders Kanban</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Drag and drop to update work order status
-            </p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <PremiumIcons.LayoutGrid className="w-5 h-5 text-gray-500" />
+              Kanban Board
+            </h1>
           </div>
         </div>
         <Link href="/workorders/new">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
+          <Button size="sm">
+            <PremiumIcons.Plus className="w-4 h-4 mr-2" />
             New Work Order
           </Button>
         </Link>
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="border-none shadow-sm bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex items-center space-x-2 border-r border-gray-200 pr-6 mr-2">
@@ -366,15 +366,20 @@ export default function WorkOrderKanbanPage() {
                 </label>
                 <Select
                   value={technicianFilter}
-                  onChange={(e) => setTechnicianFilter(e.target.value)}
+                  onValueChange={(val) => setTechnicianFilter(val)}
                   disabled={myTasksOnly}
                 >
-                  <option value="">All Technicians</option>
-                  {technicians?.map((tech) => (
-                    <option key={tech.id} value={tech.id.toString()}>
-                      {tech.first_name} {tech.last_name}
-                    </option>
-                  ))}
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Technicians" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Technicians</SelectItem>
+                    {technicians?.map((tech) => (
+                      <SelectItem key={tech.id} value={tech.id.toString()}>
+                        {tech.first_name} {tech.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -384,26 +389,32 @@ export default function WorkOrderKanbanPage() {
                 </label>
                 <Select
                   value={priorityFilter}
-                  onChange={(e) => setPriorityFilter(e.target.value)}
+                  onValueChange={(val) => setPriorityFilter(val)}
                 >
-                  <option value="">All Priorities</option>
-                  <option value="urgent">Urgent</option>
-                  <option value="high">High</option>
-                  <option value="normal">Normal</option>
-                  <option value="low">Low</option>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Priorities" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
 
               <div className="flex items-end">
                 <Button
                   variant="secondary"
+                  size="sm"
                   onClick={() => {
                     setTechnicianFilter("");
                     setPriorityFilter("");
                     setMyTasksOnly(false);
                   }}
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" />
+                  <PremiumIcons.RefreshCw className="w-4 h-4 mr-2" />
                   Clear Filters
                 </Button>
               </div>
@@ -430,7 +441,7 @@ export default function WorkOrderKanbanPage() {
         </div>
         <DragOverlay>
           {activeId ? (
-            <div className="bg-white rounded-lg p-4 border-2 border-blue-500 shadow-xl opacity-90">
+            <div className="bg-white rounded-lg p-4 border-2 border-primary shadow-xl opacity-90">
               <p className="text-sm font-semibold">Moving work order...</p>
             </div>
           ) : null}

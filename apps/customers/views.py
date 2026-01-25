@@ -102,6 +102,17 @@ class CustomerViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Create customer with user account"""
         serializer.save()
+
+    def perform_destroy(self, instance):
+        """
+        Custom delete to ensure the associated User is also deleted.
+        Since it's a OneToOne relationship, deleting the User will 
+        automatically delete the Customer (CASCADE), and AllAuth SocialAccounts.
+        """
+        user = instance.user
+        instance.delete()
+        if user:
+            user.delete()
     
     @action(detail=True, methods=['get'])
     def vehicles(self, request, pk=None):

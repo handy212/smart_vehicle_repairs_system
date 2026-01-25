@@ -44,9 +44,9 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
 
     const items = [
         { label: "Pending Requests", value: stats.pending_requests, color: "text-amber-600" },
-        { label: "Ordered", value: stats.ordered_requests, color: "text-blue-600" },
+        { label: "PO Created", value: stats.ordered_requests || stats.po_created_requests, color: "text-primary" },
         { label: "Received", value: stats.received_requests, color: "text-green-600" },
-        { label: "Total Requests", value: stats.total_requests, color: "text-gray-600" },
+        { label: "Awaiting Stock", value: stats.awaiting_stock_requests, color: "text-purple-600" },
     ];
 
     return (
@@ -81,7 +81,7 @@ export default function PartsRequestsPage() {
     // BUT the original code hardcoded { status: "pending" }.
     // I will expose a filter for status default to "pending".
 
-    const [activeStatus, setActiveStatus] = useState<string>("pending");
+    const [activeStatus, setActiveStatus] = useState<string>("all");
 
     // Fetch stats
     const { data: stats, isLoading: statsLoading } = useQuery({
@@ -157,9 +157,9 @@ export default function PartsRequestsPage() {
                     <div className="flex justify-between items-center pt-2">
                         <div>
                             <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-                                <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+                                <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
                                 <span>/</span>
-                                <Link href="/inventory" className="hover:text-blue-600 transition-colors">Inventory</Link>
+                                <Link href="/inventory" className="hover:text-primary transition-colors">Inventory</Link>
                                 <span>/</span>
                                 <span className="text-gray-900 dark:text-gray-100 font-medium">Parts Requests</span>
                             </div>
@@ -199,31 +199,37 @@ export default function PartsRequestsPage() {
                                     <DropdownMenuItem onClick={() => setActiveStatus("pending")}>
                                         <div className="flex items-center justify-between w-full">
                                             Pending
-                                            {activeStatus === "pending" && <CheckCircle className="w-3.5 h-3.5 text-blue-600" />}
+                                            {activeStatus === "pending" && <CheckCircle className="w-3.5 h-3.5 text-primary" />}
                                         </div>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setActiveStatus("ordered")}>
+                                    <DropdownMenuItem onClick={() => setActiveStatus("po_created")}>
                                         <div className="flex items-center justify-between w-full">
-                                            Ordered
-                                            {activeStatus === "ordered" && <CheckCircle className="w-3.5 h-3.5 text-blue-600" />}
+                                            PO Created
+                                            {activeStatus === "po_created" && <CheckCircle className="w-3.5 h-3.5 text-primary" />}
+                                        </div>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setActiveStatus("awaiting_stock")}>
+                                        <div className="flex items-center justify-between w-full">
+                                            Awaiting Stock
+                                            {activeStatus === "awaiting_stock" && <CheckCircle className="w-3.5 h-3.5 text-primary" />}
                                         </div>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setActiveStatus("received")}>
                                         <div className="flex items-center justify-between w-full">
                                             Received
-                                            {activeStatus === "received" && <CheckCircle className="w-3.5 h-3.5 text-blue-600" />}
+                                            {activeStatus === "received" && <CheckCircle className="w-3.5 h-3.5 text-primary" />}
                                         </div>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setActiveStatus("ready")}>
                                         <div className="flex items-center justify-between w-full">
-                                            Ready (Allocated)
-                                            {activeStatus === "ready" && <CheckCircle className="w-3.5 h-3.5 text-blue-600" />}
+                                            Allocated (Ready)
+                                            {activeStatus === "ready" && <CheckCircle className="w-3.5 h-3.5 text-primary" />}
                                         </div>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setActiveStatus("all")}>
                                         <div className="flex items-center justify-between w-full">
                                             All Statuses
-                                            {activeStatus === "all" && <CheckCircle className="w-3.5 h-3.5 text-blue-600" />}
+                                            {activeStatus === "all" && <CheckCircle className="w-3.5 h-3.5 text-primary" />}
                                         </div>
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -285,7 +291,7 @@ export default function PartsRequestsPage() {
                                                     className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800 cursor-pointer transition-colors"
                                                     onClick={() => handleViewDetails(woId)}
                                                 >
-                                                    <TableCell className="font-mono text-xs font-medium text-blue-600 dark:text-blue-400 px-4 py-2">
+                                                    <TableCell className="font-mono text-xs font-medium text-primary dark:text-primary px-4 py-2">
                                                         {woNumber}
                                                     </TableCell>
                                                     <TableCell className="text-sm font-medium text-gray-900 dark:text-gray-100 px-4 py-2">
@@ -303,7 +309,7 @@ export default function PartsRequestsPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            className="h-7 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                            className="h-7 text-xs font-medium text-primary hover:text-orange-700 hover:bg-primary/10 dark:hover:bg-orange-900/20"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleViewDetails(woId);

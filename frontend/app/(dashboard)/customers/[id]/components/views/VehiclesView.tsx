@@ -17,7 +17,7 @@ export function VehiclesView({ customerId }: VehiclesViewProps) {
     });
 
     const columns = [
-        { header: "Vehicle", accessorKey: "vehicle_display", cell: (item: any) => <Link href={`/vehicles/${item.id}`} className="font-medium text-blue-600 hover:underline">{item.make} {item.model} ({item.year})</Link> },
+        { header: "Vehicle", accessorKey: "vehicle_display", cell: (item: any) => <Link href={`/vehicles/${item.id}`} className="font-medium text-primary hover:underline">{item.make} {item.model} ({item.year})</Link> },
         { header: "License Plate", accessorKey: "license_plate" },
         { header: "VIN", accessorKey: "vin" },
         { header: "Color", accessorKey: "color" },

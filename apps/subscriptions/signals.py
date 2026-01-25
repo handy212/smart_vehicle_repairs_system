@@ -54,9 +54,10 @@ def check_duplicate_subscription(sender, instance, **kwargs):
         if not instance.vehicle:
             return
             
-        # Check for existing subscription for this vehicle
+        # Check for existing ACTIVE or PENDING subscription for this vehicle
         existing = Subscription.objects.filter(
-            vehicle=instance.vehicle
+            vehicle=instance.vehicle,
+            status__in=['active', 'pending', 'suspended']
         ).exclude(pk=instance.pk).first()
         
         if existing:

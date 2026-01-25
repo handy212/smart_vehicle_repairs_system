@@ -66,7 +66,7 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
 
     const getStatusColor = (status: Shift['status']) => {
         switch (status) {
-            case 'scheduled': return "text-blue-600 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800";
+            case 'scheduled': return "text-primary bg-primary/10 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800";
             case 'active': return "text-green-600 bg-green-50 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
             case 'completed': return "text-gray-600 bg-gray-50 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700";
             case 'absent': return "text-red-600 bg-red-50 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
@@ -110,8 +110,8 @@ export function ShiftSchedule({ shifts, technicianId }: ShiftScheduleProps) {
                     const isToday = isSameDay(day, new Date());
 
                     return (
-                        <Card key={day.toISOString()} className={cn("overflow-hidden flex flex-col h-full min-h-[200px]", isToday && "border-blue-500 ring-1 ring-blue-500")}>
-                            <div className={cn("p-2 text-center text-sm font-medium border-b bg-muted/50", isToday && "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300")}>
+                        <Card key={day.toISOString()} className={cn("overflow-hidden flex flex-col h-full min-h-[200px]", isToday && "border-primary ring-1 ring-primary")}>
+                            <div className={cn("p-2 text-center text-sm font-medium border-b bg-muted/50", isToday && "bg-primary/10 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300")}>
                                 {format(day, "EEE, MMM d")}
                             </div>
                             <CardContent className="p-2 flex-1 space-y-2">

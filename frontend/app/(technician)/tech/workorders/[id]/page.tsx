@@ -62,7 +62,7 @@ export default function TechnicianWorkOrderPage() {
     if (woLoading || !workOrder) {
         return (
             <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         );
     }
@@ -71,7 +71,7 @@ export default function TechnicianWorkOrderPage() {
     const getStatusColor = (status: string) => {
         switch (status) {
             case "in_progress": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
-            case "assigned": return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+            case "assigned": return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300";
             case "paused": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300";
             case "completed": return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300";
             default: return "bg-gray-100 text-gray-800";
@@ -170,7 +170,7 @@ export default function TechnicianWorkOrderPage() {
                         ) : tasks && tasks.length > 0 ? (
                             tasks.map((task: any) => (
                                 <Card key={task.id} className="border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-                                    <div className="flex border-l-4 border-blue-500">
+                                    <div className="flex border-l-4 border-primary">
                                         <div className="flex-1 p-4">
                                             <div className="flex justify-between items-start mb-2">
                                                 <h3 className="font-semibold text-gray-900 dark:text-white">{task.name}</h3>
@@ -231,7 +231,7 @@ export default function TechnicianWorkOrderPage() {
                     <Button
                         size="lg"
                         className={`h-14 px-8 rounded-full shadow-lg transition-all ${isWorking
-                            ? "bg-blue-600 hover:bg-blue-700 text-white"
+                            ? "bg-primary hover:bg-primary/90 text-white"
                             : "bg-gray-200 text-gray-400 cursor-not-allowed hidden"
                             }`}
                         onClick={() => {

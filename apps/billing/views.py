@@ -1873,7 +1873,6 @@ class TaxConfigurationView(APIView):
             'vat_rate': str(config.vat_rate),
             'nhil_rate': str(config.nhil_rate),
             'getfund_rate': str(config.getfund_rate),
-            'covid_rate': str(config.covid_rate),
         })
 # Removed AccountingViewSet garbage
 

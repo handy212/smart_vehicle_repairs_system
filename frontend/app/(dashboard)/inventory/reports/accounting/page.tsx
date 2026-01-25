@@ -150,7 +150,7 @@ export default function InventoryAccountingPage() {
                                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold text-blue-600">
+                                <div className="text-2xl font-bold text-primary">
                                     {formatCurrency(data.inventory_summary.total_cost_value)}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -257,7 +257,7 @@ export default function InventoryAccountingPage() {
                                                     <TableCell className="font-medium">{category.category_name}</TableCell>
                                                     <TableCell className="text-right">{formatNumber(category.parts_count)}</TableCell>
                                                     <TableCell className="text-right">{formatNumber(category.total_quantity)}</TableCell>
-                                                    <TableCell className="text-right font-mono text-blue-600">
+                                                    <TableCell className="text-right font-mono text-primary">
                                                         {formatCurrency(category.cost_value)}
                                                     </TableCell>
                                                     <TableCell className="text-right font-mono">
@@ -325,7 +325,7 @@ export default function InventoryAccountingPage() {
                                     );
                                 })}
                             </div>
-                            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                            <div className="mt-6 p-4 bg-primary/10 dark:bg-orange-950 rounded-lg">
                                 <p className="text-sm text-muted-foreground">
                                     <strong>Stock Aging Guide:</strong> 0-90 days (Fresh stock), 91-180 days (Normal turnover),
                                     181-365 days (Slow-moving - consider promotions), Over 365 days (Dead stock - consider write-off)

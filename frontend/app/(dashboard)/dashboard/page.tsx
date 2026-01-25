@@ -7,7 +7,7 @@ import { appointmentsApi } from "@/lib/api/appointments";
 import { workordersApi } from "@/lib/api/workorders";
 import { reportingApi } from "@/lib/api/reporting";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, DollarSign } from "lucide-react";
+import { PremiumIcons } from "@/components/ui/icons";
 import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { DashboardSkeleton } from "@/components/ui/skeleton";
@@ -174,13 +174,12 @@ export default function DashboardPage() {
 
       {/* Error Banner */}
       {hasApiErrors && (
-        <Card className="border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-900/20">
+        <Card className="border-yellow-200 dark:border-yellow-900 bg-yellow-50/50 dark:bg-yellow-900/10 backdrop-blur-sm">
           <CardContent className="pt-4">
-            <div className="flex items-center space-x-2 text-yellow-800 dark:text-yellow-400">
-              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-              <p className="text-xs sm:text-sm font-medium">
-                Some dashboard data is temporarily unavailable. The page will continue to load with
-                available data.
+            <div className="flex items-center space-x-2 text-yellow-700 dark:text-yellow-500">
+              <PremiumIcons.AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <p className="text-sm font-medium">
+                Some dashboard data is temporarily unavailable. The page will continue to load with available data.
               </p>
             </div>
           </CardContent>
@@ -198,15 +197,15 @@ export default function DashboardPage() {
           <ShopPulse workOrderStats={workOrderStats} />
 
           {/* Revenue Chart */}
-          <Card className="border-t shadow-sm overflow-hidden bg-white dark:bg-gray-900">
-            <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
+          <Card className="border-none shadow-sm overflow-hidden bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
+            <CardHeader className="py-4 px-6 border-b border-gray-100/50 dark:border-gray-800/50">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1 rounded bg-emerald-500/10 text-emerald-600">
-                    <DollarSign className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 rounded-lg bg-emerald-100/50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+                    <PremiumIcons.Receipt className="w-4 h-4" />
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
                       Revenue Performance
                     </CardTitle>
                   </div>
@@ -225,9 +224,9 @@ export default function DashboardPage() {
 
           {/* Work Order Status & Payment Methods Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-t shadow-sm overflow-hidden bg-white dark:bg-gray-900">
-              <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
-                <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+            <Card className="border-none shadow-sm overflow-hidden bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
+              <CardHeader className="py-4 px-6 border-b border-gray-100/50 dark:border-gray-800/50">
+                <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
                   Workload Distribution
                 </CardTitle>
               </CardHeader>
@@ -239,9 +238,9 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-t shadow-sm overflow-hidden bg-white dark:bg-gray-900">
-              <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
-                <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+            <Card className="border-none shadow-sm overflow-hidden bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
+              <CardHeader className="py-4 px-6 border-b border-gray-100/50 dark:border-gray-800/50">
+                <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
                   Payment Mix
                 </CardTitle>
               </CardHeader>

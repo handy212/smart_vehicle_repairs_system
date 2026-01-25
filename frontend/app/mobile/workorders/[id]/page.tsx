@@ -203,7 +203,7 @@ export default function MobileWorkOrderDetailPage() {
     return (
       <div className="p-4 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -234,7 +234,7 @@ export default function MobileWorkOrderDetailPage() {
     const colors: Record<string, string> = {
       draft: "bg-gray-100 text-gray-700",
       pending: "bg-yellow-100 text-yellow-700",
-      ordered: "bg-blue-100 text-blue-700",
+      ordered: "bg-orange-100 text-orange-700",
       ready: "bg-green-100 text-green-700",
       received: "bg-green-100 text-green-700",
       installed: "bg-green-100 text-green-700",
@@ -271,7 +271,7 @@ export default function MobileWorkOrderDetailPage() {
               className={cn(
                 "text-xs",
                 workOrder.status === "in_progress" &&
-                "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+                "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
                 workOrder.status === "assigned" &&
                 "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
                 workOrder.status === "approved" &&

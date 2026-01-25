@@ -39,7 +39,7 @@ export default function VehicleHistoryPage() {
   if (vehicleLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-orange-400"></div>
       </div>
     );
   }
@@ -150,7 +150,7 @@ export default function VehicleHistoryPage() {
                 <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Services</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{vehicleWorkOrders.length}</p>
               </div>
-              <Wrench className="w-8 h-8 text-blue-500 dark:text-blue-400" />
+              <Wrench className="w-8 h-8 text-primary dark:text-primary" />
             </div>
           </CardContent>
         </Card>
@@ -333,7 +333,7 @@ export default function VehicleHistoryPage() {
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center ${
                         item.type === "work_order"
-                          ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                          ? "bg-orange-100 dark:bg-orange-900/30 text-primary dark:text-primary"
                           : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
                       }`}
                     >

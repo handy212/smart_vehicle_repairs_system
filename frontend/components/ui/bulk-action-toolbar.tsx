@@ -28,17 +28,17 @@ export function BulkActionToolbar({
 
   return (
     <div
-      className={`bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between animate-in slide-in-from-top-2 duration-200 ${className}`}
+      className={`bg-primary/10 border border-orange-200 rounded-lg p-4 flex items-center justify-between animate-in slide-in-from-top-2 duration-200 ${className}`}
     >
         <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-blue-900">
+          <span className="text-sm font-medium text-orange-900">
             {selectedCount} item{selectedCount !== 1 ? "s" : ""} selected
           </span>
           <Button
             variant="ghost"
             size="sm"
             onClick={onClearSelection}
-            className="h-8 text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+            className="h-8 text-orange-700 hover:text-orange-900 hover:bg-orange-100"
           >
             <X className="w-4 h-4 mr-1" />
             Clear

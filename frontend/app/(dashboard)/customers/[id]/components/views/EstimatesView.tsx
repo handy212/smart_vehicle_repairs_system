@@ -33,14 +33,14 @@ export function EstimatesView({ customerId }: EstimatesViewProps) {
 
     const stats = [
         { label: "Draft", value: counts.draft, icon: FileText },
-        { label: "Sent", value: counts.sent, icon: Send, color: "text-blue-600" },
+        { label: "Sent", value: counts.sent, icon: Send, color: "text-primary" },
         { label: "Accepted", value: counts.accepted, icon: CheckCircle, color: "text-green-600" },
         { label: "Declined", value: counts.declined, icon: XCircle, color: "text-red-600" },
         { label: "Expired", value: counts.expired, icon: Clock, color: "text-orange-600" },
     ];
 
     const columns = [
-        { header: "Estimate #", accessorKey: "estimate_number", cell: (item: any) => <Link href={`/billing/estimates/${item.id}`} className="text-blue-600 hover:underline">{item.estimate_number}</Link> },
+        { header: "Estimate #", accessorKey: "estimate_number", cell: (item: any) => <Link href={`/billing/estimates/${item.id}`} className="text-primary hover:underline">{item.estimate_number}</Link> },
         { header: "Date", accessorKey: "estimate_date", cell: (item: any) => format(new Date(item.estimate_date), "MMM dd, yyyy") },
         { header: "Expiry Date", accessorKey: "expiry_date", cell: (item: any) => item.expiry_date ? format(new Date(item.expiry_date), "MMM dd, yyyy") : "-" },
         { header: "Amount", accessorKey: "total", cell: (item: any) => formatCurrency(parseFloat(item.total)) },

@@ -64,7 +64,7 @@ export function FilesView({ customerId }: FilesViewProps) {
     };
 
     const columns = [
-        { header: "Name", accessorKey: "name", cell: (item: any) => <div className="flex items-center gap-2"><File className="w-4 h-4 text-blue-500" /><a href={item.file} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">{item.name}</a></div> },
+        { header: "Name", accessorKey: "name", cell: (item: any) => <div className="flex items-center gap-2"><File className="w-4 h-4 text-primary" /><a href={item.file} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">{item.name}</a></div> },
         { header: "Type", accessorKey: "extension" },
         { header: "Size", accessorKey: "size", cell: (item: any) => item.size ? `${(item.size / 1024).toFixed(0)} KB` : '-' },
         { header: "Uploaded By", accessorKey: "uploaded_by_name", cell: (item: any) => item.uploaded_by_name || "System" },

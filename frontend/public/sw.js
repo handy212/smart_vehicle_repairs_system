@@ -1,6 +1,6 @@
 // Service Worker for Vehicle Repairs PWA
-const CACHE_NAME = 'vehicle-repairs-v1';
-const RUNTIME_CACHE = 'vehicle-repairs-runtime-v1';
+const CACHE_NAME = 'vehicle-repairs-v2'; // Bumped version to invalidate old cache
+const RUNTIME_CACHE = 'vehicle-repairs-runtime-v2';
 const OFFLINE_URL = '/offline';
 
 // Assets to cache on install
@@ -100,15 +100,24 @@ self.addEventListener('fetch', (event) => {
         if (cachedResponse) {
           return cachedResponse;
         }
-        return fetch(request).then((response) => {
-          if (response.status === 200) {
+        return fetch(request)
+          .then((response) => {
+            // Check if valid response
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
             const responseToCache = response.clone();
             caches.open(RUNTIME_CACHE).then((cache) => {
               cache.put(request, responseToCache);
             });
-          }
-          return response;
-        });
+            return response;
+          })
+          .catch((err) => {
+            console.warn('[Service Worker] Fetch failed for image:', request.url, err);
+            // Return nothing or a placeholder if needed, but don't crash
+            // For now, let it fail gracefully so browser handles alt text
+            return new Response('', { status: 404, statusText: 'Not Found' });
+          });
       })
     );
     return;

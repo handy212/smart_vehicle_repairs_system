@@ -26,7 +26,7 @@ export default function InspectionTemplatesPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -38,9 +38,9 @@ export default function InspectionTemplatesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
             <span>/</span>
-            <Link href="/inspections" className="hover:text-blue-600 transition-colors">Inspections</Link>
+            <Link href="/inspections" className="hover:text-primary transition-colors">Inspections</Link>
             <span>/</span>
             <span className="text-gray-900 dark:text-gray-100 font-medium">Templates</span>
           </div>
@@ -54,7 +54,7 @@ export default function InspectionTemplatesPage() {
             </Button>
           </Link>
           <Link href="/inspections/templates/new">
-            <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+            <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
               <Plus className="w-3.5 h-3.5 mr-2" />
               New Template
             </Button>
@@ -100,7 +100,7 @@ export default function InspectionTemplatesPage() {
                       <TableCell className="font-medium text-sm text-gray-900 dark:text-gray-100 py-2.5">
                         {template.name}
                         {template.is_default && (
-                          <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200 text-[10px] px-1.5 py-0">Default</Badge>
+                          <Badge variant="outline" className="ml-2 bg-primary/10 text-orange-700 border-orange-200 text-[10px] px-1.5 py-0">Default</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-gray-500 text-xs py-2.5 max-w-[200px] truncate">

@@ -115,7 +115,7 @@ export function VehicleHistoryView({ vehicleId, workOrders }: VehicleHistoryView
                                             className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0 cursor-pointer"
                                             onDoubleClick={() => router.push(`/workorders/${wo.id}`)}
                                         >
-                                            <TableCell className="px-4 py-2 font-mono text-xs font-medium text-blue-600 dark:text-blue-400">
+                                            <TableCell className="px-4 py-2 font-mono text-xs font-medium text-primary dark:text-primary">
                                                 {wo.work_order_number}
                                             </TableCell>
                                             <TableCell className="px-4 py-2">
@@ -150,7 +150,7 @@ export function VehicleHistoryView({ vehicleId, workOrders }: VehicleHistoryView
                                             <TableCell className="px-4 py-2 text-right">
                                                 <Link href={`/workorders/${wo.id}`}>
                                                     <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <ArrowUpRight className="w-3.5 h-3.5 text-gray-400 hover:text-blue-600" />
+                                                        <ArrowUpRight className="w-3.5 h-3.5 text-gray-400 hover:text-primary" />
                                                     </Button>
                                                 </Link>
                                             </TableCell>

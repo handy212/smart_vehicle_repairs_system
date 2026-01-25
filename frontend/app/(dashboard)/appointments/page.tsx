@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { Plus, Search, Calendar, Clock, Trash2, Download, CalendarDays, X, ChevronDown, MoreVertical, Eye, Edit, Mail } from "lucide-react";
+import { PremiumIcons } from "@/components/ui/icons";
+import { X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -325,12 +326,16 @@ export default function AppointmentsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
-            <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Appointments</span>
+          {/* Premium Header */}
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2">
+              <PremiumIcons.Calendar className="w-8 h-8 text-primary dark:text-primary" />
+              Appointments
+            </h1>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Appointments</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Manage your service schedule and bookings
+          </p>
         </div>
         <div className="flex items-center space-x-2">
           <DropdownMenu>
@@ -338,10 +343,10 @@ export default function AppointmentsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+                className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 backdrop-blur-sm bg-white/50"
               >
                 Actions
-                <ChevronDown className="w-3.5 h-3.5 ml-2" />
+                <PremiumIcons.ChevronDown className="w-3.5 h-3.5 ml-2" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -350,7 +355,7 @@ export default function AppointmentsPage() {
                   onClick={() => handleExport()}
                   disabled={!data?.results || data.results.length === 0}
                 >
-                  <Download className="w-4 h-4 mr-2" />
+                  <PremiumIcons.Download className="w-4 h-4 mr-2" />
                   Export CSV
                 </DropdownMenuItem>
               </PermissionGuard>
@@ -358,15 +363,15 @@ export default function AppointmentsPage() {
           </DropdownMenu>
 
           <Link href="/appointments/calendar">
-            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700">
-              <CalendarDays className="w-3.5 h-3.5 mr-2" />
+            <Button variant="outline" size="sm" className="h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 backdrop-blur-sm bg-white/50">
+              <PremiumIcons.CalendarDays className="w-3.5 h-3.5 mr-2" />
               Calendar View
             </Button>
           </Link>
           <PermissionGuard permission="create_appointments">
             <Link href="/appointments/new">
-              <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-                <Plus className="w-3.5 h-3.5 mr-2" />
+              <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm border-none">
+                <PremiumIcons.Plus className="w-3.5 h-3.5 mr-2" />
                 New Appointment
               </Button>
             </Link>
@@ -379,7 +384,7 @@ export default function AppointmentsPage() {
         <div className="flex items-center gap-3 flex-wrap">
           {/* Search */}
           <div className="relative flex-1 min-w-[200px] max-w-xs">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+            <PremiumIcons.Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
             <Input
               type="text"
               placeholder="Search appointments..."
@@ -425,7 +430,7 @@ export default function AppointmentsPage() {
               }}
               className="h-9"
             >
-              <X className="w-4 h-4 mr-1" />
+              <PremiumIcons.X className="w-4 h-4 mr-1" />
               Clear
             </Button>
           )}
@@ -477,7 +482,7 @@ export default function AppointmentsPage() {
                     }}
                     className="hover:text-red-600"
                   >
-                    <X className="w-3 h-3" />
+                    <PremiumIcons.X className="w-3 h-3" />
                   </button>
                 </Badge>
               );
@@ -496,15 +501,17 @@ export default function AppointmentsPage() {
       />
 
       {/* Appointments Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
+      <Card className="border-none shadow-sm overflow-hidden bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
+        <CardHeader className="py-4 px-6 border-b border-gray-100/50 dark:border-gray-800/50 bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm">
+          <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
             All Appointments ({data?.count || 0})
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading ? (
-            <TableSkeleton rows={8} columns={9} />
+            <div className="p-6">
+              <TableSkeleton rows={8} columns={9} />
+            </div>
           ) : data?.results && data.results.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
@@ -518,7 +525,7 @@ export default function AppointmentsPage() {
                           if (input) input.indeterminate = bulkSelection.isIndeterminate;
                         }}
                         onChange={bulkSelection.toggleSelectAll}
-                        className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-3.5 w-3.5 text-primary focus:ring-primary border-gray-300 rounded"
                       />
                     </TableHead>
                     <SortableHeader
@@ -586,7 +593,7 @@ export default function AppointmentsPage() {
                           checked={bulkSelection.isSelected(appointment.id)}
                           onChange={() => bulkSelection.toggleSelection(appointment.id)}
                           onClick={(e) => e.stopPropagation()}
-                          className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-3.5 w-3.5 text-primary focus:ring-primary border-gray-300 rounded"
                         />
                       </TableCell>
                       <TableCell className="font-mono text-xs font-medium py-2.5">
@@ -596,7 +603,7 @@ export default function AppointmentsPage() {
                       <TableCell className="py-2.5 text-sm">{appointment.vehicle_info || "N/A"}</TableCell>
                       <TableCell className="py-2.5">
                         <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                          <Calendar className="w-3.5 h-3.5" />
+                          <PremiumIcons.Calendar className="w-3.5 h-3.5" />
                           <span>
                             {appointment.appointment_date
                               ? format(new Date(appointment.appointment_date), "MMM dd, yyyy")
@@ -604,7 +611,7 @@ export default function AppointmentsPage() {
                           </span>
                           {appointment.appointment_time && (
                             <>
-                              <Clock className="w-3.5 h-3.5 ml-2" />
+                              <PremiumIcons.Clock className="w-3.5 h-3.5 ml-2" />
                               <span>{appointment.appointment_time}</span>
                             </>
                           )}
@@ -634,25 +641,25 @@ export default function AppointmentsPage() {
                               className="h-8 w-8 p-0 dark:hover:bg-gray-700 data-[state=open]:bg-gray-100 dark:data-[state=open]:bg-gray-800"
                             >
                               <span className="sr-only">Open menu</span>
-                              <MoreVertical className="w-4 h-4" />
+                              <PremiumIcons.MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-56">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => router.push(`/appointments/${appointment.id}`)}>
-                              <Eye className="mr-2 h-4 w-4" />
+                              <PremiumIcons.Eye className="mr-2 h-4 w-4" />
                               View Details
                             </DropdownMenuItem>
                             <PermissionGuard permission="edit_appointments">
                               <DropdownMenuItem onClick={() => router.push(`/appointments/${appointment.id}/edit`)}>
-                                <Edit className="mr-2 h-4 w-4" />
+                                <PremiumIcons.Edit className="mr-2 h-4 w-4" />
                                 Edit Appointment
                               </DropdownMenuItem>
                             </PermissionGuard>
                             <DropdownMenuSeparator />
                             <PermissionGuard permission="edit_appointments">
                               <DropdownMenuItem onClick={() => { }}>
-                                <Mail className="mr-2 h-4 w-4" />
+                                <PremiumIcons.Mail className="mr-2 h-4 w-4" />
                                 Send Reminder
                               </DropdownMenuItem>
                             </PermissionGuard>
@@ -667,7 +674,7 @@ export default function AppointmentsPage() {
                                 className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20"
                                 disabled={deleteMutation.isPending}
                               >
-                                <Trash2 className="mr-2 h-4 w-4" />
+                                <PremiumIcons.Trash2 className="mr-2 h-4 w-4" />
                                 Delete Appointment
                               </DropdownMenuItem>
                             </PermissionGuard>
@@ -681,11 +688,11 @@ export default function AppointmentsPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <PremiumIcons.Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No appointments found.</p>
               <Link href="/appointments/new">
                 <Button className="mt-4" variant="secondary">
-                  <Plus className="w-4 h-4 mr-2" />
+                  <PremiumIcons.Plus className="w-4 h-4 mr-2" />
                   Schedule First Appointment
                 </Button>
               </Link>
@@ -733,7 +740,7 @@ export default function AppointmentsPage() {
             </label>
             <Select
               value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value)}
+              onValueChange={(value) => setNewStatus(value)}
             >
               <option value="confirmed">Confirmed</option>
               <option value="cancelled">Cancelled</option>

@@ -205,7 +205,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                                     <div className="flex flex-col items-center gap-2">
                                         <Package className="h-8 w-8 text-gray-300" />
                                         <p className="text-sm">No items in this order.</p>
-                                        <Button variant="link" size="sm" onClick={() => setIsAddDialogOpen(true)} className="text-blue-600">
+                                        <Button variant="link" size="sm" onClick={() => setIsAddDialogOpen(true)} className="text-primary">
                                             Add your first item
                                         </Button>
                                     </div>
@@ -273,7 +273,7 @@ function SearchResultItem({ part, onAdd, isAdding }: { part: any, onAdd: (data: 
     };
 
     return (
-        <div className={`bg-white border rounded-lg transition-all ${isExpanded ? 'ring-2 ring-blue-500 border-blue-500 shadow-md' : 'hover:border-blue-300'}`}>
+        <div className={`bg-white border rounded-lg transition-all ${isExpanded ? 'ring-2 ring-primary border-primary shadow-md' : 'hover:border-orange-300'}`}>
             <div
                 className="flex justify-between items-center p-3 cursor-pointer"
                 onClick={() => setIsExpanded(!isExpanded)}
@@ -298,7 +298,7 @@ function SearchResultItem({ part, onAdd, isAdding }: { part: any, onAdd: (data: 
                     <Button
                         size="sm"
                         variant={isExpanded ? "secondary" : "outline"}
-                        className={isExpanded ? "bg-blue-50 text-blue-600" : ""}
+                        className={isExpanded ? "bg-primary/10 text-primary" : ""}
                     >
                         {isExpanded ? "Close" : "Add"}
                     </Button>

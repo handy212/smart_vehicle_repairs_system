@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
   in_progress: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800",
-  completed: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800",
+  completed: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-primary border-orange-200 dark:border-orange-800",
   approved: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800",
   rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800",
 };
@@ -199,7 +199,7 @@ export default function InspectionDetailPage() {
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold">{inspection.completion_percentage || 0}%</span>
               <div className="flex-1 bg-gray-100 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden max-w-[100px]">
-                <div className="bg-blue-600 h-full" style={{ width: `${inspection.completion_percentage || 0}%` }} />
+                <div className="bg-primary h-full" style={{ width: `${inspection.completion_percentage || 0}%` }} />
               </div>
             </div>
           </CardContent>
@@ -342,7 +342,7 @@ export default function InspectionDetailPage() {
                 <CardContent className="grid grid-cols-2 gap-x-8 gap-y-4">
                   <div>
                     <p className="text-xs text-muted-foreground">Vehicle</p>
-                    <Link href={`/vehicles/${vehicle?.id}`} className="text-sm font-medium text-blue-600 hover:underline">
+                    <Link href={`/vehicles/${vehicle?.id}`} className="text-sm font-medium text-primary hover:underline">
                       {vehicle?.year} {vehicle?.make} {vehicle?.model}
                     </Link>
                   </div>
@@ -384,7 +384,7 @@ export default function InspectionDetailPage() {
                     {inspection.results
                       .filter((r: any) => r.notes && r.notes.trim())
                       .map((result: any) => (
-                        <div key={result.id} className="border-l-2 border-blue-500 pl-4 py-2">
+                        <div key={result.id} className="border-l-2 border-primary pl-4 py-2">
                           <div className="flex items-start justify-between mb-1">
                             <p className="font-medium text-sm text-gray-900 dark:text-gray-100">
                               {result.item_name || `Item #${result.inspection_item}`}
@@ -407,7 +407,7 @@ export default function InspectionDetailPage() {
               {/* Recommendations */}
               {inspection.recommendations && (
                 <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-base text-blue-600">Recommendations</CardTitle></CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-base text-primary">Recommendations</CardTitle></CardHeader>
                   <CardContent><p className="text-sm whitespace-pre-wrap">{inspection.recommendations}</p></CardContent>
                 </Card>
               )}
@@ -431,8 +431,8 @@ export default function InspectionDetailPage() {
             <CardContent className="pt-4">
               {inspection.work_order ? (
                 <div className="flex items-center gap-3 p-3 rounded-lg border bg-gray-50 dark:bg-gray-800/50">
-                  <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded-full">
-                    <Wrench className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <div className="bg-orange-100 dark:bg-orange-900 p-2 rounded-full">
+                    <Wrench className="w-4 h-4 text-primary dark:text-primary" />
                   </div>
                   <div>
                     <Link href={`/workorders/${typeof inspection.work_order === 'object' ? inspection.work_order.id : inspection.work_order}`} className="font-medium text-sm hover:underline">
@@ -457,7 +457,7 @@ export default function InspectionDetailPage() {
             <CardContent className="pt-4 space-y-4">
               <div className="flex gap-3">
                 <div className="w-8 flex flex-col items-center">
-                  <div className="w-2 h-2 rounded-full bg-blue-500" />
+                  <div className="w-2 h-2 rounded-full bg-primary" />
                   <div className="w-0.5 h-full bg-gray-100 dark:bg-gray-800 -mb-2" />
                 </div>
                 <div className="pb-4">

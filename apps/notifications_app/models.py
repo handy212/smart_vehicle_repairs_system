@@ -43,6 +43,7 @@ class NotificationTemplate(models.Model):
         ('push', 'Push Notification'),
         ('in_app', 'In-App Notification'),
         ('whatsapp_manual', 'WhatsApp (Manual)'),
+        ('whatsapp', 'WhatsApp (API)'),
     ]
     
     name = models.CharField(max_length=200)
@@ -56,6 +57,10 @@ class NotificationTemplate(models.Model):
     
     # SMS-specific fields
     sms_body = models.TextField(blank=True, max_length=320, help_text="SMS message (max 320 chars)")
+    
+    # WhatsApp Template Settings
+    whatsapp_template_name = models.CharField(max_length=255, blank=True, help_text="Name of the Meta WhatsApp template")
+    whatsapp_template_variables = models.JSONField(default=list, blank=True, help_text="List of variable mappings for the template, e.g. ['customer_name', 'total']")
     
     # Push notification fields
     push_title = models.CharField(max_length=100, blank=True)
@@ -117,6 +122,7 @@ class Notification(models.Model):
         ('push', 'Push Notification'),
         ('in_app', 'In-App Notification'),
         ('whatsapp_manual', 'WhatsApp (Manual)'),
+        ('whatsapp', 'WhatsApp (API)'),
     ]
     
     STATUS_CHOICES = [
@@ -231,6 +237,7 @@ class NotificationPreference(models.Model):
     push_enabled = models.BooleanField(default=True)
     in_app_enabled = models.BooleanField(default=True)
     whatsapp_manual_enabled = models.BooleanField(default=True)
+    whatsapp_enabled = models.BooleanField(default=True, verbose_name="WhatsApp (API)")
     sound_enabled = models.BooleanField(default=True, help_text="Play sound for in-app notifications")
     
     # Notification type preferences
@@ -294,6 +301,7 @@ class NotificationPreference(models.Model):
             'push': self.push_enabled,
             'in_app': self.in_app_enabled,
             'whatsapp_manual': self.whatsapp_manual_enabled,
+            'whatsapp': self.whatsapp_enabled,
         }.get(channel, True)
         
         if not channel_enabled:

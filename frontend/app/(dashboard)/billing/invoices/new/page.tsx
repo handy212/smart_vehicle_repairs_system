@@ -14,7 +14,7 @@ import { adminApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -330,16 +330,19 @@ export default function NewInvoicePage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Customer *</label>
                 <Select
-                  {...register("customer", { valueAsNumber: true })}
-                  onChange={(e) => setValue("customer", parseInt(e.target.value), { shouldValidate: true })}
                   value={watch("customer")?.toString() || ""}
+                  onValueChange={(val) => setValue("customer", parseInt(val), { shouldValidate: true })}
                 >
-                  <option value="">Select customer...</option>
-                  {customersData?.results.map((c: any) => (
-                    <option key={c.id} value={c.id}>
-                      {c.full_name || c.company_name || c.email || `Customer #${c.id}`}
-                    </option>
-                  ))}
+                  <SelectTrigger className={errors.customer ? "border-red-600" : ""}>
+                    <SelectValue placeholder="Select customer..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customersData?.results.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id.toString()}>
+                        {c.full_name || c.company_name || c.email || `Customer #${c.id}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
                 {errors.customer && <p className="text-sm text-red-600">{errors.customer.message}</p>}
               </div>
@@ -347,29 +350,39 @@ export default function NewInvoicePage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Vehicle</label>
                 <Select
-                  {...register("vehicle", { valueAsNumber: true })}
+                  value={watch("vehicle")?.toString() || ""}
+                  onValueChange={(val) => setValue("vehicle", parseInt(val), { shouldValidate: true })}
                   disabled={!selectedCustomer}
                 >
-                  <option value="">Select vehicle...</option>
-                  {vehiclesData?.results.map((v: any) => (
-                    <option key={v.id} value={v.id}>
-                      {v.year} {v.make} {v.model}
-                    </option>
-                  ))}
+                  <SelectTrigger disabled={!selectedCustomer}>
+                    <SelectValue placeholder="Select vehicle..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehiclesData?.results.map((v: any) => (
+                      <SelectItem key={v.id} value={v.id.toString()}>
+                        {v.year} {v.make} {v.model}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Sales Agent</label>
                 <Select
-                  {...register("sales_agent", { valueAsNumber: true })}
+                  value={watch("sales_agent")?.toString() || ""}
+                  onValueChange={(val) => setValue("sales_agent", parseInt(val), { shouldValidate: true })}
                 >
-                  <option value="">Select Agent</option>
-                  {salesAgents?.map((agent: any) => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.first_name} {agent.last_name}
-                    </option>
-                  ))}
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Agent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {salesAgents?.map((agent: any) => (
+                      <SelectItem key={agent.id} value={agent.id.toString()}>
+                        {agent.first_name} {agent.last_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
             </div>
@@ -383,10 +396,18 @@ export default function NewInvoicePage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Payment Terms *</label>
-                <Select {...register("payment_terms")}>
-                  {PAYMENT_TERMS.map(term => (
-                    <option key={term.value} value={term.value}>{term.label}</option>
-                  ))}
+                <Select
+                  value={watch("payment_terms") || ""}
+                  onValueChange={(val) => setValue("payment_terms", val as any, { shouldValidate: true })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select terms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_TERMS.map(term => (
+                      <SelectItem key={term.value} value={term.value}>{term.label}</SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -415,10 +436,18 @@ export default function NewInvoicePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Discount Type</label>
-                <Select {...register("discount_type")}>
-                  <option value="none">No Discount</option>
-                  <option value="before_tax">Before Tax</option>
-                  <option value="after_tax">After Tax</option>
+                <Select
+                  value={watch("discount_type") || ""}
+                  onValueChange={(val: any) => setValue("discount_type", val, { shouldValidate: true })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Discount Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Discount</SelectItem>
+                    <SelectItem value="before_tax">Before Tax</SelectItem>
+                    <SelectItem value="after_tax">After Tax</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
               {discountType !== 'none' && (
@@ -521,14 +550,18 @@ export default function NewInvoicePage() {
                           ) : (
                             <Select
                               value={item.item_type}
-                              onChange={(e) => updateLineItem(index, "item_type", e.target.value)}
-                              className="h-8 text-xs"
+                              onValueChange={(val) => updateLineItem(index, "item_type", val)}
                             >
-                              <option value="labor">Labor</option>
-                              <option value="part">Part</option>
-                              <option value="sublet">Sublet</option>
-                              <option value="fee">Fee</option>
-                              <option value="other">Other</option>
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="labor">Labor</SelectItem>
+                                <SelectItem value="part">Part</SelectItem>
+                                <SelectItem value="sublet">Sublet</SelectItem>
+                                <SelectItem value="fee">Fee</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                              </SelectContent>
                             </Select>
                           )}
                         </TableCell>

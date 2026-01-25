@@ -1527,7 +1527,7 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         from apps.inventory.models import Part
         
         wo_part = self.get_object()
-        if wo_part.status not in ['pending', 'draft']:
+        if wo_part.status not in ['pending', 'draft', 'po_created', 'awaiting_stock', 'received', 'ordered']: # 'ordered' kept for backward compatibility
              return Response(
                  {'error': f'Cannot allocate part in {wo_part.status} status'},
                  status=status.HTTP_400_BAD_REQUEST
@@ -1615,9 +1615,15 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         wo_part = self.get_object()
         
         # Validation
-        if wo_part.status not in ['pending', 'draft']:
+        if wo_part.status not in ['pending', 'draft', 'po_created']: # 'po_created' allows re-triggering/updating PO
              return Response(
                  {'error': f'Cannot order part in {wo_part.status} status'},
+                 status=status.HTTP_400_BAD_REQUEST
+             )
+        
+        if wo_part.quantity <= 0:
+             return Response(
+                 {'error': 'Quantity must be greater than 0 to order'},
                  status=status.HTTP_400_BAD_REQUEST
              )
              
@@ -1630,8 +1636,17 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         # Identify Part & Supplier
         part = Part.objects.filter(part_number=wo_part.part_number).first()
         if not part:
+             # Instead of error, return flag for frontend to handle
              return Response(
-                 {'error': f"Part '{wo_part.part_number}' not found in Inventory. Please create it in Inventory first."},
+                 {
+                     'error': f"Part '{wo_part.part_number}' not found in Inventory.",
+                     'needs_inventory_item': True,
+                     'part_data': {
+                         'part_name': wo_part.part_name,
+                         'part_number': wo_part.part_number,
+                         'description': wo_part.description
+                     }
+                 },
                  status=status.HTTP_404_NOT_FOUND
              )
              
@@ -1687,16 +1702,136 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
                 unit_cost=part.cost_price or part.last_cost or 0
             )
 
-        # Link WO Part to PO Item
+        # Link WO Part to PO Item and set status to 'po_created'
         wo_part.purchase_order_item = po_item
-        wo_part.status = 'ordered'
+        wo_part.status = 'po_created'
         wo_part.save()
         
         return Response({
-            'status': 'ordered',
+            'status': 'po_created',
             'po_number': po.po_number,
             'po_id': po.id,
             'message': f"{'Created new' if created_new_po else 'Added to'} PO {po.po_number}"
+        })
+    
+    @action(detail=True, methods=['post'])
+    def create_and_order(self, request, pk=None):
+        """Create inventory part and add to Purchase Order"""
+        from apps.inventory.models import Part, PurchaseOrder, PurchaseOrderItem, Supplier, PartCategory
+        from decimal import Decimal
+        
+        wo_part = self.get_object()
+        
+        # Validation
+        # Validation
+        if wo_part.status not in ['pending', 'draft', 'po_created']:
+            return Response(
+                {'error': f'Cannot order part in {wo_part.status} status'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if wo_part.quantity <= 0:
+             return Response(
+                 {'error': 'Quantity must be greater than 0 to order'},
+                 status=status.HTTP_400_BAD_REQUEST
+             )
+        
+        # Required data from request
+        part_data = request.data
+        required_fields = ['part_name', 'part_number', 'cost_price', 'supplier_id']
+        missing = [f for f in required_fields if not part_data.get(f)]
+        if missing:
+            return Response(
+                {'error': f'Missing required fields: {", ".join(missing)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if part already exists
+        existing_part = Part.objects.filter(part_number=part_data['part_number']).first()
+        if existing_part:
+            return Response(
+                {'error': f'Part with number {part_data["part_number"]} already exists'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get supplier
+        try:
+            supplier = Supplier.objects.get(id=part_data['supplier_id'])
+        except Supplier.DoesNotExist:
+            return Response(
+                {'error': 'Supplier not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Identify Branch
+        branch = wo_part.work_order.branch
+        if not branch:
+            return Response({'error': 'Work Order has no branch assigned'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get or create default category
+        category_name = part_data.get('category', 'Uncategorized')
+        category, _ = PartCategory.objects.get_or_create(name=category_name)
+
+        # Create Part in Inventory
+        part = Part.objects.create(
+            name=part_data['part_name'],
+            part_number=part_data['part_number'],
+            description=part_data.get('description', wo_part.description or ''),
+            category=category,
+            cost_price=Decimal(str(part_data.get('cost_price') or 0)),
+            selling_price=Decimal(str(part_data.get('selling_price') or part_data.get('cost_price') or 0)),
+            quantity_in_stock=0,  # Initially 0, will be updated when PO is received
+            minimum_stock=int(part_data.get('minimum_stock_level', 1)),
+            branch=branch,
+            preferred_supplier=supplier,
+            created_by=request.user
+        )
+        
+        # Add supplier to part's suppliers
+        part.suppliers.add(supplier)
+        
+        # Find Open PO (Draft) or Create New
+        po = PurchaseOrder.objects.filter(
+            supplier=supplier,
+            branch=branch,
+            status='draft'
+        ).first()
+        
+        created_new_po = False
+        if not po:
+            po = PurchaseOrder.objects.create(
+                supplier=supplier,
+                branch=branch,
+                status='draft',
+                created_by=request.user,
+                notes=f"Auto-generated for Work Orders"
+            )
+            created_new_po = True
+        
+        # Create PO Item
+        po_item = PurchaseOrderItem.objects.create(
+            purchase_order=po,
+            part=part,
+            quantity=wo_part.quantity,
+            unit_cost=part.cost_price
+        )
+        
+        # Link WO Part to PO Item and update inventory reference
+        wo_part.inventory_part = part
+        wo_part.part_name = part.name
+        wo_part.part_number = part.part_number
+        if wo_part.unit_cost == 0 and part.cost_price:
+            wo_part.unit_cost = part.cost_price
+        wo_part.purchase_order_item = po_item
+        wo_part.status = 'po_created'
+        wo_part.save()
+        
+        return Response({
+            'status': 'po_created',
+            'po_number': po.po_number,
+            'po_id': po.id,
+            'part_id': part.id,
+            'message': f"Created part '{part.name}' and {'new' if created_new_po else 'added to'} PO {po.po_number}"
         })
 
     @action(detail=False, methods=['post'])
@@ -1708,7 +1843,7 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         if not ids:
              return Response({'error': 'No IDs provided'}, status=status.HTTP_400_BAD_REQUEST)
              
-        parts_to_order = WorkOrderPart.objects.filter(id__in=ids, status__in=['pending', 'draft'])
+        parts_to_order = WorkOrderPart.objects.filter(id__in=ids, status__in=['pending', 'draft', 'po_created'])
         
         results = {
             'processed': 0,
@@ -1717,6 +1852,10 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
         }
         
         for wo_part in parts_to_order:
+            if wo_part.quantity <= 0:
+                results['errors'].append(f"Part {wo_part.id}: Quantity must be positive")
+                continue
+
             if not wo_part.part_number:
                 results['errors'].append(f"Part {wo_part.id}: Missing part number")
                 continue
@@ -1769,7 +1908,7 @@ class WorkOrderPartViewSet(viewsets.ModelViewSet):
                 )
                 
             wo_part.purchase_order_item = po_item
-            wo_part.status = 'ordered'
+            wo_part.status = 'po_created'
             wo_part.save()
             results['processed'] += 1
             

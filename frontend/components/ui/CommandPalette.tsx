@@ -169,14 +169,14 @@ export function CommandPalette() {
                                             className={cn(
                                                 "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors",
                                                 isSelected
-                                                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                                                    ? "bg-primary/10 dark:bg-orange-900/20 text-primary dark:text-primary"
                                                     : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
                                             )}
                                             onMouseEnter={() => setSelectedIndex(idx)}
                                         >
                                             <div className={cn(
                                                 "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border",
-                                                isSelected ? "border-blue-200 dark:border-blue-800 bg-white dark:bg-blue-950" : "border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800"
+                                                isSelected ? "border-orange-200 dark:border-orange-800 bg-white dark:bg-orange-950" : "border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800"
                                             )}>
                                                 <Icon className="h-4 w-4" />
                                             </div>
@@ -209,14 +209,14 @@ export function CommandPalette() {
                                                 className={cn(
                                                     "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors",
                                                     isSelected
-                                                        ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                                                        ? "bg-primary/10 dark:bg-orange-900/20 text-primary dark:text-primary"
                                                         : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
                                                 )}
                                                 onMouseEnter={() => setSelectedIndex(globalIdx)}
                                             >
                                                 <div className={cn(
                                                     "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border",
-                                                    isSelected ? "border-blue-200 dark:border-blue-800 bg-white dark:bg-blue-950" : "border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800"
+                                                    isSelected ? "border-orange-200 dark:border-orange-800 bg-white dark:bg-orange-950" : "border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800"
                                                 )}>
                                                     <Icon className="h-4 w-4" />
                                                 </div>
@@ -267,14 +267,14 @@ export function CommandPalette() {
                                                 className={cn(
                                                     "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors",
                                                     isSelected
-                                                        ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                                                        ? "bg-primary/10 dark:bg-orange-900/20 text-primary dark:text-primary"
                                                         : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
                                                 )}
                                                 onMouseEnter={() => setSelectedIndex(results.indexOf(item))}
                                             >
                                                 <div className={cn(
                                                     "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border",
-                                                    isSelected ? "border-blue-200 dark:border-blue-800 bg-white dark:bg-blue-950" : "border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800"
+                                                    isSelected ? "border-orange-200 dark:border-orange-800 bg-white dark:bg-orange-950" : "border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800"
                                                 )}>
                                                     <Icon className="h-4 w-4" />
                                                 </div>

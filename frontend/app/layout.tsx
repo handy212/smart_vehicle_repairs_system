@@ -30,6 +30,7 @@ export const viewport: Viewport = {
 };
 
 import { Toaster } from "@/components/ui/toaster";
+import Script from "next/script";
 
 export default function RootLayout({
   children,
@@ -41,6 +42,7 @@ export default function RootLayout({
       <head>
         <ThemeScript />
         <link rel="manifest" href="/manifest.json" />
+        <meta name="referrer" content="no-referrer-when-downgrade" />
         <meta name="theme-color" content="#2563eb" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -48,6 +50,11 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
+        {/* Google Sign-In SDK for OAuth */}
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="beforeInteractive"
+        />
         <Providers>
           {children}
           <Toaster />

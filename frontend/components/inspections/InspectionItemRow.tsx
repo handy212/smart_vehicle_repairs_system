@@ -175,8 +175,8 @@ export function InspectionItemRow({
                                 className={cn(
                                     "w-7 h-7 text-xs font-semibold rounded border transition-all",
                                     result.rating_value === n
-                                        ? "bg-blue-600 text-white border-blue-600"
-                                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400"
+                                        ? "bg-primary text-white border-primary"
+                                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-orange-400"
                                 )}
                             >
                                 {n}
@@ -207,7 +207,7 @@ export function InspectionItemRow({
                         size="sm"
                         className={cn(
                             "h-7 w-7 p-0",
-                            showNotes || result.notes ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20" : "text-gray-400"
+                            showNotes || result.notes ? "text-primary bg-primary/10 dark:bg-orange-900/20" : "text-gray-400"
                         )}
                         onClick={onToggleNotes}
                         title="Notes"

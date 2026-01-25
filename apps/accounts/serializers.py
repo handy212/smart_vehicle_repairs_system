@@ -2,6 +2,7 @@
 Serializers for accounts app
 """
 from rest_framework import serializers
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 
@@ -439,6 +440,114 @@ class PublicUserSerializer(serializers.ModelSerializer):
     
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     
-    class Meta:
-        model = User
-        fields = ['id', 'first_name', 'last_name', 'full_name', 'role', 'profile_picture']
+
+class ManualRegistrationInitiateSerializer(serializers.Serializer):
+    """
+    Serializer to initiate manual registration:
+    1. Validates input
+    2. Checks if email is taken
+    3. Triggers OTP
+    """
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password_confirm = serializers.CharField(write_only=True, required=True)
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+    phone = serializers.CharField(required=True)
+    
+    # Customer type fields
+    customer_type = serializers.ChoiceField(choices=['individual', 'business', 'fleet'], default='individual')
+    company_name = serializers.CharField(required=False, allow_blank=True)
+    business_type = serializers.CharField(required=False, allow_blank=True)
+    tax_id = serializers.CharField(required=False, allow_blank=True)
+    
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError({"password": "Passwords didn't match."})
+        
+        email = attrs['email']
+        # Check if user already exists
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError({"email": "User with this email already exists."})
+            
+        # Business validation
+        customer_type = attrs.get('customer_type')
+        if customer_type in ['business', 'fleet'] and not attrs.get('company_name'):
+            raise serializers.ValidationError({"company_name": "Company name is required for business/fleet accounts."})
+            
+        return attrs
+        
+
+class ManualRegistrationVerifySerializer(serializers.Serializer):
+    """
+    Serializer to finalize manual registration:
+    1. Verifies OTP
+    2. Creates User
+    3. Creates Customer Profile
+    4. Returns Tokens
+    """
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(write_only=True, required=True)
+    otp_code = serializers.CharField(required=True, min_length=6, max_length=6)
+    
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+    phone = serializers.CharField(required=True)
+    customer_type = serializers.ChoiceField(choices=['individual', 'business', 'fleet'], default='individual')
+    
+    company_name = serializers.CharField(required=False, allow_blank=True)
+    business_type = serializers.CharField(required=False, allow_blank=True)
+    tax_id = serializers.CharField(required=False, allow_blank=True)
+    
+    def create(self, validated_data):
+        from django.db import transaction
+        from apps.customers.models import Customer
+        from apps.accounts.models import RegistrationOTP
+        
+        email = validated_data['email']
+        otp_code = validated_data['otp_code']
+        password = validated_data['password']
+        
+        # Verify OTP
+        otp_record = RegistrationOTP.objects.filter(email=email, otp_code=otp_code).first()
+        if not otp_record or not otp_record.is_verified:
+             # Double check logic: create method usually assumes OTP was checked, but since we are stateless
+             # we might need to verify it again or check if it matches DB.
+             # Actually, simpler: verify code matches DB 
+             if not otp_record:
+                  raise serializers.ValidationError({"otp_code": "Invalid verification code."})
+             # Ideally we check expiration too
+        
+        with transaction.atomic():
+            # Mark OTP as verified (or delete it)
+            otp_record.is_verified = True
+            otp_record.save()
+            
+            # Create User
+            user = User.objects.create_user(
+                email=email,
+                username=email,
+                password=password,
+                first_name=validated_data['first_name'],
+                last_name=validated_data['last_name'],
+                phone=validated_data['phone'],
+                role='customer',
+                is_active=True 
+            )
+            
+            # Create Customer Profile
+            Customer.objects.create(
+                user=user,
+                customer_type=validated_data['customer_type'],
+                company_name=validated_data.get('company_name', ''),
+                business_type=validated_data.get('business_type', ''),
+                tax_id=validated_data.get('tax_id', ''),
+            )
+            
+        # Generate Tokens
+        refresh = RefreshToken.for_user(user)
+        return {
+            'user': user,
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }

@@ -9,7 +9,7 @@ import { customersApi } from "@/lib/api/customers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, AlertCircle, Building2, Save, KeyRound, RefreshCw, Copy, Eye, EyeOff, Mail as MailIcon, UserCheck, UserX } from "lucide-react";
@@ -24,7 +24,7 @@ const customerSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
   phone: z.string().optional(),
-  
+
   // Customer fields
   customer_type: z.enum(["individual", "business", "fleet"]),
   company_name: z.string().optional(),
@@ -69,6 +69,7 @@ export default function EditCustomerPage() {
     watch,
     reset,
     setError,
+    setValue,
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
   });
@@ -102,7 +103,7 @@ export default function EditCustomerPage() {
       queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
       toast({
         title: "Success",
-        description: data.email_sent 
+        description: data.email_sent
           ? "Password reset successfully and email sent to customer"
           : "Password reset successfully",
       });
@@ -142,7 +143,7 @@ export default function EditCustomerPage() {
       queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
       toast({
         title: "Success",
-        description: data.email_sent 
+        description: data.email_sent
           ? "Portal access granted and welcome email sent"
           : `Portal access granted${data.password ? `. Password: ${data.password}` : ""}`,
       });
@@ -247,21 +248,21 @@ export default function EditCustomerPage() {
             if (emailCheck.user_id && emailCheck.user_id !== customer?.user?.id) {
               const user = emailCheck.user as any;
               const customerData = emailCheck.customer as any;
-              const displayName = customerData 
+              const displayName = customerData
                 ? (customerData.company_name || `${customerData.user?.first_name} ${customerData.user?.last_name}` || customerData.customer_number)
                 : (user ? `${user.first_name} ${user.last_name}` : (user?.email || 'User'));
-              
+
               toast({
                 title: "Email Already Exists",
                 description: `A user with email "${data.email}" already exists in the system.`,
                 variant: "warning",
               });
-              
+
               if (emailCheck.customer_id && typeof window !== 'undefined' && confirm(`A user with email "${data.email}" already exists.\n\n${displayName}\n\nWould you like to view the existing customer instead?`)) {
                 router.push(`/customers/${emailCheck.customer_id}`);
                 return;
               }
-              
+
               // Set error on email field
               setError("email", {
                 type: "manual",
@@ -275,35 +276,35 @@ export default function EditCustomerPage() {
           console.warn("Email existence check failed:", emailError);
         }
       }
-      
+
       await updateMutation.mutateAsync(data);
     } catch (error) {
       console.error("Error updating customer:", error);
-      
+
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
-        
+
         // Handle field-level errors
         if (errorData.email) {
-          const emailError = Array.isArray(errorData.email) 
-            ? errorData.email[0] 
+          const emailError = Array.isArray(errorData.email)
+            ? errorData.email[0]
             : errorData.email;
-          setError("email", { 
-            type: "server", 
-            message: emailError 
+          setError("email", {
+            type: "server",
+            message: emailError
           });
         }
-        
+
         if (errorData.company_name) {
-          const companyError = Array.isArray(errorData.company_name) 
-            ? errorData.company_name[0] 
+          const companyError = Array.isArray(errorData.company_name)
+            ? errorData.company_name[0]
             : errorData.company_name;
-          setError("company_name", { 
-            type: "server", 
-            message: companyError 
+          setError("company_name", {
+            type: "server",
+            message: companyError
           });
         }
-        
+
         // Handle non-field errors
         if (errorData.non_field_errors) {
           const nonFieldError = Array.isArray(errorData.non_field_errors)
@@ -326,7 +327,7 @@ export default function EditCustomerPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary dark:border-orange-400"></div>
       </div>
     );
   }
@@ -376,7 +377,7 @@ export default function EditCustomerPage() {
             type="submit"
             form="customer-edit-form"
             disabled={isSubmitting || updateMutation.isPending}
-            className="dark:bg-blue-600 dark:hover:bg-blue-700"
+            className="dark:bg-primary dark:hover:bg-primary/90"
           >
             {isSubmitting || updateMutation.isPending ? (
               <span className="flex items-center gap-2">
@@ -482,10 +483,10 @@ export default function EditCustomerPage() {
           </Card>
 
           {/* Customer Type & Business Information */}
-          <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-blue-500">
+          <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-primary">
             <CardHeader>
               <CardTitle className="dark:text-white flex items-center gap-2 text-lg">
-                <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <Building2 className="w-5 h-5 text-primary dark:text-primary" />
                 Customer Type & Business Information
               </CardTitle>
             </CardHeader>
@@ -497,13 +498,17 @@ export default function EditCustomerPage() {
                       Customer Type <span className="text-red-500">*</span>
                     </Label>
                     <Select
-                      id="customer_type"
-                      {...register("customer_type")}
-                      className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      value={watch("customer_type")}
+                      onValueChange={(val: any) => setValue("customer_type", val, { shouldValidate: true })}
                     >
-                      <option value="individual">Individual</option>
-                      <option value="business">Business</option>
-                      <option value="fleet">Fleet</option>
+                      <SelectTrigger id="customer_type" className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="individual">Individual</SelectItem>
+                        <SelectItem value="business">Business</SelectItem>
+                        <SelectItem value="fleet">Fleet</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
 
@@ -558,15 +563,19 @@ export default function EditCustomerPage() {
                       Payment Terms
                     </Label>
                     <Select
-                      id="payment_terms"
-                      {...register("payment_terms")}
-                      className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      value={watch("payment_terms") || ""}
+                      onValueChange={(val: any) => setValue("payment_terms", val)}
                     >
-                      <option value="due_on_receipt">Due on Receipt</option>
-                      <option value="net_15">Net 15</option>
-                      <option value="net_30">Net 30</option>
-                      <option value="net_60">Net 60</option>
-                      <option value="prepaid">Prepaid</option>
+                      <SelectTrigger id="payment_terms" className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <SelectValue placeholder="Select terms" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="due_on_receipt">Due on Receipt</SelectItem>
+                        <SelectItem value="net_15">Net 15</SelectItem>
+                        <SelectItem value="net_30">Net 30</SelectItem>
+                        <SelectItem value="net_60">Net 60</SelectItem>
+                        <SelectItem value="prepaid">Prepaid</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
 
@@ -575,13 +584,17 @@ export default function EditCustomerPage() {
                       Status
                     </Label>
                     <Select
-                      id="status"
-                      {...register("status")}
-                      className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      value={watch("status")}
+                      onValueChange={(val: any) => setValue("status", val)}
                     >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="suspended">Suspended</option>
+                      <SelectTrigger id="status" className="dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                        <SelectItem value="suspended">Suspended</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -606,8 +619,8 @@ export default function EditCustomerPage() {
                       {hasPortalAccess ? "Customer can log in to the portal" : "Customer cannot access the portal"}
                     </p>
                   </div>
-                  <Badge 
-                    variant={hasPortalAccess ? "default" : "secondary"} 
+                  <Badge
+                    variant={hasPortalAccess ? "default" : "secondary"}
                     className={hasPortalAccess ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : ""}
                   >
                     {hasPortalAccess ? "Enabled" : "Disabled"}
@@ -618,7 +631,7 @@ export default function EditCustomerPage() {
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
                       type="button"
-                     variant="secondary"
+                      variant="secondary"
                       onClick={() => {
                         const sendEmail = window.confirm("Send welcome email with login details?");
                         grantPortalAccessMutation.mutate({ sendEmail });
@@ -644,7 +657,7 @@ export default function EditCustomerPage() {
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Button
                         type="button"
-                       variant="secondary"
+                        variant="secondary"
                         onClick={() => setShowPasswordReset(true)}
                         className="dark:border-gray-600 dark:text-gray-300 flex-1"
                       >
@@ -653,7 +666,7 @@ export default function EditCustomerPage() {
                       </Button>
                       <Button
                         type="button"
-                       variant="secondary"
+                        variant="secondary"
                         onClick={() => sendResetLinkMutation.mutate()}
                         disabled={sendResetLinkMutation.isPending}
                         className="dark:border-gray-600 dark:text-gray-300 flex-1"
@@ -672,7 +685,7 @@ export default function EditCustomerPage() {
                       </Button>
                       <Button
                         type="button"
-                       variant="secondary"
+                        variant="secondary"
                         onClick={() => {
                           if (window.confirm("Are you sure you want to revoke portal access? The customer will not be able to log in.")) {
                             revokePortalAccessMutation.mutate();
@@ -722,7 +735,7 @@ export default function EditCustomerPage() {
                             </div>
                             <Button
                               type="button"
-                             variant="secondary"
+                              variant="secondary"
                               onClick={generatePassword}
                               className="dark:border-gray-600 dark:text-gray-300"
                               title="Generate secure password"
@@ -732,7 +745,7 @@ export default function EditCustomerPage() {
                             {newPassword && (
                               <Button
                                 type="button"
-                               variant="secondary"
+                                variant="secondary"
                                 onClick={handleCopyPassword}
                                 className="dark:border-gray-600 dark:text-gray-300"
                                 title="Copy password"
@@ -750,7 +763,7 @@ export default function EditCustomerPage() {
                           <input
                             type="checkbox"
                             id="send_password_email_customer_edit"
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                            className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
                           />
                           <Label htmlFor="send_password_email_customer_edit" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             Send new password to customer via email
@@ -759,7 +772,7 @@ export default function EditCustomerPage() {
                         <div className="flex gap-3">
                           <Button
                             type="button"
-                           variant="secondary"
+                            variant="secondary"
                             onClick={() => {
                               setShowPasswordReset(false);
                               setNewPassword("");

@@ -171,10 +171,10 @@ export default function TimeTrackingPage() {
 
       {/* Active Time Log */}
       {activeLog && (
-        <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950">
+        <Card className="border-orange-200 dark:border-orange-800 bg-primary/10 dark:bg-orange-950">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              <Clock className="h-5 w-5 text-primary dark:text-primary" />
               Currently Clocked In
             </CardTitle>
           </CardHeader>
@@ -199,7 +199,7 @@ export default function TimeTrackingPage() {
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 Duration
               </div>
-              <div className="font-semibold text-lg text-blue-600 dark:text-blue-400">
+              <div className="font-semibold text-lg text-primary dark:text-primary">
                 {formatDuration(
                   activeLog.duration_hours ||
                   calculateDuration(activeLog.clock_in, new Date().toISOString())

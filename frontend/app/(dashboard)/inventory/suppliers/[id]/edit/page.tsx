@@ -160,7 +160,7 @@ export default function EditSupplierPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -249,7 +249,7 @@ export default function EditSupplierPage() {
                   <input
                     type="checkbox"
                     {...register("is_active")}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
                   />
                   <label className="ml-2 text-sm text-gray-700">Active</label>
                 </div>
@@ -257,7 +257,7 @@ export default function EditSupplierPage() {
                   <input
                     type="checkbox"
                     {...register("is_preferred")}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
                   />
                   <label className="ml-2 text-sm text-gray-700">Preferred</label>
                 </div>

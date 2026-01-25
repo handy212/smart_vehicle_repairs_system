@@ -32,7 +32,7 @@ import { z } from "zod";
 import { PermissionGuard } from "@/components/auth/PermissionGuard";
 import { usePermissions } from "@/lib/hooks/usePermissions";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const branchSchema = z.object({
@@ -143,14 +143,14 @@ export default function BranchesPage() {
       <div className="flex items-center justify-between px-4 pt-4">
         <div>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/admin" className="hover:text-blue-600 transition-colors">Admin</Link>
+            <Link href="/admin" className="hover:text-primary transition-colors">Admin</Link>
             <span>/</span>
             <span className="text-gray-900 dark:text-gray-100 font-medium">Branches</span>
           </div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Branch Management</h1>
         </div>
         <PermissionGuard permission="manage_branches">
-          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="h-8 dark:bg-blue-600 dark:hover:bg-blue-700">
+          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="h-8 dark:bg-primary dark:hover:bg-primary/90">
             <Plus className="w-3.5 h-3.5 mr-1.5" />
             New Branch
           </Button>
@@ -185,11 +185,11 @@ export default function BranchesPage() {
           <CardContent className="p-3 flex items-center justify-between">
             <div>
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">HQ</p>
-              <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+              <p className="text-xl font-bold text-primary dark:text-primary">
                 {headquarters}
               </p>
             </div>
-            <Building2 className="w-5 h-5 text-blue-500 opacity-80" />
+            <Building2 className="w-5 h-5 text-primary opacity-80" />
           </CardContent>
         </Card>
         <Card className="shadow-sm">
@@ -223,13 +223,17 @@ export default function BranchesPage() {
               <Filter className="w-3.5 h-3.5 text-gray-400" />
               <Select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-[160px] h-8 text-sm bg-white dark:bg-gray-900"
+                onValueChange={(val) => setStatusFilter(val)}
               >
-                <option value="all">All Branches</option>
-                <option value="active">Active Only</option>
-                <option value="inactive">Inactive Only</option>
-                <option value="headquarters">Headquarters</option>
+                <SelectTrigger className="w-[160px] h-8 text-sm bg-white dark:bg-gray-900">
+                  <SelectValue placeholder="All Branches" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  <SelectItem value="active">Active Only</SelectItem>
+                  <SelectItem value="inactive">Inactive Only</SelectItem>
+                  <SelectItem value="headquarters">Headquarters</SelectItem>
+                </SelectContent>
               </Select>
             </div>
           </div>
@@ -327,7 +331,7 @@ export default function BranchesPage() {
                       <TableCell className="px-4 py-2.5">
                         <div className="flex items-center gap-1.5">
                           {branch.is_headquarters && (
-                            <Badge variant="default" className="text-[9px] bg-blue-600 h-4 px-1">
+                            <Badge variant="default" className="text-[9px] bg-primary h-4 px-1">
                               HQ
                             </Badge>
                           )}
@@ -350,7 +354,7 @@ export default function BranchesPage() {
                             <Link
                               href={`/admin/branches/${branch.id}`}
                             >
-                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-blue-600">
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-primary">
                                 <Eye className="w-3.5 h-3.5" />
                               </Button>
                             </Link>

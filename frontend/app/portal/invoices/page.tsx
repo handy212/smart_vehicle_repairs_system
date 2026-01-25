@@ -77,9 +77,9 @@ export default function MyInvoicesPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="col-span-2 md:col-span-1 border-none shadow-sm bg-blue-50 dark:bg-blue-900/10">
+        <Card className="col-span-2 md:col-span-1 border-none shadow-sm bg-primary/10 dark:bg-orange-900/10">
           <CardContent className="p-4 flex flex-col justify-center h-full">
-            <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider">Total Invoices</p>
+            <p className="text-xs font-medium text-primary dark:text-primary uppercase tracking-wider">Total Invoices</p>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
               {invoices.length}
             </div>
@@ -166,7 +166,7 @@ export default function MyInvoicesPage() {
                 <PortalCard
                   key={inv.id}
                   href={`/portal/invoices/${inv.id}`}
-                  icon={<FileText className="w-5 h-5 text-blue-500" />}
+                  icon={<FileText className="w-5 h-5 text-primary" />}
                   title={`Invoice #${inv.invoice_number}`}
                   subtitle={format(new Date(inv.invoice_date), "MMM d, yyyy")}
                   status={

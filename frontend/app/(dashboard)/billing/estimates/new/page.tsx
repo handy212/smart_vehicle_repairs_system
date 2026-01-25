@@ -13,7 +13,7 @@ import { adminApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, AlertCircle, Plus, Trash2, Search } from "lucide-react";
@@ -311,20 +311,23 @@ export default function NewEstimatePage() {
                   <label className="text-sm font-medium">Customer</label>
                   <Select
                     value={customer?.toString() || ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
+                    onValueChange={(val) => {
                       if (val) {
                         setValue("customer", parseInt(val));
                         setSelectedCustomer(parseInt(val));
                       }
                     }}
                   >
-                    <option value="">Select Customer</option>
-                    {customersData?.results?.map((c) => (
-                      <option key={c.id} value={c.id.toString()}>
-                        {c.full_name || c.company_name || c.email}
-                      </option>
-                    ))}
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customersData?.results?.map((c) => (
+                        <SelectItem key={c.id} value={c.id.toString()}>
+                          {c.full_name || c.company_name || c.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                   {errors.customer && <p className="text-xs text-red-500">{errors.customer.message}</p>}
                 </div>
@@ -332,29 +335,37 @@ export default function NewEstimatePage() {
                   <label className="text-sm font-medium">Vehicle</label>
                   <Select
                     value={watch("vehicle")?.toString() || ""}
-                    onChange={(e) => setValue("vehicle", parseInt(e.target.value))}
+                    onValueChange={(val) => setValue("vehicle", parseInt(val))}
                     disabled={!selectedCustomer}
                   >
-                    <option value="">{!selectedCustomer ? "Select a customer first" : "Select Vehicle"}</option>
-                    {vehiclesData?.results?.map((v) => (
-                      <option key={v.id} value={v.id.toString()}>
-                        {v.year} {v.make} {v.model} - {v.vin}
-                      </option>
-                    ))}
+                    <SelectTrigger disabled={!selectedCustomer}>
+                      <SelectValue placeholder={!selectedCustomer ? "Select a customer first" : "Select Vehicle"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vehiclesData?.results?.map((v) => (
+                        <SelectItem key={v.id} value={v.id.toString()}>
+                          {v.year} {v.make} {v.model} - {v.vin}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Sales Agent</label>
                   <Select
                     value={watch("sales_agent")?.toString() || ""}
-                    onChange={(e) => setValue("sales_agent", parseInt(e.target.value))}
+                    onValueChange={(val) => setValue("sales_agent", parseInt(val))}
                   >
-                    <option value="">Select Agent</option>
-                    {salesAgents?.map((agent: any) => (
-                      <option key={agent.id} value={agent.id.toString()}>
-                        {agent.first_name} {agent.last_name}
-                      </option>
-                    ))}
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Agent" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {salesAgents?.map((agent: any) => (
+                        <SelectItem key={agent.id} value={agent.id.toString()}>
+                          {agent.first_name} {agent.last_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
               </div>
@@ -391,13 +402,18 @@ export default function NewEstimatePage() {
                   <label className="text-sm font-medium">Status</label>
                   <Select
                     value={watch("status")}
-                    onChange={(e: any) => setValue("status", e.target.value)}
+                    onValueChange={(val: any) => setValue("status", val)}
                   >
-                    <option value="draft">Draft</option>
-                    <option value="sent">Sent</option>
-                    <option value="approved">Accepted</option>
-                    <option value="declined">Declined</option>
-                    <option value="expired">Expired</option>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="sent">Sent</SelectItem>
+                      <SelectItem value="approved">Accepted</SelectItem>
+                      <SelectItem value="declined">Declined</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -417,11 +433,16 @@ export default function NewEstimatePage() {
                 <label className="text-sm font-medium">Discount Type</label>
                 <Select
                   value={watch("discount_type")}
-                  onChange={(e: any) => setValue("discount_type", e.target.value)}
+                  onValueChange={(val: any) => setValue("discount_type", val)}
                 >
-                  <option value="none">No Discount</option>
-                  <option value="before_tax">Before Tax</option>
-                  <option value="after_tax">After Tax</option>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Discount Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Discount</SelectItem>
+                    <SelectItem value="before_tax">Before Tax</SelectItem>
+                    <SelectItem value="after_tax">After Tax</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
               {watch("discount_type") !== 'none' && (
@@ -519,13 +540,17 @@ export default function NewEstimatePage() {
                           ) : (
                             <Select
                               value={item.item_type}
-                              onChange={(e) => updateLineItem(index, 'item_type', e.target.value)}
-                              className="h-8 text-xs"
+                              onValueChange={(val: any) => updateLineItem(index, 'item_type', val)}
                             >
-                              <option value="labor">Labor</option>
-                              <option value="fee">Fee</option>
-                              <option value="sublet">Sublet</option>
-                              <option value="other">Other</option>
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="labor">Labor</SelectItem>
+                                <SelectItem value="fee">Fee</SelectItem>
+                                <SelectItem value="sublet">Sublet</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                              </SelectContent>
                             </Select>
                           )}
                         </TableCell>

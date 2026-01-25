@@ -282,7 +282,7 @@ export default function PaymentPage() {
                 {amountDue > 0 && (
                   <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
                     <span className="text-gray-900 dark:text-gray-100">Amount Due</span>
-                    <span className="text-blue-600 dark:text-blue-400">
+                    <span className="text-primary dark:text-primary">
                       ${amountDue.toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
@@ -345,10 +345,10 @@ export default function PaymentPage() {
                     )}
                   </Button>
 
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
                     <div className="flex items-start space-x-2">
-                      <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                      <div className="text-sm text-blue-800 dark:text-blue-300">
+                      <AlertCircle className="w-5 h-5 text-primary dark:text-primary flex-shrink-0 mt-0.5" />
+                      <div className="text-sm text-orange-800 dark:text-orange-300">
                         <p className="font-medium mb-1">Secure Payment</p>
                         
                       </div>

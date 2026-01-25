@@ -161,3 +161,21 @@ class User(AbstractUser):
 
 # Import permission models
 from .permission_models import Permission, Role, UserPermissionOverride
+
+
+class RegistrationOTP(models.Model):
+    """
+    Temporary storage for 6-digit registration codes sent via email.
+    """
+    email = models.EmailField(db_index=True)
+    otp_code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Registration OTP'
+        verbose_name_plural = 'Registration OTPs'
+
+    def __str__(self):
+        return f"OTP for {self.email} - {self.otp_code}"

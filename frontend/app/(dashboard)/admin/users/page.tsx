@@ -5,7 +5,7 @@ import { adminApi, User, branchesApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Edit, Trash2, UserCheck, UserX, Building2, Users, Filter, MoreVertical, Eye } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -135,7 +135,7 @@ export default function UsersManagementPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -143,17 +143,22 @@ export default function UsersManagementPage() {
   return (
     <div className="space-y-4 dark:bg-gray-900 min-h-screen">
       <div className="flex items-center justify-between px-4 pt-4">
-        <div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/admin" className="hover:text-blue-600 transition-colors">Admin</Link>
-            <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Users</span>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+              <Link href="/admin" className="hover:text-primary transition-colors">Admin</Link>
+              <span>/</span>
+              <span className="text-gray-900 dark:text-gray-100 font-medium">Users</span>
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">User Management</h1>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">User Management</h1>
         </div>
         <PermissionGuard permission="create_users">
           <Link href="/admin/users/new">
-            <Button size="sm" className="h-8 dark:bg-blue-600 dark:hover:bg-blue-700">
+            <Button size="sm" className="h-8 dark:bg-primary dark:hover:bg-primary/90">
               <Plus className="w-3.5 h-3.5 mr-1.5" />
               Add User
             </Button>
@@ -172,47 +177,59 @@ export default function UsersManagementPage() {
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
               <Select
                 value={roleFilter}
-                onChange={(e) => {
-                  setRoleFilter(e.target.value);
+                onValueChange={(val) => {
+                  setRoleFilter(val);
                   setPage(1);
                 }}
-                className="h-8 text-sm bg-white dark:bg-gray-900"
               >
-                <option value="all">All Roles</option>
-                <option value="admin">Admin</option>
-                <option value="manager">Manager</option>
-                <option value="service_coordinator">Service Coordinator</option>
-                <option value="receptionist">Receptionist</option>
-                <option value="technician">Technician</option>
-                <option value="parts_manager">Parts Manager</option>
-                <option value="accountant">Accountant</option>
+                <SelectTrigger className="h-8 text-sm bg-white dark:bg-gray-900">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="service_coordinator">Service Coordinator</SelectItem>
+                  <SelectItem value="receptionist">Receptionist</SelectItem>
+                  <SelectItem value="technician">Technician</SelectItem>
+                  <SelectItem value="parts_manager">Parts Manager</SelectItem>
+                  <SelectItem value="accountant">Accountant</SelectItem>
+                </SelectContent>
               </Select>
               <Select
                 value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
+                onValueChange={(val) => {
+                  setStatusFilter(val);
                   setPage(1);
                 }}
-                className="h-8 text-sm bg-white dark:bg-gray-900"
               >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <SelectTrigger className="h-8 text-sm bg-white dark:bg-gray-900">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
               </Select>
               <Select
                 value={branchFilter}
-                onChange={(e) => {
-                  setBranchFilter(e.target.value);
+                onValueChange={(val) => {
+                  setBranchFilter(val);
                   setPage(1);
                 }}
-                className="h-8 text-sm bg-white dark:bg-gray-900"
               >
-                <option value="all">All Branches</option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
+                <SelectTrigger className="h-8 text-sm bg-white dark:bg-gray-900">
+                  <SelectValue placeholder="All Branches" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Branches</SelectItem>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
           </div>
@@ -381,6 +398,6 @@ export default function UsersManagementPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }

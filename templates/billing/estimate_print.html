@@ -181,12 +181,7 @@
                 <td class="text-right">${{ estimate.tax_getfund_amount|floatformat:2 }}</td>
             </tr>
             {% endif %}
-            {% if estimate.tax_hrl_amount > 0 %}
-            <tr>
-                <td class="text-right">COVID-19 HRL (1%):</td>
-                <td class="text-right">${{ estimate.tax_hrl_amount|floatformat:2 }}</td>
-            </tr>
-            {% endif %}
+
             {% if estimate.tax_vat_amount > 0 %}
             <tr>
                 <td class="text-right">VAT (15%):</td>

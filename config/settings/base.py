@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',  # Google OAuth provider
     'corsheaders',
     'guardian',
     'rolepermissions',
@@ -245,6 +246,31 @@ ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
+# Social Account Settings
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'APP': {
+            'client_id': env('GOOGLE_OAUTH_CLIENT_ID', default=''),
+            'secret': env('GOOGLE_OAUTH_CLIENT_SECRET', default=''),
+            'key': ''
+        }
+    }
+}
+
+# Social account adapter settings
+SOCIALACCOUNT_AUTO_SIGNUP = True  # Automatically create accounts for new social logins
+SOCIALACCOUNT_EMAIL_REQUIRED = True  # Require email from social provider
+SOCIALACCOUNT_QUERY_EMAIL = True  # Request email from social provider
+ACCOUNT_ADAPTER = 'apps.accounts.adapters.AccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'apps.accounts.adapters.SocialAccountAdapter'
+
 # Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
@@ -307,10 +333,17 @@ CARAPI_BASE_URL = 'https://carapi.app/api'
 CARAPI_KEY = env('CARAPI_KEY', default='')
 CARAPI_SECRET = env('CARAPI_SECRET', default='')
 
+
 # Twilio Configuration
 TWILIO_ACCOUNT_SID = env('TWILIO_ACCOUNT_SID', default='')
 TWILIO_AUTH_TOKEN = env('TWILIO_AUTH_TOKEN', default='')
 TWILIO_PHONE_NUMBER = env('TWILIO_PHONE_NUMBER', default='')
+
+# WhatsApp Integration
+WHATSAPP_ENABLED = env.bool('WHATSAPP_ENABLED', default=False)
+WHATSAPP_ACCESS_TOKEN = env('WHATSAPP_ACCESS_TOKEN', default='')
+WHATSAPP_PHONE_NUMBER_ID = env('WHATSAPP_PHONE_NUMBER_ID', default='')
+WHATSAPP_BUSINESS_ACCOUNT_ID = env('WHATSAPP_BUSINESS_ACCOUNT_ID', default='')
 
 # Firebase Configuration
 FIREBASE_CREDENTIALS_PATH = env('FIREBASE_CREDENTIALS_PATH', default='')

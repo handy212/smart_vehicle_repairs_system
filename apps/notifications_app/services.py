@@ -8,7 +8,9 @@ import logging
 
 from .models import Notification, NotificationLog, WebPushSubscription
 from .firebase import send_push_notification, is_firebase_available
-from apps.accounts.settings_utils import get_setting, get_email_settings, get_notification_settings
+from .hubtel_sms import is_hubtel_available
+from .whatsapp_service import get_whatsapp_service
+from apps.accounts.settings_utils import get_setting, get_email_settings, get_notification_settings, get_whatsapp_settings
 
 try:
     from pywebpush import webpush, WebPushException
@@ -49,6 +51,7 @@ class NotificationService:
                 'sms': notification_settings.get('notification_sms_enabled', 'true').lower() == 'true',
                 'push': notification_settings.get('notification_push_enabled', 'true').lower() == 'true',
                 'in_app': notification_settings.get('notification_in_app_enabled', 'true').lower() == 'true',
+                'whatsapp': get_whatsapp_settings().get('whatsapp_enabled', 'false').lower() == 'true',
             }.get(notification.channel, True)
             
             if not channel_enabled:
@@ -98,6 +101,8 @@ class NotificationService:
                 return self._send_sms(notification)
             elif notification.channel == 'push':
                 return self._send_push(notification)
+            elif notification.channel == 'whatsapp':
+                return self._send_whatsapp(notification)
             elif notification.channel == 'in_app':
                 return self._send_in_app(notification)
             else:
@@ -312,6 +317,113 @@ class NotificationService:
             self._log_action(notification, 'failed', f'Push failed: {str(e)}')
             return False
     
+    
+    def _send_whatsapp(self, notification):
+        """
+        Send WhatsApp notification
+        """
+        try:
+            # 1. Check if WhatsApp service is available
+            whatsapp_service = get_whatsapp_service()
+            if not whatsapp_service.is_available():
+                notification.mark_as_failed("WhatsApp service not configured")
+                self._log_action(notification, 'failed', 'WhatsApp not configured')
+                return False
+                
+            # 2. Get phone number
+            phone_number = None
+            if hasattr(notification.recipient, 'notification_preferences'):
+                phone_number = notification.recipient.notification_preferences.phone_number
+            
+            if not phone_number and hasattr(notification.recipient, 'phone'):
+                phone_number = notification.recipient.phone
+                
+            if not phone_number:
+                notification.mark_as_failed("No phone number configured")
+                self._log_action(notification, 'failed', 'No phone number')
+                return False
+                
+            # 3. Determine message type
+            # If template is provided, use it (recommended for business initiated)
+            # If document URL is in data, send document
+            # Otherwise send text
+            
+            success = False
+            result = None
+            
+            # Check for document
+            if notification.notification_type == 'invoice' and notification.data.get('invoice_pdf_url'):
+                # Send invoice PDF
+                pdf_url = notification.data.get('invoice_pdf_url')
+                filename = notification.data.get('filename', 'invoice.pdf')
+                caption = notification.message
+                
+                success, result = whatsapp_service.send_document(
+                    to=phone_number,
+                    media_url=pdf_url,
+                    caption=caption,
+                    filename=filename
+                )
+            
+            # Check for template (if configured in notification template)
+            elif notification.template and hasattr(notification.template, 'whatsapp_template_name') and notification.template.whatsapp_template_name:
+                template_name = notification.template.whatsapp_template_name
+                template_vars = notification.template.whatsapp_template_variables
+                
+                # Build components
+                components = []
+                body_params = []
+                
+                if template_vars:
+                    for var_name in template_vars:
+                        # Find value in notification data or common fields
+                        val = notification.data.get(var_name, '')
+                        
+                        # Fallback to direct attribute lookup if simple string
+                        if not val and hasattr(notification, var_name):
+                            val = getattr(notification, var_name)
+                            
+                        # Format if necessary
+                        body_params.append({
+                            "type": "text",
+                            "text": str(val)
+                        })
+                
+                if body_params:
+                    components.append({
+                        "type": "body",
+                        "parameters": body_params
+                    })
+                    
+                success, result = whatsapp_service.send_template_message(
+                    to=phone_number,
+                    template_name=template_name,
+                    components=components
+                )
+            
+            # Default to text message
+            else:
+                message = notification.message
+                success, result = whatsapp_service.send_message(phone_number, message)
+            
+            if success:
+                notification.mark_as_sent()
+                notification.mark_as_delivered()
+                self._log_action(notification, 'sent', f'WhatsApp sent: {result}')
+                logger.info(f"WhatsApp sent to {phone_number}: {result}")
+                return True
+            else:
+                notification.mark_as_failed(str(result))
+                self._log_action(notification, 'failed', f'WhatsApp failed: {result}')
+                logger.error(f"WhatsApp failed to {phone_number}: {result}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to send WhatsApp: {str(e)}")
+            notification.mark_as_failed(str(e))
+            self._log_action(notification, 'failed', f'WhatsApp failed: {str(e)}')
+            return False
+
     def _send_web_push(self, notification):
         """
         Send Web Push notifications to all active subscriptions

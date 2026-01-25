@@ -35,10 +35,10 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   // Handle hydration and localStorage
   useEffect(() => {
     setMounted(true);
-    
+
     const sidebarCollapsed = localStorage.getItem("portalSidebarCollapsed") === "true";
     setIsSidebarCollapsed(sidebarCollapsed);
-    
+
     // Check if desktop
     const checkDesktop = () => {
       setIsDesktop(window.innerWidth >= 1024);
@@ -47,7 +47,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         setIsSidebarOpen(true);
       }
     };
-    
+
     checkDesktop();
     window.addEventListener("resize", checkDesktop);
     return () => window.removeEventListener("resize", checkDesktop);
@@ -55,12 +55,12 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (!mounted) return;
-    
+
     if (!isLoading && !user) {
       router.push("/login");
       return;
     }
-    
+
     // Check if user has customer role - redirect non-customers to dashboard
     if (user && user.role !== "customer") {
       router.push("/dashboard");
@@ -71,28 +71,28 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   if (!mounted || isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   // Calculate sidebar width
-  const sidebarWidthExpanded = 256; // w-64 = 16rem = 256px
+  const sidebarWidthExpanded = 288; // w-72 = 18rem = 288px
   const sidebarWidthCollapsed = 80; // w-20 = 5rem = 80px
   const sidebarCollapsed = mounted ? isSidebarCollapsed : false;
   const sidebarWidth = sidebarCollapsed ? sidebarWidthCollapsed : sidebarWidthExpanded;
-  
+
   // On mobile, sidebar is hidden by default (overlay), on desktop it's always visible
   const totalMargin = isDesktop ? sidebarWidth : 0;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <PortalNavbar 
+      <PortalNavbar
         onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}
         user={user}
       />
-      <PortalSidebar 
+      <PortalSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         isCollapsed={mounted ? isSidebarCollapsed : false}
@@ -106,7 +106,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       />
       <main
         className="min-h-screen px-3 sm:px-4 md:px-6 lg:px-8 py-0 pb-4 sm:pb-6 lg:pb-8 transition-all duration-300"
-        style={{ 
+        style={{
           marginLeft: `${totalMargin}px`,
           paddingTop: '5rem' // 80px to account for header (64px) + extra space
         }}

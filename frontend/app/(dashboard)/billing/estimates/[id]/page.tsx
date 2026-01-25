@@ -202,7 +202,7 @@ export default function EstimateDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -287,8 +287,8 @@ export default function EstimateDetailPage() {
                 </span>
                 {estimate.work_order && estimate.work_order_number && (
                   <Link href={`/workorders/${typeof estimate.work_order === 'object' ? estimate.work_order.id : estimate.work_order}`}>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors dark:bg-blue-950/20 dark:border-blue-800 dark:text-blue-400">
-                      <span className="h-2 w-2 rounded-full bg-blue-500" />
+                    <span className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-primary/10 px-3 py-1 text-xs font-semibold text-orange-700 hover:bg-orange-100 transition-colors dark:bg-orange-950/20 dark:border-orange-800 dark:text-primary">
+                      <span className="h-2 w-2 rounded-full bg-primary" />
                       Work Order #{estimate.work_order_number}
                     </span>
                   </Link>
@@ -425,28 +425,28 @@ export default function EstimateDetailPage() {
           <TabsList className="bg-white dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 rounded-lg w-full justify-start h-auto flex-wrap">
             <TabsTrigger
               value="estimate"
-              className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-400 px-4 py-2 h-auto gap-2"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
             >
               <FileCheck className="w-4 h-4" />
               Estimate Details
             </TabsTrigger>
             <TabsTrigger
               value="activity"
-              className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-400 px-4 py-2 h-auto gap-2"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
             >
               <Activity className="w-4 h-4" />
               Activity Log
             </TabsTrigger>
             <TabsTrigger
               value="reminders"
-              className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-400 px-4 py-2 h-auto gap-2"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
             >
               <Clock className="w-4 h-4" />
               Reminders
             </TabsTrigger>
             <TabsTrigger
               value="notes"
-              className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 dark:data-[state=active]:bg-blue-900/20 dark:data-[state=active]:text-blue-400 px-4 py-2 h-auto gap-2"
+              className="data-[state=active]:bg-primary/10 data-[state=active]:text-orange-700 dark:data-[state=active]:bg-orange-900/20 dark:data-[state=active]:text-orange-400 px-4 py-2 h-auto gap-2"
             >
               <StickyNote className="w-4 h-4" />
               Notes
@@ -463,7 +463,7 @@ export default function EstimateDetailPage() {
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-2">Customer</h3>
                     {estimate.customer ? (
-                      <Link href={`/customers/${typeof estimate.customer === 'object' && estimate.customer !== null ? estimate.customer.id : estimate.customer}`} className="text-base font-semibold text-gray-900 hover:text-blue-600 block">
+                      <Link href={`/customers/${typeof estimate.customer === 'object' && estimate.customer !== null ? estimate.customer.id : estimate.customer}`} className="text-base font-semibold text-gray-900 hover:text-primary block">
                         {estimate.customer_name || "View Customer"}
                       </Link>
                     ) : (
@@ -514,7 +514,7 @@ export default function EstimateDetailPage() {
                       {estimate.vehicle && (
                         <div className="flex flex-col">
                           <span className="text-sm text-gray-500">Vehicle</span>
-                          <Link href={`/vehicles/${typeof estimate.vehicle === 'object' && estimate.vehicle !== null ? estimate.vehicle.id : estimate.vehicle}`} className="text-sm font-medium text-blue-600 hover:underline">
+                          <Link href={`/vehicles/${typeof estimate.vehicle === 'object' && estimate.vehicle !== null ? estimate.vehicle.id : estimate.vehicle}`} className="text-sm font-medium text-primary hover:underline">
                             {estimate.vehicle_display || "View Vehicle"}
                           </Link>
                           {estimate.vehicle_vin && <span className="text-xs text-gray-500">VIN: {estimate.vehicle_vin}</span>}
@@ -532,7 +532,7 @@ export default function EstimateDetailPage() {
                             value={localStatus || estimate.status}
                             onChange={handleStatusChange}
                             disabled={statusChangeMutation.isPending}
-                            className="px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
                           >
                             <option value="draft">Draft</option>
                             <option value="sent">Sent</option>
@@ -720,8 +720,8 @@ export default function EstimateDetailPage() {
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <div className="flex items-center gap-3 mb-2">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-primary dark:text-primary" />
                 </div>
                 <DialogTitle className="text-xl">Approve Estimate {estimate?.estimate_number}</DialogTitle>
               </div>
@@ -755,7 +755,7 @@ export default function EstimateDetailPage() {
               <Button
                 onClick={confirmApproveEstimate}
                 disabled={approveEstimateMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-white"
               >
                 {approveEstimateMutation.isPending ? (
                   <>

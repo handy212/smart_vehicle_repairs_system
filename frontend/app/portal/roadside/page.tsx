@@ -162,7 +162,7 @@ export default function MyRoadsideRequestsPage() {
           <PortalCard
             key={req.id}
             href={`/portal/roadside/${req.id}`}
-            icon={<Navigation className="w-5 h-5 text-blue-500" />}
+            icon={<Navigation className="w-5 h-5 text-primary" />}
             title={`${req.request_number} • ${getServiceTypeDisplay(req.service_type)}`}
             subtitle={format(new Date(req.requested_at), "MMM d, h:mm a")}
             status={

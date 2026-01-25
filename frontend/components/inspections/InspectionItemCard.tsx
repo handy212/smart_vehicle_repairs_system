@@ -92,7 +92,7 @@ export function InspectionItemCard({
                             size="sm"
                             className={cn(
                                 "h-7 px-2 text-[10px] font-bold uppercase tracking-widest",
-                                showNotes || result.notes ? "bg-blue-50 text-blue-600 border-blue-200" : "text-gray-400"
+                                showNotes || result.notes ? "bg-primary/10 text-primary border-orange-200" : "text-gray-400"
                             )}
                             onClick={onToggleNotes}
                         >
@@ -194,8 +194,8 @@ export function InspectionItemCard({
                                         className={cn(
                                             "w-8 h-8 text-[11px] font-bold rounded border transition-all duration-200",
                                             result.rating_value === n
-                                                ? "bg-blue-600 text-white border-blue-600"
-                                                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400"
+                                                ? "bg-primary text-white border-primary"
+                                                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-orange-400"
                                         )}
                                     >
                                         {n}

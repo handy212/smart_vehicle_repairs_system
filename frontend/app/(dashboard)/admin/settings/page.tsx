@@ -5,7 +5,7 @@ import { adminApi, SystemSetting } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Save, Trash2, Eye, EyeOff, Info, Upload, Image as ImageIcon, Award, Tag } from "lucide-react";
@@ -401,7 +401,7 @@ export default function SystemSettingsPage() {
                     })()
                   }
                   onClick={() => handleSaveRow(setting.id)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white h-7 text-xs px-2"
+                  className="bg-primary hover:bg-primary/90 text-white h-7 text-xs px-2"
                 >
                   <Save className="w-3 h-3 mr-1" />
                   Save
@@ -431,7 +431,7 @@ export default function SystemSettingsPage() {
   if (isLoading && !settingsData) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -440,13 +440,18 @@ export default function SystemSettingsPage() {
     <div className="space-y-4 dark:bg-gray-900 min-h-screen">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4">
-        <div>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/admin" className="hover:text-blue-600 transition-colors">Admin</Link>
-            <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium">Settings</span>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
+              <Link href="/admin" className="hover:text-primary transition-colors">Admin</Link>
+              <span>/</span>
+              <span className="text-gray-900 dark:text-gray-100 font-medium">Settings</span>
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">System Configuration</h1>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">System Configuration</h1>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/admin/settings/skills">
@@ -488,7 +493,7 @@ export default function SystemSettingsPage() {
                 key={cat.value}
                 onClick={() => handleCategorySelect(cat.value)}
                 className={`px-3 py-1.5 rounded text-xs font-medium transition-colors border ${isSelected
-                  ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                  ? "bg-primary text-white border-primary shadow-sm"
                   : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
                   }`}
               >
@@ -504,11 +509,11 @@ export default function SystemSettingsPage() {
 
         {/* Info Banner for Company Settings */}
         {selectedCategory === "company" && (
-          <Card className="mb-4 border-blue-100 bg-blue-50/50 dark:bg-blue-900/10 dark:border-blue-800/30 shadow-none">
+          <Card className="mb-4 border-orange-100 bg-primary/5 dark:bg-orange-900/10 dark:border-orange-800/30 shadow-none">
             <CardContent className="p-3">
               <div className="flex items-start space-x-2">
-                <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                <Info className="w-4 h-4 text-primary dark:text-primary flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-orange-800 dark:text-orange-200 leading-relaxed">
                   <strong>Company Information:</strong> These settings are used throughout the application, including in emails, invoices, and notifications.
                   Make sure to keep this information up to date. Changes take effect immediately.
                 </p>
@@ -683,72 +688,92 @@ export default function SystemSettingsPage() {
                                       setting.key === 'theme_mode' ? (
                                         <Select
                                           value={getRowValue(setting) || 'light'}
-                                          onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                          className="w-full h-8 text-xs bg-white"
+                                          onValueChange={(val) => handleRowChange(setting, { value: val })}
                                           disabled={!canManage}
                                         >
-                                          <option value="light">Light</option>
-                                          <option value="dark">Dark</option>
-                                          <option value="auto">Auto (System Preference)</option>
+                                          <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="light">Light</SelectItem>
+                                            <SelectItem value="dark">Dark</SelectItem>
+                                            <SelectItem value="auto">Auto (System Preference)</SelectItem>
+                                          </SelectContent>
                                         </Select>
                                       ) : /* SMS Provider - Dropdown */
                                         setting.key === 'sms_provider' ? (
                                           <Select
                                             value={getRowValue(setting) || 'hubtel'}
-                                            onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                            className="w-full h-8 text-xs bg-white"
+                                            onValueChange={(val) => handleRowChange(setting, { value: val })}
                                             disabled={!canManage}
                                           >
-                                            <option value="hubtel">Hubtel</option>
-                                            <option value="twilio">Twilio</option>
-                                            <option value="africastalking">Africastalking</option>
-                                            <option value="other">Other</option>
+                                            <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="hubtel">Hubtel</SelectItem>
+                                              <SelectItem value="twilio">Twilio</SelectItem>
+                                              <SelectItem value="africastalking">Africastalking</SelectItem>
+                                              <SelectItem value="other">Other</SelectItem>
+                                            </SelectContent>
                                           </Select>
                                         ) : /* Email Backend - Dropdown */
                                           setting.key === 'email_backend' || setting.key.match(/email_backend/i) ? (
                                             <Select
                                               value={getRowValue(setting) || 'smtp'}
-                                              onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                              className="w-full h-8 text-xs bg-white"
+                                              onValueChange={(val) => handleRowChange(setting, { value: val })}
                                               disabled={!canManage}
                                             >
-                                              <option value="smtp">SMTP</option>
-                                              <option value="sendgrid">SendGrid</option>
-                                              <option value="mailgun">Mailgun</option>
-                                              <option value="ses">Amazon SES</option>
-                                              <option value="django.core.mail.backends.smtp.EmailBackend">Django SMTP Backend</option>
+                                              <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="smtp">SMTP</SelectItem>
+                                                <SelectItem value="sendgrid">SendGrid</SelectItem>
+                                                <SelectItem value="mailgun">Mailgun</SelectItem>
+                                                <SelectItem value="ses">Amazon SES</SelectItem>
+                                                <SelectItem value="django.core.mail.backends.smtp.EmailBackend">Django SMTP Backend</SelectItem>
+                                              </SelectContent>
                                             </Select>
                                           ) : /* Payment Gateway - Dropdown */
                                             setting.key === 'payment_gateway' ? (
                                               <Select
                                                 value={getRowValue(setting) || ''}
-                                                onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                                className="w-full h-8 text-xs bg-white"
+                                                onValueChange={(val) => handleRowChange(setting, { value: val })}
                                                 disabled={!canManage}
                                               >
-                                                <option value="">None</option>
-                                                <option value="stripe">Stripe</option>
-                                                <option value="paypal">PayPal</option>
-                                                <option value="square">Square</option>
-                                                <option value="other">Other</option>
+                                                <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                  <SelectValue placeholder="None" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="none">None</SelectItem>
+                                                  <SelectItem value="stripe">Stripe</SelectItem>
+                                                  <SelectItem value="paypal">PayPal</SelectItem>
+                                                  <SelectItem value="square">Square</SelectItem>
+                                                  <SelectItem value="other">Other</SelectItem>
+                                                </SelectContent>
                                               </Select>
                                             ) : /* Late Fee Type - Dropdown */
                                               setting.key === 'late_fee_type' ? (
                                                 <Select
                                                   value={getRowValue(setting) || 'percentage'}
-                                                  onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                                  className="w-full h-8 text-xs bg-white"
+                                                  onValueChange={(val) => handleRowChange(setting, { value: val })}
                                                   disabled={!canManage}
                                                 >
-                                                  <option value="fixed">Fixed Amount</option>
-                                                  <option value="percentage">Percentage</option>
+                                                  <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                    <SelectValue />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="fixed">Fixed Amount</SelectItem>
+                                                    <SelectItem value="percentage">Percentage</SelectItem>
+                                                  </SelectContent>
                                                 </Select>
                                               ) : /* Currency - Dropdown */
                                                 setting.key === 'currency' ? (
                                                   <Select
                                                     value={getRowValue(setting) || 'USD'}
-                                                    onChange={(e) => {
-                                                      handleRowChange(setting, { value: e.target.value });
+                                                    onValueChange={(val) => {
+                                                      handleRowChange(setting, { value: val });
                                                       // Auto-update currency_symbol when currency changes
                                                       const currencyToSymbol: Record<string, string> = {
                                                         'USD': '$',
@@ -764,67 +789,83 @@ export default function SystemSettingsPage() {
                                                       };
                                                       const symbolSetting = settings.find(s => s.key === 'currency_symbol');
                                                       if (symbolSetting) {
-                                                        handleRowChange(symbolSetting, { value: currencyToSymbol[e.target.value] || '$' });
+                                                        handleRowChange(symbolSetting, { value: currencyToSymbol[val] || '$' });
                                                       }
                                                     }}
-                                                    className="w-full h-8 text-xs bg-white"
                                                     disabled={!canManage}
                                                   >
-                                                    <option value="USD">USD - US Dollar</option>
-                                                    <option value="EUR">EUR - Euro</option>
-                                                    <option value="GBP">GBP - British Pound</option>
-                                                    <option value="GHS">GHS - Ghanaian Cedi</option>
-                                                    <option value="NGN">NGN - Nigerian Naira</option>
-                                                    <option value="KES">KES - Kenyan Shilling</option>
-                                                    <option value="ZAR">ZAR - South African Rand</option>
-                                                    <option value="CAD">CAD - Canadian Dollar</option>
-                                                    <option value="AUD">AUD - Australian Dollar</option>
-                                                    <option value="JPY">JPY - Japanese Yen</option>
+                                                    <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                      <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                      <SelectItem value="USD">USD - US Dollar</SelectItem>
+                                                      <SelectItem value="EUR">EUR - Euro</SelectItem>
+                                                      <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                                                      <SelectItem value="GHS">GHS - Ghanaian Cedi</SelectItem>
+                                                      <SelectItem value="NGN">NGN - Nigerian Naira</SelectItem>
+                                                      <SelectItem value="KES">KES - Kenyan Shilling</SelectItem>
+                                                      <SelectItem value="ZAR">ZAR - South African Rand</SelectItem>
+                                                      <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                                                      <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
+                                                      <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
+                                                    </SelectContent>
                                                   </Select>
                                                 ) : /* Currency Symbol - Dropdown */
                                                   setting.key === 'currency_symbol' ? (
                                                     <Select
                                                       value={getRowValue(setting) || '$'}
-                                                      onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                                      className="w-full h-8 text-xs bg-white"
+                                                      onValueChange={(val) => handleRowChange(setting, { value: val })}
                                                       disabled={!canManage}
                                                     >
-                                                      <option value="$">$ - Dollar</option>
-                                                      <option value="€">€ - Euro</option>
-                                                      <option value="£">£ - Pound</option>
-                                                      <option value="₵">₵ - Cedi</option>
-                                                      <option value="₦">₦ - Naira</option>
-                                                      <option value="KSh">KSh - Shilling</option>
-                                                      <option value="R">R - Rand</option>
-                                                      <option value="CA$">CA$ - Canadian Dollar</option>
-                                                      <option value="A$">A$ - Australian Dollar</option>
-                                                      <option value="¥">¥ - Yen/Yuan</option>
+                                                      <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                        <SelectValue />
+                                                      </SelectTrigger>
+                                                      <SelectContent>
+                                                        <SelectItem value="$">$ - Dollar</SelectItem>
+                                                        <SelectItem value="€">€ - Euro</SelectItem>
+                                                        <SelectItem value="£">£ - Pound</SelectItem>
+                                                        <SelectItem value="₵">₵ - Cedi</SelectItem>
+                                                        <SelectItem value="₦">₦ - Naira</SelectItem>
+                                                        <SelectItem value="KSh">KSh - Shilling</SelectItem>
+                                                        <SelectItem value="R">R - Rand</SelectItem>
+                                                        <SelectItem value="CA$">CA$ - Canadian Dollar</SelectItem>
+                                                        <SelectItem value="A$">A$ - Australian Dollar</SelectItem>
+                                                        <SelectItem value="¥">¥ - Yen/Yuan</SelectItem>
+                                                      </SelectContent>
                                                     </Select>
                                                   ) : /* Log Level - Dropdown */
                                                     setting.key === 'log_level' ? (
                                                       <Select
                                                         value={getRowValue(setting) || 'INFO'}
-                                                        onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                                        className="w-full h-8 text-xs bg-white"
+                                                        onValueChange={(val) => handleRowChange(setting, { value: val })}
                                                         disabled={!canManage}
                                                       >
-                                                        <option value="DEBUG">DEBUG</option>
-                                                        <option value="INFO">INFO</option>
-                                                        <option value="WARNING">WARNING</option>
-                                                        <option value="ERROR">ERROR</option>
-                                                        <option value="CRITICAL">CRITICAL</option>
+                                                        <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                          <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                          <SelectItem value="DEBUG">DEBUG</SelectItem>
+                                                          <SelectItem value="INFO">INFO</SelectItem>
+                                                          <SelectItem value="WARNING">WARNING</SelectItem>
+                                                          <SelectItem value="ERROR">ERROR</SelectItem>
+                                                          <SelectItem value="CRITICAL">CRITICAL</SelectItem>
+                                                        </SelectContent>
                                                       </Select>
                                                     ) : /* Backup Frequency - Dropdown */
                                                       setting.key === 'backup_frequency' ? (
                                                         <Select
                                                           value={getRowValue(setting) || 'daily'}
-                                                          onChange={(e) => handleRowChange(setting, { value: e.target.value })}
-                                                          className="w-full h-8 text-xs bg-white"
+                                                          onValueChange={(val) => handleRowChange(setting, { value: val })}
                                                           disabled={!canManage}
                                                         >
-                                                          <option value="daily">Daily</option>
-                                                          <option value="weekly">Weekly</option>
-                                                          <option value="monthly">Monthly</option>
+                                                          <SelectTrigger className="w-full h-8 text-xs bg-white">
+                                                            <SelectValue />
+                                                          </SelectTrigger>
+                                                          <SelectContent>
+                                                            <SelectItem value="daily">Daily</SelectItem>
+                                                            <SelectItem value="weekly">Weekly</SelectItem>
+                                                            <SelectItem value="monthly">Monthly</SelectItem>
+                                                          </SelectContent>
                                                         </Select>
                                                       ) : /* Color inputs */
                                                         setting.key.match(/(primary_color|secondary_color|success_color|danger_color|warning_color|info_color)/i) ? (
@@ -1115,9 +1156,9 @@ export default function SystemSettingsPage() {
     }
 
     return (
-      <Card className="mb-4 border-blue-200 bg-blue-50/50 shadow-none">
+      <Card className="mb-4 border-orange-200 bg-primary/5 shadow-none">
         <CardContent className="p-3">
-          <p className="text-xs text-blue-800">
+          <p className="text-xs text-orange-800">
             Tax configuration is managed in the Tax & Compliance section. Configure VAT rates, tax exemptions, and compliance settings here.
           </p>
         </CardContent>

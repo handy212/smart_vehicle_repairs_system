@@ -341,15 +341,15 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                         </CardHeader>
                         <CardContent className="pt-4 space-y-3">
                             <label className="flex items-center space-x-2 cursor-pointer">
-                                <input type="checkbox" {...register("is_active")} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                <input type="checkbox" {...register("is_active")} className="rounded border-gray-300 text-primary focus:ring-primary" />
                                 <span className="text-sm">Active</span>
                             </label>
                             <label className="flex items-center space-x-2 cursor-pointer">
-                                <input type="checkbox" {...register("is_taxable")} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                <input type="checkbox" {...register("is_taxable")} className="rounded border-gray-300 text-primary focus:ring-primary" />
                                 <span className="text-sm">Taxable</span>
                             </label>
                             <label className="flex items-center space-x-2 cursor-pointer">
-                                <input type="checkbox" {...register("is_core")} className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                <input type="checkbox" {...register("is_core")} className="rounded border-gray-300 text-primary focus:ring-primary" />
                                 <span className="text-sm">Core Part</span>
                             </label>
                             {watch("is_core") && (

@@ -48,7 +48,7 @@ export default function InspectionsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -61,7 +61,7 @@ export default function InspectionsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
             <span>/</span>
             <span className="text-gray-900 dark:text-gray-100 font-medium">Inspections</span>
           </div>
@@ -76,7 +76,7 @@ export default function InspectionsPage() {
           </Link>
           <PermissionGuard permission="create_inspections">
             <Link href="/inspections/new">
-              <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+              <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
                 <Plus className="w-3.5 h-3.5 mr-2" />
                 New Inspection
               </Button>
@@ -102,7 +102,7 @@ export default function InspectionsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">All Status</option>
                 <option value="in_progress">In Progress</option>
@@ -113,7 +113,7 @@ export default function InspectionsPage() {
               <select
                 value={resultFilter}
                 onChange={(e) => setResultFilter(e.target.value)}
-                className="h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-9 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="">All Results</option>
                 <option value="pass">Pass</option>
@@ -194,7 +194,7 @@ export default function InspectionsPage() {
                       className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 cursor-pointer"
                       onDoubleClick={() => router.push(`/inspections/${inspection.id}`)}
                     >
-                      <TableCell className="py-2 font-mono text-xs font-medium text-blue-600">
+                      <TableCell className="py-2 font-mono text-xs font-medium text-primary">
                         {inspection.inspection_number}
                       </TableCell>
                       <TableCell className="py-2">
@@ -214,7 +214,7 @@ export default function InspectionsPage() {
                           className={cn(
                             "text-[10px] px-2 py-0.5 font-medium border shadow-none",
                             inspection.status === 'completed' && "border-green-200 text-green-700 bg-green-50/50",
-                            inspection.status === 'in_progress' && "border-blue-200 text-blue-700 bg-blue-50/50",
+                            inspection.status === 'in_progress' && "border-orange-200 text-orange-700 bg-primary/5",
                             inspection.status === 'approved' && "border-indigo-200 text-indigo-700 bg-indigo-50/50",
                             inspection.status === 'rejected' && "border-red-200 text-red-700 bg-red-50/50",
                           )}
@@ -244,7 +244,7 @@ export default function InspectionsPage() {
                         <div className="flex items-center gap-2">
                           <div className="w-16 bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
                             <div
-                              className="bg-blue-600 h-1.5 rounded-full transition-all duration-500"
+                              className="bg-primary h-1.5 rounded-full transition-all duration-500"
                               style={{
                                 width: `${inspection.completion_percentage || 0}%`,
                               }}

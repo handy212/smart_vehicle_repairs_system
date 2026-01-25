@@ -80,7 +80,7 @@ export default function MobileWorkOrdersPage() {
     return (
       <div className="p-4 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -177,7 +177,7 @@ export default function MobileWorkOrdersPage() {
                     className={cn(
                       "px-2 py-1 rounded text-xs font-medium mb-2",
                       wo.status === "in_progress" &&
-                      "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+                      "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
                       wo.status === "pending" &&
                       "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
                       wo.status === "waiting_for_parts" &&

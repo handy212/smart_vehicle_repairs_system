@@ -100,7 +100,7 @@ export function DocumentList({ customerId, vehicleId }: DocumentListProps) {
                                         <TableCell className="font-medium">
                                             <div className="flex items-center gap-2">
                                                 {doc.file_type.startsWith("image/") ? (
-                                                    <ImageIcon className="w-4 h-4 text-blue-500" />
+                                                    <ImageIcon className="w-4 h-4 text-primary" />
                                                 ) : (
                                                     <FileText className="w-4 h-4 text-orange-500" />
                                                 )}

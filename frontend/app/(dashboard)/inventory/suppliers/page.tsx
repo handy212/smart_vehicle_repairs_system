@@ -42,7 +42,7 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
   if (!stats) return null;
 
   const items = [
-    { label: "Total Suppliers", value: stats.total_suppliers, color: "text-blue-600" },
+    { label: "Total Suppliers", value: stats.total_suppliers, color: "text-primary" },
     { label: "Active", value: stats.active_suppliers, color: "text-green-600" },
     { label: "Preferred", value: stats.preferred_suppliers, color: "text-amber-600" },
   ];
@@ -107,9 +107,9 @@ export default function SuppliersPage() {
         <div className="flex justify-between items-center pt-2">
           <div>
             <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-              <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+              <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
               <span>/</span>
-              <Link href="/inventory" className="hover:text-blue-600 transition-colors">Inventory</Link>
+              <Link href="/inventory" className="hover:text-primary transition-colors">Inventory</Link>
               <span>/</span>
               <span className="text-gray-900 dark:text-gray-100 font-medium">Suppliers</span>
             </div>
@@ -223,7 +223,7 @@ export default function SuppliersPage() {
           </DropdownMenu>
 
           <Link href="/inventory/suppliers/new">
-            <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+            <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
               <Plus className="w-4 h-4 mr-2" />
               Add Supplier
             </Button>

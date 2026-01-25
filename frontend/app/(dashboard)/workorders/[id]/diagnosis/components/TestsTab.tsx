@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 interface TestsTabProps {
@@ -121,7 +121,7 @@ export function TestsTab({
                 <CardContent className="pt-4">
                     {isLoading ? (
                         <div className="flex items-center justify-center py-12">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                         </div>
                     ) : error ? (
                         <p className="text-sm text-red-600 text-center py-8">
@@ -192,7 +192,7 @@ export function TestsTab({
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            className="h-7 px-2 text-gray-500 hover:text-blue-600"
+                                            className="h-7 px-2 text-gray-500 hover:text-primary"
                                             onClick={() => setEditingTest(test)}
                                             disabled={isDisabled}
                                         >
@@ -382,12 +382,12 @@ function TestDialog({
                     <div className="flex-1 overflow-y-auto p-6 pt-2 space-y-6">
                         {/* Template Selection */}
                         {!test && (
-                            <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-lg p-4">
-                                <Label className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2 block">
+                            <div className="bg-primary/5 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800 rounded-lg p-4">
+                                <Label className="text-sm font-semibold text-orange-900 dark:text-orange-100 mb-2 block">
                                     Quick Start from Template
                                 </Label>
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-2.5 text-blue-400 w-4 h-4" />
+                                    <Search className="absolute left-3 top-2.5 text-orange-400 w-4 h-4" />
                                     <Input
                                         placeholder="Search test procedure library..."
                                         value={templateSearchQuery || formData.test_name}
@@ -397,11 +397,11 @@ function TestDialog({
                                                 setFormData({ ...formData, test_name: e.target.value });
                                             }
                                         }}
-                                        className="pl-9 border-blue-200 focus-visible:ring-blue-500 bg-white dark:bg-gray-900"
+                                        className="pl-9 border-orange-200 focus-visible:ring-primary bg-white dark:bg-gray-900"
                                     />
                                     {isSearchingTemplates && (
                                         <div className="absolute right-3 top-2.5">
-                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                                         </div>
                                     )}
                                 </div>
@@ -416,9 +416,9 @@ function TestDialog({
                                                     key={template.id}
                                                     type="button"
                                                     onClick={() => handleSelectTemplate(template)}
-                                                    className="w-full text-left p-3 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b border-gray-50 dark:border-gray-800 last:border-b-0 transition-colors group"
+                                                    className="w-full text-left p-3 hover:bg-primary/10 dark:hover:bg-orange-900/20 border-b border-gray-50 dark:border-gray-800 last:border-b-0 transition-colors group"
                                                 >
-                                                    <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-300">
+                                                    <div className="font-semibold text-sm text-gray-900 dark:text-gray-100 group-hover:text-orange-700 dark:group-hover:text-orange-300">
                                                         {template.name}
                                                     </div>
                                                     <div className="text-xs text-gray-500 mt-1 line-clamp-1">
@@ -447,24 +447,27 @@ function TestDialog({
                             <div className="space-y-2">
                                 <Label htmlFor="category" className="text-sm font-medium">Category <span className="text-red-500">*</span></Label>
                                 <Select
-                                    id="category"
                                     value={formData.category}
-                                    onChange={(e) => {
-                                        setFormData({ ...formData, category: e.target.value as any });
+                                    onValueChange={(val) => {
+                                        setFormData({ ...formData, category: val as any });
                                         setTemplateResults([]);
                                     }}
                                     required
-                                    className="h-9"
                                 >
-                                    <option value="electrical">Electrical</option>
-                                    <option value="mechanical">Mechanical</option>
-                                    <option value="performance">Performance</option>
-                                    <option value="fluid">Fluid</option>
-                                    <option value="pressure">Pressure</option>
-                                    <option value="temperature">Temperature</option>
-                                    <option value="visual">Visual</option>
-                                    <option value="road_test">Road Test</option>
-                                    <option value="other">Other</option>
+                                    <SelectTrigger id="category" className="h-9 w-full">
+                                        <SelectValue placeholder="Select category" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="electrical">Electrical</SelectItem>
+                                        <SelectItem value="mechanical">Mechanical</SelectItem>
+                                        <SelectItem value="performance">Performance</SelectItem>
+                                        <SelectItem value="fluid">Fluid</SelectItem>
+                                        <SelectItem value="pressure">Pressure</SelectItem>
+                                        <SelectItem value="temperature">Temperature</SelectItem>
+                                        <SelectItem value="visual">Visual</SelectItem>
+                                        <SelectItem value="road_test">Road Test</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
                                 </Select>
                             </div>
                         </div>
@@ -520,15 +523,18 @@ function TestDialog({
                             <div className="space-y-2">
                                 <Label htmlFor="status" className="text-sm font-medium">Status <span className="text-red-500">*</span></Label>
                                 <Select
-                                    id="status"
                                     value={formData.status}
-                                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                                    onValueChange={(val) => setFormData({ ...formData, status: val as any })}
                                     required
-                                    className="h-9"
                                 >
-                                    <option value="pass">Pass</option>
-                                    <option value="fail">Fail</option>
-                                    <option value="inconclusive">Inconclusive</option>
+                                    <SelectTrigger id="status" className="h-9 w-full">
+                                        <SelectValue placeholder="Select status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="pass">Pass</SelectItem>
+                                        <SelectItem value="fail">Fail</SelectItem>
+                                        <SelectItem value="inconclusive">Inconclusive</SelectItem>
+                                    </SelectContent>
                                 </Select>
                             </div>
                         </div>
@@ -538,7 +544,7 @@ function TestDialog({
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/90 text-white">
                             {isLoading ? "Saving..." : test ? "Update Test" : "Add Test"}
                         </Button>
                     </div>

@@ -143,7 +143,7 @@ export default function AppointmentCalendarPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -154,9 +154,9 @@ export default function AppointmentCalendarPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
             <span>/</span>
-            <Link href="/appointments" className="hover:text-blue-600 transition-colors">Appointments</Link>
+            <Link href="/appointments" className="hover:text-primary transition-colors">Appointments</Link>
             <span>/</span>
             <span className="text-gray-900 dark:text-gray-100 font-medium">Calendar</span>
           </div>
@@ -170,7 +170,7 @@ export default function AppointmentCalendarPage() {
             </Button>
           </Link>
           <Link href="/appointments/new">
-            <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+            <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
               <Plus className="w-3.5 h-3.5 mr-2" />
               New Appointment
             </Button>
@@ -244,7 +244,7 @@ export default function AppointmentCalendarPage() {
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded bg-blue-500"></div>
+              <div className="w-4 h-4 rounded bg-primary"></div>
               <span className="text-sm text-gray-700">Normal</span>
             </div>
             <div className="flex items-center space-x-2">

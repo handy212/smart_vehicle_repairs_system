@@ -275,7 +275,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                                 id="customer"
                                                 className={cn(
                                                     "w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-gray-800 transition-all",
-                                                    errors.customer ? "border-red-500 ring-red-500/10" : "border-gray-200 dark:border-gray-700 focus:ring-blue-500/10"
+                                                    errors.customer ? "border-red-500 ring-red-500/10" : "border-gray-200 dark:border-gray-700 focus:ring-primary/10"
                                                 )}
                                                 value={selectedCustomerId || ""}
                                                 onChange={(e) => {
@@ -317,7 +317,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                                 disabled={!selectedCustomerId || isLoadingVehicles}
                                                 className={cn(
                                                     "w-full h-11 px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 transition-all disabled:opacity-50",
-                                                    errors.vehicle ? "border-red-500 ring-red-500/10" : "border-gray-200 dark:border-gray-700 focus:ring-blue-500/10"
+                                                    errors.vehicle ? "border-red-500 ring-red-500/10" : "border-gray-200 dark:border-gray-700 focus:ring-primary/10"
                                                 )}
                                             >
                                                 <option value="">
@@ -347,10 +347,10 @@ export default function NewRoadsideRequestDashboardPage() {
                                 </div>
 
                                 {selectedCustomer && (
-                                    <div className="mt-4 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/50 space-y-3">
+                                    <div className="mt-4 p-4 rounded-xl bg-primary/5 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/50 space-y-3">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-700 dark:text-blue-300">
+                                                <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-700 dark:text-orange-300">
                                                     <UserIcon className="w-5 h-5" />
                                                 </div>
                                                 <div>
@@ -362,7 +362,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                         </div>
 
                                         {selectedVehicleId && (
-                                            <div className="pt-3 border-t border-blue-100 dark:border-blue-900/30">
+                                            <div className="pt-3 border-t border-orange-100 dark:border-orange-900/30">
                                                 {isLoadingSubscription ? (
                                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                         <div className="h-3 w-3 rounded-full border-2 border-primary border-r-transparent animate-spin" />
@@ -479,7 +479,7 @@ export default function NewRoadsideRequestDashboardPage() {
                                         {...register("service_type")}
                                         className={cn(
                                             "w-full h-11 px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 transition-all",
-                                            errors.service_type ? "border-red-500 ring-red-500/10" : "border-gray-200 dark:border-gray-700 focus:ring-blue-500/10"
+                                            errors.service_type ? "border-red-500 ring-red-500/10" : "border-gray-200 dark:border-gray-700 focus:ring-primary/10"
                                         )}
                                     >
                                         <option value="">Select Service Type</option>
@@ -559,7 +559,7 @@ export default function NewRoadsideRequestDashboardPage() {
 
                                 <div className="pt-2">
                                     <div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
-                                        <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+                                        <Info className="h-5 w-5 text-primary mt-0.5" />
                                         <div className="space-y-1">
                                             <p className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Policy Check</p>
                                             <p className="text-[11px] text-gray-500 leading-relaxed">System will auto-check AA Membership during submission and apply covered benefits immediately.</p>

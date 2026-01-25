@@ -275,7 +275,7 @@ export default function ReportsPage() {
                     {formatCurrency(dashboardData.week.revenue)}
                   </p>
                 </div>
-                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500 flex-shrink-0 ml-2" />
+                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0 ml-2" />
               </div>
             </CardContent>
           </Card>
@@ -341,7 +341,7 @@ export default function ReportsPage() {
         <TabsContent value="financial" className="space-y-4 sm:space-y-6">
           {revenueLoading && (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
           )}
           {revenueData && (
@@ -424,7 +424,7 @@ export default function ReportsPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      <p className="text-xl sm:text-2xl font-bold text-primary dark:text-primary">
                         {formatCurrency((revenueData.summary.service_revenue || 0))}
                       </p>
                       {revenueData.summary.total_paid > 0 && (

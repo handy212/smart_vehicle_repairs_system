@@ -4,7 +4,7 @@ URL configuration for accounts app
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
-from .views import UserViewSet
+from .views import UserViewSet, GoogleAuthView, ManualRegistrationView
 from .recaptcha_views import RecaptchaTokenObtainPairView
 from .admin_api_views import (
     SystemSettingsViewSet, AuditLogViewSet, SystemBackupViewSet,
@@ -14,6 +14,8 @@ from .admin_api_views import (
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
+router.register(r'google', GoogleAuthView, basename='google-auth')
+router.register(r'register', ManualRegistrationView, basename='manual-register')
 
 # Admin API routes
 admin_router = DefaultRouter()

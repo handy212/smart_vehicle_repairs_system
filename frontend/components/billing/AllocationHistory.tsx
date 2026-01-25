@@ -72,7 +72,7 @@ export function AllocationHistory({ paymentId }: AllocationHistoryProps) {
                         <div className="flex items-start justify-between">
                             <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <Receipt className="w-3.5 h-3.5 text-blue-600" />
+                                    <Receipt className="w-3.5 h-3.5 text-primary" />
                                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                         Invoice {allocation.invoice_number}
                                     </span>

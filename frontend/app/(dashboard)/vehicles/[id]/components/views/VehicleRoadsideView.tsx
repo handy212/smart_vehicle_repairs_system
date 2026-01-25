@@ -66,7 +66,7 @@ export function VehicleRoadsideView({ roadsideRequests }: VehicleRoadsideViewPro
                                         <TableCell className="px-4 py-2 text-right">
                                             <Link href={`/roadside/${req.id}`}>
                                                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Eye className="w-3.5 h-3.5 text-gray-500 hover:text-blue-600" />
+                                                    <Eye className="w-3.5 h-3.5 text-gray-500 hover:text-primary" />
                                                 </Button>
                                             </Link>
                                         </TableCell>

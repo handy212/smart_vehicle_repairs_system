@@ -8,7 +8,7 @@ import { workOrderTasksApi } from "@/lib/api/workorder-tasks";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { AxiosError } from "axios";
@@ -36,6 +36,8 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
     reset,
     setError,
@@ -105,11 +107,19 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
               <label htmlFor="task_type" className="block text-sm font-medium text-gray-700 mb-2">
                 Task Type *
               </label>
-              <Select id="task_type" {...register("task_type")} className="w-full">
-                <option value="inspection">Inspection</option>
-                <option value="repair">Repair</option>
-                <option value="replacement">Replacement</option>
-                <option value="diagnostic">Diagnostic</option>
+              <Select
+                value={watch("task_type")}
+                onValueChange={(val) => setValue("task_type", val as any)}
+              >
+                <SelectTrigger id="task_type" className="w-full">
+                  <SelectValue placeholder="Select task type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inspection">Inspection</SelectItem>
+                  <SelectItem value="repair">Repair</SelectItem>
+                  <SelectItem value="replacement">Replacement</SelectItem>
+                  <SelectItem value="diagnostic">Diagnostic</SelectItem>
+                </SelectContent>
               </Select>
               {errors.task_type && (
                 <p className="mt-1 text-sm text-red-600">{errors.task_type.message}</p>
@@ -170,7 +180,7 @@ export default function AddTaskDialog({ workOrderId, open, onClose, onSuccess }:
           </div>
         </form>
         <DialogFooter>
-          <Button type="button"variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit(onSubmit)} disabled={isSubmitting}>

@@ -135,10 +135,10 @@ export default function AddPartDialog({
           <DialogTitle>Add Part</DialogTitle>
         </DialogHeader>
         <div className="px-6 pb-2">
-          <div className="bg-blue-50 border border-blue-100 p-4 rounded-md mb-4">
-            <label className="block text-sm font-medium text-blue-900 mb-2">Search Inventory</label>
+          <div className="bg-primary/10 border border-orange-100 p-4 rounded-md mb-4">
+            <label className="block text-sm font-medium text-orange-900 mb-2">Search Inventory</label>
             <InventoryPartSearch onSelect={handleInventorySelect} />
-            <p className="text-xs text-blue-700 mt-2">
+            <p className="text-xs text-orange-700 mt-2">
               Searching inventory will auto-fill the part details below. You can still edit them manually.
             </p>
           </div>

@@ -8,7 +8,7 @@ import { billingApi, Invoice } from "@/lib/api/billing";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { AxiosError } from "axios";
@@ -52,6 +52,7 @@ export default function RecordPaymentDialog({
     reset,
     setError,
     watch,
+    setValue,
   } = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
@@ -155,17 +156,21 @@ export default function RecordPaymentDialog({
                   Payment Method *
                 </label>
                 <Select
-                  id="payment_method"
-                  {...register("payment_method")}
-                  className={`w-full ${errors.payment_method ? "border-red-500" : ""}`}
+                  value={watch("payment_method")}
+                  onValueChange={(val: any) => setValue("payment_method", val, { shouldValidate: true })}
                 >
-                  <option value="cash">Cash</option>
-                  <option value="check">Check</option>
-                  <option value="credit_card">Credit Card</option>
-                  <option value="debit_card">Debit Card</option>
-                  <option value="bank_transfer">Bank Transfer</option>
-                  <option value="online">Online Payment</option>
-                  <option value="other">Other</option>
+                  <SelectTrigger id="payment_method" className={errors.payment_method ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="check">Check</SelectItem>
+                    <SelectItem value="credit_card">Credit Card</SelectItem>
+                    <SelectItem value="debit_card">Debit Card</SelectItem>
+                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="online">Online Payment</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
                 </Select>
                 {errors.payment_method && (
                   <p className="mt-1 text-sm text-red-600">{errors.payment_method.message}</p>
@@ -249,13 +254,20 @@ export default function RecordPaymentDialog({
                   <label htmlFor="card_type" className="block text-sm font-medium text-gray-700 mb-2">
                     Card Type
                   </label>
-                  <Select id="card_type" {...register("card_type")} className="w-full">
-                    <option value="">Select type</option>
-                    <option value="visa">Visa</option>
-                    <option value="mastercard">Mastercard</option>
-                    <option value="amex">American Express</option>
-                    <option value="discover">Discover</option>
-                    <option value="other">Other</option>
+                  <Select
+                    value={watch("card_type") || ""}
+                    onValueChange={(val) => setValue("card_type", val)}
+                  >
+                    <SelectTrigger id="card_type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="visa">Visa</SelectItem>
+                      <SelectItem value="mastercard">Mastercard</SelectItem>
+                      <SelectItem value="amex">American Express</SelectItem>
+                      <SelectItem value="discover">Discover</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
               </div>

@@ -72,7 +72,7 @@ export default function TaxReportPage() {
 
             {isLoading ? (
                 <div className="flex justify-center items-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
             ) : report ? (
                 <div className="space-y-6">
@@ -162,7 +162,7 @@ export default function TaxReportPage() {
                                     <span className="font-medium">COVID-19 HRL</span>
                                     <span className="font-bold">{formatCurrency(report.tax_collected.hrl)}</span>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/30 rounded border-t-2 border-blue-500">
+                                <div className="flex justify-between items-center p-3 bg-primary/10 dark:bg-orange-900/30 rounded border-t-2 border-primary">
                                     <span className="font-bold text-lg">Total Collected</span>
                                     <span className="font-bold text-lg text-green-600">{formatCurrency(report.tax_collected.total)}</span>
                                 </div>

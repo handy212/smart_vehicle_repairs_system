@@ -174,6 +174,45 @@ def get_sms_settings():
     return get_settings(keys, defaults)
 
 
+def get_whatsapp_settings():
+    """Get all WhatsApp settings"""
+    keys = [
+        'whatsapp_enabled',
+        'whatsapp_access_token',
+        'whatsapp_phone_number_id',
+        'whatsapp_business_account_id',
+        'whatsapp_api_version',
+    ]
+    
+    defaults = {
+        'whatsapp_enabled': 'false',
+        'whatsapp_api_version': 'v22.0',
+    }
+    
+    settings_dict = get_settings(keys, defaults)
+    
+    # Fallback to environment variables/Django settings
+    from django.conf import settings
+    
+    # If not enabled in DB, check env
+    if settings_dict['whatsapp_enabled'] == 'false':
+        env_enabled = getattr(settings, 'WHATSAPP_ENABLED', False)
+        if env_enabled:
+            settings_dict['whatsapp_enabled'] = 'true'
+            
+    # Check other credentials
+    if not settings_dict.get('whatsapp_access_token'):
+        settings_dict['whatsapp_access_token'] = getattr(settings, 'WHATSAPP_ACCESS_TOKEN', '')
+        
+    if not settings_dict.get('whatsapp_phone_number_id'):
+        settings_dict['whatsapp_phone_number_id'] = getattr(settings, 'WHATSAPP_PHONE_NUMBER_ID', '')
+        
+    if not settings_dict.get('whatsapp_business_account_id'):
+        settings_dict['whatsapp_business_account_id'] = getattr(settings, 'WHATSAPP_BUSINESS_ACCOUNT_ID', '')
+        
+    return settings_dict
+
+
 def get_payment_settings():
     """Get all payment settings"""
     keys = [

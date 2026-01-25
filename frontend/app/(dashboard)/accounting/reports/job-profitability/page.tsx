@@ -83,7 +83,7 @@ export default function JobProfitabilityPage() {
                                         {formatCurrency(report.summary?.total_revenue || 0)}
                                     </p>
                                 </div>
-                                <DollarSign className="w-8 h-8 text-blue-600" />
+                                <DollarSign className="w-8 h-8 text-primary" />
                             </div>
                         </CardContent>
                     </Card>
@@ -124,7 +124,7 @@ export default function JobProfitabilityPage() {
                 <CardContent className="p-0">
                     {isLoading ? (
                         <div className="flex justify-center p-8">
-                            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
                         </div>
                     ) : report?.jobs?.length > 0 ? (
                         <div className="overflow-x-auto">

@@ -29,7 +29,7 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
             <CardHeader className="py-3 px-4 border-b bg-gray-50/30 dark:bg-gray-800/30">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="p-1 rounded bg-blue-500/10 text-blue-600">
+                        <div className="p-1 rounded bg-primary/10 text-primary">
                             <Wrench className="w-3.5 h-3.5" />
                         </div>
                         <CardTitle className="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
@@ -38,7 +38,7 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
                     </div>
                     <Link
                         href="/workorders"
-                        className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 transition-colors"
+                        className="text-[10px] font-bold uppercase tracking-widest text-primary dark:text-primary hover:text-orange-800 dark:hover:text-orange-300 flex items-center gap-1 transition-colors"
                     >
                         View Full Board
                         <ChevronRight className="w-3 h-3" />
@@ -61,12 +61,12 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
                                 <div className={cn(
                                     "flex items-center justify-center w-14 h-14 rounded-full border-2 transition-all duration-300",
                                     count > 0
-                                        ? "bg-white dark:bg-gray-950 border-blue-500 shadow-lg shadow-blue-500/10 scale-110"
+                                        ? "bg-white dark:bg-gray-950 border-primary shadow-lg shadow-primary/10 scale-110"
                                         : "bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-800 group-hover:border-gray-200"
                                 )}>
                                     <span className={cn(
                                         "text-2xl font-bold tracking-tight",
-                                        count > 0 ? "text-blue-600 dark:text-blue-400" : "text-gray-400"
+                                        count > 0 ? "text-primary dark:text-primary" : "text-gray-400"
                                     )}>
                                         {count}
                                     </span>
@@ -86,7 +86,7 @@ export function ShopPulse({ workOrderStats }: ShopPulseProps) {
 
                 <div className="mt-8 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-center gap-4 text-[10px] font-medium text-gray-400 uppercase tracking-widest">
                     <span className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                         Live Flow Monitoring
                     </span>
                 </div>

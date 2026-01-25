@@ -296,13 +296,13 @@ export default function VehiclesPage() {
       <Card className="shadow-sm border bg-white dark:bg-gray-800">
         <CardContent className="p-3 flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Active</span>
-          <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{stats?.active_vehicles || 0}</span>
+          <span className="text-lg font-bold text-primary dark:text-primary">{stats?.active_vehicles || 0}</span>
         </CardContent>
       </Card>
       <Card className="shadow-sm border bg-white dark:bg-gray-800">
         <CardContent className="p-3 flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">In Service</span>
-          <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{stats?.in_service_vehicles || 0}</span>
+          <span className="text-lg font-bold text-primary dark:text-primary">{stats?.in_service_vehicles || 0}</span>
         </CardContent>
       </Card>
       <Card className="shadow-sm border bg-white dark:bg-gray-800">
@@ -459,7 +459,7 @@ export default function VehiclesPage() {
 
           <PermissionGuard permission="create_vehicles">
             <Link href="/vehicles/new">
-              <Button size="sm" className="h-9 bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200">
+              <Button size="sm" className="h-9">
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Add Vehicle
               </Button>
@@ -495,7 +495,7 @@ export default function VehiclesPage() {
                           if (input) input.indeterminate = bulkSelection.isIndeterminate;
                         }}
                         onChange={bulkSelection.toggleSelectAll}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                       />
                     </th>
                     <th className="px-4 h-10 text-left text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -557,7 +557,7 @@ export default function VehiclesPage() {
                           type="checkbox"
                           checked={bulkSelection.isSelected(vehicle.id)}
                           onChange={() => bulkSelection.toggleSelection(vehicle.id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                         />
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">

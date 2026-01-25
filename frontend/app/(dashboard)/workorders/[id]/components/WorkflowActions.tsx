@@ -1090,8 +1090,8 @@ export default function WorkflowActions({
             </DialogDescription>
           </DialogHeader>
           <div className="px-6 pb-6 space-y-3">
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
-              <p className="text-sm text-blue-800 dark:text-blue-400">
+            <div className="bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-3">
+              <p className="text-sm text-orange-800 dark:text-primary">
                 <AlertCircle className="w-4 h-4 inline mr-1" />
                 This requires diagnosis notes and an estimated total greater than $0. The work order will move to "Awaiting Approval" status and notify the customer.
               </p>
@@ -1698,7 +1698,7 @@ function CompleteDiagnosisForm({
               id="requires_approval"
               checked={requiresApproval}
               onChange={(e) => setRequiresApproval(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
             />
             <Label htmlFor="requires_approval" className="cursor-pointer dark:text-gray-300">
               Requires Customer Approval
@@ -1804,7 +1804,7 @@ function ApproveForm({
               id="approval_method"
               value={approvalMethod}
               onChange={(e) => setApprovalMethod(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             >
               <option value="phone">Phone</option>
               <option value="email">Email</option>
@@ -1925,7 +1925,7 @@ function QualityCheckForm({
                   id="allTasksCompleted"
                   checked={checklist.allTasksCompleted}
                   onChange={() => handleChecklistChange('allTasksCompleted')}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
                 />
                 <Label htmlFor="allTasksCompleted" className="cursor-pointer dark:text-gray-300 text-sm">
                   All tasks completed
@@ -1943,7 +1943,7 @@ function QualityCheckForm({
                   id="allPartsInstalled"
                   checked={checklist.allPartsInstalled}
                   onChange={() => handleChecklistChange('allPartsInstalled')}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
                 />
                 <Label htmlFor="allPartsInstalled" className="cursor-pointer dark:text-gray-300 text-sm">
                   All parts installed or returned
@@ -1961,7 +1961,7 @@ function QualityCheckForm({
                   id="vehicleClean"
                   checked={checklist.vehicleClean}
                   onChange={() => handleChecklistChange('vehicleClean')}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
                 />
                 <Label htmlFor="vehicleClean" className="cursor-pointer dark:text-gray-300 text-sm">
                   Vehicle cleaned and presentable
@@ -1974,7 +1974,7 @@ function QualityCheckForm({
                   id="noDamage"
                   checked={checklist.noDamage}
                   onChange={() => handleChecklistChange('noDamage')}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
                 />
                 <Label htmlFor="noDamage" className="cursor-pointer dark:text-gray-300 text-sm">
                   No new damage or scratches
@@ -1987,7 +1987,7 @@ function QualityCheckForm({
                   id="testDrivePassed"
                   checked={checklist.testDrivePassed}
                   onChange={() => handleChecklistChange('testDrivePassed')}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
                 />
                 <Label htmlFor="testDrivePassed" className="cursor-pointer dark:text-gray-300 text-sm">
                   Test drive passed (if applicable)
@@ -2000,7 +2000,7 @@ function QualityCheckForm({
                   id="customerSatisfied"
                   checked={checklist.customerSatisfied}
                   onChange={() => handleChecklistChange('customerSatisfied')}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
                 />
                 <Label htmlFor="customerSatisfied" className="cursor-pointer dark:text-gray-300 text-sm">
                   Customer satisfaction confirmed
@@ -2029,7 +2029,7 @@ function QualityCheckForm({
                 id="passed"
                 checked={passed}
                 onChange={(e) => setPassed(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
               />
               <Label htmlFor="passed" className="cursor-pointer dark:text-gray-300">
                 Quality Check Passed
@@ -2179,8 +2179,8 @@ function MarkInvoicedForm({
     <>
       <form onSubmit={handleSubmit} className="px-6 pb-6">
         <div className="space-y-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
-            <p className="text-sm text-blue-800 dark:text-blue-400">
+          <div className="bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-3">
+            <p className="text-sm text-orange-800 dark:text-primary">
               <AlertCircle className="w-4 h-4 inline mr-1" />
               Odometer reading is required before marking as invoiced.
             </p>
@@ -2263,7 +2263,7 @@ function CloseWorkOrderForm({
               id="payment_received"
               checked={paymentReceived}
               onChange={(e) => setPaymentReceived(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"
             />
             <Label htmlFor="payment_received" className="cursor-pointer dark:text-gray-300">
               Payment received
@@ -2401,8 +2401,8 @@ function StartDiagnosisForm({
     <>
       <form onSubmit={handleSubmit} className="px-6 pb-6">
         <div className="space-y-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded p-3">
-            <p className="text-sm text-blue-800 dark:text-blue-400">
+          <div className="bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded p-3">
+            <p className="text-sm text-orange-800 dark:text-primary">
               <CheckCircle className="w-4 h-4 inline mr-1" />
               <strong>Assign to Mechanic/Technician:</strong>
             </p>
@@ -2416,7 +2416,7 @@ function StartDiagnosisForm({
               id="primary_technician"
               value={primaryTechnician}
               onChange={(e) => setPrimaryTechnician(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             >
               <option value="">Select Mechanic/Technician</option>
               {techniciansList.map((tech: any) => (
@@ -2435,7 +2435,7 @@ function StartDiagnosisForm({
               id="priority"
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             >
               <option value="low">Low</option>
               <option value="normal">Normal</option>
@@ -2508,7 +2508,7 @@ function AssignServiceCoordinatorForm({
               value={serviceCoordinatorId}
               onChange={(e) => setServiceCoordinatorId(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             >
               <option value="">Select Service Coordinator</option>
               {serviceCoordinatorsList.map((coord: any) => (
@@ -2610,7 +2610,7 @@ function CreateInspectionForm({
               value={templateId}
               onChange={(e) => setTemplateId(parseInt(e.target.value) || "")}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
             >
               <option value="">Select a template</option>
               {templates.map((template) => (

@@ -105,7 +105,7 @@ export default function PortalPage() {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[50vh]">
-                <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                 <p className="text-gray-500">Loading work order details...</p>
             </div>
         );
@@ -217,8 +217,8 @@ export default function PortalPage() {
                 {/* Right Column: Actions */}
                 <div className="space-y-6">
 
-                    <Card className="sticky top-24 border-blue-100 shadow-md">
-                        <CardHeader className="bg-blue-50/50 pb-4">
+                    <Card className="sticky top-24 border-orange-100 shadow-md">
+                        <CardHeader className="bg-primary/5 pb-4">
                             <CardTitle className="text-lg">Action Required</CardTitle>
                             <CardDescription>Please review the estimate above.</CardDescription>
                         </CardHeader>
@@ -245,7 +245,7 @@ export default function PortalPage() {
                                     </div>
 
                                     <Button
-                                        className="w-full bg-blue-600 hover:bg-blue-700 h-11 text-base group"
+                                        className="w-full bg-primary hover:bg-primary/90 h-11 text-base group"
                                         onClick={handleApprove}
                                         disabled={processing}
                                     >

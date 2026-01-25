@@ -203,11 +203,11 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                             {vehicle.owner ? (
                                 <Link href={`/customers/${typeof vehicle.owner === 'object' ? vehicle.owner.id : vehicle.owner}`}>
                                     <div className="flex items-center space-x-3 group hover:bg-gray-50 p-2 -m-2 rounded-md transition-colors">
-                                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-sm">
+                                        <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center text-primary font-semibold text-sm">
                                             {vehicle.owner_name?.charAt(0) || <User className="w-5 h-5" />}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                                            <p className="text-sm font-medium text-gray-900 group-hover:text-primary transition-colors truncate">
                                                 {vehicle.owner_name}
                                             </p>
                                             <p className="text-xs text-gray-500 flex items-center mt-0.5">

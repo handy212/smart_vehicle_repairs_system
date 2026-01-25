@@ -215,7 +215,7 @@ export default function RefundDetailPage() {
                                     <User className="h-4 w-4 text-gray-400" />
                                     <span className="text-sm font-medium text-gray-500">Customer</span>
                                 </div>
-                                <Link href={`/customers/${refund.customer}`} className="text-blue-600 hover:underline">
+                                <Link href={`/customers/${refund.customer}`} className="text-primary hover:underline">
                                     {refund.customer_name}
                                 </Link>
                             </div>
@@ -227,7 +227,7 @@ export default function RefundDetailPage() {
                                     <FileText className="h-4 w-4 text-gray-400" />
                                     <span className="text-sm font-medium text-gray-500">Invoice</span>
                                 </div>
-                                <Link href={`/billing/invoices/${refund.invoice}`} className="text-blue-600 hover:underline">
+                                <Link href={`/billing/invoices/${refund.invoice}`} className="text-primary hover:underline">
                                     View Invoice #{refund.invoice}
                                 </Link>
                             </div>
@@ -239,33 +239,33 @@ export default function RefundDetailPage() {
                                     <FileText className="h-4 w-4 text-gray-400" />
                                     <span className="text-sm font-medium text-gray-500">Original Payment</span>
                                 </div>
-                                <Link href={`/billing/payments/${refund.original_payment}`} className="text-blue-600 hover:underline">
+                                <Link href={`/billing/payments/${refund.original_payment}`} className="text-primary hover:underline">
                                     View Payment #{refund.original_payment}
                                 </Link>
                             </div>
                         </div>
 
-                        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-lg border border-blue-100 dark:border-blue-900">
-                            <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">Audit Trail</h4>
+                        <div className="bg-primary/10 dark:bg-orange-900/10 p-4 rounded-lg border border-orange-100 dark:border-orange-900">
+                            <h4 className="text-sm font-semibold text-orange-900 dark:text-orange-100 mb-2">Audit Trail</h4>
                             <div className="space-y-2 text-xs">
                                 <div className="flex justify-between">
-                                    <span className="text-blue-700 dark:text-blue-300">Requested</span>
-                                    <span className="text-blue-900 dark:text-blue-100">
+                                    <span className="text-orange-700 dark:text-orange-300">Requested</span>
+                                    <span className="text-orange-900 dark:text-orange-100">
                                         {format(new Date(refund.requested_at), 'MMM dd, HH:mm')} by {refund.requested_by_name}
                                     </span>
                                 </div>
                                 {refund.approved_at && (
                                     <div className="flex justify-between">
-                                        <span className="text-blue-700 dark:text-blue-300">Approved</span>
-                                        <span className="text-blue-900 dark:text-blue-100">
+                                        <span className="text-orange-700 dark:text-orange-300">Approved</span>
+                                        <span className="text-orange-900 dark:text-orange-100">
                                             {format(new Date(refund.approved_at), 'MMM dd, HH:mm')} by {refund.approved_by_name}
                                         </span>
                                     </div>
                                 )}
                                 {refund.processed_at && (
                                     <div className="flex justify-between">
-                                        <span className="text-blue-700 dark:text-blue-300">Processed</span>
-                                        <span className="text-blue-900 dark:text-blue-100">
+                                        <span className="text-orange-700 dark:text-orange-300">Processed</span>
+                                        <span className="text-orange-900 dark:text-orange-100">
                                             {format(new Date(refund.processed_at), 'MMM dd, HH:mm')} by {refund.processed_by_name}
                                         </span>
                                     </div>

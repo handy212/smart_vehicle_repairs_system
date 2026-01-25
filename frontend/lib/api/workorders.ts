@@ -294,6 +294,22 @@ export const workordersApi = {
       const response = await apiClient.post(`/workorders/parts/${id}/order/`);
       return response.data;
     },
+
+    createAndOrder: async (
+      id: number,
+      inventoryData: {
+        part_name: string;
+        part_number: string;
+        description: string;
+        cost_price: string;
+        selling_price?: string;
+        supplier_id: number;
+        minimum_stock_level?: number;
+      }
+    ): Promise<{ status: string; po_number: string; po_id: number; part_id: number; message: string }> => {
+      const response = await apiClient.post(`/workorders/parts/${id}/create_and_order/`, inventoryData);
+      return response.data;
+    },
     bulkOrder: async (ids: number[]): Promise<{ status: string; processed: number; po_numbers: string[]; errors: string[] }> => {
       const response = await apiClient.post(`/workorders/parts/bulk_order/`, { ids });
       return response.data;
@@ -328,7 +344,7 @@ export interface WorkOrderPart {
   unit_cost?: string;
   markup_percentage?: string;
   selling_price?: string;
-  status: 'draft' | 'pending' | 'ordered' | 'ready' | 'received' | 'installed' | 'returned';
+  status: 'draft' | 'pending' | 'po_created' | 'awaiting_stock' | 'received' | 'ready' | 'installed' | 'returned';
   installed_at?: string;
   installed_by?: number;
   installed_by_name?: string;

@@ -11,7 +11,7 @@ import { vehiclesApi } from "@/lib/api/vehicles";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
@@ -257,7 +257,7 @@ export default function EditWorkOrderPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -338,16 +338,14 @@ export default function EditWorkOrderPage() {
                       </label>
 
                       <Select
-                        id="customer"
-                        {...register("customer", { valueAsNumber: true })}
-                        className={`w-full ${errors.customer ? "border-red-500" : ""}`}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          setValue("customer", val);
-                          setSelectedCustomer(val);
+                        value={customer?.toString() || ""}
+                        onValueChange={(val) => {
+                          const numVal = parseInt(val);
+                          setValue("customer", numVal);
+                          setSelectedCustomer(numVal);
 
                           // Update selected customer data
-                          const customerData = customersData?.results?.find((c) => c.id === val);
+                          const customerData = customersData?.results?.find((c) => c.id === numVal);
                           if (customerData) {
                             setSelectedCustomerData({
                               id: customerData.id,
@@ -362,12 +360,16 @@ export default function EditWorkOrderPage() {
                           }
                         }}
                       >
-                        <option value="">Select a customer</option>
-                        {customersData?.results?.map((customer) => (
-                          <option key={customer.id} value={customer.id}>
-                            {customer.full_name || `${customer.user?.first_name || ''} ${customer.user?.last_name || ''}`.trim() || 'Unknown'}
-                          </option>
-                        ))}
+                        <SelectTrigger id="customer" className={`w-full ${errors.customer ? "border-red-500" : ""}`}>
+                          <SelectValue placeholder="Select a customer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customersData?.results?.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id.toString()}>
+                              {customer.full_name || `${customer.user?.first_name || ''} ${customer.user?.last_name || ''}`.trim() || 'Unknown'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
 
                       {errors.customer && (
@@ -420,24 +422,24 @@ export default function EditWorkOrderPage() {
                       </label>
 
                       <Select
-                        id="vehicle"
-                        {...register("vehicle", { valueAsNumber: true })}
-                        className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}
+                        value={vehicle?.toString() || ""}
+                        onValueChange={(val) => setValue("vehicle", parseInt(val))}
                         disabled={!selectedCustomer || !vehiclesData?.results?.length}
                       >
-                        <option value="">
-                          {!selectedCustomer
+                        <SelectTrigger id="vehicle" className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}>
+                          <SelectValue placeholder={!selectedCustomer
                             ? "Select a customer first"
                             : !vehiclesData?.results?.length
                               ? "No vehicles found"
-                              : "Select a vehicle"}
-                        </option>
-
-                        {vehiclesData?.results?.map((vehicle) => (
-                          <option key={vehicle.id} value={vehicle.id}>
-                            {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
-                          </option>
-                        ))}
+                              : "Select a vehicle"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {vehiclesData?.results?.map((vehicle) => (
+                            <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                              {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
                       </Select>
 
                       {errors.vehicle && (
@@ -495,13 +497,18 @@ export default function EditWorkOrderPage() {
                       Priority
                     </label>
                     <Select
-                      id="priority"
-                      {...register("priority")}
+                      value={watch("priority")}
+                      onValueChange={(val) => setValue("priority", val as any)}
                     >
-                      <option value="low">Low</option>
-                      <option value="normal">Normal</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
+                      <SelectTrigger id="priority" className="w-full">
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
                   <div>
@@ -509,22 +516,26 @@ export default function EditWorkOrderPage() {
                       Status
                     </label>
                     <Select
-                      id="status"
-                      {...register("status")}
-                      className={errors.status ? "border-red-500" : ""}
+                      value={watch("status")}
+                      onValueChange={(val) => setValue("status", val as any)}
                       disabled={!workOrder}
                     >
-                      {workOrder ? (() => {
-                        const validStatuses = getValidStatuses(workOrder.status);
-                        return validStatuses.map((status) => (
-                          <option key={status} value={status}>
-                            {STATUS_LABELS[status] || status}
-                            {status === workOrder.status ? " (current)" : ""}
-                          </option>
-                        ));
-                      })() : (
-                        <option value="">Loading...</option>
-                      )}
+                      <SelectTrigger id="status" className={`w-full ${errors.status ? "border-red-500" : ""}`}>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {workOrder ? (() => {
+                          const validStatuses = getValidStatuses(workOrder.status);
+                          return validStatuses.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {STATUS_LABELS[status] || status}
+                              {status === workOrder.status ? " (current)" : ""}
+                            </SelectItem>
+                          ));
+                        })() : (
+                          <SelectItem value="loading">Loading...</SelectItem>
+                        )}
+                      </SelectContent>
                     </Select>
                     {workOrder && (
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -565,7 +576,7 @@ export default function EditWorkOrderPage() {
                   {isSubmitting ? "Saving..." : "Save Changes"}
                 </Button>
                 <Link href={`/workorders/${workOrderId}`}>
-                  <Button type="button"variant="secondary" className="w-full">
+                  <Button type="button" variant="secondary" className="w-full">
                     Cancel
                   </Button>
                 </Link>

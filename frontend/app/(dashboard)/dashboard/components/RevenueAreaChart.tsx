@@ -154,9 +154,9 @@ const RevenueAreaChart = memo(function RevenueAreaChart({ data }: RevenueAreaCha
     <div className="space-y-4">
       {/* Summary Statistics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-          <p className="text-xs text-blue-600 dark:text-blue-400 mb-1">Total Revenue</p>
-          <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
+        {/* <div className="p-3 rounded-lg bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+          <p className="text-xs text-primary dark:text-primary mb-1">Total Revenue</p>
+          <p className="text-lg font-bold text-orange-900 dark:text-orange-100">
             ${parseFloat(String(stats.total)).toLocaleString(undefined, {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,

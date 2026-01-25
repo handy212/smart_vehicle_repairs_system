@@ -78,7 +78,7 @@ export default function FixedAssetsListPage() {
             cell: (asset: FixedAsset) => (
                 <Link
                     href={`/fixed-assets/${asset.id}`}
-                    className="font-mono text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline"
+                    className="font-mono text-xs font-bold text-primary hover:text-orange-700 hover:underline"
                 >
                     {asset.asset_number}
                 </Link>
@@ -130,7 +130,7 @@ export default function FixedAssetsListPage() {
             accessor: "net_book_value" as const,
             className: "w-32 text-right",
             cell: (asset: FixedAsset) => (
-                <span className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">
+                <span className="font-mono text-xs font-bold text-primary dark:text-primary">
                     {formatCurrency(asset.net_book_value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </span>
             ),
@@ -216,8 +216,8 @@ export default function FixedAssetsListPage() {
                                         </p>
                                     </div>
                                     <div className="flex-shrink-0">
-                                        <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                                            <Package className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                        <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center">
+                                            <Package className="w-5 h-5 text-primary dark:text-primary" />
                                         </div>
                                     </div>
                                 </div>
@@ -231,7 +231,7 @@ export default function FixedAssetsListPage() {
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
                                             Net Book Value
                                         </p>
-                                        <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
+                                        <p className="text-2xl font-black text-primary dark:text-primary mt-1">
                                             {formatCurrency(stats.total_net_book_value, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                         </p>
                                         <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
@@ -239,8 +239,8 @@ export default function FixedAssetsListPage() {
                                         </p>
                                     </div>
                                     <div className="flex-shrink-0">
-                                        <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                                            <TrendingDown className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                                        <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center">
+                                            <TrendingDown className="w-5 h-5 text-primary dark:text-primary" />
                                         </div>
                                     </div>
                                 </div>
@@ -312,7 +312,7 @@ export default function FixedAssetsListPage() {
                                 <select
                                     value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option value="active">Active</option>
                                     <option value="">All Statuses</option>
@@ -324,7 +324,7 @@ export default function FixedAssetsListPage() {
                                 <select
                                     value={categoryFilter}
                                     onChange={(e) => setCategoryFilter(e.target.value)}
-                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="h-9 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option value="">All Categories</option>
                                     {categories?.map((cat) => (

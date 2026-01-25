@@ -17,7 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { DataTable, Column } from '@/components/shared/DataTable';
 import api from '@/lib/api/client';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Clock, History, FileText } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { TemplateManager } from '@/components/sms/TemplateManager';
@@ -341,9 +341,9 @@ export default function SMSConsolePage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-[10px] uppercase text-gray-500 font-semibold tracking-wider">Scheduled</p>
-                                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{stats?.scheduled || 0}</p>
+                                    <p className="text-2xl font-bold text-primary dark:text-primary mt-1">{stats?.scheduled || 0}</p>
                                 </div>
-                                <Clock className="h-8 w-8 text-blue-500 opacity-20" />
+                                <Clock className="h-8 w-8 text-primary opacity-20" />
                             </div>
                         </CardContent>
                     </Card>
@@ -423,14 +423,17 @@ export default function SMSConsolePage() {
                                         <TemplateManager />
                                     </div>
                                     <Select
-                                        className="w-full h-9 text-sm"
-                                        onChange={(e) => setMessage(e.target.value)}
                                         value=""
+                                        onValueChange={(val) => setMessage(val)}
                                     >
-                                        <option value="" disabled>Select a template...</option>
-                                        {(templates as any[])?.map((t: any) => (
-                                            <option key={t.id} value={t.sms_body}>{t.name}</option>
-                                        ))}
+                                        <SelectTrigger className="w-full h-9 text-sm">
+                                            <SelectValue placeholder="Select a template..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(templates as any[])?.map((t: any) => (
+                                                <SelectItem key={t.id} value={t.sms_body}>{t.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="flex-1">
@@ -548,7 +551,7 @@ export default function SMSConsolePage() {
                                             {recipients.map((r, i) => (
                                                 <div key={i} className="flex justify-between items-center bg-muted/50 p-2 rounded text-sm">
                                                     <div className="flex items-center gap-2 overflow-hidden">
-                                                        {r.type === 'user' ? <Users className="h-3 w-3 text-blue-500 shrink-0" /> : <Phone className="h-3 w-3 text-green-500 shrink-0" />}
+                                                        {r.type === 'user' ? <Users className="h-3 w-3 text-primary shrink-0" /> : <Phone className="h-3 w-3 text-green-500 shrink-0" />}
                                                         <span className="truncate" title={r.name}>{r.name}</span>
                                                     </div>
                                                     <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleRemoveRecipient(i)}>

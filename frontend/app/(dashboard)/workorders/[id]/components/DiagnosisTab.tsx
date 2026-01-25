@@ -55,7 +55,7 @@ export default function DiagnosisTab({
     return (
       <Card>
         <CardContent className="py-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-gray-500">Loading diagnosis...</p>
         </CardContent>
       </Card>
@@ -146,7 +146,7 @@ export default function DiagnosisTab({
           {diagnosis.root_cause && (
             <div>
               <Label className="text-sm font-semibold mb-2 block">Root Cause</Label>
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+              <div className="p-3 bg-primary/10 dark:bg-orange-900/20 rounded-md border border-orange-200 dark:border-orange-800">
                 <p className="text-sm font-medium mb-1">{diagnosis.root_cause}</p>
                 {diagnosis.root_cause_explanation && (
                   <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -223,10 +223,10 @@ export default function DiagnosisTab({
                 )}
               </div>
               {diagnosis.total_estimated_cost && (
-                <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                <div className="mt-4 p-3 bg-primary/10 dark:bg-orange-900/20 rounded-md border border-orange-200 dark:border-orange-800">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold">Total Estimated Cost</span>
-                    <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                    <span className="text-lg font-bold text-primary dark:text-primary">
                       {formatCurrency(Number(diagnosis.total_estimated_cost))}
                     </span>
                   </div>

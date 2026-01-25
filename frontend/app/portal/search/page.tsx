@@ -121,7 +121,7 @@ export default function SearchPage() {
                               </p>
                             )}
                           </div>
-                          <Car className="w-6 h-6 text-blue-500" />
+                          <Car className="w-6 h-6 text-primary" />
                         </div>
                       </CardContent>
                     </Card>
@@ -160,7 +160,7 @@ export default function SearchPage() {
                                 {result.status}
                               </Badge>
                             )}
-                            <Calendar className="w-6 h-6 text-blue-500" />
+                            <Calendar className="w-6 h-6 text-primary" />
                           </div>
                         </div>
                       </CardContent>
@@ -208,7 +208,7 @@ export default function SearchPage() {
                                 {result.status}
                               </Badge>
                             )}
-                            <FileText className="w-6 h-6 text-blue-500" />
+                            <FileText className="w-6 h-6 text-primary" />
                           </div>
                         </div>
                       </CardContent>
@@ -256,7 +256,7 @@ export default function SearchPage() {
                                 {result.status}
                               </Badge>
                             )}
-                            <FileText className="w-6 h-6 text-blue-500" />
+                            <FileText className="w-6 h-6 text-primary" />
                           </div>
                         </div>
                       </CardContent>
@@ -296,7 +296,7 @@ export default function SearchPage() {
                                 {result.status}
                               </Badge>
                             )}
-                            <CreditCard className="w-6 h-6 text-blue-500" />
+                            <CreditCard className="w-6 h-6 text-primary" />
                           </div>
                         </div>
                       </CardContent>

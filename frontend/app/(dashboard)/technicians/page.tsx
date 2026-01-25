@@ -51,7 +51,7 @@ export default function TechniciansPage() {
     const getStatusColor = (status: Technician['current_status']) => {
         switch (status) {
             case 'available': return "bg-green-500/15 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800";
-            case 'busy': return "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800";
+            case 'busy': return "bg-primary/15 text-orange-700 dark:text-primary border-orange-200 dark:border-orange-800";
             case 'break': return "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800";
             case 'offline': return "bg-gray-500/15 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-gray-800";
             default: return "";
@@ -62,7 +62,6 @@ export default function TechniciansPage() {
         <div className="space-y-4">
             <StaffPageHeader
                 title="Technicians"
-                description="Manage field service technicians and their schedules."
                 breadcrumbs={[
                     { label: "Dashboard", href: "/dashboard" },
                     { label: "Technicians" }
@@ -81,32 +80,32 @@ export default function TechniciansPage() {
 
             {/* Stats Overview */}
             {!isLoading && data?.results && (
-                <StaffStatsGrid
-                    stats={[
-                        {
-                            title: "Total Technicians",
-                            value: data.results.length,
-                            icon: Users,
-                        },
-                        {
-                            title: "Available",
-                            value: data.results.filter(t => t.current_status === 'available').length,
-                            icon: CheckCircle2,
-                            trend: { value: "Ready", label: "for assignment", positive: true }
-                        },
-                        {
-                            title: "Busy / On Job",
-                            value: data.results.filter(t => ['busy', 'break'].includes(t.current_status)).length,
-                            icon: Clock,
-                            trend: { value: "Active", label: "working", positive: undefined }
-                        },
-                        {
-                            title: "Offline",
-                            value: data.results.filter(t => t.current_status === 'offline').length,
-                            icon: AlertCircle,
-                        }
-                    ]}
-                />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <Card className="shadow-sm border bg-white dark:bg-gray-800">
+                        <CardContent className="p-3 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</span>
+                            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{data.results.length}</span>
+                        </CardContent>
+                    </Card>
+                    <Card className="shadow-sm border bg-white dark:bg-gray-800">
+                        <CardContent className="p-3 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Available</span>
+                            <span className="text-lg font-bold text-green-600 dark:text-green-400">{data.results.filter(t => t.current_status === 'available').length}</span>
+                        </CardContent>
+                    </Card>
+                    <Card className="shadow-sm border bg-white dark:bg-gray-800">
+                        <CardContent className="p-3 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Busy</span>
+                            <span className="text-lg font-bold text-primary dark:text-primary">{data.results.filter(t => ['busy', 'break'].includes(t.current_status)).length}</span>
+                        </CardContent>
+                    </Card>
+                    <Card className="shadow-sm border bg-white dark:bg-gray-800">
+                        <CardContent className="p-3 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Offline</span>
+                            <span className="text-lg font-bold text-gray-500 dark:text-gray-400">{data.results.filter(t => t.current_status === 'offline').length}</span>
+                        </CardContent>
+                    </Card>
+                </div>
             )}
 
             {/* Filter Bar - Lightweight */}
@@ -247,8 +246,8 @@ export default function TechniciansPage() {
                                 ))
                             ) : (
                                 <div className="col-span-full flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-lg bg-muted/50">
-                                    <div className="rounded-full bg-blue-100 dark:bg-blue-900/20 p-4 mb-4">
-                                        <Search className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                                    <div className="rounded-full bg-orange-100 dark:bg-orange-900/20 p-4 mb-4">
+                                        <Search className="h-8 w-8 text-primary dark:text-primary" />
                                     </div>
                                     <h3 className="text-lg font-semibold">No technicians found</h3>
                                     <p className="text-muted-foreground max-w-sm mt-2 mb-6">

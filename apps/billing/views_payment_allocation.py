@@ -1,3 +1,18 @@
+from rest_framework import viewsets, status, serializers
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
+from decimal import Decimal
+import logging
+from django.db import transaction
+
+from apps.billing.models import PaymentAllocation, Payment, Invoice
+from apps.billing.serializers import PaymentAllocationSerializer
+
+logger = logging.getLogger(__name__)
+
 class PaymentAllocationViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing payment allocations
@@ -96,7 +111,6 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
             )
         
         # Create allocations in a transaction
-        from django.db import transaction
         created_allocations = []
         
         try:
@@ -116,8 +130,16 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
                     except Invoice.DoesNotExist:
                         raise serializers.ValidationError(f"Invoice {invoice_id} not found")
                     
-                    # Validate  allocation doesn't exceed invoice balance
-                    if amount > invoice.amount_due:
+                    # Validate allocation doesn't exceed invoice balance
+                    # Logic adjustment: If the payment is already applied to this invoice (linked),
+                    # we should count it as available balance for allocation purposes.
+                    allowable_balance = invoice.amount_due
+                    
+                    # If this payment is the one linked to the invoice, add its value back to the allowable balance
+                    if payment.invoice_id == invoice.id:
+                        allowable_balance += payment.amount
+                        
+                    if amount > allowable_balance:
                         raise serializers.ValidationError(
                             f"Allocation amount ({amount}) exceeds invoice {invoice.invoice_number} balance ({invoice.amount_due})"
                         )

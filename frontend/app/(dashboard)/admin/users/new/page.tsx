@@ -10,7 +10,7 @@ import { branchesApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, AlertCircle, Building2, Info, RefreshCw, Copy, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
@@ -324,15 +324,15 @@ export default function NewUserPage() {
         </div>
         <div className="flex space-x-4">
           <Link href="/admin/users">
-            <Button type="button"variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
+            <Button type="button" variant="secondary" className="dark:border-gray-700 dark:text-gray-200">
               Cancel
             </Button>
           </Link>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             form="user-create-form"
-            disabled={isSubmitting || createMutation.isPending} 
-            className="dark:bg-blue-600 dark:hover:bg-blue-700 min-w-[120px]"
+            disabled={isSubmitting || createMutation.isPending}
+            className="dark:bg-primary dark:hover:bg-primary/90 min-w-[120px]"
           >
             {isSubmitting || createMutation.isPending ? (
               <span className="flex items-center gap-2">
@@ -348,407 +348,413 @@ export default function NewUserPage() {
 
       <form id="user-create-form" onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-6">
-            <Card className="dark:bg-gray-800 dark:border-gray-700">
-              <CardHeader>
-                <CardTitle className="dark:text-white text-lg">Basic Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {serverError && (
-                  <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-700 dark:text-red-400 px-4 py-3 rounded-r flex items-start">
-                    <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">{serverError}</span>
-                  </div>
-                )}
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
+            <CardHeader>
+              <CardTitle className="dark:text-white text-lg">Basic Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {serverError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 text-red-700 dark:text-red-400 px-4 py-3 rounded-r flex items-start">
+                  <AlertCircle className="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">{serverError}</span>
+                </div>
+              )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Email <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      type="email"
-                      placeholder="user@example.com"
-                      {...register("email")}
-                      className={errors.email ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
-                    />
-                    {errors.email && (
-                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.email.message}
-                      </p>
-                    )}
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="email"
+                    placeholder="user@example.com"
+                    {...register("email")}
+                    className={errors.email ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                  />
+                  {errors.email && (
+                    <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.email.message}
+                    </p>
+                  )}
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Username <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      placeholder="username"
-                      {...register("username")}
-                      className={errors.username ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
-                    />
-                    {errors.username && (
-                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.username.message}
-                      </p>
-                    )}
-                  </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Username <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    placeholder="username"
+                    {...register("username")}
+                    className={errors.username ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                  />
+                  {errors.username && (
+                    <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.username.message}
+                    </p>
+                  )}
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      First Name <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      placeholder="John"
-                      {...register("first_name")}
-                      className={errors.first_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
-                    />
-                    {errors.first_name && (
-                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.first_name.message}
-                      </p>
-                    )}
-                  </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    First Name <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    placeholder="John"
+                    {...register("first_name")}
+                    className={errors.first_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                  />
+                  {errors.first_name && (
+                    <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.first_name.message}
+                    </p>
+                  )}
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Last Name <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      placeholder="Doe"
-                      {...register("last_name")}
-                      className={errors.last_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
-                    />
-                    {errors.last_name && (
-                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.last_name.message}
-                      </p>
-                    )}
-                  </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Last Name <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    placeholder="Doe"
+                    {...register("last_name")}
+                    className={errors.last_name ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
+                  />
+                  {errors.last_name && (
+                    <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.last_name.message}
+                    </p>
+                  )}
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Phone</label>
-                    <Input
-                      type="tel"
-                      placeholder="(555) 123-4567"
-                      {...register("phone")}
-                      className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Phone</label>
+                  <Input
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    {...register("phone")}
+                    className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Role <span className="text-red-500">*</span>
-                    </label>
-                    <Select
-                      {...register("role")}
-                      className={errors.role ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}
-                    >
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Role <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    value={watch("role")}
+                    onValueChange={(val: any) => setValue("role", val, { shouldValidate: true })}
+                  >
+                    <SelectTrigger className={errors.role ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
                       {ROLE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
+                        <SelectItem key={option.value} value={option.value}>
                           {option.label}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </Select>
-                    {errors.role && (
-                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.role.message}
-                      </p>
-                    )}
-                  </div>
+                    </SelectContent>
+                  </Select>
+                  {errors.role && (
+                    <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.role.message}
+                    </p>
+                  )}
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Password <span className="text-red-500">*</span>
-                    </label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Input
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Minimum 8 characters"
-                          {...register("password")}
-                          className={errors.password ? "border-red-500 dark:border-red-500 pr-10" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                          title={showPassword ? "Hide password" : "Show password"}
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      <Button
-                        type="button"
-                       variant="secondary"
-                        onClick={handleGeneratePassword}
-                        className="dark:border-gray-600 dark:text-gray-300"
-                        title="Generate secure password"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                      </Button>
-                      {passwordValue && (
-                        <Button
-                          type="button"
-                         variant="secondary"
-                          onClick={handleCopyPassword}
-                          className="dark:border-gray-600 dark:text-gray-300"
-                          title="Copy password"
-                        >
-                          {passwordCopied ? (
-                            <span className="text-xs text-green-600 dark:text-green-400">Copied!</span>
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                    {errors.password && (
-                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.password.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Confirm Password <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
                       <Input
-                        type={showPassword2 ? "text" : "password"}
-                        placeholder="Re-enter password"
-                        {...register("password2")}
-                        className={errors.password2 ? "border-red-500 dark:border-red-500 pr-10" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"}
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Minimum 8 characters"
+                        {...register("password")}
+                        className={errors.password ? "border-red-500 dark:border-red-500 pr-10" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"}
                       />
                       <button
                         type="button"
-                        onClick={() => setShowPassword2(!showPassword2)}
+                        onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                        title={showPassword2 ? "Hide password" : "Show password"}
+                        title={showPassword ? "Hide password" : "Show password"}
                       >
-                        {showPassword2 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
-                    {errors.password2 && (
-                      <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.password2.message}
-                      </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={handleGeneratePassword}
+                      className="dark:border-gray-600 dark:text-gray-300"
+                      title="Generate secure password"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
+                    {passwordValue && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleCopyPassword}
+                        className="dark:border-gray-600 dark:text-gray-300"
+                        title="Copy password"
+                      >
+                        {passwordCopied ? (
+                          <span className="text-xs text-green-600 dark:text-green-400">Copied!</span>
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
                     )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Branch Assignment and Employment Information - Combined */}
-            <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-blue-500">
-              <CardHeader>
-                <CardTitle className="dark:text-white flex items-center gap-2 text-lg">
-                  <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  Branch Assignment & Employment Information
-                  <span className="text-red-500 text-sm font-normal">*</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Branch Assignment - Left Side */}
-                  <div className="space-y-6">
-                {isManager ? (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                      Managed Branches <span className="text-red-500">*</span>
-                    </label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                      Select all branches this manager should oversee
+                  {errors.password && (
+                    <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.password.message}
                     </p>
-                    <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3 dark:bg-gray-700/50 bg-gray-50">
-                      {branches.length > 0 ? (
-                        branches.map((branch) => (
-                          <label
-                            key={branch.id}
-                            className="flex items-center space-x-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 p-3 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              value={branch.id}
-                              {...register("managed_branches", {
-                                setValueAs: (value) => {
-                                  const current = watch("managed_branches") || [];
-                                  if (Array.isArray(value)) {
-                                    return value.map(Number);
-                                  }
-                                  const branchId = Number(value);
-                                  if (current.includes(branchId)) {
-                                    return current.filter((id) => id !== branchId);
-                                  }
-                                  return [...current, branchId];
-                                },
-                              })}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-5 h-5"
-                            />
-                            <div className="flex-1">
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{branch.name}</span>
-                              {branch.code && (
-                                <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">({branch.code})</span>
-                              )}
-                            </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Confirm Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword2 ? "text" : "password"}
+                      placeholder="Re-enter password"
+                      {...register("password2")}
+                      className={errors.password2 ? "border-red-500 dark:border-red-500 pr-10" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white pr-10"}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword2(!showPassword2)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                      title={showPassword2 ? "Hide password" : "Show password"}
+                    >
+                      {showPassword2 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {errors.password2 && (
+                    <p className="text-red-500 dark:text-red-400 text-xs mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {errors.password2.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Branch Assignment and Employment Information - Combined */}
+          <Card className="dark:bg-gray-800 dark:border-gray-700 border-l-4 border-l-primary">
+            <CardHeader>
+              <CardTitle className="dark:text-white flex items-center gap-2 text-lg">
+                <Building2 className="w-5 h-5 text-primary dark:text-primary" />
+                Branch Assignment & Employment Information
+                <span className="text-red-500 text-sm font-normal">*</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Branch Assignment - Left Side */}
+                <div className="space-y-6">
+                  {isManager ? (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                        Managed Branches <span className="text-red-500">*</span>
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        Select all branches this manager should oversee
+                      </p>
+                      <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3 dark:bg-gray-700/50 bg-gray-50">
+                        {branches.length > 0 ? (
+                          branches.map((branch) => (
+                            <label
+                              key={branch.id}
+                              className="flex items-center space-x-3 cursor-pointer hover:bg-primary/10 dark:hover:bg-orange-900/20 p-3 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors"
+                            >
+                              <input
+                                type="checkbox"
+                                value={branch.id}
+                                {...register("managed_branches", {
+                                  setValueAs: (value) => {
+                                    const current = watch("managed_branches") || [];
+                                    if (Array.isArray(value)) {
+                                      return value.map(Number);
+                                    }
+                                    const branchId = Number(value);
+                                    if (current.includes(branchId)) {
+                                      return current.filter((id) => id !== branchId);
+                                    }
+                                    return [...current, branchId];
+                                  },
+                                })}
+                                className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-5 h-5"
+                              />
+                              <div className="flex-1">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{branch.name}</span>
+                                {branch.code && (
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">({branch.code})</span>
+                                )}
+                              </div>
+                            </label>
+                          ))
+                        ) : (
+                          <div className="text-center py-8">
+                            <Building2 className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                            <p className="text-sm text-gray-500 dark:text-gray-400">No active branches available</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Create a branch first before assigning users</p>
+                          </div>
+                        )}
+                      </div>
+                      {errors.managed_branches && (
+                        <p className="text-red-500 dark:text-red-400 text-xs mt-2 flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.managed_branches.message}
+                        </p>
+                      )}
+
+                      {/* Additional Options for Managers */}
+                      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="is_active"
+                            {...register("is_active")}
+                            className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                          />
+                          <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            User is active
                           </label>
-                        ))
-                      ) : (
-                        <div className="text-center py-8">
-                          <Building2 className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-                          <p className="text-sm text-gray-500 dark:text-gray-400">No active branches available</p>
-                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Create a branch first before assigning users</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="send_welcome_email"
+                            {...register("send_welcome_email")}
+                            className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                          />
+                          <label htmlFor="send_welcome_email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Do not send welcome letter
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                        Assigned Branch <span className="text-red-500">*</span>
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        Select the primary branch for this staff member
+                      </p>
+                      <Select
+                        value={watch("branch")?.toString() || ""}
+                        onValueChange={(val) => setValue("branch", val ? Number(val) : null, { shouldValidate: true })}
+                      >
+                        <SelectTrigger className={errors.branch ? "border-red-500 dark:border-red-500" : "dark:bg-gray-700 dark:border-gray-600 dark:text-white"}>
+                          <SelectValue placeholder="-- Select a branch --" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {branches.map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id.toString()}>
+                              {branch.name} {branch.code ? `(${branch.code})` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.branch && (
+                        <p className="text-red-500 dark:text-red-400 text-xs mt-2 flex items-center gap-1">
+                          <AlertCircle className="w-4 h-4" />
+                          {errors.branch.message}
+                        </p>
+                      )}
+                      {branches.length === 0 && (
+                        <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                          <p className="text-xs text-yellow-800 dark:text-yellow-400 flex items-center gap-2">
+                            <Info className="w-4 h-4" />
+                            No active branches available. Create a branch first before assigning users.
+                          </p>
                         </div>
                       )}
-                    </div>
-                    {errors.managed_branches && (
-                      <p className="text-red-500 dark:text-red-400 text-xs mt-2 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4" />
-                        {errors.managed_branches.message}
-                      </p>
-                    )}
-                    
-                    {/* Additional Options for Managers */}
-                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="is_active"
-                          {...register("is_active")}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
-                        />
-                        <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          User is active
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="send_welcome_email"
-                          {...register("send_welcome_email")}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
-                        />
-                        <label htmlFor="send_welcome_email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Do not send welcome letter
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                      Assigned Branch <span className="text-red-500">*</span>
-                    </label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                      Select the primary branch for this staff member
-                    </p>
-                    <Select
-                      {...register("branch", { 
-                        setValueAs: (v) => (v ? Number(v) : null),
-                        required: "Branch assignment is required for staff members"
-                      })}
-                      className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    >
-                      <option value="">-- Select a branch --</option>
-                      {branches.map((branch) => (
-                        <option key={branch.id} value={branch.id}>
-                          {branch.name} {branch.code ? `(${branch.code})` : ""}
-                        </option>
-                      ))}
-                    </Select>
-                    {errors.branch && (
-                      <p className="text-red-500 dark:text-red-400 text-xs mt-2 flex items-center gap-1">
-                        <AlertCircle className="w-4 h-4" />
-                        {errors.branch.message}
-                      </p>
-                    )}
-                    {branches.length === 0 && (
-                      <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-                        <p className="text-xs text-yellow-800 dark:text-yellow-400 flex items-center gap-2">
-                          <Info className="w-4 h-4" />
-                          No active branches available. Create a branch first before assigning users.
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Additional Options */}
-                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="is_active"
-                          {...register("is_active")}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
-                        />
-                        <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          User is active
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id="send_welcome_email"
-                          {...register("send_welcome_email")}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
-                        />
-                        <label htmlFor="send_welcome_email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Do not send welcome letter
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                  </div>
 
-                  {/* Employment Info (for staff) - Right Side */}
-                  {isStaff && (
-                    <div className="space-y-6">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          Employee ID
-                          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 font-normal">(Auto-generated, editable)</span>
-                        </label>
-                        <Input
-                          placeholder="EMP-00001"
-                          {...register("employee_id")}
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          Hire Date
-                        </label>
-                        <Input
-                          type="date"
-                          {...register("hire_date")}
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                          Hourly Rate
-                        </label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          {...register("hourly_rate")}
-                          className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                        />
+                      {/* Additional Options */}
+                      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="is_active"
+                            {...register("is_active")}
+                            className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                          />
+                          <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            User is active
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="send_welcome_email"
+                            {...register("send_welcome_email")}
+                            className="rounded border-gray-300 text-primary focus:ring-primary dark:bg-gray-600 dark:border-gray-500 w-4 h-4"
+                          />
+                          <label htmlFor="send_welcome_email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Do not send welcome letter
+                          </label>
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
+
+                {/* Employment Info (for staff) - Right Side */}
+                {isStaff && (
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Employee ID
+                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 font-normal">(Auto-generated, editable)</span>
+                      </label>
+                      <Input
+                        placeholder="EMP-00001"
+                        {...register("employee_id")}
+                        className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Hire Date
+                      </label>
+                      <Input
+                        type="date"
+                        {...register("hire_date")}
+                        className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Hourly Rate
+                      </label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...register("hourly_rate")}
+                        className="dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </form>
     </div>

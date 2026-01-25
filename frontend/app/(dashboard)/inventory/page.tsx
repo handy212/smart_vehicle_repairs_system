@@ -52,7 +52,7 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
   if (!stats) return null;
 
   const items = [
-    { label: "Total Parts", value: stats.total_parts, color: "text-blue-600" },
+    { label: "Total Parts", value: stats.total_parts, color: "text-primary" },
     { label: "Low Stock", value: stats.low_stock, color: "text-amber-600" },
     { label: "Out of Stock", value: stats.out_of_stock, color: "text-red-600" },
     { label: "Total Value", value: stats.total_value, isCurrency: true, color: "text-green-600" },
@@ -234,7 +234,7 @@ export default function InventoryPage() {
         <div className="flex justify-between items-center pt-2">
           <div>
             <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-              <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+              <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
               <span>/</span>
               <span className="text-gray-900 dark:text-gray-100 font-medium">Inventory</span>
             </div>
@@ -338,10 +338,10 @@ export default function InventoryPage() {
             })}
             {/* Bulk Actions Badge if selection active */}
             {bulkSelection.selectedCount > 0 && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-100 font-normal">
+              <Badge variant="secondary" className="text-[10px] px-1.5 h-6 flex items-center gap-1 bg-primary/10 text-orange-700 border-orange-100 font-normal">
                 {bulkSelection.selectedCount} selected
                 <X
-                  className="w-3 h-3 cursor-pointer hover:text-blue-900"
+                  className="w-3 h-3 cursor-pointer hover:text-orange-900"
                   onClick={bulkSelection.clearSelection}
                 />
               </Badge>
@@ -391,7 +391,7 @@ export default function InventoryPage() {
 
           <PermissionGuard permission="create_parts">
             <Link href="/inventory/new">
-              <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+              <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Part
               </Button>
@@ -434,7 +434,7 @@ export default function InventoryPage() {
                         checked={bulkSelection.isAllSelected}
                         ref={(input) => { if (input) input.indeterminate = bulkSelection.isIndeterminate; }}
                         onChange={bulkSelection.toggleSelectAll}
-                        className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                        className="h-3.5 w-3.5 text-primary focus:ring-primary border-gray-300 rounded cursor-pointer"
                       />
                     </TableHead>
                     <TableHead className="h-9 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Part #</TableHead>
@@ -459,7 +459,7 @@ export default function InventoryPage() {
                           type="checkbox"
                           checked={bulkSelection.isSelected(part.id)}
                           onChange={() => bulkSelection.toggleSelection(part.id)}
-                          className="h-3.5 w-3.5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+                          className="h-3.5 w-3.5 text-primary focus:ring-primary border-gray-300 rounded cursor-pointer"
                         />
                       </TableCell>
                       <TableCell className="px-4 py-2 font-mono text-xs font-medium text-gray-700 dark:text-gray-300">

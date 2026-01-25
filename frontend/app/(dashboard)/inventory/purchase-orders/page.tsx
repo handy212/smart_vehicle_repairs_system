@@ -46,7 +46,7 @@ const StatsGrid = ({ stats, loading }: { stats: any, loading: boolean }) => {
   if (!stats) return null;
 
   const items = [
-    { label: "Total POs", value: stats.total_orders, color: "text-blue-600" },
+    { label: "Total POs", value: stats.total_orders, color: "text-primary" },
     { label: "Pending", value: stats.pending_orders, color: "text-amber-600" },
     { label: "Completed", value: stats.completed_orders, color: "text-green-600" },
     { label: "Total Value", value: stats.total_value, isCurrency: true, color: "text-indigo-600" },
@@ -142,9 +142,9 @@ export default function PurchaseOrdersPage() {
         <div className="flex justify-between items-center pt-2">
           <div>
             <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-              <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+              <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
               <span>/</span>
-              <Link href="/inventory" className="hover:text-blue-600 transition-colors">Inventory</Link>
+              <Link href="/inventory" className="hover:text-primary transition-colors">Inventory</Link>
               <span>/</span>
               <span className="text-gray-900 dark:text-gray-100 font-medium">Purchase Orders</span>
             </div>
@@ -258,7 +258,7 @@ export default function PurchaseOrdersPage() {
           </DropdownMenu>
 
           <Link href="/inventory/purchase-orders/new">
-            <Button size="sm" className="h-9 bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+            <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 text-white shadow-sm">
               <Plus className="w-4 h-4 mr-2" />
               New PO
             </Button>

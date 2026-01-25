@@ -160,7 +160,7 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -179,8 +179,8 @@ export default function ProfilePage() {
         <Card className="border border-gray-200 dark:border-gray-800 shadow-sm">
           <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/20 rounded-md">
-                <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
+                <User className="w-4 h-4 text-primary dark:text-primary" />
               </div>
               <div>
                 <CardTitle className="text-sm font-semibold text-gray-900 dark:text-white">Personal Information</CardTitle>
@@ -328,7 +328,7 @@ export default function ProfilePage() {
 
               {isAdmin && (
                 <div className="pt-2">
-                  <Button type="submit" disabled={isSubmitting} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs px-4">
+                  <Button type="submit" disabled={isSubmitting} size="sm" className="bg-primary hover:bg-primary/90 text-white h-8 text-xs px-4">
                     {isSubmitting ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
@@ -353,8 +353,8 @@ export default function ProfilePage() {
           <Card className="border border-gray-200 dark:border-gray-800 shadow-sm">
             <CardHeader className="pb-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/20 rounded-md">
-                  <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <div className="p-1.5 bg-orange-100 dark:bg-orange-900/20 rounded-md">
+                  <User className="w-4 h-4 text-primary dark:text-primary" />
                 </div>
                 <div>
                   <CardTitle className="text-sm font-semibold text-gray-900 dark:text-white">Profile Picture</CardTitle>
@@ -370,7 +370,7 @@ export default function ProfilePage() {
                     className="h-24 w-24 rounded-full object-cover shadow-lg"
                   />
                 ) : (
-                  <div className="h-24 w-24 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white font-bold text-3xl shadow-lg">
+                  <div className="h-24 w-24 rounded-full bg-gradient-to-br from-primary to-primary/90 flex items-center justify-center text-white font-bold text-3xl shadow-lg">
                     {user?.first_name?.[0] || user?.email?.[0] || "U"}
                   </div>
                 )}

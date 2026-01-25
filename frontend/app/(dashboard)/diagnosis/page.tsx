@@ -81,7 +81,7 @@ export default function DiagnosisListPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">
+            <Link href="/dashboard" className="hover:text-primary transition-colors">
               Dashboard
             </Link>
             <span>/</span>
@@ -116,10 +116,10 @@ export default function DiagnosisListPage() {
               In Progress
             </span>
             <div className="flex items-end justify-between">
-              <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
+              <span className="text-xl font-bold text-primary dark:text-primary">
                 {stats.inProgress}
               </span>
-              <Timer className="w-5 h-5 text-blue-400 mb-0.5" />
+              <Timer className="w-5 h-5 text-orange-400 mb-0.5" />
             </div>
           </CardContent>
         </Card>
@@ -197,7 +197,7 @@ export default function DiagnosisListPage() {
       <div className="space-y-4">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : diagnoses.length === 0 ? (
           <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-lg border border-dashed border-gray-200 dark:border-gray-800">
@@ -314,7 +314,7 @@ export default function DiagnosisListPage() {
                               ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
                               : diagnosis.status === "on_hold"
                                 ? "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"
-                                : "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+                                : "bg-primary/10 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-primary dark:border-orange-800"
                           )}
                         >
                           {diagnosis.status_display || diagnosis.status}

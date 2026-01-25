@@ -2,28 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { PremiumIcons } from "@/components/ui/icons";
 import {
-  Home,
-  Car,
-  Calendar,
-  FileText,
-  PlusCircle,
-  CreditCard,
   ChevronLeft,
   ChevronRight,
-  Package,
-  Wrench,
-  Truck,
+  PlusCircle, // Keep specialized UI icons or replace later
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { LucideIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { adminApi, SystemSetting } from "@/lib/api/admin";
+import { useMemo } from "react";
 
 // Define type for navigation items
 interface NavigationItem {
   name: string;
   href: string;
-  icon: LucideIcon;
+  icon: any; // Allow any component
   badge?: boolean;
 }
 
@@ -37,25 +33,25 @@ const navigationGroups: NavigationGroup[] = [
   {
     name: "Main",
     items: [
-      { name: "Dashboard", href: "/portal", icon: Home },
+      { name: "Dashboard", href: "/portal", icon: PremiumIcons.Home }, // Assuming Home icon added or map to Dashboard
     ],
   },
   {
     name: "My Services",
     items: [
-      { name: "My Vehicles", href: "/portal/vehicles", icon: Car },
-      { name: "My Appointments", href: "/portal/appointments", icon: Calendar },
-      { name: "Book Appointment", href: "/portal/book", icon: PlusCircle },
-      { name: "Roadside Assistance", href: "/portal/roadside", icon: Truck },
+      { name: "My Vehicles", href: "/portal/vehicles", icon: PremiumIcons.Car },
+      { name: "My Appointments", href: "/portal/appointments", icon: PremiumIcons.Calendar },
+      { name: "Book Appointment", href: "/portal/book", icon: PlusCircle }, // Keep PlusCircle for now
+      { name: "Roadside Assistance", href: "/portal/roadside", icon: PremiumIcons.Truck },
     ],
   },
   {
     name: "Billing & Documents",
     items: [
-      { name: "My Invoices", href: "/portal/invoices", icon: FileText },
-      { name: "My Estimates", href: "/portal/estimates", icon: FileText },
-      { name: "Payment History", href: "/portal/payments", icon: CreditCard },
-      { name: "My Subscriptions", href: "/portal/subscriptions", icon: Package },
+      { name: "My Invoices", href: "/portal/invoices", icon: PremiumIcons.FileText },
+      { name: "My Estimates", href: "/portal/estimates", icon: PremiumIcons.FileText },
+      { name: "Payment History", href: "/portal/payments", icon: PremiumIcons.CreditCard },
+      { name: "My Subscriptions", href: "/portal/subscriptions", icon: PremiumIcons.Package },
     ],
   },
 ];
@@ -70,6 +66,30 @@ interface PortalSidebarProps {
 export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false, onToggleCollapse }: PortalSidebarProps) {
   const pathname = usePathname();
 
+  const { data: brandingSettings } = useQuery<SystemSetting[]>({
+    queryKey: ["settings", "branding", "public"],
+    queryFn: () => adminApi.settings.publicBranding(),
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+  });
+
+  const branding = useMemo(() => {
+    if (!brandingSettings) {
+      return {
+        primary_color: "#ff8040", // Default orange
+      };
+    }
+
+    const getSetting = (key: string): string | null => {
+      const setting = brandingSettings.find((s) => s.key === key);
+      return setting?.value && setting.value.trim() !== "" ? setting.value : null;
+    };
+
+    return {
+      primary_color: getSetting("primary_color") || "#ff8040",
+    };
+  }, [brandingSettings]);
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -83,10 +103,11 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false, onT
 
       <aside
         className={cn(
-          "fixed left-0 top-16 bottom-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto z-40 transition-all duration-300 ease-in-out",
+          "fixed left-0 top-16 bottom-0 overflow-y-auto z-40 transition-all duration-300 ease-out",
           "lg:translate-x-0",
+          "bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200/60 dark:border-gray-800/60 shadow-xl", // Premium glass effect
           isOpen ? "translate-x-0" : "-translate-x-full",
-          isCollapsed ? "w-20" : "w-64"
+          isCollapsed ? "w-20" : "w-72" // Slightly wider for premium feel
         )}
       >
         {/* Collapse/Expand Toggle Button */}
@@ -105,7 +126,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false, onT
               variant="default"
               size="icon"
               onClick={onToggleCollapse}
-              className="h-10 w-10 rounded-full shadow-md border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-700 dark:hover:text-blue-400 hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-lg transition-all"
+              className="h-10 w-10 rounded-full shadow-md border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-primary/10 dark:hover:bg-orange-900/30 hover:text-orange-700 dark:hover:text-orange-400 hover:border-orange-400 dark:hover:border-primary hover:shadow-lg transition-all"
               title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {isCollapsed ? (
@@ -141,22 +162,36 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false, onT
                         }
                       }}
                       className={cn(
-                        "group flex items-center rounded-lg transition-all duration-200 relative",
-                        isCollapsed ? "px-2 py-2.5 justify-center" : "px-3 py-2.5",
+                        "group flex items-center rounded-xl transition-all duration-300 relative mx-2 mb-1 overflow-hidden",
+                        isCollapsed ? "px-2 py-3 justify-center" : "px-4 py-3",
                         isActive
-                          ? "bg-gradient-to-r from-blue-50 dark:from-blue-900/30 to-blue-50/50 dark:to-blue-900/20 text-blue-700 dark:text-blue-300 shadow-sm"
-                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100"
+                          ? "shadow-md font-semibold ring-1 ring-black/5 dark:ring-white/5"
+                          : "text-gray-600 dark:text-gray-400 hover:bg-gray-50/80 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-gray-100"
                       )}
+                      style={isActive ? {
+                        backgroundColor: `${branding.primary_color}15`, // 10% opacity hex
+                        color: branding.primary_color,
+                      } : undefined}
                       title={isCollapsed ? item.name : undefined}
                       aria-label={item.name}
                       aria-current={isActive ? "page" : undefined}
                     >
-                      <Icon className={cn("flex-shrink-0", isCollapsed ? "w-5 h-5" : "w-5 h-5 mr-3")} />
+                      <Icon
+                        className={cn(
+                          "transition-transform duration-300 flex-shrink-0",
+                          isCollapsed ? "w-6 h-6" : "w-5 h-5 mr-3.5",
+                          isActive ? "scale-110" : "group-hover:scale-110 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+                        )}
+                        style={isActive ? { color: branding.primary_color } : undefined}
+                      />
                       {!isCollapsed && (
-                        <span className="flex-1 font-medium">{item.name}</span>
+                        <span className="flex-1 tracking-tight">{item.name}</span>
                       )}
                       {isActive && !isCollapsed && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 dark:bg-blue-400 rounded-r-full" />
+                        <div
+                          className="w-1.5 h-1.5 rounded-full ml-auto shadow-sm"
+                          style={{ backgroundColor: branding.primary_color }}
+                        />
                       )}
                     </Link>
                   );

@@ -94,8 +94,8 @@ export default function OpenTillPage() {
                                 </p>
                             </div>
 
-                            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                                <p className="text-sm text-blue-800 dark:text-blue-200">
+                            <div className="bg-primary/10 dark:bg-orange-900/20 p-4 rounded-lg">
+                                <p className="text-sm text-orange-800 dark:text-orange-200">
                                     <strong>Note:</strong> Make sure to count your starting cash carefully.
                                     This will be used to calculate variance when closing the till.
                                 </p>

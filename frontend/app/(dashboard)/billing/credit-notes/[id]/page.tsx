@@ -57,7 +57,7 @@ export default function CreditNoteDetailPage() {
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
         );
     }
@@ -158,7 +158,7 @@ export default function CreditNoteDetailPage() {
                                     </TableRow>
                                     <TableRow>
                                         <TableCell colSpan={3} className="text-right font-bold text-lg">Total Credit</TableCell>
-                                        <TableCell className="text-right font-bold text-lg text-blue-600">{formatCurrency(parseFloat(creditNote.total))}</TableCell>
+                                        <TableCell className="text-right font-bold text-lg text-primary">{formatCurrency(parseFloat(creditNote.total))}</TableCell>
                                     </TableRow>
                                 </TableBody>
                             </Table>
@@ -187,7 +187,7 @@ export default function CreditNoteDetailPage() {
                                     <p>
                                         <Link
                                             href={`/billing/invoices/${typeof creditNote.invoice === 'object' ? creditNote.invoice?.id : creditNote.invoice}`}
-                                            className="text-blue-600 hover:underline flex items-center gap-1"
+                                            className="text-primary hover:underline flex items-center gap-1"
                                         >
                                             <FileText className="h-4 w-4" />
                                             #{creditNote.invoice_number}

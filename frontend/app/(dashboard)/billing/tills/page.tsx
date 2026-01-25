@@ -40,9 +40,9 @@ export default function TillDashboardPage() {
             <div className="flex items-center justify-between pt-2">
                 <div>
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-                        <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+                        <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
                         <span>/</span>
-                        <Link href="/billing" className="hover:text-blue-600 transition-colors">Billing</Link>
+                        <Link href="/billing" className="hover:text-primary transition-colors">Billing</Link>
                         <span>/</span>
                         <span className="text-gray-900 dark:text-gray-100 font-medium">Till Management</span>
                     </div>

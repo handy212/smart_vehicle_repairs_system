@@ -127,7 +127,7 @@ export function InspectionForm({
                 <Card>
                     <CardHeader className="pb-4 border-b border-gray-100 dark:border-gray-800">
                         <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-blue-500" />
+                            <FileText className="w-5 h-5 text-primary" />
                             Inspection Details
                         </CardTitle>
                         <CardDescription>
@@ -174,7 +174,7 @@ export function InspectionForm({
                                     <p className="text-red-500 text-xs mt-1">{errors.template.message}</p>
                                 )}
                                 <p className="text-xs text-muted-foreground">
-                                    <Link href="/inspections/templates" className="text-blue-600 hover:underline">
+                                    <Link href="/inspections/templates" className="text-primary hover:underline">
                                         Manage templates
                                     </Link>
                                 </p>
@@ -192,7 +192,7 @@ export function InspectionForm({
                                     <p className="text-red-500 text-xs mt-1">{errors.work_order.message}</p>
                                 )}
                                 {workOrderData && (
-                                    <div className="flex items-center gap-2 mt-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded text-xs text-blue-700 dark:text-blue-300">
+                                    <div className="flex items-center gap-2 mt-1 bg-primary/10 dark:bg-orange-900/20 px-2 py-1 rounded text-xs text-orange-700 dark:text-orange-300">
                                         <Wrench className="w-3 h-3" />
                                         Linked to WO #{(workOrderData as any).wo_number || workOrderData.id}
                                     </div>

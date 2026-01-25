@@ -15,6 +15,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Car, Eye, EyeOff } from "lucide-react";
 import { setSystemThemeMode } from "@/lib/hooks/useTheme";
 import { ReCAPTCHAComponent } from "@/components/ui/recaptcha";
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
+import CompleteRegistrationForm from "@/components/auth/CompleteRegistrationForm";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -24,6 +26,8 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+const DEFAULT_HERO_IMAGE = "/images/login-hero.png";
+
 export default function LoginPage() {
   const router = useRouter();
   const { setUser } = useAuthStore();
@@ -32,36 +36,41 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
-  // Fetch branding settings using public endpoint (no auth required)
+  // Partial registration state
+  const [regData, setRegData] = useState<{ user_data: any, google_token_info: any } | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    // Force light mode for auth pages
+    document.documentElement.classList.remove('dark');
+  }, []);
+
   const { data: brandingSettings } = useQuery<SystemSetting[]>({
     queryKey: ["settings", "branding", "public"],
     queryFn: () => adminApi.settings.publicBranding(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     retry: 2,
   });
 
-  // Fetch integration settings to get reCAPTCHA site key
   const { data: integrations } = useQuery<{
-    google_analytics_id?: string;
-    facebook_pixel_id?: string;
     recaptcha_site_key?: string;
   }>({
     queryKey: ["settings", "integrations", "public"],
     queryFn: () => adminApi.settings.publicIntegrations(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     retry: 2,
   });
 
-  // Extract branding values
   const branding = useMemo(() => {
     if (!brandingSettings) {
       return {
-        siteName: "Smart Vehicle Repairs",
-        tagline: "Management System",
-        logoPath: null,
-        loginBackground: null,
-        loginBackgroundOverlay: "0.5",
-        themeMode: null,
+        site_name: "American Autoparts Ltd",
+        tagline: "Professional Auto Care",
+        logo_path: null,
+        logo_dark_path: null,
+        login_background: null,
+        primary_color: "#ff8040",
       };
     }
 
@@ -71,47 +80,20 @@ export default function LoginPage() {
     };
 
     return {
-      siteName: getSetting("site_name") || "Smart Vehicle Repairs",
-      tagline: getSetting("company_tagline") || "Management System",
-      logoPath: getSetting("logo_path"),
-      loginBackground: getSetting("login_background") || getSetting("staff_login_background"),
-      loginBackgroundOverlay: getSetting("login_background_overlay") || "0.5",
-      themeMode: getSetting("theme_mode"),
+      site_name: getSetting("site_name") || "American Autoparts Ltd",
+      tagline: getSetting("company_tagline") || "Professional Auto Care",
+      logo_path: getSetting("logo_path"),
+      logo_dark_path: getSetting("logo_dark_path"),
+      login_background: getSetting("login_background"),
+      primary_color: getSetting("primary_color") || "#ff8040",
     };
   }, [brandingSettings]);
-
-  // Apply theme_mode from system settings
-  useEffect(() => {
-    if (branding.themeMode) {
-      const themeMode = branding.themeMode.toLowerCase().trim();
-      if (['light', 'dark', 'system', 'auto'].includes(themeMode)) {
-        const themeValue = themeMode === 'auto' ? 'system' : themeMode;
-        setSystemThemeMode(themeValue as 'light' | 'dark' | 'system');
-        // Trigger theme application
-        window.dispatchEvent(new CustomEvent('systemThemeModeChanged', { detail: themeValue }));
-      }
-    }
-  }, [branding.themeMode]);
-
-  // Get media base URL from API URL (remove /api suffix)
-  const mediaBaseUrl = useMemo(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-    return apiUrl.replace(/\/api\/?$/, "");
-  }, []);
-
-  const getMediaUrl = useCallback(
-    (path: string) => {
-      if (path.startsWith("http")) return path;
-      return `${mediaBaseUrl}/media/${path}`;
-    },
-    [mediaBaseUrl]
-  );
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
     setValue,
+    formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
@@ -136,221 +118,245 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
 
-    // Check if reCAPTCHA is required and validated
-    // Use site key from backend settings if available, otherwise fall back to env var
-    const recaptchaSiteKey = integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-    if (recaptchaSiteKey && !recaptchaToken) {
-      setError("Please complete the reCAPTCHA verification.");
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      // Include reCAPTCHA token in login request
-      const loginData = {
-        email: data.email,
-        password: data.password,
-        ...(recaptchaToken && { recaptcha_token: recaptchaToken }),
-      };
-      
-      const authResponse = await authApi.login(loginData);
-      
+      const authData = await authApi.login(data);
+
       // Store tokens
       if (typeof window !== "undefined") {
-        localStorage.setItem("access_token", authResponse.access);
-        localStorage.setItem("refresh_token", authResponse.refresh);
+        localStorage.setItem("access_token", authData.access);
+        localStorage.setItem("refresh_token", authData.refresh);
       }
 
-      // Get user info
+      // Update global state
       const user = await authApi.getCurrentUser();
       setUser(user);
 
-      // Redirect based on user role
+      // Redirect based on role
       if (user.role === "customer") {
         router.push("/portal");
       } else {
         router.push("/dashboard");
       }
     } catch (err: any) {
-      setError(
-        err.response?.data?.detail || "Invalid email or password. Please try again."
-      );
+      console.error("Login error:", err);
+      setError("Invalid email or password");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Background style with overlay
-  const backgroundStyle = useMemo(() => {
-    if (!branding.loginBackground) {
-      return { backgroundColor: "#f9fafb" }; // bg-gray-50
+  // Resolve image paths (handle relative/absolute URLs from backend)
+  const getImageUrl = (path: string | undefined, defaultPath: string) => {
+    if (!path) return defaultPath;
+    if (path.startsWith('http')) return path;
+
+    // Get base URL by removing /api suffix
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+
+    // Ensure path starts with /
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+
+    // If path already includes /media, don't add it again
+    if (cleanPath.startsWith('/media/')) {
+      return `${baseUrl}${cleanPath}`;
     }
 
-    const bgUrl = getMediaUrl(branding.loginBackground);
-    const overlayOpacity = parseFloat(branding.loginBackgroundOverlay) || 0.5;
+    return `${baseUrl}/media${cleanPath}`;
+  };
 
-    return {
-      backgroundImage: `linear-gradient(rgba(0, 0, 0, ${overlayOpacity}), rgba(0, 0, 0, ${overlayOpacity})), url(${bgUrl})`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      backgroundRepeat: "no-repeat",
-    };
-  }, [branding.loginBackground, branding.loginBackgroundOverlay, getMediaUrl]);
+  const heroImage = branding.login_background
+    ? getImageUrl(branding.login_background, DEFAULT_HERO_IMAGE)
+    : DEFAULT_HERO_IMAGE;
 
-  // Logo URL
-  const logoUrl = useMemo(() => {
-    if (!branding.logoPath) return null;
-    return getMediaUrl(branding.logoPath);
-  }, [branding.logoPath, getMediaUrl]);
+  const heroLogo = branding.logo_dark_path || branding.logo_path;
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative"
-      style={backgroundStyle}
-    >
-      <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-xl border-0 animate-in fade-in-0 zoom-in-95 duration-200">
-        <CardHeader className="space-y-4">
-          {/* Logo */}
-          {logoUrl ? (
-            <div className="flex justify-center">
-              <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-lg overflow-hidden bg-white flex items-center justify-center shadow-md border border-gray-200">
-                <img
-                  src={logoUrl}
-                  alt={branding.siteName}
-                  className="h-full w-full object-contain p-2"
-                  onError={(e) => {
-                    // Hide image if it fails to load
-                    const target = e.target as HTMLImageElement;
-                    if (target) {
-                      target.style.display = "none";
-                      const parent = target.parentElement;
-                      if (parent && !parent.querySelector(".fallback-icon")) {
-                        const icon = document.createElement("div");
-                        icon.className = "fallback-icon h-full w-full flex items-center justify-center";
-                        icon.innerHTML = '<svg class="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>';
-                        parent.appendChild(icon);
-                      }
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-md">
-                <Car className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
-              </div>
-            </div>
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
+        {/* Left side: Hero Image & Branding */}
+        <div
+          className="hidden lg:flex relative flex-col justify-between p-12 overflow-hidden bg-gray-900 group"
+          style={{ backgroundColor: branding.primary_color }}
+        >
+          {isMounted && (
+            <img
+              src={heroImage}
+              alt="Service Center"
+              className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay transition-transform duration-700 ease-in-out group-hover:scale-105"
+            />
           )}
-          
-          <div>
-            <CardTitle className="text-2xl text-center text-gray-900">
-              {branding.siteName}
-            </CardTitle>
-            <CardDescription className="text-center mt-2">
-              {branding.tagline}
-            </CardDescription>
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(to top, ${branding.primary_color} 0%, ${branding.primary_color}40 40%, transparent 100%)`
+            }}
+          />
+
+          <div className="relative z-10 flex items-center gap-3">
+            {heroLogo ? (
+              <div className="p-3 bg-white rounded-xl shadow-lg">
+                <img
+                  src={getImageUrl(heroLogo, "")}
+                  alt={branding.site_name}
+                  className="h-10 w-auto object-contain"
+                />
+              </div>
+            ) : (
+              <div className="p-3 bg-white rounded-xl shadow-lg">
+                <Car className="w-8 h-8" style={{ color: branding.primary_color }} />
+              </div>
+            )}
           </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm" role="alert">
-                {error}
-              </div>
-            )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                autoFocus
-                {...register("email")}
-                // placeholder="you@example.com"
-                className={errors.email ? "border-red-500" : ""}
-                disabled={isLoading}
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
+          <div className="relative z-10 space-y-4">
+            <h1 className="text-5xl font-extrabold text-white leading-tight">
+              The Future of <br />
+              <span style={{ color: '#bfdbfe' }}>Automotive Care</span>
+            </h1>
+            <p className="text-xl text-white/90 max-w-md">
+              {branding.tagline}
+            </p>
+          </div>
+        </div>
+
+        {/* Right side: Login Form */}
+        <div className="flex items-center justify-center p-8 bg-gray-50/50">
+          <div className="w-full max-w-md space-y-8 animate-in fade-in zoom-in-95 duration-500">
+            <div className="text-center lg:text-left">
+              <h2 className="text-3xl font-bold text-gray-900">{branding.site_name}</h2>
+              <p className="mt-2 text-gray-600">
+                Welcome back! Please enter your details.
+              </p>
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  {...register("password")}
-                  placeholder="••••••••"
-                  className={errors.password ? "border-red-500 pr-10" : "pr-10"}
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-              )}
-            </div>
+            <Card className="border-0 shadow-xl bg-white rounded-2xl overflow-hidden">
+              <CardContent className="p-8">
+                {regData ? (
+                  <CompleteRegistrationForm
+                    userData={regData.user_data}
+                    onSuccess={(authData) => {
+                      setUser(authData.user);
+                      router.push(authData.user.role === "customer" ? "/portal" : "/dashboard");
+                    }}
+                    onCancel={() => setRegData(null)}
+                  />
+                ) : (
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    {error && (
+                      <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm font-medium animate-in shake duration-300">
+                        {error}
+                      </div>
+                    )}
 
-            {/* reCAPTCHA */}
-            {(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) && (
-              <div>
-                <ReCAPTCHAComponent
-                  siteKey={integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
-                  onChange={handleRecaptchaChange}
-                  onExpired={handleRecaptchaExpired}
-                  onError={handleRecaptchaError}
-                  theme="light"
-                />
-                {errors.recaptcha_token && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.recaptcha_token.message}
-                  </p>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-gray-700 ml-1">Email Address</label>
+                      <Input
+                        type="email"
+                        {...register("email")}
+                        placeholder="name@company.com"
+                        className="h-12 rounded-xl border-gray-200 bg-white focus:bg-white focus:ring-2 focus:ring-offset-0 transition-all"
+                        style={{ '--tw-ring-color': branding.primary_color } as React.CSSProperties}
+                        disabled={isLoading}
+                      />
+                      {errors.email && <p className="text-xs text-red-500 ml-1">{errors.email.message}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center px-1">
+                        <label className="text-sm font-semibold text-gray-700">Password</label>
+                        <button
+                          type="button"
+                          onClick={() => router.push("/login/forgot-password")}
+                          className="text-xs font-semibold hover:underline"
+                          style={{ color: branding.primary_color }}
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          {...register("password")}
+                          placeholder="••••••••"
+                          className="h-12 rounded-xl border-gray-200 bg-white focus:bg-white focus:ring-2 focus:ring-offset-0 pr-12 transition-all"
+                          style={{ '--tw-ring-color': branding.primary_color } as React.CSSProperties}
+                          disabled={isLoading}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* reCAPTCHA */}
+                    {(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) && (
+                      <div className="flex justify-center py-2">
+                        <ReCAPTCHAComponent
+                          siteKey={integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
+                          onChange={handleRecaptchaChange}
+                          onExpired={handleRecaptchaExpired}
+                          onError={handleRecaptchaError}
+                          theme="light"
+                        />
+                      </div>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="w-full h-12 rounded-xl text-white font-bold text-lg shadow-lg transition-all hover:opacity-90 active:scale-95"
+                      style={{ backgroundColor: branding.primary_color }}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Signing in..." : "Sign in"}
+                    </Button>
+
+                    <div className="relative my-8 text-center text-sm font-medium text-gray-400 line-through">
+                      <span className="bg-white px-4 relative z-10 no-underline">OR</span>
+                      <hr className="absolute top-1/2 left-0 w-full border-gray-100" />
+                    </div>
+
+                    <GoogleLoginButton
+                      onSuccess={(data) => {
+                        setUser(data.user);
+                        router.push(data.user.role === "customer" ? "/portal" : "/dashboard");
+                      }}
+                      onRegistrationRequired={(data) => setRegData(data)}
+                      onError={(msg) => setError(msg)}
+                    />
+                  </form>
                 )}
-              </div>
-            )}
+              </CardContent>
+            </Card>
 
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading || (!!(integrations?.recaptcha_site_key || process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY) && !recaptchaToken)}
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Signing in...
-                </span>
-              ) : (
-                "Sign in"
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            <p className="text-center text-gray-600">
+              Don't have an account?{" "}
+              <button
+                type="button"
+                onClick={() => router.push("/register")}
+                className="font-bold underline-offset-4 hover:underline"
+                style={{ color: branding.primary_color }}
+              >
+                Start for free
+              </button>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 py-4 px-8">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-sm text-gray-600">
+          <p>© <span suppressHydrationWarning>{new Date().getFullYear()}</span> <span suppressHydrationWarning>{branding.site_name}</span>. All rights reserved.</p>
+          <p>Developed by <a href="https://github.com/handy212" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: branding.primary_color }}>SafeTrack Systems</a></p>
+        </div>
+      </footer>
     </div>
   );
 }
+
 

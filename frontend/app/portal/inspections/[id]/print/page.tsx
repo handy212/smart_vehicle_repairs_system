@@ -251,7 +251,7 @@ export default function InspectionPrintPage() {
       <div className="no-print mt-8 text-center">
         <button
           onClick={() => window.print()}
-          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
         >
           Print Inspection Report
         </button>

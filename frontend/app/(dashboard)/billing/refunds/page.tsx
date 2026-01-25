@@ -82,9 +82,9 @@ export default function RefundsPage() {
             <div className="flex items-center justify-between pt-2">
                 <div>
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-                        <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+                        <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
                         <span>/</span>
-                        <Link href="/billing" className="hover:text-blue-600 transition-colors">Billing</Link>
+                        <Link href="/billing" className="hover:text-primary transition-colors">Billing</Link>
                         <span>/</span>
                         <span className="text-gray-900 dark:text-gray-100 font-medium">Refunds</span>
                     </div>
@@ -116,7 +116,7 @@ export default function RefundsPage() {
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="px-3 py-1 h-8 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="px-3 py-1 h-8 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary"
                         >
                             <option value="">All Statuses</option>
                             <option value="pending">Pending</option>
@@ -198,7 +198,7 @@ export default function RefundsPage() {
                                             <TableCell className="px-4 py-2 text-right">
                                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Link href={`/billing/refunds/${refund.id}`}>
-                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-blue-600">
+                                                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-gray-500 hover:text-primary">
                                                             <Eye className="h-3.5 w-3.5" />
                                                         </Button>
                                                     </Link>

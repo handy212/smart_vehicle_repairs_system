@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ArrowLeft, Edit, FileText, Wrench, Package, MessageSquare, Image, Search, Printer, ChevronDown, Clock } from "lucide-react";
+import { PremiumIcons } from "@/components/ui/icons";
 import Link from "next/link";
 import WorkOrderOverviewTab from "./components/OverviewTab";
 import WorkOrderTasksTab from "./components/TasksTab";
@@ -100,7 +101,7 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${stepStatus === 'completed'
                       ? 'bg-green-500 text-white'
                       : stepStatus === 'current'
-                        ? 'bg-blue-600 text-white ring-2 ring-blue-200 dark:ring-blue-900'
+                        ? 'bg-primary text-white ring-2 ring-orange-200 dark:ring-orange-900'
                         : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                       }`}
                   >
@@ -108,7 +109,7 @@ function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusCha
                   </div>
                   <span
                     className={`text-xs mt-1 text-center whitespace-nowrap max-w-[70px] truncate ${stepStatus === 'current'
-                      ? 'font-semibold text-blue-600 dark:text-blue-400'
+                      ? 'font-semibold text-primary dark:text-primary'
                       : stepStatus === 'completed'
                         ? 'text-gray-600 dark:text-gray-400'
                         : 'text-gray-400 dark:text-gray-500'
@@ -221,27 +222,36 @@ export default function WorkOrderDetailPage() {
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-              <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
-              <span>/</span>
-              <Link href="/workorders" className="hover:text-blue-600 transition-colors">Work Orders</Link>
-              <span>/</span>
-              <span className="text-gray-900 dark:text-gray-100 font-medium">#{workOrder.work_order_number}</span>
-            </div>
+            {/* Back Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.back()}
+              className="mb-1 -ml-2 h-8 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+            >
+              <PremiumIcons.ArrowLeft className="w-4 h-4 mr-1" />
+              Back
+            </Button>
+            {/* Premium Header - Removed manual breadcrumbs and WO number for cleaner look */}
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
               {workOrder.customer_name || "Customer"} - {workOrder.vehicle_info || "Vehicle"}
             </h1>
           </div>
           <div className="flex items-center space-x-2">
+            {/* Work Order Number Badge */}
+            <div className="px-3 py-1.5 rounded-full bg-primary/10 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-700/50 text-orange-700 dark:text-orange-300 font-mono text-sm font-bold shadow-sm mr-2">
+              #{workOrder.work_order_number}
+            </div>
+
             {/* Print Dropdown */}
             <div className="relative">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowPrintMenu(!showPrintMenu)}
-                className="flex items-center h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700"
+                className="flex items-center h-9 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 backdrop-blur-sm"
               >
-                <Printer className="w-3.5 h-3.5 mr-2" />
+                <PremiumIcons.Receipt className="w-3.5 h-3.5 mr-2" />
                 Print
                 <ChevronDown className="w-3.5 h-3.5 ml-2" />
               </Button>
@@ -251,7 +261,7 @@ export default function WorkOrderDetailPage() {
                     className="fixed inset-0 z-10"
                     onClick={() => setShowPrintMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                  <div className="absolute right-0 mt-2 w-48 bg-white/90 backdrop-blur-xl dark:bg-gray-800/90 rounded-xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 z-20 overflow-hidden ring-1 ring-black/5">
                     <div
                       className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                       onClick={() => {
@@ -279,12 +289,6 @@ export default function WorkOrderDetailPage() {
                 </>
               )}
             </div>
-            <Link href={`/tech/workorders/${workOrderId}`}>
-              <Button variant="secondary" size="sm" className="h-9 hidden md:inline-flex">
-                <Wrench className="w-3.5 h-3.5 mr-2" />
-                Tech Mode
-              </Button>
-            </Link>
             <PermissionGuard permission="edit_workorders">
               <Link href={`/workorders/${workOrderId}/edit`}>
                 <Button size="sm" className="h-9">
@@ -297,8 +301,8 @@ export default function WorkOrderDetailPage() {
         </div>
       </div>
 
-      {/* Workflow Progress Indicator */}
-      <Card>
+      {/* Workflow Progress Indicator with Glass Effect */}
+      <Card className="border-none shadow-sm bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
         <CardContent className="py-4 px-4">
           <WorkflowProgressIndicator
             status={workOrder.status}
@@ -313,16 +317,16 @@ export default function WorkOrderDetailPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="overview">
-            <FileText className="w-4 h-4 mr-2" />
+          <TabsTrigger value="overview" className="data-[state=active]:bg-white/80 data-[state=active]:backdrop-blur-sm data-[state=active]:shadow-sm">
+            <PremiumIcons.FileText className="w-4 h-4 mr-2" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="tasks">
-            <Wrench className="w-4 h-4 mr-2" />
+          <TabsTrigger value="tasks" className="data-[state=active]:bg-white/80 data-[state=active]:backdrop-blur-sm data-[state=active]:shadow-sm">
+            <PremiumIcons.Wrench className="w-4 h-4 mr-2" />
             Tasks ({tasks.length})
           </TabsTrigger>
-          <TabsTrigger value="parts">
-            <Package className="w-4 h-4 mr-2" />
+          <TabsTrigger value="parts" className="data-[state=active]:bg-white/80 data-[state=active]:backdrop-blur-sm data-[state=active]:shadow-sm">
+            <PremiumIcons.Package className="w-4 h-4 mr-2" />
             Parts ({parts.length})
           </TabsTrigger>
           <TabsTrigger value="notes">
@@ -388,6 +392,6 @@ export default function WorkOrderDetailPage() {
           <WorkOrderTimeline workOrder={workOrder} notes={notes} />
         </TabsContent>
       </Tabs>
-    </div>
+    </div >
   );
 }

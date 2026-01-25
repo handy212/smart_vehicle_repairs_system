@@ -197,7 +197,7 @@ export default function RoadsideDetailPage() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
         );
     }
@@ -270,7 +270,7 @@ export default function RoadsideDetailPage() {
                                             href={`https://www.google.com/maps?q=${request.latitude},${request.longitude}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-1 hover:underline"
+                                            className="text-xs text-primary dark:text-primary flex items-center gap-1 mt-1 hover:underline"
                                         >
                                             Open in Maps <ExternalLink className="h-3 w-3" />
                                         </a>
@@ -309,7 +309,7 @@ export default function RoadsideDetailPage() {
                                 <div className="pt-3 border-t">
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Vehicle</p>
                                     <p className="text-sm text-gray-900 dark:text-gray-100">{request.vehicle_display}</p>
-                                    <Link href={`/vehicles/${request.vehicle}`} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                                    <Link href={`/vehicles/${request.vehicle}`} className="text-xs text-primary dark:text-primary hover:underline">
                                         View Details
                                     </Link>
                                 </div>
@@ -368,7 +368,7 @@ export default function RoadsideDetailPage() {
                         <CardContent>
                             <div className="relative space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200 dark:before:bg-gray-700">
                                 <div className="relative pl-8">
-                                    <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-blue-600"></div>
+                                    <div className="absolute left-0 top-1 h-4 w-4 rounded-full border-4 border-white dark:border-gray-900 bg-primary"></div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm font-semibold">Request Created</span>
                                         <span className="text-xs text-gray-500 dark:text-gray-400">{format(new Date(request.requested_at), "h:mm a")}</span>
@@ -410,7 +410,7 @@ export default function RoadsideDetailPage() {
                                                 <span className="text-gray-500 dark:text-gray-400">Invoice:</span>
                                                 <Link
                                                     href={`/billing/invoices/${request.invoice}`}
-                                                    className="font-semibold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                                                    className="font-semibold text-primary dark:text-primary hover:underline flex items-center gap-1"
                                                 >
                                                     {request.invoice_number} <ExternalLink className="h-3 w-3" />
                                                 </Link>
@@ -502,7 +502,7 @@ export default function RoadsideDetailPage() {
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status)
                                             ? 'bg-green-500 text-white'
                                             : request.status === 'requested'
-                                                ? 'bg-blue-600 text-white'
+                                                ? 'bg-primary text-white'
                                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
                                             }`}>
                                             {['dispatched', 'en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? '✓' : '1'}
@@ -516,7 +516,7 @@ export default function RoadsideDetailPage() {
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status)
                                             ? 'bg-green-500 text-white'
                                             : request.status === 'dispatched'
-                                                ? 'bg-blue-600 text-white'
+                                                ? 'bg-primary text-white'
                                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
                                             }`}>
                                             {['en_route', 'on_site', 'in_progress', 'completed'].includes(request.status) ? '✓' : '2'}
@@ -530,7 +530,7 @@ export default function RoadsideDetailPage() {
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['on_site', 'in_progress', 'completed'].includes(request.status)
                                             ? 'bg-green-500 text-white'
                                             : request.status === 'en_route'
-                                                ? 'bg-blue-600 text-white'
+                                                ? 'bg-primary text-white'
                                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
                                             }`}>
                                             {['on_site', 'in_progress', 'completed'].includes(request.status) ? '✓' : '3'}
@@ -544,7 +544,7 @@ export default function RoadsideDetailPage() {
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${['in_progress', 'completed'].includes(request.status)
                                             ? 'bg-green-500 text-white'
                                             : ['on_site', 'arrived'].includes(request.status)
-                                                ? 'bg-blue-600 text-white'
+                                                ? 'bg-primary text-white'
                                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
                                             }`}>
                                             {['in_progress', 'completed'].includes(request.status) ? '✓' : '4'}
@@ -558,7 +558,7 @@ export default function RoadsideDetailPage() {
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${request.status === 'completed'
                                             ? 'bg-green-500 text-white'
                                             : request.status === 'in_progress'
-                                                ? 'bg-blue-600 text-white'
+                                                ? 'bg-primary text-white'
                                                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
                                             }`}>
                                             {request.status === 'completed' ? '✓' : '5'}
@@ -590,7 +590,7 @@ export default function RoadsideDetailPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center gap-2 mb-3">
-                                    <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-bold text-blue-600">
+                                    <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-bold text-primary">
                                         {request.assigned_technician_name?.substring(0, 2).toUpperCase()}
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -672,7 +672,7 @@ export default function RoadsideDetailPage() {
                             size="sm"
                             onClick={() => dispatchMutation.mutate(parseInt(selectedTechnicianId))}
                             disabled={!selectedTechnicianId || dispatchMutation.isPending}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            className="bg-primary hover:bg-primary/90 text-white"
                         >
                             {dispatchMutation.isPending ? "Assigning..." : "Assign & Dispatch"}
                         </Button>

@@ -66,17 +66,17 @@ export function CustomerSidebar({ activeView, onViewChange, className, counts = 
                             className={cn(
                                 "w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                                 isActive
-                                    ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm border border-gray-100 dark:border-gray-700"
+                                    ? "bg-white dark:bg-gray-800 text-primary dark:text-primary shadow-sm border border-gray-100 dark:border-gray-700"
                                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900"
                             )}
                         >
-                            <item.icon className={cn("w-4 h-4", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-400")} />
+                            <item.icon className={cn("w-4 h-4", isActive ? "text-primary dark:text-primary" : "text-gray-400")} />
                             <span className="flex-1 text-left">{item.label}</span>
                             {item.count !== undefined && item.count > 0 && (
                                 <span className={cn(
                                     "text-xs px-2 py-0.5 rounded-full",
                                     isActive
-                                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
+                                        ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
                                         : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                                 )}>
                                     {item.count}

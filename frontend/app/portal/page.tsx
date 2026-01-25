@@ -88,7 +88,7 @@ export default function PortalHomePage() {
           <section>
             <div className="flex items-center justify-between mb-3 px-1">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Upcoming Service</h2>
-              <Link href="/portal/appointments" className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center">
+              <Link href="/portal/appointments" className="text-xs font-medium text-primary hover:text-orange-700 flex items-center">
                 View All <ArrowRight className="w-3 h-3 ml-1" />
               </Link>
             </div>
@@ -99,7 +99,7 @@ export default function PortalHomePage() {
                     {recent_appointments.map((apt: any) => (
                       <div key={apt.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors flex items-center justify-between group">
                         <div className="flex items-center gap-4">
-                          <div className="h-10 w-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 dark:bg-orange-900/20 flex items-center justify-center text-primary dark:text-primary font-bold text-xs">
                             {format(new Date(apt.appointment_date), "d")}
                           </div>
                           <div>
@@ -130,7 +130,7 @@ export default function PortalHomePage() {
           <section>
             <div className="flex items-center justify-between mb-3 px-1">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Recent Billing</h2>
-              <Link href="/portal/invoices" className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center">
+              <Link href="/portal/invoices" className="text-xs font-medium text-primary hover:text-orange-700 flex items-center">
                 View All <ArrowRight className="w-3 h-3 ml-1" />
               </Link>
             </div>

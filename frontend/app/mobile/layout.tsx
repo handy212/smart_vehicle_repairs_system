@@ -105,7 +105,7 @@ export default function MobileLayout({
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
@@ -141,7 +141,7 @@ export default function MobileLayout({
       {/* Header */}
       <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 h-14 px-4 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="bg-blue-600 p-1.5 rounded-lg">
+          <div className="bg-primary p-1.5 rounded-lg">
             <Wrench className="h-5 w-5 text-white" />
           </div>
           <h1 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -153,7 +153,7 @@ export default function MobileLayout({
           {pushNotifications.isSupported && !pushNotifications.isSubscribed && (
             <button
               type="button"
-              className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300"
+              className="inline-flex items-center gap-1 rounded-md border border-orange-200 bg-primary/10 px-2 py-1 text-xs font-medium text-orange-700 hover:bg-orange-100 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300"
               onClick={() => {
                 pushNotifications
                   .requestPermission()
@@ -201,20 +201,20 @@ export default function MobileLayout({
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 text-xs transition-colors",
                   isActive
-                    ? "text-blue-600 dark:text-blue-400"
+                    ? "text-primary dark:text-primary"
                     : "text-gray-500 dark:text-gray-400"
                 )}
               >
                 <Icon
                   className={cn(
                     "h-5 w-5",
-                    isActive && "text-blue-600 dark:text-blue-400"
+                    isActive && "text-primary dark:text-primary"
                   )}
                 />
                 <span
                   className={cn(
                     "font-medium",
-                    isActive && "text-blue-600 dark:text-blue-400"
+                    isActive && "text-primary dark:text-primary"
                   )}
                 >
                   {item.label}

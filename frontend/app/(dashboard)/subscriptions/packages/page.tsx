@@ -301,7 +301,7 @@ export default function PackagesPage() {
         const count = subscriptions.filter((s: any) => s.package === pkg.id && s.status === "active").length;
         return (
           <div className="flex items-center gap-1.5">
-            <span className={cn("text-sm font-bold", count > 0 ? "text-blue-600" : "text-gray-500")}>{count}</span>
+            <span className={cn("text-sm font-bold", count > 0 ? "text-primary" : "text-gray-500")}>{count}</span>
             <span className="text-xs text-muted-foreground">active</span>
           </div>
         )
@@ -385,8 +385,8 @@ export default function PackagesPage() {
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Total Packages</p>
                   <p className="text-2xl font-black text-gray-900 dark:text-white mt-1">{packages.length}</p>
                 </div>
-                <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center">
-                  <PackageIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div className="w-10 h-10 rounded-lg bg-primary/10 dark:bg-orange-950/20 flex items-center justify-center">
+                  <PackageIcon className="w-5 h-5 text-primary dark:text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -436,7 +436,7 @@ export default function PackagesPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-9 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="h-9 px-3 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Active</option>

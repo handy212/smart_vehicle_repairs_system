@@ -141,14 +141,14 @@ export default function WorkOrderOverviewTab({
                       {typeof workOrder.customer === "object" && workOrder.customer !== null ? (
                         <Link
                           href={`/customers/${workOrder.customer.id}`}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-base"
+                          className="text-primary hover:text-orange-800 dark:text-primary dark:hover:text-orange-300 font-medium text-base"
                         >
                           {workOrder.customer.full_name || workOrder.customer_name || "View Customer"}
                         </Link>
                       ) : (
             <Link
                           href={`/customers/${workOrder.customer}`}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-base"
+                          className="text-primary hover:text-orange-800 dark:text-primary dark:hover:text-orange-300 font-medium text-base"
             >
               {workOrder.customer_name || "View Customer"}
             </Link>
@@ -201,14 +201,14 @@ export default function WorkOrderOverviewTab({
                       {typeof workOrder.vehicle === "object" && workOrder.vehicle !== null ? (
                         <Link
                           href={`/vehicles/${workOrder.vehicle.id}`}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-base"
+                          className="text-primary hover:text-orange-800 dark:text-primary dark:hover:text-orange-300 font-medium text-base"
                         >
                           {workOrder.vehicle.year} {workOrder.vehicle.make} {workOrder.vehicle.model}
                         </Link>
                       ) : (
             <Link
                           href={`/vehicles/${workOrder.vehicle}`}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium text-base"
+                          className="text-primary hover:text-orange-800 dark:text-primary dark:hover:text-orange-300 font-medium text-base"
             >
               {workOrder.vehicle_info || "View Vehicle"}
             </Link>
@@ -359,7 +359,7 @@ export default function WorkOrderOverviewTab({
                           <div>
                             <Link 
                               href={`/workorders/${rework.id}`}
-                              className="font-mono text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                              className="font-mono text-sm text-primary dark:text-primary hover:underline"
                             >
                               {rework.work_order_number}
                             </Link>
@@ -522,7 +522,7 @@ export default function WorkOrderOverviewTab({
                   <select
                     value={selectedServiceCoordinator}
                     onChange={(e) => setSelectedServiceCoordinator(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                    className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                   >
                     <option value="">Select Service Coordinator</option>
                     {serviceCoordinatorsList.map((coord: any) => (

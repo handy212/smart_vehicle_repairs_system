@@ -11,7 +11,7 @@ import { vehiclesApi } from "@/lib/api/vehicles";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -124,7 +124,7 @@ export default function EditAppointmentPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -152,11 +152,11 @@ export default function EditAppointmentPage() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-1">
-            <Link href="/dashboard" className="hover:text-blue-600 transition-colors">Dashboard</Link>
+            <Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link>
             <span>/</span>
-            <Link href="/appointments" className="hover:text-blue-600 transition-colors">Appointments</Link>
+            <Link href="/appointments" className="hover:text-primary transition-colors">Appointments</Link>
             <span>/</span>
-            <Link href={`/appointments/${appointmentId}`} className="hover:text-blue-600 transition-colors">#{appointmentId}</Link>
+            <Link href={`/appointments/${appointmentId}`} className="hover:text-primary transition-colors">#{appointmentId}</Link>
             <span>/</span>
             <span className="text-gray-900 dark:text-gray-100 font-medium">Edit</span>
           </div>
@@ -186,27 +186,30 @@ export default function EditAppointmentPage() {
                     Customer *
                   </label>
                   <Select
-                    id="customer"
-                    {...register("customer", { valueAsNumber: true })}
-                    className={errors.customer ? "border-red-500" : ""}
-                    onChange={(e) => {
-                      setValue("customer", parseInt(e.target.value));
-                      setSelectedCustomer(parseInt(e.target.value));
+                    value={watch("customer")?.toString() || ""}
+                    onValueChange={(val) => {
+                      const numVal = parseInt(val);
+                      setValue("customer", numVal, { shouldValidate: true });
+                      setSelectedCustomer(numVal);
                     }}
                   >
-                    <option value="">Select a customer</option>
-                    {customersData?.results?.map((customer) => {
-                      const displayName = customer.full_name ||
-                        customer.company_name ||
-                        (customer.user?.first_name && customer.user?.last_name
-                          ? `${customer.user.first_name} ${customer.user.last_name}`
-                          : customer.user?.email || customer.customer_number);
-                      return (
-                        <option key={customer.id} value={customer.id}>
-                          {displayName}
-                        </option>
-                      );
-                    })}
+                    <SelectTrigger className={errors.customer ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Select a customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customersData?.results?.map((customer) => {
+                        const displayName = customer.full_name ||
+                          customer.company_name ||
+                          (customer.user?.first_name && customer.user?.last_name
+                            ? `${customer.user.first_name} ${customer.user.last_name}`
+                            : customer.user?.email || customer.customer_number);
+                        return (
+                          <SelectItem key={customer.id} value={customer.id.toString()}>
+                            {displayName}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
                   </Select>
                   {errors.customer && (
                     <p className="mt-1 text-sm text-red-600">{errors.customer.message}</p>
@@ -218,23 +221,26 @@ export default function EditAppointmentPage() {
                     Vehicle *
                   </label>
                   <Select
-                    id="vehicle"
-                    {...register("vehicle", { valueAsNumber: true })}
-                    className={errors.vehicle ? "border-red-500" : ""}
+                    value={watch("vehicle")?.toString() || ""}
+                    onValueChange={(val) => setValue("vehicle", parseInt(val), { shouldValidate: true })}
                     disabled={!selectedCustomer || !vehiclesData?.results?.length}
                   >
-                    <option value="">
-                      {!selectedCustomer
-                        ? "Select a customer first"
-                        : !vehiclesData?.results?.length
-                          ? "No vehicles found"
-                          : "Select a vehicle"}
-                    </option>
-                    {vehiclesData?.results?.map((vehicle) => (
-                      <option key={vehicle.id} value={vehicle.id}>
-                        {vehicle.make} {vehicle.model} {vehicle.year} - {vehicle.vin}
-                      </option>
-                    ))}
+                    <SelectTrigger className={errors.vehicle ? "border-red-500" : ""}>
+                      <SelectValue placeholder={
+                        !selectedCustomer
+                          ? "Select a customer first"
+                          : !vehiclesData?.results?.length
+                            ? "No vehicles found"
+                            : "Select a vehicle"
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vehiclesData?.results?.map((vehicle) => (
+                        <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                          {vehicle.make} {vehicle.model} {vehicle.year} - {vehicle.vin}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                   {errors.vehicle && (
                     <p className="mt-1 text-sm text-red-600">{errors.vehicle.message}</p>
@@ -287,13 +293,18 @@ export default function EditAppointmentPage() {
                       Service Type *
                     </label>
                     <Select
-                      id="service_type"
-                      {...register("service_type")}
+                      value={watch("service_type") || ""}
+                      onValueChange={(val: any) => setValue("service_type", val, { shouldValidate: true })}
                     >
-                      <option value="inspection">Inspection</option>
-                      <option value="repair">Repair</option>
-                      <option value="maintenance">Maintenance</option>
-                      <option value="diagnostic">Diagnostic</option>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="inspection">Inspection</SelectItem>
+                        <SelectItem value="repair">Repair</SelectItem>
+                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                        <SelectItem value="diagnostic">Diagnostic</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
                   <div>
@@ -301,13 +312,18 @@ export default function EditAppointmentPage() {
                       Priority
                     </label>
                     <Select
-                      id="priority"
-                      {...register("priority")}
+                      value={watch("priority") || ""}
+                      onValueChange={(val: any) => setValue("priority", val, { shouldValidate: true })}
                     >
-                      <option value="low">Low</option>
-                      <option value="normal">Normal</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
                 </div>

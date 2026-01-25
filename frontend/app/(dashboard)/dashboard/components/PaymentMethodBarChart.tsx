@@ -166,14 +166,14 @@ const PaymentMethodBarChart = memo(function PaymentMethodBarChart({
       {/* Total Revenue Summary */}
       {totalRevenue > 0 && (
         <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
             <div className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              <DollarSign className="w-5 h-5 text-primary dark:text-primary" />
+              <span className="text-sm font-medium text-orange-900 dark:text-orange-100">
                 Total Revenue
               </span>
             </div>
-            <span className="text-lg font-bold text-blue-900 dark:text-blue-100">
+            <span className="text-lg font-bold text-orange-900 dark:text-orange-100">
               {formatMoney(totalRevenue)}
             </span>
           </div>

@@ -187,7 +187,7 @@ export default function CashFlowPage() {
                         <div className="flex justify-between items-center">
                             <CardTitle>Cash Flow Summary</CardTitle>
                             <div className="text-sm font-medium">
-                                Opening Balance: <span className="text-blue-600">{formatCurrency(report.opening_balance)}</span>
+                                Opening Balance: <span className="text-primary">{formatCurrency(report.opening_balance)}</span>
                             </div>
                         </div>
                     </CardHeader>
@@ -212,9 +212,9 @@ export default function CashFlowPage() {
                             </span>
                         </div>
 
-                        <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg border border-blue-100">
-                            <span className="font-bold text-lg text-blue-900">Closing Cash Balance</span>
-                            <span className="font-bold text-xl text-blue-700">
+                        <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg border border-orange-100">
+                            <span className="font-bold text-lg text-orange-900">Closing Cash Balance</span>
+                            <span className="font-bold text-xl text-orange-700">
                                 {formatCurrency(report.closing_balance)}
                             </span>
                         </div>

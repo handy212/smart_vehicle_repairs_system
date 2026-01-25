@@ -14,7 +14,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/lib/hooks/useToast";
 
 export default function BankReconciliationPage() {
@@ -193,18 +193,21 @@ export default function BankReconciliationPage() {
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
                             <Label htmlFor="account">Bank Account</Label>
+                            <Label htmlFor="account">Bank Account</Label>
                             <Select
-                                id="account"
                                 value={selectedAccount}
-                                onChange={(e: any) => setSelectedAccount(e.target.value)}
-                                className="w-full"
+                                onValueChange={(value) => setSelectedAccount(value)}
                             >
-                                <option value="" disabled>Select account</option>
-                                {accounts?.map((acc: any) => (
-                                    <option key={acc.id} value={acc.id.toString()}>
-                                        {acc.code} - {acc.name}
-                                    </option>
-                                ))}
+                                <SelectTrigger className="w-full" id="account">
+                                    <SelectValue placeholder="Select account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {accounts?.map((acc: any) => (
+                                        <SelectItem key={acc.id} value={acc.id.toString()}>
+                                            {acc.code} - {acc.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
                             </Select>
                         </div>
                         <div className="grid gap-2">

@@ -76,6 +76,17 @@ export const authApi = {
     return response.data;
   },
 
+  register: {
+    initiate: async (data: any): Promise<any> => {
+      const response = await apiClient.post("/auth/register/initiate/", data);
+      return response.data;
+    },
+    verify: async (data: any): Promise<any> => {
+      const response = await apiClient.post("/auth/register/verify/", data);
+      return response.data;
+    }
+  },
+
   logout: () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("access_token");
