@@ -75,8 +75,12 @@ class CustomerViewSet(viewsets.ModelViewSet):
         
         # Filter by status (exclude inactive by default)
         if self.action == 'list':
+            # Check for inactive_period first - if set, don't auto-filter by status
+            inactive_period = self.request.query_params.get('inactive_period')
+            
             status_param = self.request.query_params.get('status')
-            if not status_param:
+            # Only auto-filter by active status if inactive_period is not set
+            if not status_param and not inactive_period:
                 queryset = queryset.filter(status='active')
             
             # Date range filtering
@@ -86,6 +90,48 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(created_at__gte=date_from)
             if date_to:
                 queryset = queryset.filter(created_at__lte=date_to)
+            
+            # Inactive period filtering
+            if inactive_period:
+                from datetime import timedelta
+                from apps.workorders.models import WorkOrder
+                
+                # Map period to days
+                period_days = {
+                    '3_months': 90,
+                    '6_months': 180,
+                    '1_year': 365,
+                    '2_years': 730,
+                }
+                
+                if inactive_period in period_days:
+                    threshold_days = period_days[inactive_period]
+                elif inactive_period.startswith('custom_'):
+                    # Format: custom_180 (custom number of days)
+                    try:
+                        threshold_days = int(inactive_period.replace('custom_', ''))
+                    except ValueError:
+                        threshold_days = 180
+                else:
+                    threshold_days = 180  # Default 6 months
+                
+                cutoff_date = timezone.now().date() - timedelta(days=threshold_days)
+                
+                # Get customers who have recent visits (within the threshold period)
+                customers_with_recent_visits = WorkOrder.objects.filter(
+                    customer__in=queryset,
+                    status__in=['completed', 'invoiced', 'closed'],
+                    completed_at__isnull=False,
+                    completed_at__date__gte=cutoff_date
+                ).values_list('customer_id', flat=True).distinct()
+                
+                # Filter to customers NOT in the recent visits list
+                # This includes:
+                # 1. Customers with no completed work orders at all
+                # 2. Customers whose last visit was before the cutoff_date
+                if customers_with_recent_visits:
+                    queryset = queryset.exclude(id__in=customers_with_recent_visits)
+                # If no customers have recent visits, the queryset already contains all inactive customers
         
         return queryset
     
@@ -98,6 +144,32 @@ class CustomerViewSet(viewsets.ModelViewSet):
         elif self.action in ['update', 'partial_update']:
             return CustomerUpdateSerializer
         return CustomerDetailSerializer
+    
+    def get_serializer_context(self):
+        """Add context for serializer"""
+        context = super().get_serializer_context()
+        # Add inactive threshold days to context if inactive_period is specified
+        if self.action == 'list':
+            inactive_period = self.request.query_params.get('inactive_period')
+            if inactive_period:
+                from datetime import timedelta
+                period_days = {
+                    '3_months': 90,
+                    '6_months': 180,
+                    '1_year': 365,
+                    '2_years': 730,
+                }
+                if inactive_period in period_days:
+                    threshold_days = period_days[inactive_period]
+                elif inactive_period.startswith('custom_'):
+                    try:
+                        threshold_days = int(inactive_period.replace('custom_', ''))
+                    except ValueError:
+                        threshold_days = 180
+                else:
+                    threshold_days = 180
+                context['inactive_threshold_days'] = threshold_days
+        return context
     
     def perform_create(self, serializer):
         """Create customer with user account"""

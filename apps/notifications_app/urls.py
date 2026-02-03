@@ -10,10 +10,9 @@ router.register('notifications', views.NotificationViewSet, basename='notificati
 router.register('preferences', views.NotificationPreferenceViewSet, basename='preference')
 router.register('logs', views.NotificationLogViewSet, basename='log')
 router.register('sms-console', views.SMSConsoleViewSet, basename='sms-console')
+router.register('push-subscriptions', views.WebPushSubscriptionViewSet, basename='push-subscription')
 
 urlpatterns = [
     path('', include(router.urls)),
     path('render-template/', views.TemplateRenderView.as_view(), name='render-template'),
-    path('push/subscribe/', views.PushSubscribeView.as_view(), name='push-subscribe'),
-    path('push/unsubscribe/', views.PushUnsubscribeView.as_view(), name='push-unsubscribe'),
 ]

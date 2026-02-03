@@ -48,6 +48,7 @@ import {
   X,
   Search,
   ArrowRight,
+  Printer,
   ChevronRight,
   RefreshCw,
   Receipt,
@@ -728,6 +729,7 @@ export default function DiagnosisPage() {
           <RecommendationsTab
             diagnosis={diagnosis}
             workOrderId={workOrderId}
+            workOrder={workOrder}
             onRefresh={() => {
               queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
             }}
@@ -811,11 +813,13 @@ export default function DiagnosisPage() {
 function RecommendationsTab({
   diagnosis,
   workOrderId,
+  workOrder,
   onRefresh,
   isDisabled = false,
 }: {
   diagnosis: Diagnosis;
   workOrderId: number;
+  workOrder?: any;
   onRefresh: () => void;
   isDisabled?: boolean;
 }) {
@@ -965,6 +969,45 @@ function RecommendationsTab({
   });
   const unapprovedRecommendations = recommendations.filter((r: any) => !r.customer_approved);
   const convertedRecommendations = recommendations.filter((r: any) => r.converted_to_task_id);
+  
+  // Check if work order is in a status that allows printing recommendations
+  const canPrintRecommendations = workOrder && ["completed", "invoiced", "closed"].includes(workOrder.status);
+  
+  const handlePrintRecommendations = async (format: "html" | "pdf" = "pdf") => {
+    try {
+      if (format === "pdf") {
+        // Download PDF
+        const blob = await workordersApi.downloadRecommendationsPDF(workOrderId);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `recommendations_${workOrder?.work_order_number || workOrderId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        toast({
+          title: "Success",
+          description: "Recommendations PDF downloaded successfully",
+        });
+      } else {
+        // Open HTML print page on Django backend
+        // Use the API URL and construct the Django frontend URL
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+        const baseUrl = apiUrl.replace("/api", "");
+        const token = localStorage.getItem("access_token");
+        // Pass token as query param for authentication
+        const printUrl = `${baseUrl}/workorders/${workOrderId}/print-recommendations/${token ? `?token=${token}` : ''}`;
+        window.open(printUrl, "_blank");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to print recommendations",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleToggleSelection = (recId: number) => {
     const newSelection = new Set(selectedRecommendations);
@@ -1035,6 +1078,28 @@ function RecommendationsTab({
                 <ListChecks className="w-3.5 h-3.5 mr-1.5" />
                 Convert to Tasks
               </Button>
+            )}
+            {canPrintRecommendations && unapprovedRecommendations.length > 0 && (
+              <>
+                <Button
+                  onClick={() => handlePrintRecommendations("pdf")}
+                  size="sm"
+                  variant="outline"
+                  className="h-8"
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1.5" />
+                  Print (PDF)
+                </Button>
+                <Button
+                  onClick={() => handlePrintRecommendations("html")}
+                  size="sm"
+                  variant="outline"
+                  className="h-8"
+                >
+                  <Printer className="w-3.5 h-3.5 mr-1.5" />
+                  Print (HTML)
+                </Button>
+              </>
             )}
             <Button onClick={() => setShowAddDialog(true)} size="sm" className="h-8" disabled={isDisabled}>
               <Plus className="w-3.5 h-3.5 mr-1.5" />

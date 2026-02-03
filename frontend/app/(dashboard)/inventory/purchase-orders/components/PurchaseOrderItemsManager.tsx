@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
-import { Trash2, Plus, Search, DollarSign, Package } from "lucide-react";
+import { Trash2, Plus, Search, DollarSign, Package, Pencil, CheckCircle, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,9 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
 
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [editingItemId, setEditingItemId] = useState<number | null>(null);
+    const [editQuantity, setEditQuantity] = useState(1);
+    const [editUnitCost, setEditUnitCost] = useState("");
 
     const handleSearch = async () => {
         if (!searchQuery) return;
@@ -63,7 +66,7 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["purchase-order", purchaseOrder.id] });
             toast({ title: "Success", description: "Item added successfully" });
-            setIsAddDialogOpen(false);
+            // Keep dialog open for multiple additions
             resetForm();
         },
         onError: (error: any) => {
@@ -91,6 +94,23 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
         },
     });
 
+    const updateItemMutation = useMutation({
+        mutationFn: ({ itemId, data }: { itemId: number; data: Partial<PurchaseOrderItem> }) =>
+            inventoryApi.updatePurchaseOrderItem(purchaseOrder.id, itemId, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["purchase-order", purchaseOrder.id] });
+            toast({ title: "Success", description: "Item updated successfully" });
+            setEditingItemId(null);
+        },
+        onError: (error: any) => {
+            toast({
+                title: "Error",
+                description: error.response?.data?.detail || "Failed to update item",
+                variant: "destructive",
+            });
+        },
+    });
+
     const resetForm = () => {
         setSelectedPart(null);
         setQuantity(1);
@@ -103,13 +123,6 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
         if (!selectedPart) return;
         addItemMutation.mutate({
             part: selectedPart.id,
-            quantity_ordered: quantity, // Note: Schema might expect 'quantity' or 'quantity_ordered' depending on create serializer. 
-            // PurchaseOrderItemCreateSerializer uses 'quantity'.
-            // Wait, look at PurchaseOrderItemCreateSerializer in serializers.py.
-            // It uses 'quantity'. Let's check api/inventory.ts interface for PurchaseOrderItem.
-            // Interface has quantity_ordered.
-            // Server likely maps 'quantity' to 'quantity_ordered' or vice versa.
-            // I will send BOTH or check serializer. Serializer had quantity.
             quantity: quantity,
             unit_cost: unitCost || selectedPart.cost_price,
         } as any);
@@ -214,37 +227,131 @@ export default function PurchaseOrderItemsManager({ purchaseOrder }: PurchaseOrd
                         ) : (
                             purchaseOrder.items.map((item) => (
                                 <TableRow key={item.id} className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0">
-                                    <TableCell className="px-4 py-2">
-                                        <div>
-                                            <span className="font-mono text-xs font-medium text-gray-700 dark:text-gray-300 block">
-                                                {item.part_number || (typeof item.part === 'object' ? item.part.part_number : '-')}
-                                            </span>
-                                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                {item.part_name || (typeof item.part === 'object' ? item.part.name : '-')}
-                                            </span>
+                                    <TableCell className="px-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-9 w-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 shrink-0 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                                <Package className="h-5 w-5" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                                                        {item.part_name || (typeof item.part === 'object' ? item.part.name : '-')}
+                                                    </span>
+                                                    {typeof item.part === 'object' && (item.part as any).category_name && (
+                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                                                            {(item.part as any).category_name}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <span className="font-mono text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                                    {item.part_number || (typeof item.part === 'object' ? item.part.part_number : '-')}
+                                                </span>
+                                            </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="px-4 py-2 text-right text-sm text-gray-900 font-medium">
-                                        {item.quantity_ordered}
+                                    <TableCell className="px-4 py-3 text-right text-sm text-gray-900 font-semibold">
+                                        {editingItemId === item.id ? (
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                value={editQuantity}
+                                                onChange={(e) => setEditQuantity(parseInt(e.target.value) || 1)}
+                                                className="h-8 w-20 text-right"
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            item.quantity
+                                        )}
                                     </TableCell>
-                                    <TableCell className="px-4 py-2 text-right text-sm text-gray-600">
-                                        ${item.unit_cost}
+                                    <TableCell className="px-4 py-3 text-right text-sm text-gray-500 dark:text-gray-400">
+                                        {editingItemId === item.id ? (
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                value={editUnitCost}
+                                                onChange={(e) => setEditUnitCost(e.target.value)}
+                                                onFocus={(e) => e.target.select()}
+                                                className="h-8 w-24 text-right"
+                                            />
+                                        ) : (
+                                            formatCurrency(parseFloat(item.unit_cost || "0"))
+                                        )}
                                     </TableCell>
-                                    <TableCell className="px-4 py-2 text-right text-sm font-bold text-gray-900">
-                                        ${item.total_cost}
+                                    <TableCell className="px-4 py-3 text-right text-sm font-bold text-gray-900 dark:text-gray-50">
+                                        {formatCurrency(parseFloat(item.total || "0"))}
                                     </TableCell>
                                     <TableCell className="px-2 py-2 text-right">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-600 hover:bg-red-50"
-                                            onClick={() => removeItemMutation.mutate(item.id)}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
+                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {editingItemId === item.id ? (
+                                                <>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 w-7 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                        onClick={() => {
+                                                            updateItemMutation.mutate({
+                                                                itemId: item.id,
+                                                                data: {
+                                                                    quantity: editQuantity,
+                                                                    unit_cost: (parseFloat(editUnitCost) || 0).toString(),
+                                                                },
+                                                            });
+                                                        }}
+                                                    >
+                                                        <CheckCircle className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 w-7 p-0 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                                                        onClick={() => setEditingItemId(null)}
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 w-7 p-0 text-gray-400 hover:text-primary hover:bg-primary/10"
+                                                        onClick={() => {
+                                                            setEditingItemId(item.id);
+                                                            setEditQuantity(item.quantity);
+                                                            setEditUnitCost(item.unit_cost || "");
+                                                        }}
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 w-7 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                                        onClick={() => removeItemMutation.mutate(item.id)}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))
+                        )}
+                        {purchaseOrder.items && purchaseOrder.items.length > 0 && (
+                            <TableRow className="hover:bg-transparent border-t border-gray-100">
+                                <TableCell colSpan={5} className="p-0">
+                                    <Button
+                                        variant="ghost"
+                                        className="w-full h-12 rounded-none text-primary hover:text-primary hover:bg-primary/5 flex items-center justify-center gap-2 text-sm font-medium transition-colors"
+                                        onClick={() => setIsAddDialogOpen(true)}
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Add Another Item
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
                         )}
                     </TableBody>
                 </Table>
@@ -264,7 +371,6 @@ function SearchResultItem({ part, onAdd, isAdding }: { part: any, onAdd: (data: 
         onAdd({
             part: part.id,
             quantity: quantity,
-            quantity_ordered: quantity,
             unit_cost: unitCost || 0
         });
         setIsAdded(true);

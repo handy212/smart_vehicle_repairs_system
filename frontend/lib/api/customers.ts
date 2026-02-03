@@ -30,6 +30,9 @@ export interface Customer {
   customer_since: string;
   created_at: string;
   status: string;
+  last_visit_date?: string | null;
+  days_since_last_visit?: number | null;
+  is_inactive?: boolean | null;
 }
 
 export interface CustomerListResponse {
@@ -52,6 +55,7 @@ export const customersApi = {
     loyalty_tier?: string;
     ordering?: string;
     page_size?: number;
+    inactive_period?: '3_months' | '6_months' | '1_year' | '2_years' | string; // string for custom_XXX
   }): Promise<CustomerListResponse> => {
     const response = await apiClient.get("/customers/customers/", { params });
     return response.data;

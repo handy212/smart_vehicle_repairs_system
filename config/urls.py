@@ -86,6 +86,7 @@ urlpatterns = [
     path('api/vehicles/', include(('apps.vehicles.urls', 'api_vehicles'))),
     path('api/appointments/', include(('apps.appointments.urls', 'api_appointments'))),
     path('api/workorders/', include(('apps.workorders.urls', 'api_workorders'))),
+    path('api/gatepass/', include(('apps.gatepass.urls', 'api_gatepass'))),
     path('api/inventory/', include(('apps.inventory.urls', 'api_inventory'))),
     path('api/billing/', include(('apps.billing.urls', 'api_billing'))),
     path('api/inspections/', include(('apps.inspections.urls', 'api_inspections'))),
@@ -111,6 +112,9 @@ urlpatterns = [
     
     # Phase 6: Work Order Management - IMPLEMENTED
     path('workorders/', include('apps.workorders.frontend_urls', namespace='workorders')),
+    
+    # Gate Pass Management
+    path('gatepass/', include('apps.gatepass.frontend_urls', namespace='gatepass')),
     
     # Phase 7: Inventory Management - COMPLETE
     path('inventory/', include('apps.inventory.frontend_urls', namespace='inventory')),

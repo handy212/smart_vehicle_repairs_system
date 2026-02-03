@@ -55,10 +55,13 @@ export default function EditPartPage() {
   const onSubmit = async (data: PartFormData, imageFile: File | null) => {
     setServerError(null);
     try {
+      // Exclude quantity_in_stock - stock is managed via StockItem per branch
+      const { quantity_in_stock, ...dataWithoutStock } = data as any;
+      
       if (imageFile) {
         const formData = new FormData();
-        Object.keys(data).forEach((key) => {
-          const value = data[key as keyof PartFormData];
+        Object.keys(dataWithoutStock).forEach((key) => {
+          const value = dataWithoutStock[key as keyof typeof dataWithoutStock];
           if (value !== undefined && value !== null) {
             formData.append(key, value.toString());
           }
@@ -67,7 +70,7 @@ export default function EditPartPage() {
         await updateMutation.mutateAsync(formData);
       } else {
         const apiData: Partial<Part> = {
-          ...data,
+          ...dataWithoutStock,
           cost_price: data.cost_price?.toString(),
           selling_price: data.selling_price?.toString(),
           list_price: data.list_price?.toString(),
@@ -117,7 +120,7 @@ export default function EditPartPage() {
     manufacturer: part.manufacturer || "",
     manufacturer_part_number: part.manufacturer_part_number || "",
     preferred_supplier: typeof part.preferred_supplier === 'object' && part.preferred_supplier !== null ? part.preferred_supplier.id : (part.preferred_supplier || undefined),
-    quantity_in_stock: part.quantity_in_stock || 0,
+    // quantity_in_stock removed - stock is managed via StockItem per branch
     reorder_point: part.reorder_point || 10,
     reorder_quantity: part.reorder_quantity || 20,
     minimum_stock: part.minimum_stock || 5,

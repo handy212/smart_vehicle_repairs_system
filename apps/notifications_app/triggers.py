@@ -1789,56 +1789,164 @@ Invoice sent. Thank you! - {self._get_company_name()}'''
     
     # ==================== SYSTEM NOTIFICATIONS ====================
     
-    def service_due_reminder(self, vehicle):
-        """Remind customer that service is due"""
-        if not vehicle.customer.user:
+    def service_due_reminder(self, schedule_or_vehicle, channel='email'):
+        """
+        Remind customer that service is due.
+        
+        Args:
+            schedule_or_vehicle: VehicleServiceSchedule instance or Vehicle instance
+            channel: 'email', 'sms', or 'call' (default: 'email')
+        """
+        from apps.vehicles.models import VehicleServiceSchedule, Vehicle
+        
+        # Handle both VehicleServiceSchedule and Vehicle for backward compatibility
+        if isinstance(schedule_or_vehicle, VehicleServiceSchedule):
+            schedule = schedule_or_vehicle
+            vehicle = schedule.vehicle
+            service_type = schedule.service_type
+            service_type_name = service_type.name
+            last_service_date = schedule.last_service_date
+            last_service_mileage = schedule.last_service_mileage
+            next_service_due_date = schedule.next_service_due_date
+            next_service_due_mileage = schedule.next_service_due_mileage
+            days_until_due = schedule.days_until_due
+            miles_until_due = schedule.miles_until_due
+            related_object_type = 'service_schedule'
+            related_object_id = schedule.id
+        elif isinstance(schedule_or_vehicle, Vehicle):
+            # Backward compatibility: use vehicle's general service info
+            vehicle = schedule_or_vehicle
+            schedule = None
+            service_type = None
+            service_type_name = 'Regular Maintenance'
+            last_service_date = vehicle.last_service_date
+            last_service_mileage = None
+            next_service_due_date = vehicle.next_service_due_date
+            next_service_due_mileage = vehicle.next_service_due_mileage
+            days_until_due = None
+            miles_until_due = None
+            if next_service_due_date:
+                from django.utils import timezone
+                today = timezone.now().date()
+                days_until_due = (next_service_due_date - today).days
+            if next_service_due_mileage:
+                miles_until_due = next_service_due_mileage - (vehicle.current_mileage or 0)
+            related_object_type = 'vehicle'
+            related_object_id = vehicle.id
+        else:
             return
         
-        template = self._get_template('service_due', 'email')
-        customer_name = self._build_customer_name(vehicle.customer)
+        if not vehicle.owner or not vehicle.owner.user:
+            return
+        
+        customer = vehicle.owner
+        template = self._get_template('service_due', channel)
+        customer_name = self._build_customer_name(customer)
         vehicle_display = self._build_vehicle_display(vehicle)
         
-        title = f'Service Due for Your {vehicle_display}'
+        # Format due date
+        if next_service_due_date:
+            due_date_str = next_service_due_date.strftime('%B %d, %Y')
+            if days_until_due is not None:
+                if days_until_due < 0:
+                    due_date_str = f"{due_date_str} ({abs(days_until_due)} days overdue)"
+                elif days_until_due == 0:
+                    due_date_str = f"{due_date_str} (Due today)"
+                else:
+                    due_date_str = f"{due_date_str} (in {days_until_due} days)"
+        else:
+            due_date_str = "Not set"
+        
+        # Format mileage info
+        current_mileage = vehicle.current_mileage or 0
+        mileage_info = f"{current_mileage:,} {vehicle.mileage_unit}"
+        if next_service_due_mileage:
+            if miles_until_due is not None:
+                if miles_until_due <= 0:
+                    mileage_info = f"{current_mileage:,} {vehicle.mileage_unit} (Due: {next_service_due_mileage:,} {vehicle.mileage_unit} - {abs(miles_until_due):,} {vehicle.mileage_unit} overdue)"
+                else:
+                    mileage_info = f"{current_mileage:,} {vehicle.mileage_unit} (Due: {next_service_due_mileage:,} {vehicle.mileage_unit} - {miles_until_due:,} {vehicle.mileage_unit} remaining)"
+        
+        title = f'Service Due: {service_type_name} for Your {vehicle_display}'
         if template and template.subject:
             title = self.service._render_template(template.subject, {
                 'vehicle_display': vehicle_display,
+                'service_type': service_type_name,
+                'due_date': due_date_str,
             })
         
-        message = f'''It's time to schedule service for your vehicle.
+        message = f'''Dear {customer_name},
 
+This is a reminder that your vehicle is due for service.
+
+VEHICLE SERVICE DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Vehicle: {vehicle_display}
-Last Service: {vehicle.last_service_date or "Never"}
-Mileage: {vehicle.current_mileage or "Unknown"} miles
+Service Type: {service_type_name}
+Due Date: {due_date_str}
+Current Mileage: {mileage_info}
+Last Service: {last_service_date.strftime('%B %d, %Y') if last_service_date else "Never"}
 
-Regular maintenance keeps your vehicle running smoothly and prevents costly repairs.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Contact us to schedule an appointment.'''
+Please schedule an appointment to keep your vehicle in optimal condition.
+
+Contact us to schedule your service appointment.
+
+Best regards,
+{self._get_company_name()} Team'''
+        
         if template and template.body:
             message = self.service._render_template(template.body, {
                 'customer_name': customer_name,
                 'vehicle_display': vehicle_display,
-                'service_type': 'Regular Maintenance',
-                'due_date': 'Now',  # TODO: Calculate actual due date
-                'mileage_due': str(vehicle.current_mileage or "Unknown"),
+                'service_type': service_type_name,
+                'due_date': due_date_str,
+                'next_service_due_date': next_service_due_date.strftime('%B %d, %Y') if next_service_due_date else "Not set",
+                'days_until_due': days_until_due if days_until_due is not None else "N/A",
+                'current_mileage': f"{current_mileage:,} {vehicle.mileage_unit}",
+                'next_service_due_mileage': f"{next_service_due_mileage:,} {vehicle.mileage_unit}" if next_service_due_mileage else "Not set",
+                'miles_remaining': miles_until_due if miles_until_due is not None else "N/A",
+                'last_service_date': last_service_date.strftime('%B %d, %Y') if last_service_date else "Never",
+                'last_service_mileage': f"{last_service_mileage:,} {vehicle.mileage_unit}" if last_service_mileage else "N/A",
                 'company_name': self._get_company_name(),
             })
         
+        # For SMS, create a shorter message
+        if channel == 'sms':
+            sms_message = (
+                f"Service Reminder: {service_type_name} due for {vehicle_display}. "
+                f"Due: {due_date_str}. Current: {current_mileage:,} {vehicle.mileage_unit}. "
+                f"Call us to schedule. - {self._get_company_name()}"
+            )
+            # Truncate if too long (SMS limit ~160 chars)
+            if len(sms_message) > 160:
+                sms_message = sms_message[:157] + "..."
+            message = sms_message
+        
         notification = Notification.objects.create(
-            recipient=vehicle.customer.user,
+            recipient=vehicle.owner.user,
             notification_type='vehicle',
-            channel='email',
+            channel=channel,
             priority='normal',
             template=template,
             title=title,
             message=message,
             data={
                 'vehicle_id': vehicle.id,
-                'last_service': str(vehicle.last_service_date) if vehicle.last_service_date else None,
+                'service_schedule_id': schedule.id if schedule else None,
+                'service_type_id': service_type.id if service_type else None,
+                'service_type_name': service_type_name,
+                'last_service_date': str(last_service_date) if last_service_date else None,
+                'next_service_due_date': str(next_service_due_date) if next_service_due_date else None,
+                'next_service_due_mileage': next_service_due_mileage,
+                'days_until_due': days_until_due,
+                'miles_until_due': miles_until_due,
                 'customer_name': customer_name,
                 'vehicle_display': vehicle_display,
             },
-            related_object_type='vehicle',
-            related_object_id=vehicle.id
+            related_object_type=related_object_type,
+            related_object_id=related_object_id
         )
         self.service.send_notification(notification)
     
@@ -2261,6 +2369,172 @@ Best regards,
                 'reset_link': reset_link,
                 'company_name': self._get_company_name(),
             }
+        )
+        self.service.send_notification(notification)
+    
+    # ==================== GATE PASS NOTIFICATIONS ====================
+    
+    def gate_pass_created(self, gate_pass):
+        """Notify customer when gate pass is created (vehicle ready for pickup)"""
+        if not gate_pass.customer or not gate_pass.customer.user:
+            return
+        
+        template = self._get_template('gate_pass_created', 'email')
+        customer_name = self._build_customer_name(gate_pass.customer)
+        vehicle_display = self._build_vehicle_display(gate_pass.vehicle)
+        
+        # Build pickup person info
+        pickup_info = "Customer"
+        if not gate_pass.picked_up_by_customer:
+            pickup_info = gate_pass.pickup_person_name or "Authorized Representative"
+            if gate_pass.pickup_person_relationship:
+                pickup_info += f" ({gate_pass.pickup_person_relationship})"
+        
+        # Build branch info
+        branch_name = gate_pass.branch.name if gate_pass.branch else "Our Location"
+        branch_address = gate_pass.branch.address if gate_pass.branch and hasattr(gate_pass.branch, 'address') else ""
+        
+        title = f'Your {vehicle_display} is Ready for Pickup - {gate_pass.gate_pass_number}'
+        if template and template.subject:
+            title = self.service._render_template(template.subject, {
+                'gate_pass_number': gate_pass.gate_pass_number,
+                'vehicle_display': vehicle_display,
+                'work_order_number': gate_pass.work_order.work_order_number if gate_pass.work_order else "N/A",
+            })
+        
+        message = f'''Good news! Your vehicle is ready for pickup.
+
+Gate Pass: {gate_pass.gate_pass_number}
+Work Order: {gate_pass.work_order.work_order_number if gate_pass.work_order else "N/A"}
+Vehicle: {vehicle_display}
+Pickup By: {pickup_info}
+Branch: {branch_name}
+{f"Address: {branch_address}" if branch_address else ""}
+
+Please bring your identification and payment method when picking up your vehicle.'''
+        
+        if template and template.body:
+            message = self.service._render_template(template.body, {
+                'customer_name': customer_name,
+                'gate_pass_number': gate_pass.gate_pass_number,
+                'work_order_number': gate_pass.work_order.work_order_number if gate_pass.work_order else "N/A",
+                'vehicle_display': vehicle_display,
+                'pickup_info': pickup_info,
+                'pickup_person_name': gate_pass.pickup_person_name if not gate_pass.picked_up_by_customer else customer_name,
+                'pickup_person_relationship': gate_pass.pickup_person_relationship or "",
+                'branch_name': branch_name,
+                'branch_address': branch_address,
+                'pickup_notes': gate_pass.pickup_notes or "",
+                'company_name': self._get_company_name(),
+            })
+        
+        notification = Notification.objects.create(
+            recipient=gate_pass.customer.user,
+            notification_type='gatepass',
+            channel='email',
+            priority='high',
+            template=template,
+            title=title,
+            message=message,
+            data={
+                'gate_pass_id': gate_pass.id,
+                'gate_pass_number': gate_pass.gate_pass_number,
+                'work_order_id': gate_pass.work_order.id if gate_pass.work_order else None,
+                'work_order_number': gate_pass.work_order.work_order_number if gate_pass.work_order else "N/A",
+                'customer_name': customer_name,
+                'vehicle_id': gate_pass.vehicle.id if gate_pass.vehicle else None,
+                'vehicle_display': vehicle_display,
+                'pickup_info': pickup_info,
+                'branch_name': branch_name,
+            },
+            related_object_type='gatepass',
+            related_object_id=gate_pass.id
+        )
+        self.service.send_notification(notification)
+    
+    def gate_pass_issued(self, gate_pass):
+        """Notify customer when gate pass is officially issued"""
+        if not gate_pass.customer or not gate_pass.customer.user:
+            return
+        
+        template = self._get_template('gate_pass_issued', 'email')
+        customer_name = self._build_customer_name(gate_pass.customer)
+        vehicle_display = self._build_vehicle_display(gate_pass.vehicle)
+        
+        # Build pickup person info
+        pickup_info = "Customer"
+        if not gate_pass.picked_up_by_customer:
+            pickup_info = gate_pass.pickup_person_name or "Authorized Representative"
+            if gate_pass.pickup_person_relationship:
+                pickup_info += f" ({gate_pass.pickup_person_relationship})"
+        
+        # Build branch info
+        branch_name = gate_pass.branch.name if gate_pass.branch else "Our Location"
+        branch_address = gate_pass.branch.address if gate_pass.branch and hasattr(gate_pass.branch, 'address') else ""
+        
+        # Build issued by info
+        issued_by_name = gate_pass.issued_by.get_full_name() if gate_pass.issued_by else "Staff"
+        
+        title = f'Gate Pass Issued - {gate_pass.gate_pass_number}'
+        if template and template.subject:
+            title = self.service._render_template(template.subject, {
+                'gate_pass_number': gate_pass.gate_pass_number,
+                'vehicle_display': vehicle_display,
+            })
+        
+        message = f'''Your gate pass has been issued and your vehicle is ready for pickup.
+
+Gate Pass: {gate_pass.gate_pass_number}
+Work Order: {gate_pass.work_order.work_order_number if gate_pass.work_order else "N/A"}
+Vehicle: {vehicle_display}
+Pickup By: {pickup_info}
+Branch: {branch_name}
+{f"Address: {branch_address}" if branch_address else ""}
+Issued At: {gate_pass.issued_at.strftime("%Y-%m-%d %H:%M") if gate_pass.issued_at else "N/A"}
+Issued By: {issued_by_name}
+
+Please bring your identification and payment method when picking up your vehicle.'''
+        
+        if template and template.body:
+            message = self.service._render_template(template.body, {
+                'customer_name': customer_name,
+                'gate_pass_number': gate_pass.gate_pass_number,
+                'work_order_number': gate_pass.work_order.work_order_number if gate_pass.work_order else "N/A",
+                'vehicle_display': vehicle_display,
+                'pickup_info': pickup_info,
+                'pickup_person_name': gate_pass.pickup_person_name if not gate_pass.picked_up_by_customer else customer_name,
+                'pickup_person_relationship': gate_pass.pickup_person_relationship or "",
+                'branch_name': branch_name,
+                'branch_address': branch_address,
+                'issued_at': gate_pass.issued_at.strftime("%Y-%m-%d %H:%M") if gate_pass.issued_at else "N/A",
+                'issued_by_name': issued_by_name,
+                'pickup_notes': gate_pass.pickup_notes or "",
+                'company_name': self._get_company_name(),
+            })
+        
+        notification = Notification.objects.create(
+            recipient=gate_pass.customer.user,
+            notification_type='gatepass',
+            channel='email',
+            priority='high',
+            template=template,
+            title=title,
+            message=message,
+            data={
+                'gate_pass_id': gate_pass.id,
+                'gate_pass_number': gate_pass.gate_pass_number,
+                'work_order_id': gate_pass.work_order.id if gate_pass.work_order else None,
+                'work_order_number': gate_pass.work_order.work_order_number if gate_pass.work_order else "N/A",
+                'customer_name': customer_name,
+                'vehicle_id': gate_pass.vehicle.id if gate_pass.vehicle else None,
+                'vehicle_display': vehicle_display,
+                'pickup_info': pickup_info,
+                'branch_name': branch_name,
+                'issued_at': gate_pass.issued_at.strftime("%Y-%m-%d %H:%M") if gate_pass.issued_at else "N/A",
+                'issued_by_name': issued_by_name,
+            },
+            related_object_type='gatepass',
+            related_object_id=gate_pass.id
         )
         self.service.send_notification(notification)
 

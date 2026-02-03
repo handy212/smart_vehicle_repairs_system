@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi, PurchaseOrder } from "@/lib/api/inventory";
+import { adminApi } from "@/lib/api/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +13,28 @@ import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/lib/hooks/useToast";
 import { usePrint } from "@/lib/hooks/usePrint";
-
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import ReceiveItemsDialog from "../components/ReceiveItemsDialog";
+import PurchaseOrderItemsManager from "../components/PurchaseOrderItemsManager";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 export default function PurchaseOrderDetailPage() {
-    const { formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
@@ -23,25 +42,60 @@ export default function PurchaseOrderDetailPage() {
   const { downloadPDF, isDownloading } = usePrint();
   const id = parseInt(params.id as string);
 
+  const [isSubmitDialogOpen, setIsSubmitDialogOpen] = useState(false);
+  const [selectedApprover, setSelectedApprover] = useState<string>("");
+
   const { data: purchaseOrder, isLoading } = useQuery({
     queryKey: ["purchase-order", id],
     queryFn: () => inventoryApi.getPurchaseOrder(id),
   });
 
-  const submitMutation = useMutation({
-    mutationFn: () => inventoryApi.submitPurchaseOrder(id),
+  const { data: usersResponse } = useQuery({
+    queryKey: ["users", "approvers"],
+    queryFn: () => adminApi.users.list({ is_active: true }),
+  });
+
+  const approvers = usersResponse?.results || [];
+
+  const submitForApprovalMutation = useMutation({
+    mutationFn: (approverId?: number) => inventoryApi.submitPurchaseOrderForApproval(id, approverId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      setIsSubmitDialogOpen(false);
       toast({
         title: "Success",
-        description: "Purchase order submitted successfully",
+        description: "Purchase order submitted for approval",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to submit purchase order",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to submit purchase order for approval",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmitForApproval = () => {
+    const approverId = selectedApprover ? parseInt(selectedApprover) : undefined;
+    submitForApprovalMutation.mutate(approverId);
+  };
+
+  const approveMutation = useMutation({
+    mutationFn: () => inventoryApi.approvePurchaseOrder(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["purchase-order", id] });
+      queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
+      toast({
+        title: "Success",
+        description: "Purchase order approved",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to approve purchase order",
         variant: "destructive",
       });
     },
@@ -54,13 +108,13 @@ export default function PurchaseOrderDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] });
       toast({
         title: "Success",
-        description: "Purchase order confirmed successfully",
+        description: "Purchase order confirmed with supplier",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to confirm purchase order",
+        description: error.response?.data?.error || error.response?.data?.detail || "Failed to confirm purchase order",
         variant: "destructive",
       });
     },
@@ -89,7 +143,9 @@ export default function PurchaseOrderDetailPage() {
     switch (status) {
       case "draft":
         return "secondary";
-      case "submitted":
+      case "pending_approval":
+        return "warning";
+      case "approved":
         return "info";
       case "confirmed":
         return "success";
@@ -105,7 +161,16 @@ export default function PurchaseOrderDetailPage() {
   };
 
   const getStatusLabel = (status: string) => {
-    return status
+    const labels: Record<string, string> = {
+      draft: "Draft",
+      pending_approval: "Pending Approval",
+      approved: "Approved",
+      confirmed: "Confirmed",
+      received: "Received",
+      partially_received: "Partially Received",
+      cancelled: "Cancelled",
+    };
+    return labels[status] || status
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
@@ -139,6 +204,44 @@ export default function PurchaseOrderDetailPage() {
 
   return (
     <div className="space-y-6">
+      <Dialog open={isSubmitDialogOpen} onOpenChange={setIsSubmitDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Submit for Approval</DialogTitle>
+            <DialogDescription>
+              Select an approver for this purchase order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="approver" className="text-right text-sm font-medium">
+                Approver
+              </label>
+              <Select value={selectedApprover} onValueChange={setSelectedApprover}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select approver" />
+                </SelectTrigger>
+                <SelectContent>
+                  {approvers.map((user) => (
+                    <SelectItem key={user.id} value={user.id.toString()}>
+                      {user.full_name || user.username || user.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSubmitDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitForApproval} disabled={submitForApprovalMutation.isPending}>
+              {submitForApprovalMutation.isPending ? "Submitting..." : "Submit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Page Header */}
       <div className="space-y-4">
         <div className="flex items-start justify-between">
@@ -150,24 +253,26 @@ export default function PurchaseOrderDetailPage() {
               <span>/</span>
               <span className="text-gray-900 font-medium">{purchaseOrder.po_number}</span>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Purchase Order Details</h1>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Purchase Order</h1>
           </div>
 
           <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9"
-              onClick={() => downloadPDF({
-                documentType: 'purchase_order',
-                documentId: id,
-                documentNumber: purchaseOrder.po_number
-              })}
-              disabled={isDownloading}
-            >
-              <Printer className="w-4 h-4 mr-2" />
-              {isDownloading ? 'Printing...' : 'Print'}
-            </Button>
+            {purchaseOrder.items && purchaseOrder.items.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9"
+                onClick={() => downloadPDF({
+                  documentType: 'purchase_order',
+                  documentId: id,
+                  documentNumber: purchaseOrder.po_number
+                })}
+                disabled={isDownloading}
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                {isDownloading ? 'Printing...' : 'Print'}
+              </Button>
+            )}
             {purchaseOrder.status === "draft" && (
               <>
                 <Link href={`/inventory/purchase-orders/${id}/edit`}>
@@ -176,37 +281,72 @@ export default function PurchaseOrderDetailPage() {
                     Edit
                   </Button>
                 </Link>
-                <Button
-                  size="sm"
-                  className="h-9"
-                  onClick={() => {
-                    if (confirm("Submit this purchase order to the supplier?")) {
-                      submitMutation.mutate();
-                    }
-                  }}
-                  disabled={submitMutation.isPending}
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Submit
-                </Button>
+                {purchaseOrder.items && purchaseOrder.items.length > 0 && (
+                  <Button
+                    size="sm"
+                    className="h-9"
+                    onClick={() => {
+                      const invalidItems = purchaseOrder.items?.filter(
+                        (item) => !item.quantity || item.quantity <= 0
+                      );
+
+                      if (invalidItems && invalidItems.length > 0) {
+                        toast({
+                          title: "Error",
+                          description: "All items must have a quantity greater than zero.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
+                      setIsSubmitDialogOpen(true);
+                    }}
+                    disabled={submitForApprovalMutation.isPending}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Submit for Approval
+                  </Button>
+                )}
               </>
             )}
-            {purchaseOrder.status === "submitted" && (
+            {purchaseOrder.status === "pending_approval" && (
               <Button
                 size="sm"
                 className="h-9"
                 onClick={() => {
-                  if (confirm("Confirm receipt of this purchase order?")) {
+                  if (confirm("Approve this purchase order? It will be ready to send to supplier.")) {
+                    approveMutation.mutate();
+                  }
+                }}
+                disabled={approveMutation.isPending}
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Approve
+              </Button>
+            )}
+            {purchaseOrder.status === "approved" && (
+              <Button
+                size="sm"
+                className="h-9"
+                onClick={() => {
+                  if (confirm("Confirm with supplier (via phone)? This will mark the PO as confirmed and ready for receiving.")) {
                     confirmMutation.mutate();
                   }
                 }}
                 disabled={confirmMutation.isPending}
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Confirm Receipt
+                Confirm with Supplier
               </Button>
             )}
-            {["draft", "submitted", "confirmed"].includes(purchaseOrder.status) && (
+            {["confirmed", "partially_received"].includes(purchaseOrder.status) && (
+              <ReceiveItemsDialog
+                purchaseOrder={purchaseOrder}
+                key={purchaseOrder.status}
+                triggerLabel={purchaseOrder.status === 'partially_received' ? "Receive Remaining" : "Receive Items"}
+              />
+            )}
+            {["draft", "pending_approval", "approved", "confirmed"].includes(purchaseOrder.status) && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -275,58 +415,64 @@ export default function PurchaseOrderDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Items List - Full Width on Mobile, 2 cols on Desktop */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border-t shadow-sm overflow-hidden">
-            <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
-              <CardTitle className="text-sm font-semibold">Items</CardTitle>
-            </CardHeader>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-gray-50/50">
-                  <TableRow className="border-gray-100">
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Part Details</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Qty</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Received</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Unit Cost</TableHead>
-                    <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {purchaseOrder.items && purchaseOrder.items.length > 0 ? (
-                    purchaseOrder.items.map((item) => (
-                      <TableRow key={item.id} className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0">
-                        <TableCell className="px-4 py-2">
-                          <div>
-                            <span className="font-mono text-xs font-medium text-gray-700 dark:text-gray-300 block">
-                              {item.part_number || (typeof item.part === 'object' ? item.part.part_number : '-')}
-                            </span>
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                              {item.part_name || (typeof item.part === 'object' ? item.part.name : '-')}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-4 py-2 text-right text-sm text-gray-900 font-medium">
-                          {item.quantity_ordered}
-                        </TableCell>
-                        <TableCell className="text-right px-4 py-2 text-sm">
-                          {item.quantity_received || 0} / {item.quantity_ordered}
-                        </TableCell>
-                        <TableCell className="text-right px-4 py-2 text-sm text-gray-600">
-                          {item.unit_cost ? `${formatCurrency(parseFloat(item.unit_cost))}` : "-"}
-                        </TableCell>
-                        <TableCell className="text-right px-4 py-2 text-sm font-bold text-gray-900">
-                          {item.total_cost ? `${formatCurrency(parseFloat(item.total_cost))}` : "-"}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">No items in this order</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+          {purchaseOrder.status === 'draft' ? (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm p-4">
+              <PurchaseOrderItemsManager purchaseOrder={purchaseOrder} />
             </div>
-          </Card>
+          ) : (
+            <Card className="border-t shadow-sm overflow-hidden">
+              <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+                <CardTitle className="text-sm font-semibold">Items</CardTitle>
+              </CardHeader>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-gray-50/50">
+                    <TableRow className="border-gray-100">
+                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4">Part Details</TableHead>
+                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Qty</TableHead>
+                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Received</TableHead>
+                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Unit Cost</TableHead>
+                      <TableHead className="h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 px-4 text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {purchaseOrder.items && purchaseOrder.items.length > 0 ? (
+                      purchaseOrder.items.map((item) => (
+                        <TableRow key={item.id} className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100 last:border-0">
+                          <TableCell className="px-4 py-2">
+                            <div>
+                              <span className="font-mono text-xs font-medium text-gray-700 dark:text-gray-300 block">
+                                {item.part_number || (typeof item.part === 'object' ? item.part.part_number : '-')}
+                              </span>
+                              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                {item.part_name || (typeof item.part === 'object' ? item.part.name : '-')}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-2 text-right text-sm text-gray-900 font-medium">
+                            {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-right px-4 py-2 text-sm">
+                            {item.quantity_received || 0} / {item.quantity}
+                          </TableCell>
+                          <TableCell className="text-right px-4 py-2 text-sm text-gray-600">
+                            {item.unit_cost ? `${formatCurrency(parseFloat(item.unit_cost))}` : "-"}
+                          </TableCell>
+                          <TableCell className="text-right px-4 py-2 text-sm font-bold text-gray-900">
+                            {item.total ? `${formatCurrency(parseFloat(item.total))}` : "-"}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-gray-500">No items in this order</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          )}
 
           {purchaseOrder.notes && (
             <Card>
@@ -398,17 +544,31 @@ export default function PurchaseOrderDetailPage() {
               )}
               {purchaseOrder.submitted_at && (
                 <div>
-                  <label className="text-xs font-medium text-gray-500">Submitted</label>
+                  <label className="text-xs font-medium text-gray-500">Submitted for Approval</label>
                   <p className="text-xs text-gray-400">
                     {format(new Date(purchaseOrder.submitted_at), "MMM dd, yyyy HH:mm")}
                   </p>
+                  {purchaseOrder.assigned_approver_name && (
+                    <p className="text-xs text-blue-600 mt-1">Assignee: {purchaseOrder.assigned_approver_name}</p>
+                  )}
                 </div>
               )}
-              {purchaseOrder.received_at && (
+              {purchaseOrder.approved_at && (
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Approved</label>
+                  <p className="text-xs text-gray-400">
+                    {format(new Date(purchaseOrder.approved_at), "MMM dd, yyyy HH:mm")}
+                  </p>
+                  {purchaseOrder.approved_by_name && (
+                    <p className="text-xs text-gray-400">by {purchaseOrder.approved_by_name}</p>
+                  )}
+                </div>
+              )}
+              {purchaseOrder.received_date && (
                 <div>
                   <label className="text-xs font-medium text-gray-500">Received</label>
                   <p className="text-xs text-gray-400">
-                    {format(new Date(purchaseOrder.received_at), "MMM dd, yyyy HH:mm")}
+                    {format(new Date(purchaseOrder.received_date), "MMM dd, yyyy")}
                   </p>
                 </div>
               )}

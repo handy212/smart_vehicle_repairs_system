@@ -62,10 +62,19 @@ export default function WorkOrdersPage() {
       type: "select",
       options: [
         { value: "draft", label: "Draft" },
-        { value: "pending", label: "Pending" },
+        { value: "inspection", label: "Initial Inspection" },
+        { value: "intake", label: "Intake" },
+        { value: "assigned", label: "Assigned" },
+        { value: "diagnosis", label: "Diagnosis" },
+        { value: "awaiting_approval", label: "Awaiting Customer Approval" },
+        { value: "approved", label: "Approved" },
         { value: "in_progress", label: "In Progress" },
+        { value: "additional_work_found", label: "Additional Work Found" },
+        { value: "paused", label: "Paused" },
+        { value: "quality_check", label: "Quality Check" },
         { value: "completed", label: "Completed" },
-        { value: "cancelled", label: "Cancelled" },
+        { value: "invoiced", label: "Invoiced" },
+        { value: "closed", label: "Closed" },
       ],
     },
     {
@@ -702,10 +711,20 @@ export default function WorkOrdersPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="inspection">Initial Inspection</SelectItem>
+                <SelectItem value="intake">Intake</SelectItem>
+                <SelectItem value="assigned">Assigned</SelectItem>
+                <SelectItem value="diagnosis">Diagnosis</SelectItem>
+                <SelectItem value="awaiting_approval">Awaiting Customer Approval</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="additional_work_found">Additional Work Found</SelectItem>
+                <SelectItem value="paused">Paused</SelectItem>
+                <SelectItem value="quality_check">Quality Check</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="invoiced">Invoiced</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
           </div>

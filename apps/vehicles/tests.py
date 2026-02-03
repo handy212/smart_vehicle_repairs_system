@@ -138,6 +138,114 @@ class VehicleModelTest(TestCase):
             vehicle = baker.make(Vehicle, owner=self.customer, engine_type=engine_type)
             self.assertEqual(vehicle.engine_type, engine_type)
 
+    def test_vin_uniqueness(self):
+        """Test that VIN must be unique."""
+        # Create first vehicle
+        Vehicle.objects.create(
+            owner=self.customer,
+            make='Toyota',
+            model='Camry',
+            year=2020,
+            vin='1HGBH41JXMN109186',
+            license_plate='ABC123',
+            current_mileage=50000
+        )
+        
+        # Try to create another vehicle with same VIN
+        with self.assertRaises(Exception):  # Should raise IntegrityError or ValidationError
+            Vehicle.objects.create(
+                owner=self.customer,
+                make='Honda',
+                model='Civic',
+                year=2021,
+                vin='1HGBH41JXMN109186',  # Duplicate VIN
+                license_plate='XYZ789',
+                current_mileage=30000
+            )
+
+    def test_license_plate_uniqueness(self):
+        """Test that license plate must be unique."""
+        # Create first vehicle
+        Vehicle.objects.create(
+            owner=self.customer,
+            make='Toyota',
+            model='Camry',
+            year=2020,
+            vin='1HGBH41JXMN109186',
+            license_plate='ABC123',
+            current_mileage=50000
+        )
+        
+        # Try to create another vehicle with same license plate
+        with self.assertRaises(Exception):  # Should raise IntegrityError or ValidationError
+            Vehicle.objects.create(
+                owner=self.customer,
+                make='Honda',
+                model='Civic',
+                year=2021,
+                vin='2HGFC2F59JH123456',  # Different VIN
+                license_plate='ABC123',  # Duplicate license plate
+                current_mileage=30000
+            )
+
+    def test_vin_uniqueness_in_form(self):
+        """Test VIN uniqueness validation in form."""
+        from apps.vehicles.forms import VehicleForm
+        
+        # Create first vehicle
+        Vehicle.objects.create(
+            owner=self.customer,
+            make='Toyota',
+            model='Camry',
+            year=2020,
+            vin='1HGBH41JXMN109186',
+            license_plate='ABC123',
+            current_mileage=50000
+        )
+        
+        # Try to create form with duplicate VIN
+        form_data = {
+            'owner': self.customer.id,
+            'vin': '1HGBH41JXMN109186',  # Duplicate
+            'year': 2021,
+            'make': 'Honda',
+            'model': 'Civic',
+            'license_plate': 'XYZ789',
+            'current_mileage': 30000
+        }
+        form = VehicleForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('vin', form.errors)
+
+    def test_license_plate_uniqueness_in_form(self):
+        """Test license plate uniqueness validation in form."""
+        from apps.vehicles.forms import VehicleForm
+        
+        # Create first vehicle
+        Vehicle.objects.create(
+            owner=self.customer,
+            make='Toyota',
+            model='Camry',
+            year=2020,
+            vin='1HGBH41JXMN109186',
+            license_plate='ABC123',
+            current_mileage=50000
+        )
+        
+        # Try to create form with duplicate license plate
+        form_data = {
+            'owner': self.customer.id,
+            'vin': '2HGFC2F59JH123456',  # Different VIN
+            'year': 2021,
+            'make': 'Honda',
+            'model': 'Civic',
+            'license_plate': 'ABC123',  # Duplicate
+            'current_mileage': 30000
+        }
+        form = VehicleForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('license_plate', form.errors)
+
 
 class VehicleAPITest(APITestCase):
     """Test cases for Vehicle API."""
@@ -203,6 +311,42 @@ class VehicleAPITest(APITestCase):
         response = self.client.post('/api/vehicles/vehicles/', data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Vehicle.objects.count(), 2)
+
+    def test_create_vehicle_duplicate_vin(self):
+        """Test creating a vehicle with duplicate VIN via API."""
+        self.client.force_authenticate(user=self.admin_user)
+        data = {
+            'owner': self.customer.id,
+            'make': 'Honda',
+            'model': 'Civic',
+            'year': 2021,
+            'vin': '1HGBH41JXMN109186',  # Duplicate VIN
+            'license_plate': 'XYZ789',
+            'current_mileage': 50000,
+            'engine_type': 'gasoline',
+            'transmission_type': 'manual'
+        }
+        response = self.client.post('/api/vehicles/vehicles/', data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('vin', response.data)
+
+    def test_create_vehicle_duplicate_license_plate(self):
+        """Test creating a vehicle with duplicate license plate via API."""
+        self.client.force_authenticate(user=self.admin_user)
+        data = {
+            'owner': self.customer.id,
+            'make': 'Honda',
+            'model': 'Civic',
+            'year': 2021,
+            'vin': '2HGFC2F59JH123456',  # Different VIN
+            'license_plate': 'ABC123',  # Duplicate license plate
+            'current_mileage': 50000,
+            'engine_type': 'gasoline',
+            'transmission_type': 'manual'
+        }
+        response = self.client.post('/api/vehicles/vehicles/', data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('license_plate', response.data)
 
     def test_retrieve_vehicle(self):
         """Test retrieving a specific vehicle."""

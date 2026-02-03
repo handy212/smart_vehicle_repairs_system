@@ -1,3 +1,5 @@
+import apiClient from "@/lib/api/client";
+
 /**
  * Service Worker Registration and Management
  */
@@ -182,6 +184,70 @@ class ServiceWorkerManager {
         break;
     }
   }
+
+  /**
+   * Subscribe to Web Push notifications
+   */
+  async subscribeToPush(): Promise<boolean> {
+    if (!this.registration) {
+      console.warn('[PWA] No SW registration, cannot subscribe to push');
+      return false;
+    }
+
+    try {
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!publicKey) {
+        console.error('[PWA] VAPID public key not found');
+        return false;
+      }
+
+      // Check current permission
+      if (Notification.permission === 'denied') {
+        console.warn('[PWA] Notification permission denied');
+        return false;
+      }
+
+      // Subscribe (this will prompt user if not granted)
+      const subscription = await this.registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+
+      // Send to backend
+      const keys = subscription.toJSON().keys;
+
+      // We need to import apiClient dynamically or use the one we added at top
+      // Importing at top is better
+      await apiClient.post('/notifications/push-subscriptions/subscribe/', {
+        endpoint: subscription.endpoint,
+        keys: {
+          p256dh: keys?.p256dh,
+          auth: keys?.auth,
+        },
+        device_name: navigator.platform || 'Unknown Device',
+      });
+
+      console.log('[PWA] Push subscription verified with backend');
+      return true;
+    } catch (error) {
+      console.error('[PWA] Failed to subscribe to push:', error);
+      return false;
+    }
+  }
+}
+
+// Helper to convert VAPID key
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
 
 // Singleton instance

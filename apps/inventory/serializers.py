@@ -5,6 +5,7 @@ from .models import (
     PartCategory, Supplier, Part, PurchaseOrder, 
     PurchaseOrderItem, InventoryTransaction,
     ServicePackage, ServicePackagePart,
+    ServiceBundle, ServiceBundleItem,
     StockItem, Transfer, TransferItem
 )
 
@@ -267,7 +268,7 @@ class PurchaseOrderItemSerializer(serializers.ModelSerializer):
 class PurchaseOrderItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = PurchaseOrderItem
-        fields = ['part', 'quantity', 'unit_cost', 'notes']
+        fields = ['id', 'part', 'quantity', 'unit_cost', 'notes']
 
     def validate_quantity(self, value):
         if value <= 0:
@@ -304,6 +305,7 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
     items = PurchaseOrderItemSerializer(many=True, read_only=True)
     created_by_name = serializers.SerializerMethodField()
     submitted_by_name = serializers.SerializerMethodField()
+    approved_by_name = serializers.SerializerMethodField()
     received_by_name = serializers.SerializerMethodField()
     total_items = serializers.ReadOnlyField()
     total_quantity = serializers.ReadOnlyField()
@@ -321,8 +323,14 @@ class PurchaseOrderDetailSerializer(serializers.ModelSerializer):
     def get_submitted_by_name(self, obj):
         return obj.submitted_by.get_full_name() if obj.submitted_by else None
 
+    def get_approved_by_name(self, obj):
+        return obj.approved_by.get_full_name() if obj.approved_by else None
+
     def get_received_by_name(self, obj):
         return obj.received_by.get_full_name() if obj.received_by else None
+
+    def get_assigned_approver_name(self, obj):
+        return obj.assigned_approver.get_full_name() if obj.assigned_approver else None
 
 
 class PurchaseOrderCreateSerializer(serializers.ModelSerializer):
@@ -570,3 +578,208 @@ class TransferCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transfer
         fields = ['source_branch', 'destination_branch', 'notes', 'items']
+
+
+class BulkStockAdjustmentItemSerializer(serializers.Serializer):
+    """Serializer for individual items in bulk stock adjustment"""
+    part_id = serializers.IntegerField(required=True)
+    quantity_change = serializers.IntegerField(required=True)
+    reason = serializers.CharField(required=False, allow_blank=True, default='')
+    notes = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class BulkStockAdjustmentSerializer(serializers.Serializer):
+    """Serializer for bulk stock adjustment"""
+    adjustments = BulkStockAdjustmentItemSerializer(many=True, required=True)
+    transaction_type = serializers.ChoiceField(
+        choices=['adjustment', 'correction', 'damage', 'loss', 'found'],
+        default='adjustment',
+        required=False
+    )
+    reason = serializers.CharField(required=False, allow_blank=True, default='Bulk adjustment')
+    notes = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class BulkTransferItemSerializer(serializers.Serializer):
+    """Serializer for individual items in bulk transfer"""
+    part_id = serializers.IntegerField(required=True)
+    quantity = serializers.IntegerField(required=True, min_value=1)
+    notes = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class BulkTransferSerializer(serializers.Serializer):
+    """Serializer for bulk stock transfer"""
+    source_branch_id = serializers.IntegerField(required=True)
+    destination_branch_id = serializers.IntegerField(required=True)
+    items = BulkTransferItemSerializer(many=True, required=True)
+    notes = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+class StockAlertSerializer(serializers.ModelSerializer):
+    """Serializer for StockAlert model"""
+    part_name = serializers.CharField(source='part.name', read_only=True)
+    part_number = serializers.CharField(source='part.part_number', read_only=True)
+    branch_name = serializers.CharField(source='branch.name', read_only=True)
+    acknowledged_by_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        from .models import StockAlert
+        model = StockAlert
+        fields = [
+            'id', 'part', 'part_name', 'part_number', 'branch', 'branch_name',
+            'stock_item', 'alert_type', 'severity', 'status', 'current_quantity',
+            'reorder_point', 'minimum_stock', 'message', 'acknowledged_by',
+            'acknowledged_by_name', 'acknowledged_at', 'resolved_at',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at', 'acknowledged_at', 'resolved_at']
+    
+    def get_acknowledged_by_name(self, obj):
+        return obj.acknowledged_by.get_full_name() if obj.acknowledged_by else None
+
+
+class StockAlertUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating StockAlert status"""
+    class Meta:
+        from .models import StockAlert
+        model = StockAlert
+        fields = ['status']
+
+
+class PhysicalCountItemSerializer(serializers.ModelSerializer):
+    """Serializer for PhysicalCountItem"""
+    part_name = serializers.CharField(source='part.name', read_only=True)
+    part_number = serializers.CharField(source='part.part_number', read_only=True)
+    reconciled_by_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        from .models import PhysicalCountItem
+        model = PhysicalCountItem
+        fields = [
+            'id', 'session', 'part', 'part_name', 'part_number', 'stock_item',
+            'system_quantity', 'physical_quantity', 'discrepancy',
+            'notes', 'reconciled', 'reconciled_at', 'reconciled_by',
+            'reconciled_by_name', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['discrepancy', 'reconciled_at', 'created_at', 'updated_at']
+    
+    def get_reconciled_by_name(self, obj):
+        return obj.reconciled_by.get_full_name() if obj.reconciled_by else None
+
+
+class PhysicalCountItemCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating PhysicalCountItem"""
+    class Meta:
+        from .models import PhysicalCountItem
+        model = PhysicalCountItem
+        fields = [
+            'part', 'stock_item', 'system_quantity', 'physical_quantity', 'notes'
+        ]
+
+
+class PhysicalCountSessionSerializer(serializers.ModelSerializer):
+    """Serializer for PhysicalCountSession"""
+    branch_name = serializers.CharField(source='branch.name', read_only=True)
+    created_by_name = serializers.SerializerMethodField()
+    completed_by_name = serializers.SerializerMethodField()
+    items = PhysicalCountItemSerializer(many=True, read_only=True)
+    unreconciled_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        from .models import PhysicalCountSession
+        model = PhysicalCountSession
+        fields = [
+            'id', 'session_number', 'branch', 'branch_name', 'status',
+            'count_date', 'notes', 'total_items_counted', 'total_discrepancies',
+            'created_by', 'created_by_name', 'completed_by', 'completed_by_name',
+            'created_at', 'updated_at', 'completed_at', 'items', 'unreconciled_count'
+        ]
+        read_only_fields = [
+            'session_number', 'total_items_counted', 'total_discrepancies',
+            'created_at', 'updated_at', 'completed_at'
+        ]
+    
+    def get_created_by_name(self, obj):
+        return obj.created_by.get_full_name() if obj.created_by else None
+    
+    def get_completed_by_name(self, obj):
+        return obj.completed_by.get_full_name() if obj.completed_by else None
+    
+    def get_unreconciled_count(self, obj):
+        return obj.count_items.filter(reconciled=False).count()
+
+
+class PhysicalCountSessionCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating PhysicalCountSession"""
+    class Meta:
+        from .models import PhysicalCountSession
+        model = PhysicalCountSession
+        fields = ['branch', 'count_date', 'notes']
+
+class ServiceBundleItemSerializer(serializers.ModelSerializer):
+    part_name = serializers.ReadOnlyField(source='part.name')
+    part_number = serializers.ReadOnlyField(source='part.part_number')
+    unit_price = serializers.ReadOnlyField(source='part.selling_price')
+    unit = serializers.ReadOnlyField(source='part.unit')
+
+    class Meta:
+        model = ServiceBundleItem
+        fields = ['id', 'part', 'part_name', 'part_number', 'quantity', 'unit', 'unit_price']
+
+
+class ServiceBundleSerializer(serializers.ModelSerializer):
+    items = ServiceBundleItemSerializer(many=True, read_only=True)
+    service_type_name = serializers.ReadOnlyField(source='service_type.name')
+    created_by_name = serializers.ReadOnlyField(source='created_by.get_full_name')
+
+    class Meta:
+        model = ServiceBundle
+        fields = [
+            'id', 'name', 'description', 'service_type', 'service_type_name',
+            'items', 'is_active', 'created_by', 'created_by_name',
+            'created_at', 'updated_at'
+        ]
+
+
+class ServiceBundleCreateUpdateSerializer(serializers.ModelSerializer):
+    items = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False
+    )
+
+    class Meta:
+        model = ServiceBundle
+        fields = ['name', 'description', 'service_type', 'is_active', 'items']
+
+    @transaction.atomic
+    def create(self, validated_data):
+        items_data = validated_data.pop('items', [])
+        validated_data['created_by'] = self.context['request'].user
+        bundle = ServiceBundle.objects.create(**validated_data)
+        
+        for item in items_data:
+            ServiceBundleItem.objects.create(
+                bundle=bundle,
+                part_id=item['part_id'],
+                quantity=item.get('quantity', 1)
+            )
+        return bundle
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop('items', None)
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        if items_data is not None:
+            instance.items.all().delete()
+            for item in items_data:
+                ServiceBundleItem.objects.create(
+                    bundle=instance,
+                    part_id=item['part_id'],
+                    quantity=item.get('quantity', 1)
+                )
+        return instance

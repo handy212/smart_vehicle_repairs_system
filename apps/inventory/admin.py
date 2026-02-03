@@ -3,7 +3,8 @@ from django.utils.html import format_html
 from .models import (
     PartCategory, Supplier, Part, PurchaseOrder,
     PurchaseOrderItem, InventoryTransaction,
-    ServicePackage, ServicePackagePart
+    ServicePackage, ServicePackagePart,
+    ServiceBundle, ServiceBundleItem
 )
 
 
@@ -264,3 +265,22 @@ class ServicePackageAdmin(admin.ModelAdmin):
     search_fields = ['name', 'description']
     inlines = [ServicePackagePartInline]
 
+
+class ServiceBundleItemInline(admin.TabularInline):
+    model = ServiceBundleItem
+    extra = 1
+    autocomplete_fields = ['part']
+
+
+@admin.register(ServiceBundle)
+class ServiceBundleAdmin(admin.ModelAdmin):
+    list_display = ['name', 'service_type', 'is_active', 'created_at']
+    list_filter = ['is_active', 'created_at', 'service_type']
+    search_fields = ['name', 'description']
+    inlines = [ServiceBundleItemInline]
+    readonly_fields = ['created_at', 'updated_at']
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)

@@ -535,7 +535,7 @@ export default function ReportsPage() {
                             fill="#8884d8"
                             dataKey="total"
                           >
-                            {revenueData.revenue_by_payment_method.map((entry, index) => (
+                            {revenueData.revenue_by_payment_method.map((entry: { method: string; total: number }, index: number) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
@@ -655,7 +655,7 @@ export default function ReportsPage() {
                           fill="#8884d8"
                           dataKey="count"
                         >
-                          {workOrderStats.by_status.map((entry, index) => (
+                          {workOrderStats.by_status.map((entry: { status: string; count: number }, index: number) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -723,7 +723,7 @@ export default function ReportsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {technicianPerf.technicians.map((tech: any) => (
+                      {technicianPerf.technicians.map((tech: { technician: { id: number; name: string }; metrics: any }) => (
                         <TableRow key={tech.technician.id}>
                           <TableCell className="font-medium text-xs sm:text-sm">
                             {tech.technician.name}
@@ -872,7 +872,7 @@ export default function ReportsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {lowStockData.items.map((item) => (
+                        {lowStockData.items.map((item: any) => (
                           <TableRow key={item.part.id}>
                             <TableCell className="font-medium text-xs sm:text-sm">
                               {item.part.name}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { workordersApi } from "@/lib/api/workorders";
+import { gatepassApi } from "@/lib/api/gatepass";
 import { useRecentItems } from "@/lib/hooks/useRecentItems";
 import { useEffect } from "react";
 import { workOrderTasksApi } from "@/lib/api/workorder-tasks";
@@ -13,7 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, FileText, Wrench, Package, MessageSquare, Image, Search, Printer, ChevronDown, Clock } from "lucide-react";
+import { ArrowLeft, Edit, FileText, Wrench, Package, MessageSquare, Image, Search, Printer, ChevronDown, Clock, FileText as FileTextIcon, Plus, ExternalLink, AlertCircle, AlertTriangle, CheckCircle } from "lucide-react";
 import { PremiumIcons } from "@/components/ui/icons";
 import Link from "next/link";
 import WorkOrderOverviewTab from "./components/OverviewTab";
@@ -29,6 +30,68 @@ import { usePrint } from "@/lib/hooks/usePrint";
 import { getStatusVariant } from "@/lib/utils/workorder-status";
 import WorkOrderTimeline from "./components/WorkOrderTimeline";
 import WorkOrderDetailSkeleton from "./components/WorkOrderDetailSkeleton";
+import { format } from "date-fns";
+import { useToast } from "@/lib/hooks/useToast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { diagnosisApi } from "@/lib/api/diagnosis";
+import { useCurrency } from "@/lib/hooks/useCurrency";
+
+// Gate Pass Section Component
+function GatePassSection({ workOrderId }: { workOrderId: number }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const { data: gatePass, isLoading } = useQuery({
+    queryKey: ["gatepass", "workorder", workOrderId],
+    queryFn: () => gatepassApi.getByWorkOrder(workOrderId),
+    enabled: !!workOrderId,
+  });
+
+  if (isLoading) {
+    return null;
+  }
+
+  return (
+    <Card className="border-none shadow-sm bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
+      <CardContent className="py-4 px-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FileTextIcon className="w-5 h-5 text-primary" />
+            <div>
+              <h3 className="font-semibold text-sm">Gate Pass</h3>
+              {gatePass ? (
+                <p className="text-xs text-gray-500">
+                  Gate Pass {gatePass.gate_pass_number} - {gatePass.status?.replace("_", " ")}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500">No gate pass created yet</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {gatePass ? (
+              <Link href={`/gatepass/${gatePass.id}`}>
+                <Button size="sm" variant="outline" className="h-8 text-xs">
+                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                  View Gate Pass
+                </Button>
+              </Link>
+            ) : (
+              <PermissionGuard permission="create_gatepass">
+                <Link href={`/gatepass/new?work_order=${workOrderId}`}>
+                  <Button size="sm" className="h-8 text-xs bg-primary hover:bg-primary/90">
+                    <Plus className="w-3.5 h-3.5 mr-1.5" />
+                    Create Gate Pass
+                  </Button>
+                </Link>
+              </PermissionGuard>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 // Workflow Progress Indicator Component
 function WorkflowProgressIndicator({ status, workOrderId, workOrder, onStatusChange, onStartRepairs }: {
@@ -149,10 +212,13 @@ export default function WorkOrderDetailPage() {
   const workOrderId = parseInt(params.id as string);
   const [activeTab, setActiveTab] = useState("overview");
   const [showPrintMenu, setShowPrintMenu] = useState(false);
+  const [showUnapprovedRecommendationsDialog, setShowUnapprovedRecommendationsDialog] = useState(false);
   const queryClient = useQueryClient();
   const { hasPermission } = usePermissions();
   const { downloadPDF, isDownloading } = usePrint();
   const { addRecentItem } = useRecentItems();
+  const { toast } = useToast();
+  const { formatCurrency } = useCurrency();
 
   const { data: workOrder, isLoading, error } = useQuery({
     queryKey: ["workorder", workOrderId],
@@ -181,6 +247,17 @@ export default function WorkOrderDetailPage() {
     queryFn: () => workOrderPartsApi.list({ work_order: workOrderId }),
     enabled: !!workOrderId,
   });
+
+  // Fetch diagnosis to get unapproved count
+  const { data: diagnosis } = useQuery({
+    queryKey: ["diagnosis", "workorder", workOrderId],
+    queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
+    enabled: !!workOrderId,
+  });
+
+  const unapprovedRecommendations = diagnosis?.repair_recommendations?.filter(
+    (r: any) => !r.customer_approved
+  ) || [];
 
   const { data: notes = [] } = useQuery({
     queryKey: ["workorder-notes", workOrderId],
@@ -215,6 +292,48 @@ export default function WorkOrderDetailPage() {
     queryClient.invalidateQueries({ queryKey: ["workorder-notes", workOrderId] });
     queryClient.invalidateQueries({ queryKey: ["diagnosis", "workorder", workOrderId] });
   };
+
+  const handlePrintRecommendations = async (format: "html" | "pdf" = "pdf") => {
+    try {
+      if (format === "pdf") {
+        // Download PDF
+        const blob = await workordersApi.downloadRecommendationsPDF(workOrderId);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `recommendations_${workOrder.work_order_number}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        toast({
+          title: "Success",
+          description: "Recommendations PDF downloaded successfully",
+        });
+      } else {
+        // Open HTML print page on Django backend
+        // Use the API URL and construct the Django frontend URL
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+        const baseUrl = apiUrl.replace("/api", "");
+        const token = localStorage.getItem("access_token");
+        // Pass token as query param for authentication
+        const printUrl = `${baseUrl}/workorders/${workOrderId}/print-recommendations/${token ? `?token=${token}` : ''}`;
+        window.open(printUrl, "_blank");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to print recommendations",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Check if work order is in a status that allows printing recommendations and has items to print
+  const canPrintRecommendations =
+    workOrder &&
+    ["completed", "invoiced", "closed"].includes(workOrder.status) &&
+    unapprovedRecommendations.length > 0;
 
   return (
     <div className="space-y-6">
@@ -255,6 +374,18 @@ export default function WorkOrderDetailPage() {
                 Print
                 <ChevronDown className="w-3.5 h-3.5 ml-2" />
               </Button>
+              {/* Unapproved Recommendations Button - Header */}
+              {workOrder.status === "closed" && unapprovedRecommendations.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowUnapprovedRecommendationsDialog(true)}
+                  className="absolute right-full mr-2 min-w-max h-9 border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-900/30"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 mr-2" />
+                  Unapproved Items
+                </Button>
+              )}
               {showPrintMenu && (
                 <>
                   <div
@@ -285,6 +416,31 @@ export default function WorkOrderDetailPage() {
                       <FileText className="w-4 h-4 inline mr-2" />
                       Print Job Card
                     </Link>
+                    {canPrintRecommendations && (
+                      <>
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                        <div
+                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                          onClick={() => {
+                            setShowPrintMenu(false);
+                            handlePrintRecommendations("pdf");
+                          }}
+                        >
+                          <AlertCircle className="w-4 h-4 inline mr-2" />
+                          Print Recommendations (PDF)
+                        </div>
+                        <div
+                          className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                          onClick={() => {
+                            setShowPrintMenu(false);
+                            handlePrintRecommendations("html");
+                          }}
+                        >
+                          <AlertCircle className="w-4 h-4 inline mr-2" />
+                          Print Recommendations (HTML)
+                        </div>
+                      </>
+                    )}
                   </div>
                 </>
               )}
@@ -313,6 +469,11 @@ export default function WorkOrderDetailPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Gate Pass Section */}
+      {workOrder.status === "closed" && <GatePassSection workOrderId={workOrderId} />}
+
+
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -392,6 +553,135 @@ export default function WorkOrderDetailPage() {
           <WorkOrderTimeline workOrder={workOrder} notes={notes} />
         </TabsContent>
       </Tabs>
+
+      {/* Unapproved Recommendations Dialog */}
+      <UnapprovedRecommendationsDialog
+        open={showUnapprovedRecommendationsDialog}
+        onOpenChange={setShowUnapprovedRecommendationsDialog}
+        workOrderId={workOrderId}
+        workOrder={workOrder}
+        onPrintRecommendations={handlePrintRecommendations}
+      />
     </div >
+  );
+}
+
+// Unapproved Recommendations Dialog Component
+function UnapprovedRecommendationsDialog({
+  open,
+  onOpenChange,
+  workOrderId,
+  workOrder,
+  onPrintRecommendations,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  workOrderId: number;
+  workOrder: any;
+  onPrintRecommendations: (format: "html" | "pdf") => void;
+}) {
+  const { formatCurrency } = useCurrency();
+
+  // Fetch diagnosis to get recommendations
+  const { data: diagnosis, isLoading } = useQuery({
+    queryKey: ["diagnosis", "workorder", workOrderId],
+    queryFn: () => diagnosisApi.getByWorkOrder(workOrderId),
+    enabled: open && !!workOrderId,
+  });
+
+  const unapprovedRecommendations = diagnosis?.repair_recommendations?.filter(
+    (r: any) => !r.customer_approved
+  ) || [];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <AlertTriangle className="w-5 h-5 text-orange-600" />
+            Unapproved Recommendations
+          </DialogTitle>
+          {/* <DialogDescription className="text-xs">
+            Review recommendations not approved by the customer.
+          </DialogDescription> */}
+        </DialogHeader>
+
+        <div className="py-2">
+          {isLoading ? (
+            <div className="text-center py-6">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+            </div>
+          ) : unapprovedRecommendations.length === 0 ? (
+            <div className="text-center py-6">
+              <CheckCircle className="w-10 h-10 mx-auto text-green-500 mb-2" />
+              <p className="font-medium text-gray-900 dark:text-gray-100">
+                All Approved
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {unapprovedRecommendations.map((rec: any) => (
+                <div key={rec.id} className="border border-orange-200 dark:border-orange-800 rounded-md bg-orange-50/50 dark:bg-orange-900/10 p-3">
+                  <div className="flex items-start justify-between mb-1.5">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                        {rec.description}
+                      </span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-1.5 py-0 h-5 border-orange-300 text-orange-700"
+                        >
+                          {rec.priority_display || rec.priority}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+                          {rec.recommendation_type_display || rec.recommendation_type}
+                        </Badge>
+                      </div>
+                    </div>
+                    {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
+                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100 font-mono">
+                        {formatCurrency(Number(rec.estimated_total_cost))}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {unapprovedRecommendations.length > 0 && (
+          <DialogFooter className="gap-2 sm:justify-between pt-2">
+            <div className="flex gap-2 w-full">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onPrintRecommendations("pdf");
+                  onOpenChange(false);
+                }}
+                className="flex-1"
+              >
+                <Printer className="w-3.5 h-3.5 mr-1.5" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onPrintRecommendations("html");
+                  onOpenChange(false);
+                }}
+                className="flex-1"
+              >
+                <Printer className="w-3.5 h-3.5 mr-1.5" />
+                HTML
+              </Button>
+            </div>
+          </DialogFooter>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

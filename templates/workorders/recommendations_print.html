@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommendations - {{ work_order.work_order_number }}</title>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            @page {
+                size: A4;
+                margin: 1cm;
+            }
+            body {
+                margin: 0;
+                padding: 10px;
+            }
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #000;
+            padding-bottom: 15px;
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+            text-transform: uppercase;
+        }
+        .header h2 {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 10px 0 5px 0;
+            color: #d32f2f;
+        }
+        .info-section {
+            margin-bottom: 20px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .info-label {
+            font-weight: bold;
+            min-width: 120px;
+        }
+        .recommendations-section {
+            margin-top: 30px;
+        }
+        .recommendation {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 2px solid #000;
+            page-break-inside: avoid;
+        }
+        .recommendation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #666;
+        }
+        .priority-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            border-radius: 3px;
+        }
+        .priority-critical {
+            background-color: #d32f2f;
+            color: white;
+        }
+        .priority-necessary {
+            background-color: #f57c00;
+            color: white;
+        }
+        .priority-recommended {
+            background-color: #1976d2;
+            color: white;
+        }
+        .priority-advisory {
+            background-color: #388e3c;
+            color: white;
+        }
+        .recommendation-type {
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+        .recommendation-description {
+            font-size: 18px;
+            font-weight: bold;
+            line-height: 1.5;
+            margin: 10px 0;
+            color: #000;
+        }
+        .recommendation-cost {
+            font-size: 14px;
+            margin-top: 8px;
+            color: #333;
+        }
+        .recommendation-cost strong {
+            font-size: 16px;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 2px solid #000;
+            text-align: center;
+            font-size: 11px;
+            color: #666;
+        }
+        .no-print {
+            margin-bottom: 20px;
+        }
+        .no-print button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        .no-print button:hover {
+            background-color: #1565c0;
+        }
+        .vehicle-info {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .customer-info {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()">Print Recommendations</button>
+        <button onclick="window.location.href='?format=pdf'">Download PDF</button>
+        <button onclick="window.close()">Close</button>
+    </div>
+
+    <div class="header">
+        <h1>Smart Vehicle Repairs</h1>
+        {% if print_branch %}
+        <p><strong>{{ print_branch.name }}</strong></p>
+        {% if print_branch.address %}<p>{{ print_branch.address }}</p>{% endif %}
+        {% if print_branch.phone %}<p>Phone: {{ print_branch.phone }}</p>{% endif %}
+        {% if print_branch.email %}<p>Email: {{ print_branch.email }}</p>{% endif %}
+        {% endif %}
+        <h2>REPAIR RECOMMENDATIONS</h2>
+        <p style="font-size: 16px; font-weight: bold;">Please place this document in the vehicle dashboard</p>
+    </div>
+
+    <div class="info-section">
+        <div class="info-row">
+            <span class="info-label">Work Order #:</span>
+            <span><strong>{{ work_order.work_order_number }}</strong></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Date:</span>
+            <span>{{ work_order.completed_at|date:"F d, Y"|default:work_order.created_at|date:"F d, Y" }}</span>
+        </div>
+    </div>
+
+    <div class="vehicle-info">
+        <div class="info-row">
+            <span class="info-label">Vehicle:</span>
+            <span><strong>{{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}</strong></span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">VIN:</span>
+            <span>{{ vehicle.vin }}</span>
+        </div>
+        {% if vehicle.license_plate %}
+        <div class="info-row">
+            <span class="info-label">License Plate:</span>
+            <span>{{ vehicle.license_plate }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="customer-info">
+        <div class="info-row">
+            <span class="info-label">Customer:</span>
+            <span><strong>{% if customer.company_name %}{{ customer.company_name }}{% else %}{{ customer.user.get_full_name|default:"N/A" }}{% endif %}</strong></span>
+        </div>
+        {% if customer.customer_number %}
+        <div class="info-row">
+            <span class="info-label">Customer #:</span>
+            <span>{{ customer.customer_number }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="recommendations-section">
+        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; text-align: center; text-decoration: underline;">
+            RECOMMENDED REPAIRS & SERVICES
+        </h2>
+        
+        {% for recommendation in recommendations %}
+        <div class="recommendation">
+            <div class="recommendation-header">
+                <div>
+                    <span class="priority-badge priority-{{ recommendation.priority }}">
+                        {{ recommendation.get_priority_display }}
+                    </span>
+                    <span class="recommendation-type">
+                        ({{ recommendation.get_recommendation_type_display }})
+                    </span>
+                </div>
+                {% if recommendation.estimated_total_cost and recommendation.estimated_total_cost > 0 %}
+                <div class="recommendation-cost">
+                    <strong>Est. Cost: ${{ recommendation.estimated_total_cost|floatformat:2 }}</strong>
+                </div>
+                {% endif %}
+            </div>
+            <div class="recommendation-description">
+                {{ recommendation.description|linebreaks }}
+            </div>
+            {% if recommendation.parts_needed %}
+            <div style="margin-top: 10px; font-size: 13px;">
+                <strong>Parts Needed:</strong>
+                <ul style="margin: 5px 0; padding-left: 20px;">
+                    {% for part in recommendation.parts_needed %}
+                    <li>{{ part.part_name }} (Qty: {{ part.quantity }})</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="footer">
+        <p><strong>IMPORTANT:</strong> These recommendations require attention. Please review with your Technical Officer (TO) for follow-up and necessary action.</p>
+        <p>Generated on {{ print_generated_at|date:"F d, Y \a\t g:i A" }}</p>
+        {% if print_branch and print_branch.phone %}
+        <p>For questions, contact: {{ print_branch.phone }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

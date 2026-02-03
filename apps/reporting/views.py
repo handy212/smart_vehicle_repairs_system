@@ -743,6 +743,9 @@ def technician_performance(request):
             created_at__date__lte=end_date
         ).distinct()
         
+        # Filter by branch
+        work_orders = _filter_branch_queryset(work_orders, request)
+        
         completed = work_orders.filter(status='completed')
         
         # Calculate revenue

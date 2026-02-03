@@ -241,7 +241,7 @@ class Part(models.Model):
             models.Index(fields=['part_number']),
             models.Index(fields=['name']),
             models.Index(fields=['category', 'is_active']),
-            models.Index(fields=['quantity_in_stock']),
+            models.Index(fields=['quantity_in_stock']),  # DEPRECATED: Kept for backward compatibility
             models.Index(fields=['manufacturer']),
         ]
 
@@ -250,28 +250,52 @@ class Part(models.Model):
 
     @property
     def available_quantity(self):
-        """Quantity available for use (not reserved)"""
+        """
+        Quantity available for use (not reserved).
+        
+        DEPRECATED: This property uses deprecated Part.quantity_in_stock and quantity_reserved fields.
+        For branch-aware inventory, use StockItem model instead.
+        This property is kept for backward compatibility with legacy code.
+        """
         if self.quantity_in_stock is None or self.quantity_reserved is None:
             return 0
         return self.quantity_in_stock - self.quantity_reserved
 
     @property
     def is_low_stock(self):
-        """Check if stock is below reorder point"""
+        """
+        Check if stock is below reorder point.
+        
+        DEPRECATED: This property uses deprecated Part.quantity_in_stock and reorder_point fields.
+        For branch-aware inventory, use StockItem model instead.
+        This property is kept for backward compatibility with legacy code.
+        """
         if self.quantity_in_stock is None or self.reorder_point is None:
             return False
         return self.quantity_in_stock <= self.reorder_point
 
     @property
     def is_out_of_stock(self):
-        """Check if part is out of stock"""
+        """
+        Check if part is out of stock.
+        
+        DEPRECATED: This property uses deprecated Part.quantity_in_stock field.
+        For branch-aware inventory, use StockItem model instead.
+        This property is kept for backward compatibility with legacy code.
+        """
         if self.quantity_in_stock is None:
             return False
         return self.quantity_in_stock == 0
 
     @property
     def needs_reorder(self):
-        """Check if part needs to be reordered"""
+        """
+        Check if part needs to be reordered.
+        
+        DEPRECATED: This property uses deprecated Part fields.
+        For branch-aware inventory, use StockItem model instead.
+        This property is kept for backward compatibility with legacy code.
+        """
         return self.is_low_stock and not self.is_out_of_stock
 
     @property
@@ -283,7 +307,13 @@ class Part(models.Model):
 
     @property
     def total_value(self):
-        """Total inventory value (cost * quantity)"""
+        """
+        Total inventory value (cost * quantity).
+        
+        DEPRECATED: This property uses deprecated Part.quantity_in_stock field.
+        For branch-aware inventory, calculate from StockItem model instead.
+        This property is kept for backward compatibility with legacy code.
+        """
         if not self.cost_price or self.quantity_in_stock is None:
             return Decimal('0.00')
         return self.cost_price * self.quantity_in_stock
@@ -467,7 +497,8 @@ class PurchaseOrder(models.Model):
     """Purchase orders for ordering parts from suppliers"""
     STATUS_CHOICES = [
         ('draft', 'Draft'),
-        ('submitted', 'Submitted'),
+        ('pending_approval', 'Pending Approval'),
+        ('approved', 'Approved'),
         ('confirmed', 'Confirmed'),
         ('partially_received', 'Partially Received'),
         ('received', 'Received'),
@@ -524,7 +555,10 @@ class PurchaseOrder(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='purchase_orders_created')
     submitted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='purchase_orders_submitted')
     submitted_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='purchase_orders_approved')
+    approved_at = models.DateTimeField(null=True, blank=True)
     received_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='purchase_orders_received')
+    assigned_approver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='purchase_orders_assigned', help_text='User selected to approve this PO')
 
     class Meta:
         ordering = ['-created_at']
@@ -629,18 +663,30 @@ class PurchaseOrderItem(models.Model):
         # Update purchase order totals
         self.purchase_order.calculate_totals()
         
-        # Update part quantity_on_order
-        if self.purchase_order.status in ['submitted', 'confirmed']:
-            pending_qty = self.quantity - self.quantity_received
-            # Recalculate total on order for this part
-            total_on_order = PurchaseOrderItem.objects.filter(
-                part=self.part,
-                purchase_order__status__in=['submitted', 'confirmed']
-            ).aggregate(
-                total=models.Sum(models.F('quantity') - models.F('quantity_received'))
-            )['total'] or 0
-            self.part.quantity_on_order = total_on_order
-            self.part.save()
+        # Update StockItem quantity_on_order (not deprecated part.quantity_on_order)
+        if self.purchase_order.status in ['pending_approval', 'approved', 'confirmed']:
+            branch = self.purchase_order.branch
+            if branch:
+                # Get or create StockItem for this branch
+                stock_item, _ = StockItem.objects.get_or_create(
+                    part=self.part,
+                    branch=branch,
+                    defaults={
+                        'reorder_point': self.part.reorder_point,
+                        'reorder_quantity': self.part.reorder_quantity,
+                        'minimum_stock': self.part.minimum_stock,
+                    }
+                )
+                # Recalculate total on order for this part at this branch
+                total_on_order = PurchaseOrderItem.objects.filter(
+                    part=self.part,
+                    purchase_order__status__in=['pending_approval', 'approved', 'confirmed'],
+                    purchase_order__branch=branch
+                ).aggregate(
+                    total=models.Sum(models.F('quantity') - models.F('quantity_received'))
+                )['total'] or 0
+                stock_item.quantity_on_order = max(0, total_on_order)
+                stock_item.save()
 
     @property
     def is_fully_received(self):
@@ -741,41 +787,9 @@ class InventoryTransaction(models.Model):
         if self.unit_cost and self.quantity and not self.total_cost:
             self.total_cost = abs(self.quantity) * self.unit_cost
         
-        # Update part quantity if this is a new transaction
-        if not self.pk:
-            # Handle Reservations (affect quantity_reserved)
-            if self.transaction_type == 'reserve':
-                self.part.quantity_reserved += abs(self.quantity)
-                self.balance_after = self.part.quantity_in_stock # Physical stock doesn't change
-                self.part.save()
-            
-            elif self.transaction_type == 'release':
-                self.part.quantity_reserved = max(0, self.part.quantity_reserved - abs(self.quantity))
-                self.balance_after = self.part.quantity_in_stock
-                self.part.save()
-            
-            # Handle Physical Stock Changes (affect quantity_in_stock)
-            else:
-                # For adjustment-type transactions, balance_after is set explicitly in the view
-                # to handle negative stock prevention. In this case, use balance_after directly.
-                # For other transactions, calculate from current stock + quantity
-                adjustment_types = ['adjustment', 'damage', 'count', 'return']
-                try:
-                    balance_check = self.balance_after is not None and self.balance_after >= 0
-                except:
-                    balance_check = False
-
-                if self.transaction_type in adjustment_types and balance_check:
-                    # balance_after was calculated and set explicitly in adjust_stock view
-                    # Update stock to match the explicitly set balance
-                    self.part.quantity_in_stock = self.balance_after
-                    self.part.save()
-                else:
-                    # Calculate balance normally (for purchase, sale, transfer transactions)
-                    new_stock = max(0, self.part.quantity_in_stock + self.quantity)
-                    self.part.quantity_in_stock = new_stock
-                    self.balance_after = new_stock
-                    self.part.save()
+        # NOTE: Stock updates are handled by InventoryService.record_transaction()
+        # This model's save method should NOT modify stock directly.
+        # The balance_after field should be set by the service layer.
         
         super().save(*args, **kwargs)
 
@@ -855,3 +869,444 @@ class ServicePackagePart(models.Model):
 
     def __str__(self):
         return f"{self.quantity}x {self.part.part_number} for {self.service_package.name}"
+
+
+class StockAlert(models.Model):
+    """
+    Stock alerts for low stock, out of stock, and reorder notifications.
+    Branch-aware alerts based on StockItem levels.
+    """
+    ALERT_TYPE_CHOICES = [
+        ('low_stock', 'Low Stock'),
+        ('out_of_stock', 'Out of Stock'),
+        ('reorder_point', 'Reorder Point Reached'),
+        ('overstock', 'Overstock'),
+    ]
+    
+    SEVERITY_CHOICES = [
+        ('info', 'Info'),
+        ('warning', 'Warning'),
+        ('critical', 'Critical'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('acknowledged', 'Acknowledged'),
+        ('resolved', 'Resolved'),
+        ('dismissed', 'Dismissed'),
+    ]
+    
+    part = models.ForeignKey(
+        Part,
+        on_delete=models.CASCADE,
+        related_name='stock_alerts',
+        help_text='Part that triggered this alert'
+    )
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.CASCADE,
+        related_name='stock_alerts',
+        help_text='Branch where this alert applies'
+    )
+    stock_item = models.ForeignKey(
+        StockItem,
+        on_delete=models.CASCADE,
+        related_name='alerts',
+        null=True,
+        blank=True,
+        help_text='StockItem that triggered this alert'
+    )
+    
+    alert_type = models.CharField(
+        max_length=20,
+        choices=ALERT_TYPE_CHOICES,
+        help_text='Type of stock alert'
+    )
+    severity = models.CharField(
+        max_length=20,
+        choices=SEVERITY_CHOICES,
+        default='warning',
+        help_text='Severity level of the alert'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='active',
+        help_text='Current status of the alert'
+    )
+    
+    # Stock levels at time of alert
+    current_quantity = models.IntegerField(
+        default=0,
+        help_text='Stock quantity when alert was created'
+    )
+    reorder_point = models.IntegerField(
+        default=0,
+        help_text='Reorder point for this part at this branch'
+    )
+    minimum_stock = models.IntegerField(
+        default=0,
+        help_text='Minimum stock level for this part'
+    )
+    
+    # Alert metadata
+    message = models.TextField(
+        blank=True,
+        help_text='Alert message or description'
+    )
+    acknowledged_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='acknowledged_stock_alerts',
+        help_text='User who acknowledged this alert'
+    )
+    acknowledged_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When this alert was acknowledged'
+    )
+    resolved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When this alert was resolved'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at', '-severity']
+        indexes = [
+            models.Index(fields=['status', 'alert_type']),
+            models.Index(fields=['branch', 'status']),
+            models.Index(fields=['part', 'branch']),
+        ]
+        verbose_name = 'Stock Alert'
+        verbose_name_plural = 'Stock Alerts'
+    
+    def __str__(self):
+        return f"{self.get_alert_type_display()} - {self.part.name} ({self.branch.name})"
+    
+    def acknowledge(self, user):
+        """Mark alert as acknowledged"""
+        self.status = 'acknowledged'
+        self.acknowledged_by = user
+        self.acknowledged_at = timezone.now()
+        self.save(update_fields=['status', 'acknowledged_by', 'acknowledged_at', 'updated_at'])
+    
+    def resolve(self):
+        """Mark alert as resolved"""
+        self.status = 'resolved'
+        self.resolved_at = timezone.now()
+        self.save(update_fields=['status', 'resolved_at', 'updated_at'])
+    
+    def dismiss(self):
+        """Dismiss the alert"""
+        self.status = 'dismissed'
+        self.save(update_fields=['status', 'updated_at'])
+
+
+class PhysicalCountSession(models.Model):
+    """
+    Physical inventory count session - tracks a complete physical count of inventory
+    """
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    session_number = models.CharField(
+        max_length=20,
+        unique=True,
+        editable=False,
+        db_index=True,
+        help_text='Auto-generated session number'
+    )
+    branch = models.ForeignKey(
+        'branches.Branch',
+        on_delete=models.CASCADE,
+        related_name='physical_count_sessions',
+        help_text='Branch where physical count is being performed'
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='draft',
+        db_index=True
+    )
+    
+    # Count details
+    count_date = models.DateField(
+        default=timezone.now,
+        help_text='Date when physical count was performed'
+    )
+    notes = models.TextField(
+        blank=True,
+        help_text='Notes about this count session'
+    )
+    
+    # Statistics
+    total_items_counted = models.IntegerField(
+        default=0,
+        help_text='Total number of items counted in this session'
+    )
+    total_discrepancies = models.IntegerField(
+        default=0,
+        help_text='Total number of items with discrepancies'
+    )
+    
+    # Tracking
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='physical_count_sessions_created',
+        help_text='User who created this count session'
+    )
+    completed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='physical_count_sessions_completed',
+        help_text='User who completed this count session'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['session_number']),
+            models.Index(fields=['branch', 'status']),
+            models.Index(fields=['count_date', 'status']),
+        ]
+        verbose_name = 'Physical Count Session'
+        verbose_name_plural = 'Physical Count Sessions'
+    
+    def __str__(self):
+        return f"{self.session_number} - {self.branch.name} ({self.get_status_display()})"
+    
+    def save(self, *args, **kwargs):
+        if not self.session_number:
+            # Generate session number: PC000001, PC000002, etc.
+            last_session = PhysicalCountSession.objects.order_by('-id').first()
+            if last_session and last_session.session_number:
+                try:
+                    last_number = int(last_session.session_number[2:])
+                    new_number = last_number + 1
+                except ValueError:
+                    new_number = 1
+            else:
+                new_number = 1
+            self.session_number = f"PC{new_number:06d}"
+        
+        super().save(*args, **kwargs)
+    
+    def start(self):
+        """Start the count session"""
+        if self.status != 'draft':
+            raise ValueError("Can only start a draft session")
+        self.status = 'in_progress'
+        self.save(update_fields=['status', 'updated_at'])
+    
+    def complete(self, user):
+        """Complete the count session"""
+        if self.status != 'in_progress':
+            raise ValueError("Can only complete an in-progress session")
+        self.status = 'completed'
+        self.completed_by = user
+        self.completed_at = timezone.now()
+        # Recalculate statistics
+        self.total_items_counted = self.count_items.count()
+        self.total_discrepancies = self.count_items.filter(
+            discrepancy__isnull=False
+        ).exclude(discrepancy=0).count()
+        self.save(update_fields=['status', 'completed_by', 'completed_at', 'total_items_counted', 'total_discrepancies', 'updated_at'])
+    
+    def cancel(self):
+        """Cancel the count session"""
+        if self.status == 'completed':
+            raise ValueError("Cannot cancel a completed session")
+        self.status = 'cancelled'
+        self.save(update_fields=['status', 'updated_at'])
+
+
+class PhysicalCountItem(models.Model):
+    """
+    Individual item counted in a physical count session
+    """
+    session = models.ForeignKey(
+        PhysicalCountSession,
+        on_delete=models.CASCADE,
+        related_name='count_items',
+        help_text='Physical count session this item belongs to'
+    )
+    part = models.ForeignKey(
+        Part,
+        on_delete=models.CASCADE,
+        related_name='physical_count_items',
+        help_text='Part that was counted'
+    )
+    stock_item = models.ForeignKey(
+        StockItem,
+        on_delete=models.CASCADE,
+        related_name='physical_count_items',
+        help_text='StockItem that was counted'
+    )
+    
+    # Count values
+    system_quantity = models.IntegerField(
+        help_text='Quantity in system before count'
+    )
+    physical_quantity = models.IntegerField(
+        help_text='Quantity physically counted'
+    )
+    discrepancy = models.IntegerField(
+        default=0,
+        help_text='Difference: physical_quantity - system_quantity'
+    )
+    
+    # Notes
+    notes = models.TextField(
+        blank=True,
+        help_text='Notes about this count item'
+    )
+    
+    # Reconciliation
+    reconciled = models.BooleanField(
+        default=False,
+        help_text='Whether discrepancy has been reconciled'
+    )
+    reconciled_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When this item was reconciled'
+    )
+    reconciled_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='physical_count_items_reconciled',
+        help_text='User who reconciled this item'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['session', 'part', 'stock_item']
+        indexes = [
+            models.Index(fields=['session', 'reconciled']),
+            models.Index(fields=['part', 'stock_item']),
+        ]
+        verbose_name = 'Physical Count Item'
+        verbose_name_plural = 'Physical Count Items'
+    
+    def __str__(self):
+        return f"{self.part.name} - System: {self.system_quantity}, Physical: {self.physical_quantity}"
+    
+    def save(self, *args, **kwargs):
+        # Calculate discrepancy
+        self.discrepancy = self.physical_quantity - self.system_quantity
+        super().save(*args, **kwargs)
+    
+    def reconcile(self, user, create_adjustment=True):
+        """
+        Reconcile the discrepancy by creating an adjustment transaction
+        
+        Args:
+            user: User performing the reconciliation
+            create_adjustment: If True, create an inventory adjustment transaction
+        """
+        if self.reconciled:
+            raise ValueError("Item is already reconciled")
+        
+        if create_adjustment and self.discrepancy != 0:
+            # Create adjustment transaction
+            InventoryService.record_transaction(
+                part=self.part,
+                quantity=self.discrepancy,
+                transaction_type='correction',
+                user=user,
+                branch=self.stock_item.branch,
+                reason=f'Physical count reconciliation - Session {self.session.session_number}',
+                notes=f'System: {self.system_quantity}, Physical: {self.physical_quantity}, Discrepancy: {self.discrepancy}'
+            )
+        
+        self.reconciled = True
+        self.reconciled_by = user
+        self.reconciled_at = timezone.now()
+        self.save(update_fields=['reconciled', 'reconciled_by', 'reconciled_at', 'updated_at'])
+
+
+class ServiceBundle(models.Model):
+    """
+    Bundle of parts and services for routine maintenance (e.g., Minor Service, Major Service)
+    """
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    
+    # Link to ServiceType (from vehicles app)
+    service_type = models.OneToOneField(
+        'vehicles.ServiceType',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='service_bundle',
+        help_text="The service type this bundle fulfills (e.g., 'Minor Service')"
+    )
+    
+    is_active = models.BooleanField(default=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='service_bundles_created'
+    )
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Service Bundle'
+        verbose_name_plural = 'Service Bundles'
+
+    def __str__(self):
+        return self.name
+
+
+class ServiceBundleItem(models.Model):
+    """
+    Item within a service bundle (Part + Quantity)
+    """
+    bundle = models.ForeignKey(ServiceBundle, on_delete=models.CASCADE, related_name='items')
+    part = models.ForeignKey(Part, on_delete=models.PROTECT, related_name='bundle_items')
+    quantity = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=1,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [['bundle', 'part']]
+        verbose_name = 'Service Bundle Item'
+        verbose_name_plural = 'Service Bundle Items'
+
+    def __str__(self):
+        return f"{self.bundle.name} - {self.part.name} (x{self.quantity})"

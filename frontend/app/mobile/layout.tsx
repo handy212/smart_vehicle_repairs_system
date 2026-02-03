@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { authApi } from "@/lib/api/auth";
 import { SyncStatusBanner } from "@/components/mobile/SyncStatusBanner";
-import { BellRing, Home, Wrench, ClipboardCheck, Clock } from "lucide-react";
+import { BellRing, Home, Wrench, ClipboardCheck, Clock, Truck } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { OfflineIndicator } from "@/components/mobile/OfflineIndicator";
@@ -28,20 +28,22 @@ export default function MobileLayout({
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkAuth = async () => {
       const token = localStorage.getItem("access_token");
 
       if (!token) {
-        router.push("/login");
+        if (isMounted) router.push("/login");
         return;
       }
 
       if (!user && token) {
         try {
           const currentUser = await authApi.getCurrentUser();
-          setUser(currentUser);
+          if (isMounted) setUser(currentUser);
         } catch (error) {
-          router.push("/login");
+          if (isMounted) router.push("/login");
         }
       }
     };
@@ -49,57 +51,14 @@ export default function MobileLayout({
     if (mounted) {
       checkAuth();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [user, setUser, router, mounted]);
 
   // Guard to prevent repeated attempts per page load
   const hasAttemptedPushRef = useRef(false);
-
-  // Subscribe to push notifications on mount
-  // DISABLED: Browser security requires notification permission from user interaction
-  // Add a UI button to enable push notifications when needed
-  /*
-  useEffect(() => {
-    if (!mounted || !isAuthenticated || !pushNotifications.isSupported) {
-      return;
-    }
-
-    // Safety guard: only ever try once per page load
-    if (hasAttemptedPushRef.current) {
-      return;
-    }
-
-    // Fixed throttling period: 24 hours (change this value to adjust)
-    const THROTTLE_PERIOD_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-    const attemptKey = "pwa-push-subscribe-attempt";
-    const now = Date.now();
-    const lastAttempt = parseInt(localStorage.getItem(attemptKey) || "0", 10);
-
-    // Skip if within throttle period
-    if (!Number.isNaN(lastAttempt) && lastAttempt > 0 && (now - lastAttempt) < THROTTLE_PERIOD_MS) {
-      return;
-    }
-
-    // Only attempt if not already subscribed
-    if (!pushNotifications.isSubscribed) {
-      hasAttemptedPushRef.current = true; // Mark as attempted immediately
-      localStorage.setItem(attemptKey, now.toString());
-
-      // Request permission and subscribe
-      pushNotifications.requestPermission().then((permission) => {
-        if (permission === "granted") {
-          pushNotifications.subscribe("Mobile App").catch((error) => {
-            // Silently handle subscription errors to prevent spam
-            console.warn("[Push] Subscription failed:", error?.message || "Unknown error");
-          });
-        }
-      }).catch((error) => {
-        // Silently handle permission errors
-        console.warn("[Push] Permission request failed:", error?.message || "Unknown error");
-      });
-    }
-  }, [mounted, isAuthenticated, pushNotifications.isSupported, pushNotifications.isSubscribed]);
-  */
 
   if (!mounted || !isAuthenticated) {
     return (
@@ -133,12 +92,16 @@ export default function MobileLayout({
       label: "Time",
       icon: Clock,
     },
+    {
+      href: "/mobile/roadside",
+      label: "Roadside",
+      icon: Truck,
+    },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
       <SyncStatusBanner />
-      {/* Header */}
       <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 h-14 px-4 flex items-center justify-between sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="bg-primary p-1.5 rounded-lg">
@@ -181,15 +144,12 @@ export default function MobileLayout({
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-y-auto">{children}</main>
 
-      {/* Install Prompt */}
       <InstallPrompt />
 
-      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-50 safe-area-inset-bottom">
-        <div className="grid grid-cols-4 h-16">
+        <div className="grid grid-cols-5 h-16">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =

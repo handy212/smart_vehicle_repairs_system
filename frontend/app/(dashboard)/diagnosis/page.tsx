@@ -41,7 +41,7 @@ import { cn } from "@/lib/utils";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 export default function DiagnosisListPage() {
-    const { formatCurrency } = useCurrency();
+  const { formatCurrency } = useCurrency();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");

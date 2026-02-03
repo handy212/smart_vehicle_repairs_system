@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.contrib import messages
+from apps.branches.utils import filter_queryset_for_user_branches
 import json
 import re
 
@@ -62,28 +63,38 @@ def mobile_dashboard(request):
         return redirect('dashboard')
     
     # Get dashboard statistics
+    # Apply branch filtering
+    active_workorders = filter_queryset_for_user_branches(
+        WorkOrder.objects.filter(status__in=['pending', 'in_progress']), 
+        request.user, request
+    )
+    todays_appointments = filter_queryset_for_user_branches(
+        Appointment.objects.filter(appointment_date=timezone.now().date(), status='confirmed'),
+        request.user, request
+    )
+    pending_inspections = filter_queryset_for_user_branches(
+        VehicleInspection.objects.filter(status='in_progress'),
+        request.user, request
+    )
+    overdue_invoices = filter_queryset_for_user_branches(
+        Invoice.objects.filter(due_date__lt=timezone.now().date(), status__in=['sent', 'viewed', 'partial', 'overdue']),
+        request.user, request
+    )
+
     context = {
-        'active_workorders_count': WorkOrder.objects.filter(
-            status__in=['pending', 'in_progress']
-        ).count(),
-        'todays_appointments_count': Appointment.objects.filter(
-            appointment_date=timezone.now().date(),
-            status='confirmed'
-        ).count(),
-        'pending_inspections_count': VehicleInspection.objects.filter(
-            status='in_progress'
-        ).count(),
-        'overdue_invoices_count': Invoice.objects.filter(
-            due_date__lt=timezone.now().date(),
-            status__in=['sent', 'viewed', 'partial', 'overdue']
-        ).count(),
+        'active_workorders_count': active_workorders.count(),
+        'todays_appointments_count': todays_appointments.count(),
+        'pending_inspections_count': pending_inspections.count(),
+        'overdue_invoices_count': overdue_invoices.count(),
     }
     
     # Get recent activity
     recent_activity = []
     
     # Recent work orders
-    recent_workorders = WorkOrder.objects.select_related('customer', 'vehicle').order_by('-created_at')[:5]
+    recent_workorders_qs = WorkOrder.objects.select_related('customer', 'vehicle').order_by('-created_at')
+    recent_workorders = filter_queryset_for_user_branches(recent_workorders_qs, request.user, request)[:5]
+    
     for wo in recent_workorders:
         recent_activity.append({
             'type': 'workorder',
@@ -95,7 +106,9 @@ def mobile_dashboard(request):
         })
     
     # Recent appointments
-    recent_appointments = Appointment.objects.select_related('customer', 'vehicle').order_by('-created_at')[:3]
+    recent_appointments_qs = Appointment.objects.select_related('customer', 'vehicle').order_by('-created_at')
+    recent_appointments = filter_queryset_for_user_branches(recent_appointments_qs, request.user, request)[:3]
+    
     for apt in recent_appointments:
         recent_activity.append({
             'type': 'appointment',
@@ -125,7 +138,8 @@ def mobile_workorder_list(request):
     search_query = request.GET.get('q', '').strip()
     
     # Base queryset
-    workorders = WorkOrder.objects.select_related('customer', 'vehicle').order_by('-created_at')
+    workorders_qs = WorkOrder.objects.select_related('customer', 'vehicle').order_by('-created_at')
+    workorders = filter_queryset_for_user_branches(workorders_qs, request.user, request)
     
     # Apply filters
     if status_filter != 'all':
@@ -238,8 +252,12 @@ def mobile_search_api(request):
     results = []
     
     if search_type in ['all', 'workorders']:
+        # Base query with branch filtering
+        workorders_qs = WorkOrder.objects.select_related('customer', 'customer__user', 'vehicle')
+        workorders_qs = filter_queryset_for_user_branches(workorders_qs, request.user, request)
+        
         if query:
-            workorders = WorkOrder.objects.select_related('customer', 'customer__user', 'vehicle').filter(
+            workorders = workorders_qs.filter(
                 Q(work_order_number__icontains=query) |
                 Q(customer__user__first_name__icontains=query) |
                 Q(customer__user__last_name__icontains=query) |
@@ -255,7 +273,7 @@ def mobile_search_api(request):
             ).order_by('-created_at')[:5]
         else:
             # Empty query for specific type - return all
-            workorders = WorkOrder.objects.select_related('customer', 'customer__user', 'vehicle').order_by('-created_at')[:10]
+            workorders = workorders_qs.order_by('-created_at')[:10]
         
         for wo in workorders:
             customer_name = wo.customer.full_name if hasattr(wo.customer, 'full_name') else (
@@ -374,8 +392,12 @@ def mobile_search_api(request):
     
     if search_type in ['all', 'appointments']:
         from apps.appointments.models import Appointment
+        # Base query with branch filtering
+        appointments_qs = Appointment.objects.select_related('customer', 'customer__user', 'vehicle')
+        appointments_qs = filter_queryset_for_user_branches(appointments_qs, request.user, request)
+        
         if query:
-            appointments = Appointment.objects.select_related('customer', 'customer__user', 'vehicle').filter(
+            appointments = appointments_qs.filter(
                 Q(customer__user__first_name__icontains=query) |
                 Q(customer__user__last_name__icontains=query) |
                 Q(customer__user__email__icontains=query) |
@@ -390,7 +412,7 @@ def mobile_search_api(request):
             ).order_by('-appointment_date', '-appointment_time')[:5]
         else:
             # Empty query for specific type - return all
-            appointments = Appointment.objects.select_related('customer', 'customer__user', 'vehicle').order_by('-appointment_date', '-appointment_time')[:10]
+            appointments = appointments_qs.order_by('-appointment_date', '-appointment_time')[:10]
         
         for apt in appointments:
             customer_name = apt.customer.full_name if hasattr(apt.customer, 'full_name') else (
@@ -409,8 +431,12 @@ def mobile_search_api(request):
     
     if search_type in ['all', 'invoices']:
         from apps.billing.models import Invoice
+        # Base query with branch filtering
+        invoices_qs = Invoice.objects.select_related('customer', 'customer__user')
+        invoices_qs = filter_queryset_for_user_branches(invoices_qs, request.user, request)
+        
         if query:
-            invoices = Invoice.objects.select_related('customer', 'customer__user').filter(
+            invoices = invoices_qs.filter(
                 Q(invoice_number__icontains=query) |
                 Q(customer__user__first_name__icontains=query) |
                 Q(customer__user__last_name__icontains=query) |
@@ -419,7 +445,7 @@ def mobile_search_api(request):
             ).order_by('-invoice_date')[:5]
         else:
             # Empty query for specific type - return all
-            invoices = Invoice.objects.select_related('customer', 'customer__user').order_by('-invoice_date')[:10]
+            invoices = invoices_qs.order_by('-invoice_date')[:10]
         
         for inv in invoices:
             customer_name = inv.customer.full_name if hasattr(inv.customer, 'full_name') else (

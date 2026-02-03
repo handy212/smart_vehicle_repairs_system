@@ -167,8 +167,20 @@ class VehicleForm(forms.ModelForm):
         return vin
 
     def clean_license_plate(self):
-        """Ensure license plate is uppercase for consistency."""
-        license_plate = self.cleaned_data['license_plate'].upper()
+        """Validate license plate format and uniqueness."""
+        license_plate = self.cleaned_data.get('license_plate', '').strip().upper()
+        
+        if not license_plate:
+            raise ValidationError("License plate is required.")
+        
+        # Check uniqueness (excluding current instance if editing)
+        existing_vehicles = Vehicle.objects.filter(license_plate=license_plate)
+        if self.instance.pk:
+            existing_vehicles = existing_vehicles.exclude(pk=self.instance.pk)
+        
+        if existing_vehicles.exists():
+            raise ValidationError("A vehicle with this license plate already exists.")
+        
         return license_plate
 
     def clean(self):

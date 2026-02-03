@@ -75,6 +75,14 @@ class Admin(AbstractUserRole):
         'print_workorders': True,
         'export_workorders': True,
         
+        # Gate Passes
+        'view_gatepass': True,
+        'create_gatepass': True,
+        'change_gatepass': True,
+        'delete_gatepass': True,
+        'issue_gatepass': True,
+        'complete_gatepass': True,
+        
         # Diagnosis
         'view_diagnosis': True,
         'create_diagnosis': True,
@@ -455,6 +463,13 @@ class Receptionist(AbstractUserRole):
         'create_workorders': True,
         'add_workorder_notes': True,
         'print_workorders': True,
+        
+        # Gate Passes
+        'view_gatepass': True,
+        'create_gatepass': True,
+        'change_gatepass': True,
+        'issue_gatepass': True,
+        'complete_gatepass': True,
         
         # Billing
         'view_billing': True,

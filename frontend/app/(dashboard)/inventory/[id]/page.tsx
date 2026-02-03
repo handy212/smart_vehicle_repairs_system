@@ -8,16 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ArrowLeft, Edit, Package, AlertTriangle, MapPin, Calendar, Clock, RotateCcw } from "lucide-react";
+import { ArrowLeft, Edit, Package, AlertTriangle, MapPin, Calendar, Clock, RotateCcw, Building2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import StockAdjustmentDialog from "./components/StockAdjustmentDialog";
 import { useState } from "react";
 import Image from "next/image";
 import { useCurrency } from "@/lib/hooks/useCurrency";
+import { useBranchStore } from "@/store/branchStore";
 
 export default function PartDetailPage() {
   const { formatCurrency } = useCurrency();
+  const { activeBranch } = useBranchStore();
   const params = useParams();
   const router = useRouter();
   const partId = parseInt(params.id as string);
@@ -181,6 +183,12 @@ export default function PartDetailPage() {
 
             {/* Stock Tab */}
             <TabsContent value="overview" className="mt-4 space-y-4">
+              {activeBranch && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                  <Building2 className="w-4 h-4" />
+                  <span>Stock levels shown for: <strong className="text-foreground">{activeBranch.name}</strong></span>
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="p-4 flex flex-col items-center justify-center text-center">

@@ -9,7 +9,6 @@ import { FileText, Filter, CheckCircle, XCircle, AlertCircle } from "lucide-reac
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select } from "@/components/ui/select";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/hooks/useToast";
@@ -149,17 +148,17 @@ export default function MyEstimatesPage() {
         <CardContent className="p-4">
           <div className="flex items-center space-x-4">
             <Filter className="w-5 h-5 text-gray-400" />
-            <Select
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-48"
+              className="flex h-10 w-48 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="all">All Status</option>
               <option value="sent">Pending</option>
               <option value="approved">Approved</option>
               <option value="declined">Declined</option>
               <option value="expired">Expired</option>
-            </Select>
+            </select>
           </div>
         </CardContent>
       </Card>

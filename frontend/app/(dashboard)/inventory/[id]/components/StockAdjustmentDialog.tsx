@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { AxiosError } from "axios";
+import { useBranchStore } from "@/store/branchStore";
+import { Building2 } from "lucide-react";
 
 const adjustmentSchema = z.object({
   quantity: z.number().int("Quantity must be a whole number"),
@@ -34,6 +36,7 @@ export default function StockAdjustmentDialog({
   onClose,
   onSuccess,
 }: StockAdjustmentDialogProps) {
+  const { activeBranch } = useBranchStore();
   const [serverError, setServerError] = useState<string | null>(null);
   const [adjustmentType, setAdjustmentType] = useState<"increase" | "decrease">("increase");
 
@@ -72,8 +75,24 @@ export default function StockAdjustmentDialog({
     onError: (error) => {
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
+        
+        // Handle branch-related errors prominently
+        const errorMessage = errorData.error || errorData.detail || errorData.non_field_errors;
+        if (errorMessage) {
+          const message = Array.isArray(errorMessage) ? errorMessage[0] : errorMessage;
+          // Check if it's a branch-related error
+          if (typeof message === 'string' && message.toLowerCase().includes('branch')) {
+            setServerError(
+              `⚠️ ${message}. Please ensure you have selected an active branch before adjusting stock.`
+            );
+          } else {
+            setServerError(message);
+          }
+        }
+        
+        // Handle field-specific errors
         Object.keys(errorData).forEach((field) => {
-          if (field !== "non_field_errors" && field !== "detail") {
+          if (field !== "non_field_errors" && field !== "detail" && field !== "error") {
             const fieldError = Array.isArray(errorData[field])
               ? errorData[field][0]
               : errorData[field];
@@ -83,15 +102,13 @@ export default function StockAdjustmentDialog({
             });
           }
         });
-        if (errorData.non_field_errors) {
-          setServerError(
-            Array.isArray(errorData.non_field_errors)
-              ? errorData.non_field_errors[0]
-              : errorData.non_field_errors
-          );
-        } else if (errorData.detail) {
-          setServerError(errorData.detail);
+        
+        // Fallback for other error formats
+        if (!errorData.error && !errorData.detail && !errorData.non_field_errors) {
+          setServerError("An error occurred while adjusting stock. Please try again.");
         }
+      } else {
+        setServerError("An unexpected error occurred. Please try again.");
       }
     },
   });
@@ -115,12 +132,19 @@ export default function StockAdjustmentDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="px-6 pb-6">
           <div className="space-y-4">
             {serverError && (
-              <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded text-sm">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 p-3 rounded text-sm">
                 {serverError}
               </div>
             )}
 
-            <div className="bg-gray-50 p-4 rounded">
+            {activeBranch && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-2 rounded">
+                <Building2 className="w-4 h-4" />
+                <span>Adjusting stock for: <strong className="text-foreground">{activeBranch.name}</strong></span>
+              </div>
+            )}
+
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Current Stock</p>

@@ -14,7 +14,8 @@ from .serializers import (
     NotificationTemplateSerializer, NotificationTemplateListSerializer,
     NotificationSerializer, NotificationListSerializer, NotificationCreateSerializer,
     NotificationPreferenceSerializer, NotificationLogSerializer,
-    BulkNotificationSerializer, NotificationStatsSerializer
+    BulkNotificationSerializer, NotificationStatsSerializer,
+    WebPushSubscriptionSerializer
 )
 from .services import NotificationService
 from .hubtel_sms import send_sms, send_bulk_sms, is_hubtel_available
@@ -920,13 +921,19 @@ class TemplateRenderView(APIView):
         })
 
 
-class PushSubscribeView(APIView):
+class WebPushSubscriptionViewSet(viewsets.GenericViewSet):
     """
-    Subscribe to Web Push notifications
+    ViewSet for managing Web Push subscriptions
     """
     permission_classes = [IsAuthenticated]
+    serializer_class = WebPushSubscriptionSerializer
+    queryset = WebPushSubscription.objects.all()
     
-    def post(self, request):
+    @action(detail=False, methods=['post'])
+    def subscribe(self, request):
+        """
+        Create or update a subscription
+        """
         endpoint = request.data.get('endpoint')
         keys = request.data.get('keys', {})
         user_agent = request.META.get('HTTP_USER_AGENT', '')
@@ -954,23 +961,23 @@ class PushSubscribeView(APIView):
         
         # Update user's push preference
         preference, _ = NotificationPreference.objects.get_or_create(user=request.user)
-        preference.push_enabled = True
-        preference.save()
+        if not preference.push_enabled:
+            preference.push_enabled = True
+            preference.save()
+            
+        serializer = self.get_serializer(subscription)
         
         return Response({
-            'id': subscription.id,
+            'subscription': serializer.data,
             'created': created,
             'message': 'Successfully subscribed to push notifications'
         })
-
-
-class PushUnsubscribeView(APIView):
-    """
-    Unsubscribe from Web Push notifications
-    """
-    permission_classes = [IsAuthenticated]
     
-    def post(self, request):
+    @action(detail=False, methods=['post'])
+    def unsubscribe(self, request):
+        """
+        Unsubscribe from notifications
+        """
         endpoint = request.data.get('endpoint')
         
         if not endpoint:
@@ -980,11 +987,12 @@ class PushUnsubscribeView(APIView):
             )
         
         # Deactivate subscription
-        WebPushSubscription.objects.filter(
+        count = WebPushSubscription.objects.filter(
             user=request.user,
             endpoint=endpoint
         ).update(is_active=False)
         
         return Response({
-            'message': 'Successfully unsubscribed from push notifications'
+            'message': 'Successfully unsubscribed from push notifications',
+            'count': count
         })

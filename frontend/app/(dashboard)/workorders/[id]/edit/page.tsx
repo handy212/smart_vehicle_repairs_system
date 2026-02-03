@@ -29,6 +29,8 @@ const workOrderSchema = z.object({
     "completed", "invoiced", "closed"
   ]),
   customer_concerns: z.string().optional(),
+  maintenance_type: z.enum(["general", "routine"]).optional(),
+  service_type: z.number().optional(),
 });
 
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
@@ -66,6 +68,17 @@ const STATUS_LABELS: Record<string, string> = {
   'invoiced': 'Invoiced',
   'closed': 'Closed',
 };
+
+// Interface for Select items to handle both direct results and fallback from workOrder
+interface CustomerSelectItem {
+  id: number;
+  full_name: string;
+}
+
+interface VehicleSelectItem {
+  id: number;
+  label: string;
+}
 
 function getValidStatuses(currentStatus: string): string[] {
   // Always include current status
@@ -111,6 +124,12 @@ export default function EditWorkOrderPage() {
     queryFn: () => workordersApi.get(workOrderId),
   });
 
+  // Fetch service types
+  const { data: serviceTypesData } = useQuery({
+    queryKey: ["serviceTypes"],
+    queryFn: () => vehiclesApi.getServiceTypes(),
+  });
+
   // Fetch customers
   const { data: customersData } = useQuery({
     queryKey: ["customers", "list"],
@@ -118,7 +137,7 @@ export default function EditWorkOrderPage() {
   });
 
   // Fetch vehicles for selected customer
-  const { data: vehiclesData } = useQuery({
+  const { data: vehiclesData, isLoading: isLoadingVehicles } = useQuery({
     queryKey: ["vehicles", "customer", selectedCustomer],
     queryFn: () => vehiclesApi.list({ owner: selectedCustomer || undefined }),
     enabled: !!selectedCustomer,
@@ -126,9 +145,22 @@ export default function EditWorkOrderPage() {
 
   // Get selected vehicle details
   const vehicle = watch("vehicle");
-  const selectedVehicle = vehicle && vehiclesData?.results
-    ? vehiclesData.results.find((v) => v.id === vehicle) || null
-    : null;
+  const selectedVehicle = (() => {
+    if (!vehicle) return null;
+
+    // Check in fetched list
+    const fromList = vehiclesData?.results?.find((v) => v.id === vehicle);
+    if (fromList) return fromList;
+
+    // Fallback to workOrder nested object if it matches
+    if (workOrder && typeof workOrder.vehicle === 'object' && workOrder.vehicle !== null) {
+      if (workOrder.vehicle.id === vehicle) {
+        return workOrder.vehicle;
+      }
+    }
+
+    return null;
+  })();
 
 
 
@@ -148,7 +180,10 @@ export default function EditWorkOrderPage() {
         priority: workOrder.priority as any,
         status: workOrder.status as any,
         customer_concerns: workOrder.customer_concerns || "",
+        maintenance_type: (workOrder.maintenance_type as any) || "general",
+        service_type: typeof workOrder.service_type === 'object' && workOrder.service_type !== null ? workOrder.service_type.id : (workOrder.service_type || undefined),
       });
+      // Use a brief timeout to ensure state updates or just let useEffect handles it
       setSelectedCustomer(customerId || null);
 
       // Set customer data if available from workOrder
@@ -173,23 +208,31 @@ export default function EditWorkOrderPage() {
       setSelectedCustomer(customer);
 
       // Find and store selected customer data
-      const customerData = customersData?.results?.find((c) => c.id === customer);
-      if (customerData) {
+      const customerInList = customersData?.results?.find((c) => c.id === customer);
+      if (customerInList) {
         setSelectedCustomerData({
-          id: customerData.id,
-          full_name: customerData.full_name,
-          email: customerData.email,
-          phone: customerData.phone,
-          customer_type: customerData.customer_type,
-          customer_number: customerData.customer_number,
+          id: customerInList.id,
+          full_name: customerInList.full_name,
+          email: customerInList.email,
+          phone: customerInList.phone,
+          customer_type: customerInList.customer_type,
+          customer_number: customerInList.customer_number,
         });
-      } else {
-        setSelectedCustomerData(null);
+      } else if (workOrder && typeof workOrder.customer === 'object' && workOrder.customer?.id === customer) {
+        // Fallback to workOrder customer data if not in the current page of customers
+        setSelectedCustomerData({
+          id: workOrder.customer.id,
+          full_name: workOrder.customer.full_name,
+          email: workOrder.customer.email,
+          phone: workOrder.customer.phone,
+          customer_type: workOrder.customer.customer_type,
+          customer_number: workOrder.customer.customer_number,
+        });
       }
     } else if (!customer) {
       setSelectedCustomerData(null);
     }
-  }, [customer, selectedCustomer, customersData]);
+  }, [customer, selectedCustomer, customersData, workOrder]);
 
   // Initialize customer data when customersData loads
   useEffect(() => {
@@ -342,6 +385,7 @@ export default function EditWorkOrderPage() {
                         onValueChange={(val) => {
                           const numVal = parseInt(val);
                           setValue("customer", numVal);
+                          setValue("vehicle", 0); // Reset vehicle when customer changes
                           setSelectedCustomer(numVal);
 
                           // Update selected customer data
@@ -364,11 +408,33 @@ export default function EditWorkOrderPage() {
                           <SelectValue placeholder="Select a customer" />
                         </SelectTrigger>
                         <SelectContent>
-                          {customersData?.results?.map((customer) => (
-                            <SelectItem key={customer.id} value={customer.id.toString()}>
-                              {customer.full_name || `${customer.user?.first_name || ''} ${customer.user?.last_name || ''}`.trim() || 'Unknown'}
-                            </SelectItem>
-                          ))}
+                          {(() => {
+                            const items: CustomerSelectItem[] = [];
+
+                            // Add all customers from the list
+                            customersData?.results?.forEach(c => {
+                              items.push({
+                                id: c.id,
+                                full_name: c.full_name || `${c.user?.first_name || ''} ${c.user?.last_name || ''}`.trim() || 'Unknown'
+                              });
+                            });
+
+                            // Add current customer from workOrder if missing from list
+                            if (workOrder && typeof workOrder.customer === 'object' && workOrder.customer !== null) {
+                              if (!items.find(i => i.id === (workOrder.customer as any).id)) {
+                                items.push({
+                                  id: (workOrder.customer as any).id,
+                                  full_name: (workOrder.customer as any).full_name || 'Current Customer'
+                                });
+                              }
+                            }
+
+                            return items.map((item) => (
+                              <SelectItem key={item.id} value={item.id.toString()}>
+                                {item.full_name}
+                              </SelectItem>
+                            ));
+                          })()}
                         </SelectContent>
                       </Select>
 
@@ -424,21 +490,45 @@ export default function EditWorkOrderPage() {
                       <Select
                         value={vehicle?.toString() || ""}
                         onValueChange={(val) => setValue("vehicle", parseInt(val))}
-                        disabled={!selectedCustomer || !vehiclesData?.results?.length}
+                        disabled={!selectedCustomer || (isLoadingVehicles && !workOrder)}
                       >
                         <SelectTrigger id="vehicle" className={`w-full ${errors.vehicle ? "border-red-500" : ""}`}>
                           <SelectValue placeholder={!selectedCustomer
                             ? "Select a customer first"
-                            : !vehiclesData?.results?.length
-                              ? "No vehicles found"
-                              : "Select a vehicle"} />
+                            : isLoadingVehicles
+                              ? "Loading vehicles..."
+                              : !vehiclesData?.results?.length && !(workOrder && typeof workOrder.vehicle === 'object')
+                                ? "No vehicles found"
+                                : "Select a vehicle"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {vehiclesData?.results?.map((vehicle) => (
-                            <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                              {vehicle.make} {vehicle.model} {vehicle.year} — {vehicle.vin}
-                            </SelectItem>
-                          ))}
+                          {(() => {
+                            const items: VehicleSelectItem[] = [];
+
+                            // Add all vehicles from the list
+                            vehiclesData?.results?.forEach(v => {
+                              items.push({
+                                id: v.id,
+                                label: `${v.make} ${v.model} ${v.year} — ${v.vin}`
+                              });
+                            });
+
+                            // Add current vehicle from workOrder if missing from list
+                            if (workOrder && typeof workOrder.vehicle === 'object' && workOrder.vehicle !== null) {
+                              if (!items.find(i => i.id === (workOrder.vehicle as any).id)) {
+                                items.push({
+                                  id: (workOrder.vehicle as any).id,
+                                  label: (workOrder.vehicle_info || 'Current Vehicle')
+                                });
+                              }
+                            }
+
+                            return items.map((item) => (
+                              <SelectItem key={item.id} value={item.id.toString()}>
+                                {item.label}
+                              </SelectItem>
+                            ));
+                          })()}
                         </SelectContent>
                       </Select>
 
@@ -491,6 +581,66 @@ export default function EditWorkOrderPage() {
                 <CardDescription>Priority, status, and description</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Maintenance Type */}
+                  <div className="col-span-2 md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Maintenance Type
+                    </label>
+                    <div className="flex items-center space-x-4 mt-2">
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          value="general"
+                          {...register("maintenance_type")}
+                          className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
+                        />
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">General Repair</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          value="routine"
+                          {...register("maintenance_type")}
+                          className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
+                        />
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Routine Service</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Service Type (only if routine) */}
+                  {watch("maintenance_type") === "routine" && (
+                    <div className="col-span-2 md:col-span-1">
+                      <label htmlFor="service_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Service Type
+                      </label>
+                      <Select
+                        value={watch("service_type")?.toString()}
+                        onValueChange={(val) => {
+                          setValue("service_type", parseInt(val));
+                          // Auto-fill concerns if empty
+                          const type = serviceTypesData?.results?.find(t => t.id === parseInt(val));
+                          if (type && !watch("customer_concerns")) {
+                            setValue("customer_concerns", `Perform ${type.name}`);
+                          }
+                        }}
+                      >
+                        <SelectTrigger id="service_type">
+                          <SelectValue placeholder="Select service type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {serviceTypesData?.results?.map((type) => (
+                            <SelectItem key={type.id} value={type.id.toString()}>
+                              {type.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">

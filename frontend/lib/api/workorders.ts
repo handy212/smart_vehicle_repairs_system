@@ -62,6 +62,12 @@ export interface WorkOrder {
     status: string;
   }>;
   warranty_reason?: string;
+  branch?: {
+    id: number;
+    name: string;
+  };
+  maintenance_type?: 'general' | 'routine';
+  service_type?: number | { id: number; name: string };
 }
 
 export interface WorkOrderListResponse {
@@ -126,6 +132,58 @@ export const workordersApi = {
 
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/workorders/work-orders/${id}/`);
+  },
+
+  checkUnapprovedRecommendations: async (vehicleId: number): Promise<{
+    vehicle_id: number;
+    vehicle_display: string;
+    count: number;
+    recommendations: Array<{
+      id: number;
+      description: string;
+      priority: string;
+      priority_display: string;
+      recommendation_type: string;
+      recommendation_type_display: string;
+      estimated_total_cost: string;
+      work_order_id: number;
+      work_order_number: string;
+      work_order_completed_at: string | null;
+      diagnosis_id: number;
+    }>;
+  }> => {
+    const response = await apiClient.get(`/workorders/work-orders/check_unapproved_recommendations/`, {
+      params: { vehicle_id: vehicleId },
+    });
+    return response.data;
+  },
+
+  getRecentWorkOrders: async (
+    vehicleId: number,
+    params?: {
+      days?: number;
+      status?: string;
+      limit?: number;
+    }
+  ): Promise<{
+    results: Array<{
+      id: number;
+      work_order_number: string;
+      status: string;
+      completed_at: string | null;
+      customer_concerns: string;
+      technician_name: string;
+      branch_name: string;
+      days_ago: number | null;
+    }>;
+  }> => {
+    const response = await apiClient.get("/workorders/work-orders/get_recent_work_orders/", {
+      params: {
+        vehicle: vehicleId,
+        ...params,
+      },
+    });
+    return response.data;
   },
 
   active: async (): Promise<WorkOrder[]> => {
@@ -242,6 +300,52 @@ export const workordersApi = {
     unavailable_parts: Array<{ part_name: string; reason: string }>;
   }> => {
     const response = await apiClient.get(`/workorders/work-orders/${id}/check_readiness/`);
+    return response.data;
+  },
+
+  printRecommendations: async (id: number): Promise<{
+    work_order: {
+      id: number;
+      work_order_number: string;
+      created_at: string;
+      completed_at?: string;
+      status: string;
+    };
+    vehicle: {
+      id: number;
+      year: number;
+      make: string;
+      model: string;
+      vin: string;
+      license_plate?: string;
+      display_name: string;
+    };
+    customer: {
+      id: number;
+      customer_number: string;
+      full_name: string;
+      company_name?: string;
+    };
+    recommendations: Array<{
+      id: number;
+      recommendation_type: string;
+      description: string;
+      priority: string;
+      estimated_total_cost: string;
+      parts_needed?: Array<any>;
+    }>;
+    count: number;
+  }> => {
+    const response = await apiClient.get(`/workorders/work-orders/${id}/print_recommendations/`);
+    return response.data;
+  },
+
+  downloadRecommendationsPDF: async (id: number): Promise<Blob> => {
+    // Use the API endpoint for PDF generation
+    const response = await apiClient.get(
+      `/workorders/work-orders/${id}/recommendations_pdf/`,
+      { responseType: 'blob' }
+    );
     return response.data;
   },
 

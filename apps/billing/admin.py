@@ -104,6 +104,8 @@ class EstimateAdmin(admin.ModelAdmin):
     ]
     
     def vehicle_display(self, obj):
+        if not obj.vehicle:
+            return "-"
         return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
     vehicle_display.short_description = 'Vehicle'
     
@@ -184,6 +186,8 @@ class InvoiceAdmin(admin.ModelAdmin):
     ]
     
     def vehicle_display(self, obj):
+        if not obj.vehicle:
+            return "-"
         return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}"
     vehicle_display.short_description = 'Vehicle'
     

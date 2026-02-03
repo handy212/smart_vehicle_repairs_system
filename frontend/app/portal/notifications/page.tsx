@@ -5,10 +5,10 @@ import { notificationsApi, Notification } from "@/lib/api/notifications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Bell, 
-  CheckCircle, 
-  Circle, 
+import {
+  Bell,
+  CheckCircle,
+  Circle,
   Calendar,
   Wrench,
   Receipt,
@@ -24,7 +24,6 @@ import { format, formatDistanceToNow } from "date-fns";
 import { useToast } from "@/lib/hooks/useToast";
 import { cn } from "@/lib/utils/cn";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select } from "@/components/ui/select";
 
 export default function NotificationsPage() {
   const { toast } = useToast();
@@ -153,7 +152,7 @@ export default function NotificationsPage() {
           <div className="flex items-center space-x-4">
             <Badge variant="warning">{unreadCount} unread</Badge>
             <Button
-             variant="secondary"
+              variant="secondary"
               onClick={() => markAllAsReadMutation.mutate()}
               disabled={markAllAsReadMutation.isPending}
             >
@@ -212,18 +211,18 @@ export default function NotificationsPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center space-x-4">
-            <Select
+            <select
               value={filter}
               onChange={(e) => setFilter(e.target.value as "all" | "unread")}
-              className="w-48"
+              className="flex h-10 w-48 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="all">All Notifications</option>
               <option value="unread">Unread Only</option>
-            </Select>
-            <Select
+            </select>
+            <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-48"
+              className="flex h-10 w-48 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="all">All Types</option>
               <option value="appointment">Appointments</option>
@@ -231,7 +230,7 @@ export default function NotificationsPage() {
               <option value="payment">Payments</option>
               <option value="vehicle">Vehicles</option>
               <option value="work_order">Work Orders</option>
-            </Select>
+            </select>
           </div>
         </CardContent>
       </Card>

@@ -3,7 +3,7 @@ Serializers for vehicles app
 """
 from rest_framework import serializers
 from django.utils import timezone
-from .models import Vehicle, VehicleMileageHistory, VehicleDocument, VehiclePhoto
+from .models import Vehicle, VehicleMileageHistory, VehicleDocument, VehiclePhoto, ServiceType, VehicleServiceSchedule, VehicleOwnershipHistory
 from .vin_decoder import decode_vin, VehicleVINDecoder
 
 
@@ -131,7 +131,7 @@ class VehicleCreateSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data)
     
     def validate_vin(self, value):
-        """Validate VIN format"""
+        """Validate VIN format and uniqueness"""
         if not value:
             raise serializers.ValidationError("VIN is required")
         
@@ -145,7 +145,33 @@ class VehicleCreateSerializer(serializers.ModelSerializer):
         if any(char in invalid_chars for char in vin):
             raise serializers.ValidationError("VIN cannot contain letters I, O, or Q")
         
+        # Check uniqueness (excluding current instance if updating)
+        existing_vehicles = Vehicle.objects.filter(vin=vin)
+        if self.instance and self.instance.pk:
+            existing_vehicles = existing_vehicles.exclude(pk=self.instance.pk)
+        
+        if existing_vehicles.exists():
+            raise serializers.ValidationError("A vehicle with this VIN already exists.")
+        
         return vin
+    
+    def validate_license_plate(self, value):
+        """Validate license plate uniqueness"""
+        if not value:
+            # License plate is required by model, but serializer allows blank for auto-generation
+            return value
+        
+        license_plate = value.strip().upper()
+        
+        # Check uniqueness (excluding current instance if updating)
+        existing_vehicles = Vehicle.objects.filter(license_plate=license_plate)
+        if self.instance and self.instance.pk:
+            existing_vehicles = existing_vehicles.exclude(pk=self.instance.pk)
+        
+        if existing_vehicles.exists():
+            raise serializers.ValidationError("A vehicle with this license plate already exists.")
+        
+        return license_plate
     
     def create(self, validated_data):
         """
@@ -163,12 +189,30 @@ class VehicleCreateSerializer(serializers.ModelSerializer):
             # License plate is required by model, so use VIN as fallback if not provided
             license_plate = validated_data.get('license_plate')
             if not license_plate or (isinstance(license_plate, str) and not license_plate.strip()):
-                # Use last 8 chars of VIN as fallback, or 'PENDING' if VIN not available
+                # Use VIN as fallback (VIN is unique, so this ensures uniqueness)
                 vin = validated_data.get('vin', '')
-                validated_data['license_plate'] = f"VIN-{vin[-8:]}" if vin and len(vin) >= 8 else 'PENDING'
+                if vin and len(vin) >= 8:
+                    # Use full VIN to ensure uniqueness (last 8 chars might collide)
+                    base_plate = f"VIN-{vin[-8:]}"
+                    # Ensure generated plate is unique
+                    counter = 1
+                    while Vehicle.objects.filter(license_plate=base_plate).exists():
+                        base_plate = f"VIN-{vin[-8:]}-{counter}"
+                        counter += 1
+                    validated_data['license_plate'] = base_plate
+                else:
+                    # This should never happen since VIN is required, but handle it anyway
+                    raise serializers.ValidationError({
+                        'license_plate': 'License plate is required. Please provide a license plate or ensure VIN is valid.'
+                    })
             else:
-                # Ensure license_plate is a string
-                validated_data['license_plate'] = str(license_plate).strip()
+                # Ensure license_plate is a string and validate uniqueness
+                validated_data['license_plate'] = str(license_plate).strip().upper()
+                # Double-check uniqueness (validate_license_plate should have caught this, but be safe)
+                if Vehicle.objects.filter(license_plate=validated_data['license_plate']).exists():
+                    raise serializers.ValidationError({
+                        'license_plate': 'A vehicle with this license plate already exists.'
+                    })
             
             if 'current_mileage' not in validated_data or validated_data.get('current_mileage') is None:
                 validated_data['current_mileage'] = 0
@@ -228,15 +272,19 @@ class VehicleCreateSerializer(serializers.ModelSerializer):
                 return vehicle
             except Exception as save_error:
                 logger.error(f"Error saving vehicle to database: {str(save_error)}", exc_info=True)
-                # Check if it's a database constraint error
-                error_msg = str(save_error)
-                if 'unique constraint' in error_msg.lower() or 'duplicate' in error_msg.lower():
-                    if 'vin' in error_msg.lower():
+                # Check if it's a database constraint error (IntegrityError)
+                from django.db import IntegrityError
+                if isinstance(save_error, IntegrityError):
+                    error_msg = str(save_error).lower()
+                    if 'vin' in error_msg or 'vehicles_vehicle_vin' in error_msg:
                         raise serializers.ValidationError({'vin': 'A vehicle with this VIN already exists.'})
-                    elif 'license_plate' in error_msg.lower():
+                    elif 'license_plate' in error_msg or 'vehicles_vehicle_license_plate' in error_msg:
                         raise serializers.ValidationError({'license_plate': 'A vehicle with this license plate already exists.'})
+                    else:
+                        # Generic integrity error
+                        raise serializers.ValidationError('A vehicle with this information already exists. Please check VIN and license plate.')
                 # Re-raise as ValidationError with a user-friendly message
-                raise serializers.ValidationError(f"Failed to save vehicle: {error_msg}")
+                raise serializers.ValidationError(f"Failed to save vehicle: {str(save_error)}")
             
         except serializers.ValidationError:
             # Re-raise validation errors as-is
@@ -315,6 +363,24 @@ class VehicleUpdateSerializer(serializers.ModelSerializer):
             'last_service_date', 'next_service_due_date', 'next_service_due_mileage',
             'status', 'notes', 'tags', 'image'
         ]
+    
+    def validate_license_plate(self, value):
+        """Validate license plate uniqueness"""
+        if not value:
+            # License plate is required by model, but allow blank for updates if not changing
+            return value
+        
+        license_plate = value.strip().upper()
+        
+        # Check uniqueness (excluding current instance)
+        existing_vehicles = Vehicle.objects.filter(license_plate=license_plate)
+        if self.instance and self.instance.pk:
+            existing_vehicles = existing_vehicles.exclude(pk=self.instance.pk)
+        
+        if existing_vehicles.exists():
+            raise serializers.ValidationError("A vehicle with this license plate already exists.")
+        
+        return license_plate
 
 
 class VehicleMileageHistorySerializer(serializers.ModelSerializer):
@@ -326,6 +392,35 @@ class VehicleMileageHistorySerializer(serializers.ModelSerializer):
         fields = ['id', 'vehicle', 'mileage', 'recorded_date', 'recorded_by', 
                   'recorded_by_name', 'notes']
         read_only_fields = ['id', 'recorded_by']
+
+
+class VehicleOwnershipHistorySerializer(serializers.ModelSerializer):
+    """Serializer for ownership history"""
+    previous_owner_name = serializers.SerializerMethodField()
+    new_owner_name = serializers.SerializerMethodField()
+    transferred_by_name = serializers.CharField(source='transferred_by.get_full_name', read_only=True)
+    vehicle_display = serializers.CharField(source='vehicle.display_name', read_only=True)
+    
+    class Meta:
+        model = VehicleOwnershipHistory
+        fields = [
+            'id', 'vehicle', 'vehicle_display', 'previous_owner', 'previous_owner_name',
+            'new_owner', 'new_owner_name', 'transfer_date', 'transferred_by',
+            'transferred_by_name', 'notes', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+    
+    def get_previous_owner_name(self, obj):
+        if obj.previous_owner:
+            if obj.previous_owner.user:
+                return obj.previous_owner.user.get_full_name()
+            return f"Customer #{obj.previous_owner.id}"
+        return "N/A"
+    
+    def get_new_owner_name(self, obj):
+        if obj.new_owner.user:
+            return obj.new_owner.user.get_full_name()
+        return f"Customer #{obj.new_owner.id}"
 
 
 class VehicleDocumentSerializer(serializers.ModelSerializer):
@@ -349,3 +444,124 @@ class VehiclePhotoSerializer(serializers.ModelSerializer):
         fields = ['id', 'vehicle', 'photo_type', 'image', 'caption', 'taken_date',
                   'uploaded_by', 'uploaded_by_name', 'uploaded_at']
         read_only_fields = ['id', 'uploaded_by', 'uploaded_at']
+
+
+class ServiceTypeSerializer(serializers.ModelSerializer):
+    """Serializer for service types"""
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+    has_bundle = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ServiceType
+        fields = [
+            'id', 'name', 'description', 'default_interval_months', 'default_interval_miles',
+            'is_predefined', 'is_active', 'created_by', 'created_by_name',
+            'created_at', 'updated_at', 'has_bundle'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'has_bundle']
+
+    def get_has_bundle(self, obj):
+        return hasattr(obj, 'service_bundle')
+
+
+
+class ServiceTypeListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for service type list"""
+    has_bundle = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ServiceType
+        fields = ['id', 'name', 'description', 'default_interval_months', 'default_interval_miles', 'is_predefined', 'has_bundle']
+
+    def get_has_bundle(self, obj):
+        return hasattr(obj, 'service_bundle')
+
+
+class VehicleServiceScheduleSerializer(serializers.ModelSerializer):
+    """Serializer for vehicle service schedules"""
+    service_type_name = serializers.CharField(source='service_type.name', read_only=True)
+    vehicle_display = serializers.CharField(source='vehicle.display_name', read_only=True)
+    customer_name = serializers.CharField(source='vehicle.owner.user.get_full_name', read_only=True)
+    customer_phone = serializers.CharField(source='vehicle.owner.user.phone', read_only=True)
+    customer_email = serializers.CharField(source='vehicle.owner.user.email', read_only=True)
+    is_due = serializers.BooleanField(read_only=True)
+    days_until_due = serializers.IntegerField(read_only=True)
+    miles_until_due = serializers.IntegerField(read_only=True)
+    current_mileage = serializers.IntegerField(source='vehicle.current_mileage', read_only=True)
+    
+    class Meta:
+        model = VehicleServiceSchedule
+        fields = [
+            'id', 'vehicle', 'vehicle_display', 'service_type', 'service_type_name',
+            'last_service_date', 'last_service_mileage', 'next_service_due_date',
+            'next_service_due_mileage', 'interval_months', 'interval_miles',
+            'is_active', 'notes', 'created_at', 'updated_at',
+            'customer_name', 'customer_phone', 'customer_email',
+            'is_due', 'days_until_due', 'miles_until_due', 'current_mileage'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class VehicleServiceScheduleListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for service schedule list"""
+    service_type_name = serializers.CharField(source='service_type.name', read_only=True)
+    vehicle_display = serializers.CharField(source='vehicle.display_name', read_only=True)
+    customer_name = serializers.CharField(source='vehicle.owner.user.get_full_name', read_only=True)
+    is_due = serializers.BooleanField(read_only=True)
+    days_until_due = serializers.IntegerField(read_only=True)
+    
+    class Meta:
+        model = VehicleServiceSchedule
+        fields = [
+            'id', 'vehicle', 'vehicle_display', 'service_type', 'service_type_name',
+            'next_service_due_date', 'next_service_due_mileage',
+            'customer_name', 'is_due', 'days_until_due'
+        ]
+
+
+class VehicleServiceScheduleCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating vehicle service schedules"""
+    
+    class Meta:
+        model = VehicleServiceSchedule
+        fields = [
+            'vehicle', 'service_type', 'last_service_date', 'last_service_mileage',
+            'next_service_due_date', 'next_service_due_mileage',
+            'interval_months', 'interval_miles', 'is_active', 'notes'
+        ]
+    
+    def create(self, validated_data):
+        """Create schedule and calculate next due if last service is provided"""
+        schedule = super().create(validated_data)
+        
+        # If last service date/mileage is provided, calculate next due
+        if schedule.last_service_date or schedule.last_service_mileage is not None:
+            schedule.calculate_next_service_due()
+        
+        return schedule
+
+
+class VehicleServiceScheduleUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating vehicle service schedules"""
+    
+    class Meta:
+        model = VehicleServiceSchedule
+        fields = [
+            'last_service_date', 'last_service_mileage',
+            'next_service_due_date', 'next_service_due_mileage',
+            'interval_months', 'interval_miles', 'is_active', 'notes'
+        ]
+    
+    def update(self, instance, validated_data):
+        """Update schedule and recalculate next due if last service changed"""
+        last_service_date_before = instance.last_service_date
+        last_service_mileage_before = instance.last_service_mileage
+        
+        schedule = super().update(instance, validated_data)
+        
+        # Recalculate if last service date or mileage changed
+        if (schedule.last_service_date != last_service_date_before or
+            schedule.last_service_mileage != last_service_mileage_before):
+            schedule.calculate_next_service_due()
+        
+        return schedule

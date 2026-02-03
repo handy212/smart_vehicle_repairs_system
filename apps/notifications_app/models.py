@@ -31,6 +31,8 @@ class NotificationTemplate(models.Model):
         ('estimate_declined', 'Estimate Declined'),
         ('estimate_expiring_soon', 'Estimate Expiring Soon'),
         ('estimate_expired', 'Estimate Expired'),
+        ('gate_pass_created', 'Gate Pass Created'),
+        ('gate_pass_issued', 'Gate Pass Issued'),
         ('user_welcome', 'User Welcome'),
         ('password_reset', 'Password Reset'),
         ('password_reset_link', 'Password Reset Link'),
@@ -40,6 +42,7 @@ class NotificationTemplate(models.Model):
     CHANNEL_CHOICES = [
         ('email', 'Email'),
         ('sms', 'SMS'),
+        ('call', 'Voice Call'),
         ('push', 'Push Notification'),
         ('in_app', 'In-App Notification'),
         ('whatsapp_manual', 'WhatsApp (Manual)'),
@@ -106,6 +109,7 @@ class Notification(models.Model):
         ('vehicle', 'Vehicle'),
         ('system', 'System'),
         ('roadside', 'Roadside Assistance'),
+        ('gatepass', 'Gate Pass'),
         ('custom', 'Custom'),
     ]
     
@@ -119,6 +123,7 @@ class Notification(models.Model):
     CHANNEL_CHOICES = [
         ('email', 'Email'),
         ('sms', 'SMS'),
+        ('call', 'Voice Call'),
         ('push', 'Push Notification'),
         ('in_app', 'In-App Notification'),
         ('whatsapp_manual', 'WhatsApp (Manual)'),

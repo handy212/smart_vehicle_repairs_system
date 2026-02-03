@@ -99,11 +99,18 @@ export function SubNav({ items, title, onToggle, isCollapsed: externalCollapsed,
         </div>
         <nav className="space-y-1">
           {items.map((item) => {
-            // For sub-nav items, check exact match or if pathname starts with the href
-            // Exclude the base route to avoid false positives
-            const isExactMatch = pathname === item.href;
-            const isSubRoute = pathname?.startsWith(item.href + "/");
-            const isActive = isExactMatch || isSubRoute;
+            // Longest match strategy: Only highlight the item with the longest href that matches the current pathname.
+            // This prevents parent routes like /inventory from being highlighted when a more specific sibling like /inventory/bundles is active.
+            const matchingItems = items.filter(i =>
+              pathname === i.href || pathname?.startsWith(i.href + "/")
+            );
+
+            const longestMatch = matchingItems.reduce((prev, curr) =>
+              curr.href.length > prev.href.length ? curr : prev,
+              { href: "" }
+            );
+
+            const isActive = item.href === longestMatch.href;
 
             const navItem = (
               <Link
@@ -170,6 +177,8 @@ export const subNavConfig: Record<string, SubNavItem[]> = {
     { name: "Categories", href: "/inventory/categories", permission: "view_categories" },
     { name: "Suppliers", href: "/inventory/suppliers", permission: "view_suppliers" },
     { name: "Purchase Orders", href: "/inventory/purchase-orders", permission: "view_purchase_orders" },
+    { name: "Service Bundles", href: "/inventory/bundles", permission: "view_inventory" },
+    { name: "Forecasting", href: "/inventory/forecasting", permission: "view_inventory" },
     { name: "Transfers", href: "/inventory/transfers", permission: "view_transfers" },
   ],
   billing: [

@@ -20,11 +20,13 @@ export default function DashboardLayoutWrapper({
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkAuth = async () => {
       const token = localStorage.getItem("access_token");
-      
+
       if (!token) {
-        router.push("/login");
+        if (isMounted) router.push("/login");
         return;
       }
 
@@ -32,21 +34,21 @@ export default function DashboardLayoutWrapper({
       if (!user && token) {
         try {
           const currentUser = await authApi.getCurrentUser();
-          setUser(currentUser);
-          
+          if (isMounted) setUser(currentUser);
+
           // Redirect customers to portal
           if (currentUser.role === "customer") {
-            router.push("/portal");
+            if (isMounted) router.push("/portal");
             return;
           }
         } catch (error) {
           // Token invalid, redirect to login
-          router.push("/login");
+          if (isMounted) router.push("/login");
         }
       } else if (user) {
         // Check role if user is already loaded
         if (user.role === "customer") {
-          router.push("/portal");
+          if (isMounted) router.push("/portal");
           return;
         }
       }
@@ -55,6 +57,10 @@ export default function DashboardLayoutWrapper({
     if (mounted) {
       checkAuth();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [user, setUser, router, mounted]);
 
   if (!mounted || !isAuthenticated) {

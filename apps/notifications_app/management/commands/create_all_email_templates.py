@@ -707,6 +707,98 @@ Best regards,
 <p>Best regards,<br>{company_name} Team</p>
 </body></html>''',
             },
+            'gate_pass_created': {
+                'name': 'Default Gate Pass Created Email',
+                'subject': 'Your {vehicle_display} is Ready for Pickup - {gate_pass_number}',
+                'body': '''Dear {customer_name},
+
+Good news! Your vehicle is ready for pickup.
+
+GATE PASS DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Gate Pass: {gate_pass_number}
+Work Order: {work_order_number}
+Vehicle: {vehicle_display}
+Pickup By: {pickup_info}
+Branch: {branch_name}
+{branch_address}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please bring your identification and payment method when picking up your vehicle.
+
+{pickup_notes}
+
+If you have any questions, please contact us.
+
+Best regards,
+{company_name} Team''',
+                'html_body': '''<html><body>
+<p>Dear {customer_name},</p>
+<p>Good news! Your vehicle is ready for pickup.</p>
+<h3>GATE PASS DETAILS:</h3>
+<hr>
+<p><strong>Gate Pass:</strong> {gate_pass_number}</p>
+<p><strong>Work Order:</strong> {work_order_number}</p>
+<p><strong>Vehicle:</strong> {vehicle_display}</p>
+<p><strong>Pickup By:</strong> {pickup_info}</p>
+<p><strong>Branch:</strong> {branch_name}</p>
+<p><strong>Address:</strong> {branch_address}</p>
+<hr>
+<p>Please bring your identification and payment method when picking up your vehicle.</p>
+<p><strong>Pickup Notes:</strong> {pickup_notes}</p>
+<p>If you have any questions, please contact us.</p>
+<p>Best regards,<br>{company_name} Team</p>
+</body></html>''',
+            },
+            'gate_pass_issued': {
+                'name': 'Default Gate Pass Issued Email',
+                'subject': 'Gate Pass Issued - {gate_pass_number}',
+                'body': '''Dear {customer_name},
+
+Your gate pass has been issued and your vehicle is ready for pickup.
+
+GATE PASS DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Gate Pass: {gate_pass_number}
+Work Order: {work_order_number}
+Vehicle: {vehicle_display}
+Pickup By: {pickup_info}
+Branch: {branch_name}
+Address: {branch_address}
+Issued At: {issued_at}
+Issued By: {issued_by_name}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please bring your identification and payment method when picking up your vehicle.
+
+Pickup Notes: {pickup_notes}
+
+If you have any questions, please contact us.
+
+Best regards,
+{company_name} Team''',
+                'html_body': '''<html><body>
+<p>Dear {customer_name},</p>
+<p>Your gate pass has been issued and your vehicle is ready for pickup.</p>
+<h3>GATE PASS DETAILS:</h3>
+<hr>
+<p><strong>Gate Pass:</strong> {gate_pass_number}</p>
+<p><strong>Work Order:</strong> {work_order_number}</p>
+<p><strong>Vehicle:</strong> {vehicle_display}</p>
+<p><strong>Pickup By:</strong> {pickup_info}</p>
+<p><strong>Branch:</strong> {branch_name}</p>
+<p><strong>Address:</strong> {branch_address}</p>
+<p><strong>Issued At:</strong> {issued_at}</p>
+<p><strong>Issued By:</strong> {issued_by_name}</p>
+<hr>
+<p>Please bring your identification and payment method when picking up your vehicle.</p>
+<p><strong>Pickup Notes:</strong> {pickup_notes}</p>
+<p>If you have any questions, please contact us.</p>
+<p>Best regards,<br>{company_name} Team</p>
+</body></html>''',
+            },
         }
 
         created_count = 0

@@ -91,6 +91,14 @@ class Command(BaseCommand):
                 'print_workorders': ('workorders', 'Print Work Orders', 'Print work order job cards'),
                 'export_workorders': ('workorders', 'Export Work Orders', 'Export work order data'),
                 
+                # ==================== GATE PASSES ====================
+                'view_gatepass': ('gatepass', 'View Gate Passes', 'View gate pass information'),
+                'create_gatepass': ('gatepass', 'Create Gate Passes', 'Create new gate passes'),
+                'change_gatepass': ('gatepass', 'Edit Gate Passes', 'Edit gate pass details'),
+                'delete_gatepass': ('gatepass', 'Delete Gate Passes', 'Delete gate passes'),
+                'issue_gatepass': ('gatepass', 'Issue Gate Passes', 'Issue gate passes'),
+                'complete_gatepass': ('gatepass', 'Complete Gate Passes', 'Complete gate passes (mark as picked up)'),
+                
                 # ==================== DIAGNOSIS ====================
                 'view_diagnosis': ('diagnosis', 'View Diagnosis', 'View diagnostic records'),
                 'create_diagnosis': ('diagnosis', 'Create Diagnosis', 'Create new diagnostic records'),

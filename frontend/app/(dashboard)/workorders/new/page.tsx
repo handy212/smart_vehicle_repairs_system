@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, AlertCircle, Check, User, XCircle, AlertTriangle, CheckCircle } from "lucide-react";
 import { PremiumIcons } from "@/components/ui/icons";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -27,6 +28,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 
 const workOrderSchema = z.object({
   customer: z.number().min(1, "Customer is required"),
@@ -36,6 +38,8 @@ const workOrderSchema = z.object({
   status: z.enum(["draft", "pending", "in_progress", "completed"]),
   customer_concerns: z.string().min(1, "Customer concerns are required"),
   odometer_in: z.number().min(0),
+  maintenance_type: z.enum(["general", "routine"]),
+  service_type: z.number().optional(),
 });
 
 type WorkOrderFormData = z.infer<typeof workOrderSchema>;
@@ -84,6 +88,14 @@ export default function NewWorkOrderPage() {
   const appointmentId = searchParams.get("appointment");
   const queryClient = useQueryClient();
 
+  // ... (state vars)
+
+  // Fetch service types
+  const { data: serviceTypesData } = useQuery({
+    queryKey: ["serviceTypes"],
+    queryFn: () => vehiclesApi.getServiceTypes(),
+  });
+
   const [selectedCustomer, setSelectedCustomer] = useState<number | null>(
     customerId ? parseInt(customerId) : null
   );
@@ -103,6 +115,13 @@ export default function NewWorkOrderPage() {
     queryFn: () => customersApi.list({ page: 1 }),
   });
 
+  // Fetch vehicle if vehicleId is provided in URL
+  const { data: vehicleFromUrl } = useQuery({
+    queryKey: ["vehicle", vehicleId],
+    queryFn: () => vehiclesApi.get(parseInt(vehicleId!)),
+    enabled: !!vehicleId,
+  });
+
   // Fetch vehicles for selected customer
   const { data: vehiclesData } = useQuery({
     queryKey: ["vehicles", "customer", selectedCustomer],
@@ -115,6 +134,14 @@ export default function NewWorkOrderPage() {
     queryKey: ["appointment", appointmentId],
     queryFn: () => appointmentsApi.get(parseInt(appointmentId!)),
     enabled: !!appointmentId,
+  });
+
+  // Fetch recent work orders when vehicle is selected (will be set after vehicle is selected)
+  const [vehicleForRecentWorkOrders, setVehicleForRecentWorkOrders] = useState<number | null>(null);
+  const { data: recentWorkOrdersData, isLoading: isLoadingRecentWorkOrders } = useQuery({
+    queryKey: ["recentWorkOrders", vehicleForRecentWorkOrders],
+    queryFn: () => workordersApi.getRecentWorkOrders(vehicleForRecentWorkOrders!),
+    enabled: !!vehicleForRecentWorkOrders,
   });
 
   const [serverError, setServerError] = useState<string | null>(null);
@@ -135,6 +162,44 @@ export default function NewWorkOrderPage() {
   const [showRepeatVisitDialog, setShowRepeatVisitDialog] = useState(false);
   const [isWarrantyRework, setIsWarrantyRework] = useState(false);
   const [selectedRelatedWorkOrder, setSelectedRelatedWorkOrder] = useState<number | null>(null);
+  const [warrantyReason, setWarrantyReason] = useState<string>("");
+  const [recentWorkOrders, setRecentWorkOrders] = useState<Array<{
+    id: number;
+    work_order_number: string;
+    status: string;
+    completed_at: string | null;
+    customer_concerns: string;
+    technician_name: string;
+    branch_name: string;
+    days_ago: number | null;
+  }>>([]);
+  const [workOrderSearchQuery, setWorkOrderSearchQuery] = useState<string>("");
+  const [showWorkOrderSearch, setShowWorkOrderSearch] = useState(false);
+  const [selectedRelatedWorkOrderDetail, setSelectedRelatedWorkOrderDetail] = useState<{
+    id: number;
+    work_order_number: string;
+    status: string;
+    completed_at: string | null;
+    customer_concerns: string;
+    technician_name: string;
+    branch_name: string;
+    days_ago: number | null;
+  } | null>(null);
+
+  // Unapproved recommendations state
+  const [showUnapprovedRecommendationsDialog, setShowUnapprovedRecommendationsDialog] = useState(false);
+  const [acknowledgedUnapproved, setAcknowledgedUnapproved] = useState(false);
+
+  // Service progression state
+  const [suggestedService, setSuggestedService] = useState<{
+    suggested_service_id: number;
+    suggested_service_name: string;
+    reason: string;
+    last_service_id?: number;
+    last_service_name?: string;
+    last_service_date?: string;
+  } | null>(null);
+  const [progressionWarning, setProgressionWarning] = useState<string | null>(null);
 
   const {
     register,
@@ -148,11 +213,12 @@ export default function NewWorkOrderPage() {
     defaultValues: {
       priority: "normal",
       status: "draft",
-      customer: customerId ? parseInt(customerId) : undefined,
-      vehicle: vehicleId ? parseInt(vehicleId) : undefined,
+      customer: customerId ? parseInt(customerId) : (undefined as any),
+      vehicle: vehicleId ? parseInt(vehicleId) : (undefined as any),
       appointment: appointmentId ? parseInt(appointmentId) : undefined,
       odometer_in: 0,
       customer_concerns: "",
+      maintenance_type: "general",
     },
   });
 
@@ -218,6 +284,106 @@ export default function NewWorkOrderPage() {
       setSelectedCustomer(customerId);
     }
   }, [appointment, customer, setValue]);
+
+  // Update vehicle for recent work orders query when vehicle changes
+  useEffect(() => {
+    if (vehicle) {
+      setVehicleForRecentWorkOrders(vehicle);
+
+      // Fetch suggested service for this vehicle
+      vehiclesApi.getSuggestedService(vehicle)
+        .then(data => {
+          setSuggestedService(data);
+        })
+        .catch(err => {
+          console.error("Error fetching suggested service:", err);
+          setSuggestedService(null);
+        });
+    } else {
+      setVehicleForRecentWorkOrders(null);
+      setSuggestedService(null);
+    }
+    // Reset acknowledgment when vehicle changes
+    setAcknowledgedUnapproved(false);
+    setProgressionWarning(null);
+  }, [vehicle]);
+
+  // Check for unapproved recommendations when vehicle is selected
+  const { data: unapprovedRecommendationsData } = useQuery({
+    queryKey: ["unapproved-recommendations", vehicle],
+    queryFn: () => workordersApi.checkUnapprovedRecommendations(vehicle!),
+    enabled: !!vehicle && !isSubmitting,
+  });
+
+  useEffect(() => {
+    if (recentWorkOrdersData?.results) {
+      setRecentWorkOrders(recentWorkOrdersData.results);
+    }
+  }, [recentWorkOrdersData]);
+
+  // Update selected related work order detail when selection changes
+  useEffect(() => {
+    if (selectedRelatedWorkOrder) {
+      const detail = recentWorkOrders.find(wo => wo.id === selectedRelatedWorkOrder);
+      if (detail) {
+        setSelectedRelatedWorkOrderDetail(detail);
+      } else {
+        // If not in recent list, fetch the work order detail
+        workordersApi.get(selectedRelatedWorkOrder).then(wo => {
+          setSelectedRelatedWorkOrderDetail({
+            id: wo.id,
+            work_order_number: wo.work_order_number,
+            status: wo.status,
+            completed_at: wo.completed_at || null,
+            customer_concerns: wo.customer_concerns || "",
+            technician_name: wo.primary_technician_name || "Not assigned",
+            branch_name: wo.branch?.name || "Unknown Branch",
+            days_ago: wo.completed_at ? Math.floor((new Date().getTime() - new Date(wo.completed_at).getTime()) / (1000 * 60 * 60 * 24)) : null,
+          });
+        }).catch(() => {
+          setSelectedRelatedWorkOrderDetail(null);
+        });
+      }
+    } else {
+      setSelectedRelatedWorkOrderDetail(null);
+    }
+  }, [selectedRelatedWorkOrder, recentWorkOrders]);
+
+  // Auto-fill customer and vehicle when vehicle is provided in URL
+  useEffect(() => {
+    if (vehicleFromUrl && vehicleId) {
+      // Extract owner/customer from vehicle
+      const ownerId = typeof vehicleFromUrl.owner === 'object' && vehicleFromUrl.owner !== null
+        ? vehicleFromUrl.owner.id
+        : vehicleFromUrl.owner;
+
+      // Only auto-fill if customer is not already set (from URL params or form)
+      if (ownerId && (!customer || customer === 0)) {
+        setValue("customer", ownerId);
+        setValue("vehicle", vehicleFromUrl.id);
+        setSelectedCustomer(ownerId);
+
+        // Set customer data if available
+        if (customersData?.results) {
+          const customerData = customersData.results.find((c) => c.id === ownerId);
+          if (customerData) {
+            setSelectedCustomerData({
+              id: customerData.id,
+              full_name: customerData.full_name,
+              email: customerData.email,
+              phone: customerData.phone,
+              customer_type: customerData.customer_type,
+              customer_number: customerData.customer_number,
+            });
+          }
+        }
+      } else if (ownerId && customer && customer !== ownerId) {
+        // If customer is already set but doesn't match vehicle owner, still set the vehicle
+        // (user might have selected a different customer, but we should still set the vehicle)
+        setValue("vehicle", vehicleFromUrl.id);
+      }
+    }
+  }, [vehicleFromUrl, vehicleId, customer, setValue, customersData]);
 
   // Initialize customer data from URL params or when customersData loads
   useEffect(() => {
@@ -345,8 +511,15 @@ export default function NewWorkOrderPage() {
     },
   });
 
-  const onSubmit = async (data: WorkOrderFormData) => {
+  const onSubmit: SubmitHandler<WorkOrderFormData> = async (data) => {
     setServerError(null);
+
+    // Check for unapproved recommendations
+    if (vehicle && (unapprovedRecommendationsData?.count ?? 0) > 0 && !acknowledgedUnapproved) {
+      setShowUnapprovedRecommendationsDialog(true);
+      return; // Block submission
+    }
+
     // Ensure odometer_in is always a number (default to 0 if not provided)
     const submitData: any = {
       ...data,
@@ -358,6 +531,9 @@ export default function NewWorkOrderPage() {
     if (isWarrantyRework && selectedRelatedWorkOrder) {
       submitData.is_warranty_rework = true;
       submitData.related_work_order = selectedRelatedWorkOrder;
+      if (warrantyReason.trim()) {
+        submitData.warranty_reason = warrantyReason.trim();
+      }
     }
 
     try {
@@ -710,6 +886,7 @@ export default function NewWorkOrderPage() {
             </Card>
 
 
+
             {/* Work Order Details */}
             <Card className="border-none shadow-sm bg-white/60 dark:bg-gray-900/40 backdrop-blur-md ring-1 ring-gray-900/5">
               <CardHeader className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-sm border-b border-gray-100/50 dark:border-gray-800/50">
@@ -720,6 +897,92 @@ export default function NewWorkOrderPage() {
                 <CardDescription>Priority and description</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Maintenance Type */}
+                  <div className="col-span-2 md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Maintenance Type
+                    </label>
+                    <div className="flex items-center space-x-4 mt-2">
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          value="general"
+                          {...register("maintenance_type")}
+                          className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
+                        />
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">General Repair</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          value="routine"
+                          {...register("maintenance_type")}
+                          className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
+                        />
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Routine Service</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Service Type (only if routine) */}
+                  {watch("maintenance_type") === "routine" && (
+                    <div className="col-span-2 md:col-span-1">
+                      <div className="flex justify-between items-center mb-1">
+                        <label htmlFor="service_type" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Service Type
+                        </label>
+                        {suggestedService && (
+                          <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                            Suggested: {suggestedService.suggested_service_name}
+                          </Badge>
+                        )}
+                      </div>
+                      <Select
+                        value={watch("service_type")?.toString()}
+                        onValueChange={(val) => {
+                          const serviceTypeId = parseInt(val);
+                          setValue("service_type", serviceTypeId);
+
+                          // Check for progression logic
+                          if (suggestedService) {
+                            if (suggestedService.last_service_id === serviceTypeId) {
+                              setProgressionWarning(`Warning: ${suggestedService.last_service_name} was already performed on ${suggestedService.last_service_date}. It is recommended to perform ${suggestedService.suggested_service_name} now.`);
+                            } else if (suggestedService.suggested_service_id !== serviceTypeId) {
+                              setProgressionWarning(`Note: ${suggestedService.suggested_service_name} is the expected next service based on history.`);
+                            } else {
+                              setProgressionWarning(null);
+                            }
+                          }
+
+                          // Auto-fill concerns if empty
+                          const type = serviceTypesData?.results?.find(t => t.id === serviceTypeId);
+                          if (type && (!watch("customer_concerns") || watch("customer_concerns").startsWith("Perform"))) {
+                            setValue("customer_concerns", `Perform ${type.name}`);
+                          }
+                        }}
+                      >
+                        <SelectTrigger id="service_type">
+                          <SelectValue placeholder="Select service type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {serviceTypesData?.results?.filter(type => type.has_bundle).map((type) => (
+                            <SelectItem key={type.id} value={type.id.toString()}>
+                              {type.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {progressionWarning && (
+                        <p className="mt-1 text-xs font-medium text-orange-600 dark:text-orange-400 flex items-center animate-in fade-in slide-in-from-top-1">
+                          <AlertTriangle className="mr-1 h-3 w-3" />
+                          {progressionWarning}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -740,58 +1003,60 @@ export default function NewWorkOrderPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Quick Select Common Concerns
-                    </label>
-                    <div className="max-h-32 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-2 bg-gray-50 dark:bg-gray-900/20">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
-                        {COMMON_CONCERNS.filter(c => c.value !== "").map((concern) => (
-                          <label
-                            key={concern.value}
-                            className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedConcerns.includes(concern.value)}
-                              onChange={(e) => {
-                                const isChecked = e.target.checked;
-                                let updatedConcerns: string[];
+                  {watch("maintenance_type") !== "routine" && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Quick Select Common Concerns
+                      </label>
+                      <div className="max-h-32 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-2 bg-gray-50 dark:bg-gray-900/20">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                          {COMMON_CONCERNS.filter(c => c.value !== "").map((concern) => (
+                            <label
+                              key={concern.value}
+                              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedConcerns.includes(concern.value)}
+                                onChange={(e) => {
+                                  const isChecked = e.target.checked;
+                                  let updatedConcerns: string[];
 
-                                if (isChecked) {
-                                  if (concern.value === "Other (describe below)") {
-                                    // Clear other selections when "Other" is selected
-                                    updatedConcerns = [concern.value];
-                                    setValue("customer_concerns", "");
+                                  if (isChecked) {
+                                    if (concern.value === "Other (describe below)") {
+                                      // Clear other selections when "Other" is selected
+                                      updatedConcerns = [concern.value];
+                                      setValue("customer_concerns", "");
+                                    } else {
+                                      // Add to selection, but remove "Other" if it was selected
+                                      updatedConcerns = selectedConcerns
+                                        .filter(c => c !== "Other (describe below)")
+                                        .concat(concern.value);
+                                    }
                                   } else {
-                                    // Add to selection, but remove "Other" if it was selected
-                                    updatedConcerns = selectedConcerns
-                                      .filter(c => c !== "Other (describe below)")
-                                      .concat(concern.value);
+                                    // Remove from selection
+                                    updatedConcerns = selectedConcerns.filter(c => c !== concern.value);
                                   }
-                                } else {
-                                  // Remove from selection
-                                  updatedConcerns = selectedConcerns.filter(c => c !== concern.value);
-                                }
 
-                                setSelectedConcerns(updatedConcerns);
+                                  setSelectedConcerns(updatedConcerns);
 
-                                // Update textarea with selected concerns (excluding "Other")
-                                const concernsToAdd = updatedConcerns.filter(c => c !== "Other (describe below)");
-                                if (concernsToAdd.length > 0) {
-                                  setValue("customer_concerns", concernsToAdd.join("\n"));
-                                } else {
-                                  setValue("customer_concerns", "");
-                                }
-                              }}
-                              className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
-                            />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{concern.label}</span>
-                          </label>
-                        ))}
+                                  // Update textarea with selected concerns (excluding "Other")
+                                  const concernsToAdd = updatedConcerns.filter(c => c !== "Other (describe below)");
+                                  if (concernsToAdd.length > 0) {
+                                    setValue("customer_concerns", concernsToAdd.join("\n"));
+                                  } else {
+                                    setValue("customer_concerns", "");
+                                  }
+                                }}
+                                className="rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
+                              />
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{concern.label}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="space-y-3">
@@ -849,9 +1114,279 @@ export default function NewWorkOrderPage() {
                 </Link>
               </CardContent>
             </Card>
+
+            {/* Return/Rework Section (Compact) */}
+            <Card className={`transition-all duration-200 border-2 ${isWarrantyRework ? 'border-orange-200 dark:border-orange-800 bg-white/60 dark:bg-gray-900/40 shadow-sm' : 'border-transparent bg-transparent shadow-none'}`}>
+              <CardContent className="p-0">
+                {/* Header / Toggle Area */}
+                <div className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition-colors ${isWarrantyRework ? 'bg-orange-50/40 dark:bg-orange-900/20' : 'bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50 border border-dashed border-gray-300 dark:border-gray-700'}`}
+                  onClick={() => {
+                    const newState = !isWarrantyRework;
+                    setIsWarrantyRework(newState);
+                    if (!newState) {
+                      setSelectedRelatedWorkOrder(null);
+                      setSelectedRelatedWorkOrderDetail(null);
+                      setWarrantyReason("");
+                    }
+                  }}>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-full ${isWarrantyRework ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/50 dark:text-orange-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                      <AlertCircle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className={`font-semibold text-base ${isWarrantyRework ? 'text-orange-900 dark:text-orange-100' : 'text-gray-700 dark:text-gray-300'}`}>
+                        Return / Rework Job?
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {isWarrantyRework ? 'Link to previous work order' : 'Click to mark this as a return or rework job'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={isWarrantyRework} readOnly />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 dark:peer-focus:ring-orange-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-orange-500"></div>
+                  </div>
+                </div>
+
+                {isWarrantyRework && (
+                  <div className="p-4 space-y-6 animate-in slide-in-from-top-2 duration-200">
+                    <Separator className="bg-orange-100 dark:bg-orange-800/30" />
+
+                    {/* Recent Work Orders List */}
+                    {vehicle && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Select Previous Job
+                          </label>
+                          {selectedRelatedWorkOrder && (
+                            <button type="button" onClick={() => setShowWorkOrderSearch(!showWorkOrderSearch)} className="text-xs text-orange-600 hover:text-orange-700 font-medium">
+                              Search manually
+                            </button>
+                          )}
+                        </div>
+
+                        {isLoadingRecentWorkOrders ? (
+                          <div className="flex items-center gap-2 text-sm text-gray-500 p-4 justify-center bg-gray-50 rounded-lg">
+                            <PremiumIcons.Spinner className="w-4 h-4 animate-spin" />
+                            Loading history...
+                          </div>
+                        ) : recentWorkOrders.length > 0 ? (
+                          <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto pr-1">
+                            {recentWorkOrders.map((wo) => (
+                              <div
+                                key={wo.id}
+                                onClick={() => {
+                                  setSelectedRelatedWorkOrder(wo.id);
+                                  setSelectedRelatedWorkOrderDetail(wo);
+                                  setShowWorkOrderSearch(false);
+                                }}
+                                className={`p-3 rounded-lg border text-left cursor-pointer transition-all hover:shadow-md ${selectedRelatedWorkOrder === wo.id
+                                  ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20 ring-1 ring-orange-500"
+                                  : "border-gray-200 dark:border-gray-700 hover:border-orange-300 bg-white dark:bg-gray-800"
+                                  }`}
+                              >
+                                <div className="flex justify-between items-start mb-1">
+                                  <span className="font-bold text-sm text-gray-900 dark:text-gray-100">{wo.work_order_number}</span>
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 font-medium uppercase tracking-wide">
+                                    {wo.days_ago !== null ? `${wo.days_ago} DAYS AGO` : 'N/A'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mb-2 min-h-[2.5em]">
+                                  {wo.customer_concerns || "No description provided"}
+                                </p>
+                                <div className="flex items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
+                                  <User className="w-3 h-3" /> {wo.technician_name.split(' ')[0]}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-6 bg-gray-50 dark:bg-gray-900/20 rounded-lg border border-dashed border-gray-200 dark:border-gray-700">
+                            <p className="text-sm text-gray-500 mt-1">No recent history found.</p>
+                            <Button type="button" variant="link" size="sm" onClick={() => setShowWorkOrderSearch(true)} className="text-orange-600">
+                              Search by ID instead
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Manual Search (Conditional) */}
+                    {(showWorkOrderSearch || (!recentWorkOrders.length && !isLoadingRecentWorkOrders)) && (
+                      <div className="space-y-2 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <label className="text-xs font-semibold uppercase text-gray-500 tracking-wide">
+                          Search by ID
+                        </label>
+                        <div className="relative">
+                          <Input
+                            type="text"
+                            placeholder="HQ-WO..."
+                            value={workOrderSearchQuery}
+                            onChange={(e) => {
+                              setWorkOrderSearchQuery(e.target.value);
+                              setShowWorkOrderSearch(e.target.value.length > 0);
+                            }}
+                            className="bg-white dark:bg-gray-900"
+                          />
+                          <Button size="sm" variant="ghost" className="absolute right-1 top-1 h-7 w-7 p-0" onClick={() => setShowWorkOrderSearch(false)}>
+                            <XCircle className="w-4 h-4 text-gray-400" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Warranty Reason */}
+                    {selectedRelatedWorkOrder && (
+                      <div className="space-y-2 animate-in fade-in duration-300">
+                        <label htmlFor="warranty_reason" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center justify-between">
+                          <span>Reason for Rework <span className="text-red-500">*</span></span>
+                        </label>
+                        <Textarea
+                          id="warranty_reason"
+                          value={warrantyReason}
+                          onChange={(e) => setWarrantyReason(e.target.value)}
+                          placeholder="Why is the vehicle returning? (e.g., Issue persisted, Part failure)"
+                          rows={2}
+                          className={`resize-none ${selectedRelatedWorkOrder && !warrantyReason.trim() ? "border-orange-500 focus-visible:ring-orange-500" : ""}`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </form>
+
+      {/* Unapproved Recommendations Warning Dialog */}
+      <Dialog open={showUnapprovedRecommendationsDialog} onOpenChange={setShowUnapprovedRecommendationsDialog}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <AlertTriangle className="w-5 h-5 text-orange-600" />
+              Unapproved Recommendations Found
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              This vehicle has {unapprovedRecommendationsData?.count || 0} unapproved recommendation{unapprovedRecommendationsData?.count !== 1 ? 's' : ''} from previous work orders. Please review and acknowledge before proceeding.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            {unapprovedRecommendationsData && unapprovedRecommendationsData.count > 0 ? (
+              <div className="space-y-4">
+                {/* Group recommendations by work order */}
+                {Object.entries(
+                  unapprovedRecommendationsData.recommendations.reduce((acc: any, rec: any) => {
+                    const woId = rec.work_order_id;
+                    if (!acc[woId]) {
+                      acc[woId] = {
+                        work_order_number: rec.work_order_number,
+                        work_order_completed_at: rec.work_order_completed_at,
+                        recommendations: [],
+                      };
+                    }
+                    acc[woId].recommendations.push(rec);
+                    return acc;
+                  }, {} as Record<number, any>)
+                ).map(([woId, group]: [string, any]) => (
+                  <div key={woId} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+                    <div className="mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+                      <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                        Work Order: {group.work_order_number}
+                      </p>
+                      {group.work_order_completed_at && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Completed: {new Date(group.work_order_completed_at).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      {group.recommendations.map((rec: any) => (
+                        <div key={rec.id} className="border-l-4 border-l-orange-500 bg-white dark:bg-gray-900 rounded p-3">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge
+                                variant={
+                                  rec.priority === "critical"
+                                    ? "danger"
+                                    : rec.priority === "necessary"
+                                      ? "default"
+                                      : "secondary"
+                                }
+                                className="text-xs capitalize"
+                              >
+                                {rec.priority_display}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {rec.recommendation_type_display}
+                              </Badge>
+                            </div>
+                            {rec.estimated_total_cost && Number(rec.estimated_total_cost) > 0 && (
+                              <span className="text-sm font-bold text-gray-900 dark:text-gray-100 font-mono">
+                                ${Number(rec.estimated_total_cost).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
+                            {rec.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <CheckCircle className="w-10 h-10 mx-auto text-green-500 mb-2" />
+                <p className="font-medium text-gray-900 dark:text-gray-100">
+                  No Unapproved Recommendations
+                </p>
+              </div>
+            )}
+          </div>
+
+          {unapprovedRecommendationsData && unapprovedRecommendationsData.count > 0 && (
+            <DialogFooter className="flex-col sm:flex-row gap-3">
+              <label className="flex items-center space-x-2 cursor-pointer text-sm">
+                <input
+                  type="checkbox"
+                  checked={acknowledgedUnapproved}
+                  onChange={(e) => setAcknowledgedUnapproved(e.target.checked)}
+                  className="w-4 h-4 text-orange-600 rounded border-gray-300 focus:ring-orange-500"
+                />
+                <span className="text-gray-700 dark:text-gray-300">
+                  I acknowledge these unapproved recommendations and wish to proceed
+                </span>
+              </label>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowUnapprovedRecommendationsDialog(false);
+                    setAcknowledgedUnapproved(false);
+                  }}
+                  className="flex-1 sm:flex-none"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowUnapprovedRecommendationsDialog(false);
+                  }}
+                  disabled={!acknowledgedUnapproved}
+                  className="flex-1 sm:flex-none"
+                >
+                  Proceed
+                </Button>
+              </div>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

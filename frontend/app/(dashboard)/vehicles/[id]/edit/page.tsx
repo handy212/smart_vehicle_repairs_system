@@ -16,6 +16,7 @@ export default function EditVehiclePage() {
   const vehicleId = parseInt(params.id as string);
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const { data: vehicle, isLoading } = useQuery<Vehicle>({
     queryKey: ["vehicle", vehicleId],
@@ -31,9 +32,42 @@ export default function EditVehiclePage() {
     },
     onError: (error) => {
       console.error("Error updating vehicle:", error);
+      setFieldErrors({});
+      
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
-        if (errorData.non_field_errors) {
+        
+        // Extract field-level errors
+        const extractedFieldErrors: Record<string, string> = {};
+        let hasFieldErrors = false;
+        
+        Object.keys(errorData).forEach((field) => {
+          if (field !== 'non_field_errors' && field !== 'detail') {
+            const fieldError = Array.isArray(errorData[field])
+              ? errorData[field][0]
+              : errorData[field];
+            if (fieldError) {
+              extractedFieldErrors[field] = fieldError;
+              hasFieldErrors = true;
+            }
+          }
+        });
+        
+        if (hasFieldErrors) {
+          setFieldErrors(extractedFieldErrors);
+          // Show a summary message
+          const fieldNames = Object.keys(extractedFieldErrors);
+          const fieldLabels: Record<string, string> = {
+            vin: 'VIN',
+            license_plate: 'License Plate',
+            owner: 'Owner',
+            year: 'Year',
+            make: 'Make',
+            model: 'Model',
+          };
+          const labels = fieldNames.map(f => fieldLabels[f] || f).join(', ');
+          setServerError(`Please fix the following field(s): ${labels}`);
+        } else if (errorData.non_field_errors) {
           setServerError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors);
         } else if (typeof errorData === 'string') {
           setServerError(errorData);
@@ -144,6 +178,7 @@ export default function EditVehiclePage() {
         isSubmitting={updateMutation.isPending}
         mode="edit"
         onCancel={() => router.back()}
+        serverFieldErrors={fieldErrors}
       />
     </div>
   );

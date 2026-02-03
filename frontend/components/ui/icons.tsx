@@ -678,4 +678,17 @@ export const PremiumIcons = {
             <polyline points="12 6 12 12 16 14" />
         </svg>
     ),
+    Spinner: (props: IconProps) => (
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...props}
+        >
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+    ),
 };

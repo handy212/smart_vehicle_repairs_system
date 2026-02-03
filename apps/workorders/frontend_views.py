@@ -7,6 +7,7 @@ from django.db.models import Q, Count, Sum, F, Max
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
+from django.template.loader import render_to_string
 from decimal import Decimal
 import json
 import csv
@@ -18,6 +19,7 @@ from .models import (
     WorkOrder, ServiceTask, WorkOrderPart, 
     TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto
 )
+from apps.diagnosis.models import Diagnosis, RepairRecommendation
 from apps.customers.models import Customer
 from apps.vehicles.models import Vehicle
 from apps.accounts.models import User
@@ -167,64 +169,19 @@ def workorder_kanban_view(request):
 @login_required
 def workorder_detail_view(request, pk):
     """
-    Work order detail view with all related data
+    Work order detail view - redirects to Next.js frontend
     """
+    # Verify work order exists and user has access
     queryset = WorkOrder.objects.select_related(
         'customer', 'vehicle', 'appointment', 'primary_technician', 'created_by', 'branch'
-    ).prefetch_related(
-        'assigned_technicians', 'tasks__assigned_to', 'parts',
-        'time_logs__technician', 'notes__created_by', 'photos'
-    ).annotate(
-        completed_tasks_count=Count('tasks', filter=Q(tasks__status='completed')),
-        task_count=Count('tasks'),
-        total_parts_quantity=Sum('parts__quantity'),
-        total_hours=Sum('time_logs__duration_hours'),
-        total_labor_cost=Sum('time_logs__labor_cost')
     )
-
-    # Filter by active branch from session
     queryset = filter_queryset_for_user_branches(queryset, request.user, request=request, use_active_branch=True)
-
     workorder = _get_workorder_or_404(request, queryset=queryset, pk=pk)
     
-    # Calculate totals and statistics
-    total_estimated_hours = workorder.tasks.aggregate(
-        total=Sum('estimated_hours')
-    )['total'] or 0
-    
-    total_actual_hours = workorder.tasks.aggregate(
-        total=Sum('actual_hours')
-    )['total'] or 0
-    
-    total_labor_cost = workorder.tasks.aggregate(
-        total=Sum('labor_cost')
-    )['total'] or 0
-    
-    total_parts_cost = workorder.parts.aggregate(
-        total=Sum('selling_price')
-    )['total'] or 0
-    
-    # Get recent activity (notes, task updates, etc.)
-    recent_notes = workorder.notes.select_related('created_by').order_by('-created_at')[:5]
-    recent_time_logs = workorder.time_logs.select_related('technician').order_by('-created_at')[:5]
-    
-    # Get technicians for task assignment
-    technicians = User.objects.filter(role__in=['technician', 'manager', 'service_coordinator']).order_by('first_name')
-    
-    context = {
-        'workorder': workorder,
-        'total_estimated_hours': total_estimated_hours,
-        'total_actual_hours': total_actual_hours,
-        'total_labor_cost': total_labor_cost,
-        'total_parts_cost': total_parts_cost,
-        'recent_notes': recent_notes,
-        'recent_time_logs': recent_time_logs,
-        'technicians': technicians,
-        'can_edit': request.user.role in ['admin', 'manager', 'receptionist'],
-        'can_work': request.user.role in ['technician', 'manager'],
-    }
-    
-    return render(request, 'workorders/workorder_detail.html', context)
+    # Redirect to Next.js frontend
+    from django.conf import settings
+    frontend_url = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:3000')
+    return redirect(f'{frontend_url}/workorders/{pk}')
 
 
 @login_required
@@ -366,6 +323,92 @@ def workorder_print_view(request, pk):
     }
     
     return render(request, 'workorders/workorder_print.html', context)
+
+
+@login_required
+def recommendations_print_view(request, pk):
+    """Print-friendly recommendations view for vehicle dashboard"""
+    
+    # Support token-based authentication from API
+    token = request.GET.get('token')
+    if token and not request.user.is_authenticated:
+        from rest_framework_simplejwt.tokens import AccessToken
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        try:
+            access_token = AccessToken(token)
+            user_id = access_token['user_id']
+            user = User.objects.get(id=user_id)
+            request.user = user
+        except Exception:
+            messages.error(request, 'Invalid authentication token.')
+            return redirect('workorders:detail', pk=pk)
+    
+    # Check permissions
+    if request.user.role not in ['admin', 'manager', 'receptionist', 'service_coordinator']:
+        messages.error(request, 'You do not have permission to print recommendations.')
+        return redirect('workorders:detail', pk=pk)
+    
+    work_order = _get_workorder_or_404(request, pk=pk)
+    
+    # Get diagnosis and recommendations
+    try:
+        diagnosis = Diagnosis.objects.filter(work_order=work_order).first()
+        
+        if not diagnosis:
+            messages.error(request, 'No diagnosis found for this work order.')
+            return redirect('workorders:detail', pk=pk)
+        
+        # Filter for unapproved recommendations (as per plan)
+        recommendations = diagnosis.repair_recommendations.filter(
+            customer_approved=False
+        ).order_by('priority', 'order', 'created_at')
+        
+        if not recommendations.exists():
+            messages.info(request, 'No unapproved recommendations found for this work order.')
+            return redirect('workorders:detail', pk=pk)
+        
+    except Exception as e:
+        messages.error(request, f'Error loading recommendations: {str(e)}')
+        return redirect('workorders:detail', pk=pk)
+    
+    # Get branch info
+    branch = work_order.branch
+    
+    context = {
+        'work_order': work_order,
+        'vehicle': work_order.vehicle,
+        'customer': work_order.customer,
+        'recommendations': recommendations,
+        'diagnosis': diagnosis,
+        'print_generated_at': timezone.now(),
+        'print_branch': branch,
+    }
+    
+    # Check if PDF format is requested
+    if request.GET.get('format') == 'pdf':
+        try:
+            from weasyprint import HTML
+            
+            # Render HTML template
+            html_string = render_to_string('workorders/recommendations_print.html', context, request=request)
+            
+            # Generate PDF
+            pdf = HTML(string=html_string).write_pdf()
+            
+            # Return PDF response
+            response = HttpResponse(pdf, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="recommendations_{work_order.work_order_number}.pdf"'
+            return response
+            
+        except ImportError:
+            messages.error(request, 'PDF generation requires WeasyPrint. Please install it: pip install weasyprint')
+            return redirect('workorders:detail', pk=pk)
+        except Exception as e:
+            messages.error(request, f'Error generating PDF: {str(e)}')
+            return redirect('workorders:detail', pk=pk)
+    
+    return render(request, 'workorders/recommendations_print.html', context)
 
 
 # AJAX Views for dynamic updates

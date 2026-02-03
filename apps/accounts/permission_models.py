@@ -27,6 +27,7 @@ class Permission(models.Model):
         ('diagnosis', 'Diagnosis'),
         ('inspections', 'Inspections'),
         ('notifications', 'Notifications'),
+        ('gatepass', 'Gate Passes'),
     )
     
     code = models.CharField(_('permission code'), max_length=100, unique=True, db_index=True)

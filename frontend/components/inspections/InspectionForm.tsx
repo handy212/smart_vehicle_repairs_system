@@ -6,10 +6,10 @@ import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertCircle, Calendar, FileText, Wrench, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -138,18 +138,21 @@ export function InspectionForm({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="vehicle">Vehicle <span className="text-red-500">*</span></Label>
-                                <Select
+                                <select
                                     id="vehicle"
                                     {...register("vehicle", { valueAsNumber: true })}
-                                    className={errors.vehicle ? "border-red-500" : ""}
+                                    className={cn(
+                                        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                                        errors.vehicle ? "border-red-500" : ""
+                                    )}
                                 >
                                     <option value="">Select a vehicle</option>
-                                    {vehicles.map((vehicle) => (
+                                    {vehicles.map((vehicle: any) => (
                                         <option key={vehicle.id} value={vehicle.id}>
                                             {vehicle.year} {vehicle.make} {vehicle.model} - {vehicle.license_plate}
                                         </option>
                                     ))}
-                                </Select>
+                                </select>
                                 {errors.vehicle && (
                                     <p className="text-red-500 text-xs mt-1">{errors.vehicle.message}</p>
                                 )}
@@ -157,19 +160,22 @@ export function InspectionForm({
 
                             <div className="space-y-2">
                                 <Label htmlFor="template">Template <span className="text-red-500">*</span></Label>
-                                <Select
+                                <select
                                     id="template"
                                     {...register("template", { valueAsNumber: true })}
-                                    className={errors.template ? "border-red-500" : ""}
+                                    className={cn(
+                                        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                                        errors.template ? "border-red-500" : ""
+                                    )}
                                 >
                                     <option value="">Select a template</option>
-                                    {templates.map((template) => (
+                                    {templates.map((template: any) => (
                                         <option key={template.id} value={template.id}>
                                             {template.name}
                                             {template.is_default && " (Default)"}
                                         </option>
                                     ))}
-                                </Select>
+                                </select>
                                 {errors.template && (
                                     <p className="text-red-500 text-xs mt-1">{errors.template.message}</p>
                                 )}

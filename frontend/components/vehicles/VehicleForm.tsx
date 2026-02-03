@@ -42,9 +42,10 @@ interface VehicleFormProps {
     isSubmitting: boolean;
     mode: "create" | "edit";
     onCancel?: () => void;
+    serverFieldErrors?: Record<string, string>;
 }
 
-export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, mode, onCancel }: VehicleFormProps) {
+export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, mode, onCancel, serverFieldErrors }: VehicleFormProps) {
     const { toast } = useToast();
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(initialData?.image || null);
@@ -94,6 +95,18 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
             }
         }
     }, [initialData, customerId, reset]);
+
+    // Set server field errors when they arrive
+    useEffect(() => {
+        if (serverFieldErrors) {
+            Object.keys(serverFieldErrors).forEach((field) => {
+                setError(field as keyof VehicleFormData, {
+                    type: "server",
+                    message: serverFieldErrors[field]
+                });
+            });
+        }
+    }, [serverFieldErrors, setError]);
 
     const vinValue = watch("vin");
     const yearValue = watch("year");
@@ -248,9 +261,10 @@ export function VehicleForm({ initialData, customerId, onSubmit, isSubmitting, m
                                 <Input
                                     {...register("license_plate")}
                                     placeholder="ABC-123"
-                                    className="uppercase"
+                                    className={`uppercase ${errors.license_plate ? "border-red-500" : ""}`}
                                     onChange={(e) => setValue("license_plate", e.target.value.toUpperCase())}
                                 />
+                                {errors.license_plate && <p className="text-xs text-red-500">{errors.license_plate.message}</p>}
                             </div>
 
                             <div className="space-y-2">

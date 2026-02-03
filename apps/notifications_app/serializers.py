@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import NotificationTemplate, Notification, NotificationPreference, NotificationLog
+from .models import NotificationTemplate, Notification, NotificationPreference, NotificationLog, WebPushSubscription
 
 
 class NotificationTemplateSerializer(serializers.ModelSerializer):
@@ -162,3 +162,19 @@ class NotificationStatsSerializer(serializers.Serializer):
     by_channel = serializers.DictField()
     by_status = serializers.DictField()
     recent_notifications = NotificationListSerializer(many=True)
+
+
+class WebPushSubscriptionSerializer(serializers.ModelSerializer):
+    """Serializer for Web Push subscriptions"""
+    class Meta:
+        model = WebPushSubscription
+        fields = [
+            'id', 'endpoint', 'p256dh', 'auth', 
+            'user_agent', 'device_name',
+            'is_active', 'last_used', 'created_at'
+        ]
+        read_only_fields = ['user', 'last_used', 'created_at']
+        extra_kwargs = {
+            'p256dh': {'write_only': True},
+            'auth': {'write_only': True}
+        }

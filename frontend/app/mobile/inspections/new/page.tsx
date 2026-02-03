@@ -42,13 +42,16 @@ export default function NewInspectionPage() {
       if (isOnline) {
         const inspection = await inspectionsApi.create(inspectionData);
 
-        // Upload photos
+        // TODO: Implement photo upload for inspections. 
+        // Currently InspectionPhoto requires an InspectionResult, but these are general photos.
+        /*
         for (const photo of photos) {
           const formData = new FormData();
           formData.append("photo", photo);
           formData.append("inspection", inspection.id.toString());
           await inspectionsApi.uploadPhoto(inspection.id, formData);
         }
+        */
 
         toast({
           title: "Success",

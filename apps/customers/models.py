@@ -276,6 +276,33 @@ class Customer(models.Model):
     def is_fleet_customer(self):
         """Check if customer is fleet type"""
         return self.customer_type == 'fleet'
+    
+    def get_last_visit_date(self):
+        """
+        Get the date of the customer's last visit based on completed work orders.
+        Returns the completed_at date of the most recent completed/invoiced/closed work order.
+        """
+        from apps.workorders.models import WorkOrder
+        last_work_order = WorkOrder.objects.filter(
+            customer=self,
+            status__in=['completed', 'invoiced', 'closed'],
+            completed_at__isnull=False
+        ).order_by('-completed_at').first()
+        
+        if last_work_order:
+            return last_work_order.completed_at.date()
+        return None
+    
+    def get_days_since_last_visit(self):
+        """
+        Calculate days since last visit.
+        Returns None if customer has never visited.
+        """
+        last_visit = self.get_last_visit_date()
+        if last_visit:
+            from django.utils import timezone
+            return (timezone.now().date() - last_visit).days
+        return None
 
 
 class CustomerNote(models.Model):

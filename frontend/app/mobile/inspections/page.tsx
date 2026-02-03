@@ -22,7 +22,7 @@ export default function MobileInspectionsPage() {
     setLoading(true);
     try {
       if (isOnline) {
-        const response = await inspectionsApi.list({ limit: 50 });
+        const response = await inspectionsApi.list();
         const data = response.results || response;
         setInspections(Array.isArray(data) ? data : []);
 
@@ -105,14 +105,14 @@ export default function MobileInspectionsPage() {
                   <div className="font-semibold text-gray-900 dark:text-white mb-1">
                     Inspection #{inspection.id}
                   </div>
-                  {inspection.vehicle_display && (
+                  {inspection.vehicle_info && (
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                      {inspection.vehicle_display}
+                      {inspection.vehicle_info}
                     </div>
                   )}
-                  {inspection.inspection_type && (
+                  {inspection.template_name && (
                     <div className="text-xs text-gray-500 dark:text-gray-500">
-                      {inspection.inspection_type}
+                      {inspection.template_name}
                     </div>
                   )}
                 </div>
@@ -121,11 +121,13 @@ export default function MobileInspectionsPage() {
                     className={cn(
                       "px-2 py-1 rounded text-xs font-medium",
                       inspection.status === "completed" &&
-                        "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                      "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                      inspection.status === "approved" &&
+                      "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+                      inspection.status === "rejected" &&
+                      "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
                       inspection.status === "in_progress" &&
-                        "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
-                      inspection.status === "draft" &&
-                        "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                      "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
                     )}
                   >
                     {inspection.status?.replace("_", " ").toUpperCase()}

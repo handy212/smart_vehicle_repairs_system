@@ -48,24 +48,36 @@ export interface PurchaseOrder {
   id: number;
   po_number: string;
   supplier: number | Supplier;
+  branch?: number | any;
   supplier_name?: string;
   order_date: string;
   expected_delivery_date?: string;
-  status: string;
+  status: 'draft' | 'pending_approval' | 'approved' | 'confirmed' | 'partially_received' | 'received' | 'cancelled';
   subtotal?: string;
   tax?: string;
+  tax_amount?: string;
   shipping?: string;
+  shipping_cost?: string;
   total?: string;
   notes?: string;
+  internal_notes?: string;
   submitted_at?: string;
   submitted_by?: number;
+  submitted_by_name?: string;
+  approved_at?: string;
+  approved_by?: number;
+  approved_by_name?: string;
+  received_date?: string;
   received_at?: string;
   received_by?: number;
+  received_by_name?: string;
   created_by?: number;
   created_by_name?: string;
   created_at?: string;
   updated_at?: string;
   items?: PurchaseOrderItem[];
+  assigned_approver?: number;
+  assigned_approver_name?: string;
 }
 
 export interface PurchaseOrderItem {
@@ -74,11 +86,11 @@ export interface PurchaseOrderItem {
   part: number | Part;
   part_number?: string;
   part_name?: string;
-  quantity_ordered: number;
+  quantity: number;
   quantity_received?: number;
   remaining_quantity?: number;
   unit_cost?: string;
-  total_cost?: string;
+  total?: string;
   received_at?: string;
 }
 
@@ -236,6 +248,30 @@ export interface Transfer {
   approved_by?: number;
   approved_by_name?: string;
   items: TransferItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ServiceBundleItem {
+  id: number;
+  part: number;
+  part_name: string;
+  part_number: string;
+  quantity: number;
+  unit: string;
+  unit_price: string;
+}
+
+export interface ServiceBundle {
+  id: number;
+  name: string;
+  description: string;
+  service_type: number;
+  service_type_name: string;
+  items: ServiceBundleItem[];
+  is_active: boolean;
+  created_by: number;
+  created_by_name: string;
   created_at: string;
   updated_at: string;
 }
@@ -451,8 +487,15 @@ export const inventoryApi = {
     await apiClient.delete(`/inventory/purchase-orders/${id}/`);
   },
 
-  submitPurchaseOrder: async (id: number): Promise<any> => {
-    const response = await apiClient.post(`/inventory/purchase-orders/${id}/submit/`);
+  submitPurchaseOrderForApproval: async (id: number, approverId?: number): Promise<any> => {
+    const response = await apiClient.post(`/inventory/purchase-orders/${id}/submit-for-approval/`, {
+      approver_id: approverId
+    });
+    return response.data;
+  },
+
+  approvePurchaseOrder: async (id: number): Promise<any> => {
+    const response = await apiClient.post(`/inventory/purchase-orders/${id}/approve/`);
     return response.data;
   },
 
@@ -473,6 +516,23 @@ export const inventoryApi = {
 
   removePurchaseOrderItem: async (poId: number, itemId: number): Promise<void> => {
     await apiClient.post(`/inventory/purchase-orders/${poId}/remove_item/`, { item_id: itemId });
+  },
+
+
+  updatePurchaseOrderItem: async (poId: number, itemId: number, data: Partial<PurchaseOrderItem>): Promise<PurchaseOrderItem> => {
+    const response = await apiClient.post(`/inventory/purchase-orders/${poId}/update_item/`, {
+      item_id: itemId,
+      ...data
+    });
+    return response.data;
+  },
+
+  receiveItem: async (itemId: number, quantityReceived: number, notes?: string): Promise<any> => {
+    const response = await apiClient.post(`/inventory/po-items/${itemId}/receive/`, {
+      quantity_received: quantityReceived,
+      notes: notes || ''
+    });
+    return response.data;
   },
 
   pendingPurchaseOrders: async (): Promise<PurchaseOrder[]> => {
@@ -546,6 +606,40 @@ export const inventoryApi = {
 
   receiveTransfer: async (id: number, items: Record<number, number>): Promise<any> => {
     const response = await apiClient.post(`/inventory/transfers/${id}/receive/`, { items });
+    return response.data;
+  },
+
+  // Service Bundles
+  listBundles: async (params?: {
+    search?: string;
+    is_active?: boolean;
+    service_type?: number;
+  }): Promise<ServiceBundle[] | { count: number; results: ServiceBundle[] }> => {
+    const response = await apiClient.get("/inventory/service-bundles/", { params });
+    return response.data;
+  },
+
+  getBundle: async (id: number): Promise<ServiceBundle> => {
+    const response = await apiClient.get(`/inventory/service-bundles/${id}/`);
+    return response.data;
+  },
+
+  createBundle: async (data: Partial<ServiceBundle>): Promise<ServiceBundle> => {
+    const response = await apiClient.post("/inventory/service-bundles/", data);
+    return response.data;
+  },
+
+  updateBundle: async (id: number, data: Partial<ServiceBundle>): Promise<ServiceBundle> => {
+    const response = await apiClient.patch(`/inventory/service-bundles/${id}/`, data);
+    return response.data;
+  },
+
+  deleteBundle: async (id: number): Promise<void> => {
+    await apiClient.delete(`/inventory/service-bundles/${id}/`);
+  },
+
+  getBundleForecast: async (branchId: number): Promise<any[]> => {
+    const response = await apiClient.get(`/inventory/service-bundles/forecast/?branch=${branchId}`);
     return response.data;
   },
 };

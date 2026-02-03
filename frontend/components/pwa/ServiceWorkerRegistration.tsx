@@ -11,7 +11,14 @@ export function ServiceWorkerRegistration() {
 
   useEffect(() => {
     // Register service worker
-    serviceWorkerManager.register().catch((error) => {
+    serviceWorkerManager.register().then(async (reg) => {
+      if (reg && 'Notification' in window) {
+        // Attempt to subscribe if permission is already granted or default (prompt)
+        if (Notification.permission === 'default' || Notification.permission === 'granted') {
+          await serviceWorkerManager.subscribeToPush();
+        }
+      }
+    }).catch((error) => {
       console.error("Failed to register service worker:", error);
     });
 

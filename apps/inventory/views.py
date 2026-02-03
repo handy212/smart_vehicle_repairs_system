@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.db import connection, models
 from django.db.models import Sum, Count, F, Q, Avg, Subquery, OuterRef, Value
 from django.db.models.functions import Coalesce
-from datetime import date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from apps.branches.utils import filter_queryset_for_user_branches
@@ -18,7 +18,8 @@ from apps.branches.utils import filter_queryset_for_user_branches
 from .models import (
     PartCategory, Supplier, Part, PurchaseOrder, 
     PurchaseOrderItem, InventoryTransaction,
-    ServicePackage, StockItem, Transfer, TransferItem
+    ServicePackage, StockItem, Transfer, TransferItem, StockAlert,
+    PhysicalCountSession, PhysicalCountItem, ServiceBundle, ServiceBundleItem
 )
 from .serializers import (
     PartCategorySerializer, SupplierListSerializer, SupplierDetailSerializer,
@@ -31,7 +32,11 @@ from .serializers import (
     InventoryTransactionCreateSerializer, LowStockReportSerializer,
     InventoryValueReportSerializer, ServicePackageSerializer,
     ServicePackageCreateSerializer, StockItemSerializer,
-    TransferSerializer, TransferCreateSerializer
+    TransferSerializer, TransferCreateSerializer,
+    StockAlertSerializer, StockAlertUpdateSerializer,
+    PhysicalCountSessionSerializer, PhysicalCountSessionCreateSerializer,
+    PhysicalCountItemSerializer, PhysicalCountItemCreateSerializer,
+    ServiceBundleSerializer, ServiceBundleCreateUpdateSerializer
 )
 from .services import InventoryService
 
@@ -339,9 +344,10 @@ class PartViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def needs_reorder(self, request):
         """Get all parts that need to be reordered"""
-        parts = self.queryset.filter(
-            quantity_in_stock__lte=F('reorder_point'),
-            quantity_in_stock__gt=0
+        # Use get_queryset() which provides annotated current_stock
+        parts = self.get_queryset().filter(
+            current_stock__lte=F('reorder_point'),
+            current_stock__gt=0
         )
         page = self.paginate_queryset(parts)
         if page is not None:
@@ -361,24 +367,169 @@ class PartViewSet(viewsets.ModelViewSet):
             reason = serializer.validated_data['reason']
             notes = serializer.validated_data.get('notes', '')
             
-            # Create inventory transaction
-            InventoryTransaction.objects.create(
+            # Resolve branch from request
+            from apps.branches.utils import resolve_branch
+            branch = resolve_branch(request)
+            if not branch:
+                return Response(
+                    {'error': 'Branch is required for stock adjustments. Please select an active branch.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get current stock from StockItem
+            from .models import StockItem
+            stock_item, _ = StockItem.objects.get_or_create(
                 part=part,
-                transaction_type='adjustment',
-                quantity=quantity,
-                balance_after=part.quantity_in_stock + quantity,
-                reason=reason,
-                notes=notes,
-                created_by=request.user
+                branch=branch,
+                defaults={
+                    'reorder_point': part.reorder_point,
+                    'reorder_quantity': part.reorder_quantity,
+                    'minimum_stock': part.minimum_stock,
+                }
             )
+            
+            # Calculate new balance (prevent negative stock)
+            old_balance = stock_item.quantity_in_stock
+            new_balance = max(0, old_balance + quantity)
+            actual_change = new_balance - old_balance
+            
+            # Use InventoryService to record transaction
+            # For adjustments, we need to set balance_after explicitly
+            inv_trans = InventoryService.record_transaction(
+                part=part,
+                quantity=actual_change,
+                transaction_type='adjustment',
+                user=request.user,
+                branch=branch,
+                reason=reason,
+                notes=notes
+            )
+            
+            # Update balance_after to the calculated value
+            inv_trans.balance_after = new_balance
+            inv_trans.save(update_fields=['balance_after'])
+            
+            # Refresh stock_item to get updated values
+            stock_item.refresh_from_db()
             
             return Response({
                 'status': 'Stock adjusted successfully',
-                'new_quantity': part.quantity_in_stock,
-                'adjustment': quantity
+                'new_quantity': stock_item.quantity_in_stock,
+                'adjustment': actual_change,
+                'branch': branch.name
             })
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'])
+    def bulk_adjust(self, request):
+        """
+        Bulk stock adjustment for multiple parts
+        """
+        from .serializers import BulkStockAdjustmentSerializer
+        from apps.branches.utils import resolve_branch
+        from django.db import transaction as db_transaction
+        
+        serializer = BulkStockAdjustmentSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        branch = resolve_branch(request)
+        if not branch:
+            return Response(
+                {'error': 'Branch is required for bulk stock adjustments. Please select an active branch.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        adjustments = serializer.validated_data['adjustments']
+        transaction_type = serializer.validated_data.get('transaction_type', 'adjustment')
+        default_reason = serializer.validated_data.get('reason', 'Bulk adjustment')
+        default_notes = serializer.validated_data.get('notes', '')
+        
+        results = {
+            'successful': [],
+            'failed': [],
+            'total_requested': len(adjustments),
+            'total_successful': 0,
+            'total_failed': 0
+        }
+        
+        with db_transaction.atomic():
+            for adj in adjustments:
+                try:
+                    part_id = adj['part_id']
+                    quantity_change = adj['quantity_change']
+                    reason = adj.get('reason') or default_reason
+                    notes = adj.get('notes') or default_notes
+                    
+                    # Get part
+                    try:
+                        part = Part.objects.get(id=part_id)
+                    except Part.DoesNotExist:
+                        results['failed'].append({
+                            'part_id': part_id,
+                            'error': 'Part not found'
+                        })
+                        results['total_failed'] += 1
+                        continue
+                    
+                    # Get or create stock item
+                    stock_item, created = StockItem.objects.get_or_create(
+                        part=part,
+                        branch=branch,
+                        defaults={'quantity_in_stock': 0}
+                    )
+                    
+                    # Check if adjustment would result in negative stock
+                    if quantity_change < 0 and abs(quantity_change) > stock_item.quantity_in_stock:
+                        results['failed'].append({
+                            'part_id': part_id,
+                            'part_name': part.name,
+                            'part_number': part.part_number,
+                            'error': f'Insufficient stock. Current: {stock_item.quantity_in_stock}, Requested: {quantity_change}'
+                        })
+                        results['total_failed'] += 1
+                        continue
+                    
+                    # Record transaction
+                    inv_transaction = InventoryService.record_transaction(
+                        part=part,
+                        quantity=quantity_change,
+                        transaction_type=transaction_type,
+                        user=request.user,
+                        branch=branch,
+                        reason=reason,
+                        notes=notes,
+                        unit_cost=part.cost_price
+                    )
+                    
+                    # Refresh stock item
+                    stock_item.refresh_from_db()
+                    
+                    results['successful'].append({
+                        'part_id': part_id,
+                        'part_name': part.name,
+                        'part_number': part.part_number,
+                        'quantity_change': quantity_change,
+                        'new_quantity': stock_item.quantity_in_stock,
+                        'transaction_id': inv_transaction.id
+                    })
+                    results['total_successful'] += 1
+                    
+                except ValueError as ve:
+                    results['failed'].append({
+                        'part_id': adj.get('part_id', 'unknown'),
+                        'error': str(ve)
+                    })
+                    results['total_failed'] += 1
+                except Exception as e:
+                    results['failed'].append({
+                        'part_id': adj.get('part_id', 'unknown'),
+                        'error': f'Unexpected error: {str(e)}'
+                    })
+                    results['total_failed'] += 1
+        
+        return Response(results, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'])
     def transaction_history(self, request, pk=None):
@@ -391,52 +542,118 @@ class PartViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def low_stock_report(self, request):
         """Generate low stock report"""
-        parts = self.queryset.filter(
-            is_active=True,
-            quantity_in_stock__lte=F('reorder_point')
+        # Use get_queryset() to get parts with annotated current_stock
+        parts = self.get_queryset().filter(
+            is_active=True
         ).select_related('category', 'preferred_supplier')
         
-        report_data = []
+        # Filter for low stock using annotated current_stock
+        low_stock_parts = []
         for part in parts:
-            report_data.append({
+            stock = getattr(part, 'current_stock', 0) or 0
+            if stock <= part.reorder_point:
+                # Get quantity_on_order from StockItem if branch is specified
+                from apps.branches.utils import resolve_branch
+                branch = resolve_branch(request)
+                quantity_on_order = 0
+                if branch:
+                    from .models import StockItem
+                    try:
+                        stock_item = StockItem.objects.get(part=part, branch=branch)
+                        quantity_on_order = stock_item.quantity_on_order
+                    except StockItem.DoesNotExist:
+                        pass
+                
+                low_stock_parts.append({
                 'part_id': part.id,
                 'part_number': part.part_number,
                 'part_name': part.name,
                 'category_name': part.category.name if part.category else '',
-                'quantity_in_stock': part.quantity_in_stock,
+                    'quantity_in_stock': stock,
                 'reorder_point': part.reorder_point,
-                'quantity_on_order': part.quantity_on_order,
-                'needs_reorder': part.needs_reorder,
+                    'quantity_on_order': quantity_on_order,
+                    'needs_reorder': stock <= part.reorder_point and stock > 0,
                 'preferred_supplier_name': part.preferred_supplier.name if part.preferred_supplier else ''
             })
         
-        serializer = LowStockReportSerializer(report_data, many=True)
+        serializer = LowStockReportSerializer(low_stock_parts, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def inventory_value(self, request):
         """Get total inventory value and breakdown by category"""
-        parts = self.queryset.filter(is_active=True)
+        # Use get_queryset() to get parts with annotated current_stock
+        parts = self.get_queryset().filter(is_active=True)
+        
+        # Resolve branch for StockItem aggregation
+        from apps.branches.utils import resolve_branch
+        branch = resolve_branch(request)
         
         total_parts = parts.count()
-        total_quantity = parts.aggregate(total=Sum('quantity_in_stock'))['total'] or 0
-        
-        # Calculate total value
+        total_quantity = 0
         total_value = Decimal('0.00')
-        for part in parts:
-            total_value += part.total_value
+        
+        # Aggregate from StockItem if branch is specified, otherwise aggregate from all branches
+        if branch:
+            from .models import StockItem
+            stock_items = StockItem.objects.filter(
+                part__in=parts,
+                branch=branch
+            ).select_related('part', 'part__category')
+            
+            for stock_item in stock_items:
+                qty = stock_item.quantity_in_stock
+                total_quantity += qty
+                if stock_item.part.cost_price:
+                    total_value += stock_item.part.cost_price * qty
+        else:
+            # Aggregate from all branches
+            from .models import StockItem
+            stock_items = StockItem.objects.filter(
+                part__in=parts
+            ).select_related('part', 'part__category').values('part', 'part__category').annotate(
+                total_qty=Sum('quantity_in_stock')
+            )
+            
+            for item in stock_items:
+                part = Part.objects.get(id=item['part'])
+                qty = item['total_qty']
+                total_quantity += qty
+                if part.cost_price:
+                    total_value += part.cost_price * qty
         
         # Breakdown by category
         by_category = []
         categories = PartCategory.objects.filter(is_active=True)
+        
         for category in categories:
             category_parts = parts.filter(category=category)
             category_value = Decimal('0.00')
             category_qty = 0
             
-            for part in category_parts:
-                category_value += part.total_value
-                category_qty += part.quantity_in_stock
+            if branch:
+                category_stock = StockItem.objects.filter(
+                    part__category=category,
+                    part__in=category_parts,
+                    branch=branch
+                )
+                for stock_item in category_stock:
+                    qty = stock_item.quantity_in_stock
+                    category_qty += qty
+                    if stock_item.part.cost_price:
+                        category_value += stock_item.part.cost_price * qty
+            else:
+                category_stock = StockItem.objects.filter(
+                    part__category=category,
+                    part__in=category_parts
+                ).values('part').annotate(total_qty=Sum('quantity_in_stock'))
+                
+                for item in category_stock:
+                    part = Part.objects.get(id=item['part'])
+                    qty = item['total_qty']
+                    category_qty += qty
+                    if part.cost_price:
+                        category_value += part.cost_price * qty
             
             if category_qty > 0:
                 by_category.append({
@@ -468,20 +685,54 @@ class PartViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if part.available_quantity < quantity:
+        # Resolve branch from request
+        from apps.branches.utils import resolve_branch
+        branch = resolve_branch(request)
+        if not branch:
             return Response(
-                {'error': f'Insufficient stock. Available: {part.available_quantity}'},
+                {'error': 'Branch is required for reservations. Please select an active branch.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        part.quantity_reserved += quantity
-        part.save()
+        # Get StockItem to check availability
+        from .models import StockItem
+        stock_item, _ = StockItem.objects.get_or_create(
+            part=part,
+            branch=branch,
+            defaults={
+                'reorder_point': part.reorder_point,
+                'reorder_quantity': part.reorder_quantity,
+                'minimum_stock': part.minimum_stock,
+            }
+        )
+        
+        available_qty = stock_item.available_quantity
+        if available_qty < quantity:
+            return Response(
+                {'error': f'Insufficient stock. Available: {available_qty}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Use InventoryService to reserve
+        InventoryService.record_transaction(
+            part=part,
+            quantity=quantity,
+            transaction_type='reserve',
+            user=request.user,
+            branch=branch,
+            reason=request.data.get('reason', 'Manual reservation'),
+            notes=request.data.get('notes', '')
+        )
+        
+        # Refresh to get updated values
+        stock_item.refresh_from_db()
         
         return Response({
             'status': 'Quantity reserved',
             'reserved': quantity,
-            'total_reserved': part.quantity_reserved,
-            'available': part.available_quantity
+            'total_reserved': stock_item.quantity_reserved,
+            'available': stock_item.available_quantity,
+            'branch': branch.name
         })
 
     @action(detail=True, methods=['post'])
@@ -496,20 +747,51 @@ class PartViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if part.quantity_reserved < quantity:
+        # Resolve branch from request
+        from apps.branches.utils import resolve_branch
+        branch = resolve_branch(request)
+        if not branch:
             return Response(
-                {'error': f'Cannot release more than reserved. Reserved: {part.quantity_reserved}'},
+                {'error': 'Branch is required for releasing reservations. Please select an active branch.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        part.quantity_reserved -= quantity
-        part.save()
+        # Get StockItem to check reserved quantity
+        from .models import StockItem
+        try:
+            stock_item = StockItem.objects.get(part=part, branch=branch)
+        except StockItem.DoesNotExist:
+            return Response(
+                {'error': 'No stock item found for this branch'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        if stock_item.quantity_reserved < quantity:
+            return Response(
+                {'error': f'Cannot release more than reserved. Reserved: {stock_item.quantity_reserved}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Use InventoryService to release
+        InventoryService.record_transaction(
+            part=part,
+            quantity=quantity,
+            transaction_type='release',
+            user=request.user,
+            branch=branch,
+            reason=request.data.get('reason', 'Manual release'),
+            notes=request.data.get('notes', '')
+        )
+        
+        # Refresh to get updated values
+        stock_item.refresh_from_db()
         
         return Response({
             'status': 'Reservation released',
             'released': quantity,
-            'total_reserved': part.quantity_reserved,
-            'available': part.available_quantity
+            'total_reserved': stock_item.quantity_reserved,
+            'available': stock_item.available_quantity,
+            'branch': branch.name
         })
     
     @action(detail=False, methods=['post'])
@@ -596,7 +878,15 @@ class PartViewSet(viewsets.ModelViewSet):
                         except:
                             pass
                     
-                    # Create or update part
+                    # Resolve branch for StockItem creation
+                    from apps.branches.utils import resolve_branch
+                    branch = resolve_branch(request)
+                    if not branch:
+                        errors.append(f"Row {row_num}: Branch is required for inventory import. Please select an active branch.")
+                        skipped_count += 1
+                        continue
+                    
+                    # Create or update part (don't set deprecated quantity_in_stock)
                     with transaction.atomic():
                         part, created = Part.objects.update_or_create(
                             part_number=part_number,
@@ -608,7 +898,6 @@ class PartViewSet(viewsets.ModelViewSet):
                                 'manufacturer_part_number': row.get('manufacturer_part_number', '').strip() or None,
                                 'cost_price': cost_price,
                                 'selling_price': selling_price,
-                                'quantity_in_stock': quantity_in_stock,
                                 'minimum_stock': minimum_stock,
                                 'reorder_point': reorder_point,
                                 'reorder_quantity': reorder_quantity,
@@ -616,11 +905,30 @@ class PartViewSet(viewsets.ModelViewSet):
                                 'is_taxable': is_taxable,
                                 'is_core': is_core,
                                 'core_charge': core_charge,
-                                'unit_of_measure': row.get('unit_of_measure', 'each').strip() or 'each',
+                                'unit': row.get('unit', row.get('unit_of_measure', 'piece')).strip() or 'piece',  # Support both field names
                                 'is_active': is_active,
                                 'created_by': request.user if created else None,
                             }
                         )
+                        
+                        # Create or update StockItem for this branch
+                        from .models import StockItem
+                        stock_item, stock_created = StockItem.objects.get_or_create(
+                            part=part,
+                            branch=branch,
+                            defaults={
+                                'quantity_in_stock': quantity_in_stock,
+                                'minimum_stock': minimum_stock,
+                                'reorder_point': reorder_point,
+                                'reorder_quantity': reorder_quantity,
+                                'bin_location': row.get('bin_location', '').strip() or None,
+                            }
+                        )
+                        
+                        # Update stock if part already existed
+                        if not stock_created and quantity_in_stock > 0:
+                            stock_item.quantity_in_stock = quantity_in_stock
+                            stock_item.save()
                         
                         if created:
                             imported_count += 1
@@ -707,22 +1015,48 @@ class PartViewSet(viewsets.ModelViewSet):
         if category_id:
             parts = parts.filter(category_id=category_id)
         
-        # Calculate inventory metrics
-        total_parts = parts.count()
-        total_quantity = parts.aggregate(total=Sum('quantity_in_stock'))['total'] or 0
+        # Resolve branch for StockItem aggregation
+        from apps.branches.utils import resolve_branch
+        branch = resolve_branch(request)
         
-        # Calculate inventory value
+        # Calculate inventory metrics from StockItem
+        total_parts = parts.count()
+        total_quantity = 0
         total_cost_value = Decimal('0.00')
         total_selling_value = Decimal('0.00')
         potential_profit = Decimal('0.00')
         
-        for part in parts:
-            cost_val = part.cost_price * part.quantity_in_stock if part.cost_price else Decimal('0')
-            sell_val = part.selling_price * part.quantity_in_stock if part.selling_price else Decimal('0')
+        # Aggregate from StockItem
+        from .models import StockItem
+        if branch:
+            stock_items = StockItem.objects.filter(
+                part__in=parts,
+                branch=branch
+            ).select_related('part')
             
-            total_cost_value += cost_val
-            total_selling_value += sell_val
-            potential_profit += (sell_val - cost_val)
+            for stock_item in stock_items:
+                qty = stock_item.quantity_in_stock
+                total_quantity += qty
+                if stock_item.part.cost_price:
+                    total_cost_value += stock_item.part.cost_price * qty
+                if stock_item.part.selling_price:
+                    total_selling_value += stock_item.part.selling_price * qty
+        else:
+            # Aggregate from all branches
+            stock_items = StockItem.objects.filter(
+                part__in=parts
+            ).values('part').annotate(total_qty=Sum('quantity_in_stock'))
+            
+            for item in stock_items:
+                part = Part.objects.get(id=item['part'])
+                qty = item['total_qty']
+                total_quantity += qty
+                if part.cost_price:
+                    total_cost_value += part.cost_price * qty
+                if part.selling_price:
+                    total_selling_value += part.selling_price * qty
+        
+        potential_profit = total_selling_value - total_cost_value
         
         # Get COGS for the period
         transactions = InventoryTransaction.objects.filter(
@@ -762,12 +1096,33 @@ class PartViewSet(viewsets.ModelViewSet):
             cat_cost_value = Decimal('0.00')
             cat_sell_value = Decimal('0.00')
             
-            for part in category_parts:
-                cat_qty += part.quantity_in_stock
+            if branch:
+                category_stock = StockItem.objects.filter(
+                    part__category=category,
+                    part__in=category_parts,
+                    branch=branch
+                )
+                for stock_item in category_stock:
+                    qty = stock_item.quantity_in_stock
+                    cat_qty += qty
+                    if stock_item.part.cost_price:
+                        cat_cost_value += stock_item.part.cost_price * qty
+                    if stock_item.part.selling_price:
+                        cat_sell_value += stock_item.part.selling_price * qty
+            else:
+                category_stock = StockItem.objects.filter(
+                    part__category=category,
+                    part__in=category_parts
+                ).values('part').annotate(total_qty=Sum('quantity_in_stock'))
+                
+                for item in category_stock:
+                    part = Part.objects.get(id=item['part'])
+                    qty = item['total_qty']
+                    cat_qty += qty
                 if part.cost_price:
-                    cat_cost_value += part.cost_price * part.quantity_in_stock
+                        cat_cost_value += part.cost_price * qty
                 if part.selling_price:
-                    cat_sell_value += part.selling_price * part.quantity_in_stock
+                        cat_sell_value += part.selling_price * qty
             
             by_category.append({
                 'category_id': category.id,
@@ -789,7 +1144,15 @@ class PartViewSet(viewsets.ModelViewSet):
         }
         
         today = timezone.now().date()
-        for part in parts:
+        # Use StockItem for aging analysis
+        if branch:
+            stock_items = StockItem.objects.filter(
+                part__in=parts,
+                branch=branch
+            ).select_related('part')
+            
+            for stock_item in stock_items:
+                part = stock_item.part
             if part.last_sold_date:
                 days_since_sale = (today - part.last_sold_date).days
             elif part.created_at:
@@ -797,7 +1160,40 @@ class PartViewSet(viewsets.ModelViewSet):
             else:
                 days_since_sale = 0
             
-            part_value = part.total_value
+                # Calculate value from StockItem
+                qty = stock_item.quantity_in_stock
+                part_value = part.cost_price * qty if part.cost_price else Decimal('0')
+                
+                if days_since_sale <= 90:
+                    aging_categories['0-90_days']['count'] += 1
+                    aging_categories['0-90_days']['value'] += part_value
+                elif days_since_sale <= 180:
+                    aging_categories['91-180_days']['count'] += 1
+                    aging_categories['91-180_days']['value'] += part_value
+                elif days_since_sale <= 365:
+                    aging_categories['181-365_days']['count'] += 1
+                    aging_categories['181-365_days']['value'] += part_value
+                else:
+                    aging_categories['over_365_days']['count'] += 1
+                    aging_categories['over_365_days']['value'] += part_value
+        else:
+            # Aggregate from all branches
+            stock_items = StockItem.objects.filter(
+                part__in=parts
+            ).values('part').annotate(total_qty=Sum('quantity_in_stock'))
+            
+            for item in stock_items:
+                part = Part.objects.get(id=item['part'])
+                qty = item['total_qty']
+                
+                if part.last_sold_date:
+                    days_since_sale = (today - part.last_sold_date).days
+                elif part.created_at:
+                    days_since_sale = (today - part.created_at.date()).days
+                else:
+                    days_since_sale = 0
+                
+                part_value = part.cost_price * qty if part.cost_price else Decimal('0')
             
             if days_since_sale <= 90:
                 aging_categories['0-90_days']['count'] += 1
@@ -856,6 +1252,554 @@ class PartViewSet(viewsets.ModelViewSet):
                     'value': float(aging_categories['over_365_days']['value'])
                 }
             ]
+        })
+
+    @action(detail=False, methods=['get'])
+    def stock_movement_report(self, request):
+        """
+        Stock movement report - shows in/out movements by date range
+        """
+        from datetime import datetime, timedelta
+        from apps.branches.utils import resolve_branch
+        
+        # Get date range from query params
+        date_from_str = request.query_params.get('date_from')
+        date_to_str = request.query_params.get('date_to')
+        
+        if date_from_str:
+            try:
+                date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+            except ValueError:
+                return Response(
+                    {'error': 'Invalid date_from format. Use YYYY-MM-DD'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            date_from = date.today() - timedelta(days=30)  # Default: last 30 days
+        
+        if date_to_str:
+            try:
+                date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+            except ValueError:
+                return Response(
+                    {'error': 'Invalid date_to format. Use YYYY-MM-DD'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            date_to = date.today()
+        
+        branch = resolve_branch(request)
+        
+        # Get transactions in date range
+        transactions = InventoryTransaction.objects.filter(
+            created_at__date__gte=date_from,
+            created_at__date__lte=date_to
+        ).select_related('part', 'part__category', 'created_by', 'branch')
+        
+        if branch:
+            transactions = transactions.filter(branch=branch)
+        
+        # Aggregate by transaction type
+        movement_summary = {}
+        part_movements = {}
+        
+        for trans in transactions:
+            trans_type = trans.transaction_type
+            part_id = trans.part.id
+            
+            # Initialize summary
+            if trans_type not in movement_summary:
+                movement_summary[trans_type] = {
+                    'count': 0,
+                    'total_quantity': 0,
+                    'total_value': Decimal('0.00')
+                }
+            
+            movement_summary[trans_type]['count'] += 1
+            movement_summary[trans_type]['total_quantity'] += abs(trans.quantity)
+            if trans.total_cost:
+                movement_summary[trans_type]['total_value'] += trans.total_cost
+            
+            # Track per-part movements
+            if part_id not in part_movements:
+                part_movements[part_id] = {
+                    'part_id': part_id,
+                    'part_number': trans.part.part_number,
+                    'part_name': trans.part.name,
+                    'category': trans.part.category.name if trans.part.category else '',
+                    'in': 0,
+                    'out': 0,
+                    'net': 0,
+                    'transactions': []
+                }
+            
+            if trans.quantity > 0:
+                part_movements[part_id]['in'] += trans.quantity
+            else:
+                part_movements[part_id]['out'] += abs(trans.quantity)
+            
+            part_movements[part_id]['net'] = part_movements[part_id]['in'] - part_movements[part_id]['out']
+            part_movements[part_id]['transactions'].append({
+                'date': trans.created_at.date().isoformat(),
+                'type': trans_type,
+                'quantity': trans.quantity,
+                'reason': trans.reason
+            })
+        
+        # Convert to list and sort by net movement
+        part_movements_list = list(part_movements.values())
+        part_movements_list.sort(key=lambda x: abs(x['net']), reverse=True)
+        
+        return Response({
+            'period': {
+                'date_from': date_from.isoformat(),
+                'date_to': date_to.isoformat(),
+                'days': (date_to - date_from).days + 1
+            },
+            'branch': branch.name if branch else 'All Branches',
+            'summary_by_type': movement_summary,
+            'part_movements': part_movements_list[:100],  # Top 100 by movement
+            'total_parts': len(part_movements)
+        })
+
+    @action(detail=False, methods=['get'])
+    def turnover_report(self, request):
+        """
+        Stock turnover analysis - shows how quickly inventory is being sold/used
+        """
+        from datetime import datetime, timedelta
+        from apps.branches.utils import resolve_branch
+        
+        # Get date range (default: last 90 days)
+        days = int(request.query_params.get('days', 90))
+        date_from = date.today() - timedelta(days=days)
+        date_to = date.today()
+        
+        branch = resolve_branch(request)
+        
+        # Get current stock levels
+        if branch:
+            stock_items = StockItem.objects.filter(
+                branch=branch
+            ).select_related('part', 'part__category')
+        else:
+            # Aggregate across all branches
+            stock_items = StockItem.objects.select_related(
+                'part', 'part__category'
+            ).values('part').annotate(
+                total_qty=Sum('quantity_in_stock')
+            )
+        
+        # Get sales/usage transactions in period
+        sales_transactions = InventoryTransaction.objects.filter(
+            transaction_type__in=['sale', 'usage'],
+            created_at__date__gte=date_from,
+            created_at__date__lte=date_to
+        ).select_related('part', 'branch')
+        
+        if branch:
+            sales_transactions = sales_transactions.filter(branch=branch)
+        
+        # Aggregate sales by part
+        sales_by_part = {}
+        for trans in sales_transactions:
+            part_id = trans.part.id
+            if part_id not in sales_by_part:
+                sales_by_part[part_id] = {
+                    'part_id': part_id,
+                    'quantity_sold': 0,
+                    'total_cost': Decimal('0.00')
+                }
+            sales_by_part[part_id]['quantity_sold'] += abs(trans.quantity)
+            if trans.total_cost:
+                sales_by_part[part_id]['total_cost'] += trans.total_cost
+        
+        # Calculate turnover for each part
+        turnover_data = []
+        
+        if branch:
+            for stock_item in stock_items:
+                part = stock_item.part
+                current_stock = stock_item.quantity_in_stock
+                sales = sales_by_part.get(part.id, {'quantity_sold': 0, 'total_cost': Decimal('0.00')})
+                
+                avg_stock = current_stock  # Simplified - could use average over period
+                turnover_ratio = sales['quantity_sold'] / avg_stock if avg_stock > 0 else 0
+                days_to_sell = avg_stock / (sales['quantity_sold'] / days) if sales['quantity_sold'] > 0 else float('inf')
+                
+                turnover_data.append({
+                    'part_id': part.id,
+                    'part_number': part.part_number,
+                    'part_name': part.name,
+                    'category': part.category.name if part.category else '',
+                    'current_stock': current_stock,
+                    'quantity_sold': sales['quantity_sold'],
+                    'avg_stock': avg_stock,
+                    'turnover_ratio': float(turnover_ratio),
+                    'days_to_sell': float(days_to_sell) if days_to_sell != float('inf') else None,
+                    'cost_of_goods_sold': float(sales['total_cost'])
+                })
+        else:
+            # Handle aggregated case
+            for item in stock_items:
+                part = Part.objects.get(id=item['part'])
+                current_stock = item['total_qty']
+                sales = sales_by_part.get(part.id, {'quantity_sold': 0, 'total_cost': Decimal('0.00')})
+                
+                avg_stock = current_stock
+                turnover_ratio = sales['quantity_sold'] / avg_stock if avg_stock > 0 else 0
+                days_to_sell = avg_stock / (sales['quantity_sold'] / days) if sales['quantity_sold'] > 0 else float('inf')
+                
+                turnover_data.append({
+                    'part_id': part.id,
+                    'part_number': part.part_number,
+                    'part_name': part.name,
+                    'category': part.category.name if part.category else '',
+                    'current_stock': current_stock,
+                    'quantity_sold': sales['quantity_sold'],
+                    'avg_stock': avg_stock,
+                    'turnover_ratio': float(turnover_ratio),
+                    'days_to_sell': float(days_to_sell) if days_to_sell != float('inf') else None,
+                    'cost_of_goods_sold': float(sales['total_cost'])
+                })
+        
+        # Sort by turnover ratio (descending)
+        turnover_data.sort(key=lambda x: x['turnover_ratio'], reverse=True)
+        
+        # Categorize: Fast-moving (high turnover), Slow-moving (low turnover), Non-moving (no sales)
+        fast_moving = [x for x in turnover_data if x['turnover_ratio'] >= 2.0]
+        slow_moving = [x for x in turnover_data if 0 < x['turnover_ratio'] < 2.0]
+        non_moving = [x for x in turnover_data if x['turnover_ratio'] == 0]
+        
+        return Response({
+            'period': {
+                'date_from': date_from.isoformat(),
+                'date_to': date_to.isoformat(),
+                'days': days
+            },
+            'branch': branch.name if branch else 'All Branches',
+            'summary': {
+                'total_parts': len(turnover_data),
+                'fast_moving': len(fast_moving),
+                'slow_moving': len(slow_moving),
+                'non_moving': len(non_moving)
+            },
+            'turnover_data': turnover_data,
+            'fast_moving': fast_moving[:50],
+            'slow_moving': slow_moving[:50],
+            'non_moving': non_moving[:50]
+        })
+
+    @action(detail=False, methods=['get'])
+    def abc_analysis(self, request):
+        """
+        ABC Analysis - categorizes inventory by value (A=high, B=medium, C=low)
+        """
+        from apps.branches.utils import resolve_branch
+        
+        branch = resolve_branch(request)
+        
+        # Get stock items with values
+        if branch:
+            stock_items = StockItem.objects.filter(
+                branch=branch
+            ).select_related('part', 'part__category')
+        else:
+            stock_items = StockItem.objects.select_related(
+                'part', 'part__category'
+            ).values('part').annotate(
+                total_qty=Sum('quantity_in_stock')
+            )
+        
+        # Calculate value for each part
+        parts_data = []
+        total_value = Decimal('0.00')
+        
+        if branch:
+            for stock_item in stock_items:
+                part = stock_item.part
+                qty = stock_item.quantity_in_stock
+                if part.cost_price:
+                    value = part.cost_price * qty
+                    parts_data.append({
+                        'part_id': part.id,
+                        'part_number': part.part_number,
+                        'part_name': part.name,
+                        'category': part.category.name if part.category else '',
+                        'quantity': qty,
+                        'unit_cost': float(part.cost_price),
+                        'total_value': float(value)
+                    })
+                    total_value += value
+        else:
+            for item in stock_items:
+                part = Part.objects.get(id=item['part'])
+                qty = item['total_qty']
+                if part.cost_price:
+                    value = part.cost_price * qty
+                    parts_data.append({
+                        'part_id': part.id,
+                        'part_number': part.part_number,
+                        'part_name': part.name,
+                        'category': part.category.name if part.category else '',
+                        'quantity': qty,
+                        'unit_cost': float(part.cost_price),
+                        'total_value': float(value)
+                    })
+                    total_value += value
+        
+        # Sort by value (descending)
+        parts_data.sort(key=lambda x: x['total_value'], reverse=True)
+        
+        # Calculate cumulative percentages and assign ABC categories
+        cumulative_value = Decimal('0.00')
+        category_a = []
+        category_b = []
+        category_c = []
+        
+        for part_data in parts_data:
+            cumulative_value += Decimal(str(part_data['total_value']))
+            cumulative_percent = (cumulative_value / total_value * 100) if total_value > 0 else 0
+            
+            part_data['cumulative_value'] = float(cumulative_value)
+            part_data['cumulative_percent'] = float(cumulative_percent)
+            
+            if cumulative_percent <= 80:
+                part_data['abc_category'] = 'A'
+                category_a.append(part_data)
+            elif cumulative_percent <= 95:
+                part_data['abc_category'] = 'B'
+                category_b.append(part_data)
+            else:
+                part_data['abc_category'] = 'C'
+                category_c.append(part_data)
+        
+        # Calculate summary
+        a_value = sum(x['total_value'] for x in category_a)
+        b_value = sum(x['total_value'] for x in category_b)
+        c_value = sum(x['total_value'] for x in category_c)
+        
+        return Response({
+            'branch': branch.name if branch else 'All Branches',
+            'total_value': float(total_value),
+            'summary': {
+                'category_a': {
+                    'count': len(category_a),
+                    'value': float(a_value),
+                    'percent_of_total': float(a_value / total_value * 100) if total_value > 0 else 0
+                },
+                'category_b': {
+                    'count': len(category_b),
+                    'value': float(b_value),
+                    'percent_of_total': float(b_value / total_value * 100) if total_value > 0 else 0
+                },
+                'category_c': {
+                    'count': len(category_c),
+                    'value': float(c_value),
+                    'percent_of_total': float(c_value / total_value * 100) if total_value > 0 else 0
+                }
+            },
+            'category_a': category_a,
+            'category_b': category_b,
+            'category_c': category_c,
+            'all_parts': parts_data
+        })
+
+    @action(detail=False, methods=['get'])
+    def multi_location_stock(self, request):
+        """
+        Multi-location stock view - shows stock levels across all branches for parts
+        """
+        from apps.branches.utils import get_user_accessible_branches
+        
+        part_id = request.query_params.get('part_id')
+        category_id = request.query_params.get('category_id')
+        search = request.query_params.get('search', '')
+        
+        user = request.user
+        accessible_branches = get_user_accessible_branches(user)
+        
+        # Get stock items
+        stock_items = StockItem.objects.filter(
+            branch__in=accessible_branches
+        ).select_related('part', 'part__category', 'branch')
+        
+        # Filter by part if specified
+        if part_id:
+            try:
+                part = Part.objects.get(id=part_id)
+                stock_items = stock_items.filter(part=part)
+            except Part.DoesNotExist:
+                return Response(
+                    {'error': 'Part not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        # Filter by category if specified
+        if category_id:
+            stock_items = stock_items.filter(part__category_id=category_id)
+        
+        # Filter by search term
+        if search:
+            stock_items = stock_items.filter(
+                Q(part__name__icontains=search) |
+                Q(part__part_number__icontains=search)
+            )
+        
+        # Group by part
+        parts_data = {}
+        
+        for stock_item in stock_items:
+            part = stock_item.part
+            branch = stock_item.branch
+            
+            if part.id not in parts_data:
+                parts_data[part.id] = {
+                    'part_id': part.id,
+                    'part_number': part.part_number,
+                    'part_name': part.name,
+                    'category': part.category.name if part.category else '',
+                    'unit': part.get_unit_display(),
+                    'cost_price': float(part.cost_price) if part.cost_price else 0,
+                    'selling_price': float(part.selling_price) if part.selling_price else 0,
+                    'locations': [],
+                    'total_quantity': 0,
+                    'total_value': Decimal('0.00'),
+                    'total_reserved': 0,
+                    'total_on_order': 0
+                }
+            
+            # Add location data
+            location_data = {
+                'branch_id': branch.id,
+                'branch_name': branch.name,
+                'quantity_in_stock': stock_item.quantity_in_stock,
+                'quantity_reserved': stock_item.quantity_reserved,
+                'quantity_on_order': stock_item.quantity_on_order,
+                'available_quantity': stock_item.quantity_in_stock - stock_item.quantity_reserved,
+                'reorder_point': stock_item.reorder_point,
+                'minimum_stock': stock_item.minimum_stock or 0,
+                'is_low_stock': stock_item.quantity_in_stock <= stock_item.reorder_point,
+                'is_out_of_stock': stock_item.quantity_in_stock == 0,
+                'value': float(stock_item.part.cost_price * stock_item.quantity_in_stock) if stock_item.part.cost_price else 0
+            }
+            
+            parts_data[part.id]['locations'].append(location_data)
+            parts_data[part.id]['total_quantity'] += stock_item.quantity_in_stock
+            parts_data[part.id]['total_reserved'] += stock_item.quantity_reserved
+            parts_data[part.id]['total_on_order'] += stock_item.quantity_on_order
+            if part.cost_price:
+                parts_data[part.id]['total_value'] += part.cost_price * stock_item.quantity_in_stock
+        
+        # Convert to list and sort
+        parts_list = list(parts_data.values())
+        
+        # Sort by total quantity (descending) or by part name
+        sort_by = request.query_params.get('sort_by', 'total_quantity')
+        if sort_by == 'name':
+            parts_list.sort(key=lambda x: x['part_name'])
+        elif sort_by == 'total_value':
+            parts_list.sort(key=lambda x: x['total_value'], reverse=True)
+        else:
+            parts_list.sort(key=lambda x: x['total_quantity'], reverse=True)
+        
+        # Calculate summary statistics
+        total_parts = len(parts_list)
+        total_locations = sum(len(p['locations']) for p in parts_list)
+        total_quantity_all = sum(p['total_quantity'] for p in parts_list)
+        total_value_all = sum(Decimal(str(p['total_value'])) for p in parts_list)
+        
+        # Count parts with stock issues
+        low_stock_count = sum(1 for p in parts_list if any(loc['is_low_stock'] for loc in p['locations']))
+        out_of_stock_count = sum(1 for p in parts_list if any(loc['is_out_of_stock'] for loc in p['locations']))
+        
+        return Response({
+            'summary': {
+                'total_parts': total_parts,
+                'total_locations': total_locations,
+                'total_quantity': total_quantity_all,
+                'total_value': float(total_value_all),
+                'low_stock_parts': low_stock_count,
+                'out_of_stock_parts': out_of_stock_count,
+                'accessible_branches': [{'id': b.id, 'name': b.name} for b in accessible_branches]
+            },
+            'parts': parts_list,
+            'filters': {
+                'part_id': part_id,
+                'category_id': category_id,
+                'search': search,
+                'sort_by': sort_by
+            }
+        })
+
+    @action(detail=True, methods=['get'])
+    def stock_by_location(self, request, pk=None):
+        """
+        Get stock levels for a specific part across all accessible branches
+        """
+        from apps.branches.utils import get_user_accessible_branches
+        
+        part = self.get_object()
+        user = request.user
+        accessible_branches = get_user_accessible_branches(user)
+        
+        # Get stock items for this part across all accessible branches
+        stock_items = StockItem.objects.filter(
+            part=part,
+            branch__in=accessible_branches
+        ).select_related('branch')
+        
+        locations = []
+        total_quantity = 0
+        total_reserved = 0
+        total_on_order = 0
+        total_value = Decimal('0.00')
+        
+        for stock_item in stock_items:
+            location_data = {
+                'branch_id': stock_item.branch.id,
+                'branch_name': stock_item.branch.name,
+                'quantity_in_stock': stock_item.quantity_in_stock,
+                'quantity_reserved': stock_item.quantity_reserved,
+                'quantity_on_order': stock_item.quantity_on_order,
+                'available_quantity': stock_item.quantity_in_stock - stock_item.quantity_reserved,
+                'reorder_point': stock_item.reorder_point,
+                'minimum_stock': stock_item.minimum_stock or 0,
+                'reorder_quantity': stock_item.reorder_quantity,
+                'is_low_stock': stock_item.quantity_in_stock <= stock_item.reorder_point,
+                'is_out_of_stock': stock_item.quantity_in_stock == 0,
+                'value': float(part.cost_price * stock_item.quantity_in_stock) if part.cost_price else 0
+            }
+            
+            locations.append(location_data)
+            total_quantity += stock_item.quantity_in_stock
+            total_reserved += stock_item.quantity_reserved
+            total_on_order += stock_item.quantity_on_order
+            if part.cost_price:
+                total_value += part.cost_price * stock_item.quantity_in_stock
+        
+        # Sort by quantity (descending)
+        locations.sort(key=lambda x: x['quantity_in_stock'], reverse=True)
+        
+        return Response({
+            'part': {
+                'id': part.id,
+                'part_number': part.part_number,
+                'name': part.name,
+                'category': part.category.name if part.category else '',
+                'unit': part.get_unit_display(),
+                'cost_price': float(part.cost_price) if part.cost_price else 0,
+                'selling_price': float(part.selling_price) if part.selling_price else 0
+            },
+            'summary': {
+                'total_quantity': total_quantity,
+                'total_reserved': total_reserved,
+                'total_on_order': total_on_order,
+                'total_available': total_quantity - total_reserved,
+                'total_value': float(total_value),
+                'locations_count': len(locations)
+            },
+            'locations': locations
         })
 
 
@@ -918,10 +1862,10 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         """
         queryset = self.get_queryset()
         total_orders = queryset.count()
-        pending_orders = queryset.filter(status__in=['draft', 'submitted']).count()
+        pending_orders = queryset.filter(status__in=['draft', 'pending_approval', 'approved']).count()
         time_now = timezone.now().date()
         overdue_orders = queryset.filter(
-            status__in=['draft', 'submitted'], 
+            status__in=['draft', 'pending_approval', 'approved'], 
             expected_delivery_date__lt=time_now
         ).count()
         completed_orders = queryset.filter(status='received').count()
@@ -946,14 +1890,14 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
             return PurchaseOrderDetailSerializer
         return PurchaseOrderListSerializer
 
-    @action(detail=True, methods=['post'])
-    def submit(self, request, pk=None):
-        """Submit purchase order to supplier"""
+    @action(detail=True, methods=['post'], url_path='submit-for-approval')
+    def submit_for_approval(self, request, pk=None):
+        """Submit purchase order for approval"""
         po = self.get_object()
         
         if po.status != 'draft':
             return Response(
-                {'error': 'Only draft purchase orders can be submitted'},
+                {'error': 'Only draft purchase orders can be submitted for approval'},
                 status=status.HTTP_400_BAD_REQUEST
             )
             
@@ -971,28 +1915,69 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
                  status=status.HTTP_400_BAD_REQUEST
              )
         
-        po.status = 'submitted'
+        # Handle approver assignment
+        approver_id = request.data.get('approver_id')
+        if approver_id:
+            from apps.accounts.models import User
+            try:
+                approver = User.objects.get(id=approver_id)
+                po.assigned_approver = approver
+            except User.DoesNotExist:
+                return Response(
+                    {'error': 'Selected approver not found'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        po.status = 'pending_approval'
         po.submitted_by = request.user
         po.submitted_at = timezone.now()
         po.save()
+
+        # Send notification to assigned approver
+        if po.assigned_approver:
+            try:
+                from apps.notifications_app.services import NotificationHelper, NotificationService
+                notification = NotificationHelper.purchase_order_approval_request(po, po.assigned_approver)
+                NotificationService().send_notification(notification)
+            except Exception as e:
+                # specific validation error logging could go here
+                pass
+
+        return Response({'status': 'Purchase order submitted for approval'})
+    
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Approve purchase order (allows sending to supplier)"""
+        po = self.get_object()
         
-        return Response({'status': 'Purchase order submitted'})
+        if po.status != 'pending_approval':
+            return Response(
+                {'error': 'Only purchase orders pending approval can be approved'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        po.status = 'approved'
+        po.approved_by = request.user
+        po.approved_at = timezone.now()
+        po.save()
+        
+        return Response({'status': 'Purchase order approved'})
 
     @action(detail=True, methods=['post'])
     def confirm(self, request, pk=None):
-        """Confirm purchase order (supplier confirmed receipt)"""
+        """Confirm purchase order (after phone confirmation with supplier)"""
         po = self.get_object()
         
-        if po.status != 'submitted':
+        if po.status != 'approved':
             return Response(
-                {'error': 'Only submitted purchase orders can be confirmed'},
+                {'error': 'Only approved purchase orders can be confirmed (after supplier acknowledgment)'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         po.status = 'confirmed'
         po.save()
         
-        return Response({'status': 'Purchase order confirmed'})
+        return Response({'status': 'Purchase order confirmed with supplier'})
 
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
@@ -1008,10 +1993,34 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         po.status = 'cancelled'
         po.save()
         
-        # Clear quantity_on_order for all items
-        for item in po.items.all():
-            item.part.quantity_on_order = max(0, item.part.quantity_on_order - item.remaining_quantity)
-            item.part.save()
+        # Clear quantity_on_order for all items (using StockItem, not deprecated part.quantity_on_order)
+        from .models import StockItem
+        from django.db.models import Sum, F
+        branch = po.branch
+        if branch:
+            for item in po.items.all():
+                # Recalculate total on order for this part at this branch (excluding this cancelled PO)
+                total_on_order = PurchaseOrderItem.objects.filter(
+                    part=item.part,
+                    purchase_order__status__in=['pending_approval', 'approved', 'confirmed'],
+                    purchase_order__branch=branch
+                ).exclude(
+                    purchase_order=po
+                ).aggregate(
+                    total=Sum(F('quantity') - F('quantity_received'))
+                )['total'] or 0
+                
+                stock_item, _ = StockItem.objects.get_or_create(
+                    part=item.part,
+                    branch=branch,
+                    defaults={
+                        'reorder_point': item.part.reorder_point,
+                        'reorder_quantity': item.part.reorder_quantity,
+                        'minimum_stock': item.part.minimum_stock,
+                    }
+                )
+                stock_item.quantity_on_order = max(0, total_on_order)
+                stock_item.save()
         
         return Response({'status': 'Purchase order cancelled'})
 
@@ -1029,15 +2038,96 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         serializer = PurchaseOrderItemCreateSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(purchase_order=po)
+            # Invalidate prefetch cache to ensure new item is included in totals
+            if hasattr(po, '_prefetched_objects_cache'):
+                po._prefetched_objects_cache = {}
             po.calculate_totals()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['post'], url_path='update_item')
+    def update_item(self, request, pk=None):
+        """Update an existing item in the purchase order"""
+        po = self.get_object()
+        
+        if po.status not in ['draft']:
+            return Response(
+                {'error': 'Can only update items in draft purchase orders'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        item_id = request.data.get('item_id')
+        if not item_id:
+            return Response(
+                {'error': 'item_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            item = po.items.get(id=item_id)
+        except PurchaseOrderItem.DoesNotExist:
+            return Response(
+                {'error': 'Item not found in this purchase order'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Update quantity if provided
+        if 'quantity' in request.data:
+            quantity = request.data['quantity']
+            if quantity <= 0:
+                return Response(
+                    {'error': 'Quantity must be greater than 0'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            item.quantity = quantity
+        
+        # Update unit_cost if provided
+        if 'unit_cost' in request.data:
+            item.unit_cost = request.data['unit_cost']
+        
+        # Update notes if provided
+        if 'notes' in request.data:
+            item.notes = request.data['notes']
+        
+        item.save()  # This will trigger calculate_totals via the model save method
+        
+        serializer = PurchaseOrderItemSerializer(item)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='remove_item')
+    def remove_item(self, request, pk=None):
+        """Remove an item from the purchase order"""
+        po = self.get_object()
+        
+        if po.status not in ['draft']:
+            return Response(
+                {'error': 'Can only remove items from draft purchase orders'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        item_id = request.data.get('item_id')
+        if not item_id:
+            return Response(
+                {'error': 'item_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            item = po.items.get(id=item_id)
+            item.delete()  # This will trigger calculate_totals via the signal or save method
+            po.calculate_totals()
+            return Response({'status': 'Item removed successfully'})
+        except PurchaseOrderItem.DoesNotExist:
+            return Response(
+                {'error': 'Item not found in this purchase order'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
     @action(detail=False, methods=['get'])
     def pending(self, request):
-        """Get all pending purchase orders (submitted or confirmed)"""
-        orders = self.queryset.filter(status__in=['submitted', 'confirmed'])
+        """Get all pending purchase orders (pending approval, approved, or confirmed)"""
+        orders = self.queryset.filter(status__in=['pending_approval', 'approved', 'confirmed'])
         page = self.paginate_queryset(orders)
         if page is not None:
             serializer = PurchaseOrderListSerializer(page, many=True)
@@ -1050,7 +2140,7 @@ class PurchaseOrderViewSet(viewsets.ModelViewSet):
         """Get overdue purchase orders"""
         today = date.today()
         orders = self.queryset.filter(
-            status__in=['submitted', 'confirmed'],
+            status__in=['pending_approval', 'approved', 'confirmed'],
             expected_delivery_date__lt=today
         )
         serializer = PurchaseOrderListSerializer(orders, many=True)
@@ -1086,15 +2176,37 @@ class PurchaseOrderItemViewSet(viewsets.ModelViewSet):
             quantity_received = serializer.validated_data['quantity_received']
             notes = serializer.validated_data.get('notes', '')
             
+            # Validate quantity is greater than 0
             if quantity_received <= 0:
                 return Response(
                     {'error': 'Received quantity must be greater than 0'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
+            # Check PO status allows receiving
+            po = item.purchase_order
+            if po.status not in ['confirmed', 'partially_received']:
+                return Response(
+                    {'error': f'Cannot receive items for PO in {po.get_status_display()} status. PO must be confirmed first.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
             if quantity_received > item.remaining_quantity:
                 return Response(
                     {'error': f'Cannot receive more than ordered. Remaining: {item.remaining_quantity}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get branch from purchase order
+            po = item.purchase_order
+            branch = po.branch
+            if not branch:
+                # Fallback to resolving branch from request
+                from apps.branches.utils import resolve_branch
+                branch = resolve_branch(request)
+                if not branch:
+                    return Response(
+                        {'error': 'Branch is required for receiving inventory. Please set branch on purchase order or select active branch.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
@@ -1106,22 +2218,44 @@ class PurchaseOrderItemViewSet(viewsets.ModelViewSet):
                 item.notes = f"{item.notes}\n{notes}" if item.notes else notes
             item.save()
             
-            # Create inventory transaction
-            InventoryTransaction.objects.create(
+            # Use InventoryService to record transaction and update StockItem
+            InventoryService.record_transaction(
                 part=item.part,
-                transaction_type='purchase',
                 quantity=quantity_received,
-                balance_after=item.part.quantity_in_stock,
+                transaction_type='purchase',
+                user=request.user,
+                purchase_order=po,
+                branch=branch,
                 unit_cost=item.unit_cost,
-                total_cost=item.unit_cost * quantity_received,
-                purchase_order=item.purchase_order,
-                reason=f"Received from PO {item.purchase_order.po_number}",
-                notes=notes,
-                created_by=request.user
+                reason=f"Received from PO {po.po_number}",
+                notes=notes
             )
             
+            # Update StockItem quantity_on_order
+            from .models import StockItem
+            stock_item, _ = StockItem.objects.get_or_create(
+                part=item.part,
+                branch=branch,
+                defaults={
+                    'quantity_on_order': 0,
+                    'reorder_point': item.part.reorder_point,
+                    'reorder_quantity': item.part.reorder_quantity,
+                    'minimum_stock': item.part.minimum_stock,
+                }
+            )
+            # Recalculate total on order for this part at this branch
+            from django.db.models import Sum, F
+            total_on_order = PurchaseOrderItem.objects.filter(
+                part=item.part,
+                purchase_order__status__in=['pending_approval', 'approved', 'confirmed'],
+                purchase_order__branch=branch
+            ).aggregate(
+                total=Sum(F('quantity') - F('quantity_received'))
+            )['total'] or 0
+            stock_item.quantity_on_order = max(0, total_on_order)
+            stock_item.save()
+            
             # Update purchase order status
-            po = item.purchase_order
             if po.is_fully_received:
                 po.status = 'received'
                 po.received_date = date.today()
@@ -1129,10 +2263,6 @@ class PurchaseOrderItemViewSet(viewsets.ModelViewSet):
             elif po.is_partially_received:
                 po.status = 'partially_received'
             po.save()
-            
-            # Update part quantity_on_order
-            item.part.quantity_on_order = max(0, item.part.quantity_on_order - quantity_received)
-            item.part.save()
             
             return Response({
                 'status': 'Items received successfully',
@@ -1198,119 +2328,6 @@ class StockItemViewSet(viewsets.ModelViewSet):
     queryset = StockItem.objects.all().select_related('part', 'branch')
     serializer_class = StockItemSerializer
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['branch', 'is_low_stock', 'is_out_of_stock']
-    search_fields = ['part__part_number', 'part__name', 'bin_location']
-    ordering_fields = ['quantity_in_stock', 'total_value']
-    
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
-        
-        # Filter by branch (handled by permission utility or manual)
-        # Assuming we want users to only see stock for their accessible branches
-        # Or all branches if they have permission?
-        # For now, let's filter by user branches utility
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
-        
-        # Admin or Manager sees all? Depends on strictness.
-        # But filter_queryset_for_user_branches handles admin logic.
-        # However, for StockItem, the user function works well.
-        
-        return filter_queryset_for_user_branches(
-            queryset, 
-            user, 
-            self.request,
-            use_active_branch=True
-        )
-
-
-class TransferViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for managing stock transfers between branches.
-    """
-    queryset = Transfer.objects.all().select_related(
-        'source_branch', 'destination_branch', 
-        'created_by', 'approved_by', 'received_by'
-    ).prefetch_related('items__part')
-    
-    permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ['status', 'source_branch', 'destination_branch']
-    ordering = ['-created_at']
-    
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return TransferCreateSerializer
-        return TransferSerializer
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        # Filter transfers relevant to user's branches (either source or dest)
-        # This complex logic might need custom implementation if utils don't cover "OR" logic well.
-        # simpler: show all if admin/manager, or filter?
-        # For now, return all, relying on permission classes to restrict actions?
-        return queryset
-
-    def perform_create(self, serializer):
-        # Use service to initiate transfer
-        items = serializer.validated_data.pop('items')
-        InventoryService.initiate_transfer(
-            source_branch=serializer.validated_data['source_branch'],
-            destination_branch=serializer.validated_data['destination_branch'],
-            items=items,
-            user=self.request.user,
-            notes=serializer.validated_data.get('notes', '')
-        )
-
-    @action(detail=True, methods=['post'])
-    def approve(self, request, pk=None):
-        transfer = self.get_object()
-        try:
-            InventoryService.approve_transfer(transfer, user=request.user)
-            return Response({'status': 'Transfer approved'})
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=['post'])
-    def ship(self, request, pk=None):
-        transfer = self.get_object()
-        try:
-            InventoryService.ship_transfer(transfer, user=request.user)
-            return Response({'status': 'Transfer marked as shipped'})
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=['post'])
-    def receive(self, request, pk=None):
-        transfer = self.get_object()
-        items_received = request.data.get('items', {})
-        # items_received expected format: {part_id: quantity}
-        # But JSON keys are strings, so we might need to parse keys to int
-        
-        parsed_items = {}
-        for k, v in items_received.items():
-            try:
-                parsed_items[int(k)] = int(v)
-            except:
-                pass
-                
-        try:
-            InventoryService.receive_transfer(transfer, parsed_items, user=request.user)
-            return Response({'status': 'Transfer received'})
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class StockItemViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for managing stock levels per branch.
-    """
-    queryset = StockItem.objects.all().select_related('part', 'branch')
-    serializer_class = StockItemSerializer
-    permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -1335,11 +2352,11 @@ class StockItemViewSet(viewsets.ModelViewSet):
         try:
              # Need to implement filtering based on StockItem.branch, not StockItem directly
              queryset = filter_queryset_for_user_branches(
-                queryset, 
-                user, 
-                self.request,
+            queryset, 
+            user, 
+            self.request,
                 branch_field='branch'
-            )
+        )
         except Exception:
             pass
             
@@ -1401,13 +2418,15 @@ class TransferViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # Use service to initiate transfer
         items = serializer.validated_data.pop('items')
-        InventoryService.initiate_transfer(
+        transfer = InventoryService.initiate_transfer(
             source_branch=serializer.validated_data['source_branch'],
             destination_branch=serializer.validated_data['destination_branch'],
             items=items,
             user=self.request.user,
             notes=serializer.validated_data.get('notes', '')
         )
+        # Assign the created transfer to serializer.instance so it's returned
+        serializer.instance = transfer
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
@@ -1446,3 +2465,466 @@ class TransferViewSet(viewsets.ModelViewSet):
             return Response({'status': 'Transfer received'})
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class StockAlertViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing stock alerts (low stock, out of stock, etc.)
+    """
+    queryset = StockAlert.objects.select_related('part', 'branch', 'stock_item', 'acknowledged_by')
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated(), HasPermission('view_inventory')]
+        elif self.action in ['update', 'partial_update', 'acknowledge', 'resolve', 'dismiss']:
+            return [IsAuthenticated(), HasPermission('manage_inventory')]
+        return [IsAuthenticated()]
+    
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['status', 'alert_type', 'severity', 'branch', 'part']
+    ordering_fields = ['created_at', 'severity', 'status']
+    ordering = ['-created_at', '-severity']
+    
+    def get_serializer_class(self):
+        if self.action in ['update', 'partial_update']:
+            return StockAlertUpdateSerializer
+        return StockAlertSerializer
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        
+        if not user or not user.is_authenticated:
+            return queryset.none()
+        
+        # Filter by accessible branches
+        from apps.branches.utils import get_user_accessible_branches
+        accessible_branches = get_user_accessible_branches(user)
+        
+        if user.role == 'admin':
+            return queryset
+
+        return queryset.filter(branch__in=accessible_branches)
+    
+    @action(detail=False, methods=['get'])
+    def active(self, request):
+        """Get all active alerts"""
+        alerts = self.get_queryset().filter(status='active')
+        serializer = self.get_serializer(alerts, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def critical(self, request):
+        """Get all critical alerts"""
+        alerts = self.get_queryset().filter(severity='critical', status='active')
+        serializer = self.get_serializer(alerts, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Get alert statistics"""
+        queryset = self.get_queryset()
+        
+        total = queryset.count()
+        active = queryset.filter(status='active').count()
+        critical = queryset.filter(severity='critical', status='active').count()
+        low_stock = queryset.filter(alert_type='low_stock', status='active').count()
+        out_of_stock = queryset.filter(alert_type='out_of_stock', status='active').count()
+        
+        by_type = queryset.filter(status='active').values('alert_type').annotate(
+            count=Count('id')
+        )
+        by_severity = queryset.filter(status='active').values('severity').annotate(
+            count=Count('id')
+        )
+        
+        return Response({
+            'total': total,
+            'active': active,
+            'critical': critical,
+            'low_stock': low_stock,
+            'out_of_stock': out_of_stock,
+            'by_type': {item['alert_type']: item['count'] for item in by_type},
+            'by_severity': {item['severity']: item['count'] for item in by_severity}
+        })
+    
+    @action(detail=True, methods=['post'])
+    def acknowledge(self, request, pk=None):
+        """Acknowledge an alert"""
+        alert = self.get_object()
+        alert.acknowledge(request.user)
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def resolve(self, request, pk=None):
+        """Resolve an alert"""
+        alert = self.get_object()
+        alert.resolve()
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def dismiss(self, request, pk=None):
+        """Dismiss an alert"""
+        alert = self.get_object()
+        alert.dismiss()
+        serializer = self.get_serializer(alert)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'])
+    def check_all(self, request):
+        """
+        Manually trigger stock alert check for all stock items
+        (or specific part/branch if provided)
+        """
+        part_id = request.data.get('part_id')
+        branch_id = request.data.get('branch_id')
+        
+        from apps.branches.models import Branch
+        
+        if part_id and branch_id:
+            try:
+                part = Part.objects.get(id=part_id)
+                branch = Branch.objects.get(id=branch_id)
+                alerts = InventoryService.check_and_create_stock_alerts(part=part, branch=branch)
+            except (Part.DoesNotExist, Branch.DoesNotExist):
+                return Response(
+                    {'error': 'Part or branch not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        else:
+            # Check all stock items (use with caution)
+            alerts = InventoryService.check_and_create_stock_alerts()
+        
+        serializer = StockAlertSerializer(alerts, many=True)
+        return Response({
+            'alerts_created': len(alerts),
+            'alerts': serializer.data
+        })
+
+
+class PhysicalCountSessionViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing physical inventory count sessions
+    """
+    queryset = PhysicalCountSession.objects.select_related(
+        'branch', 'created_by', 'completed_by'
+    ).prefetch_related('count_items__part', 'count_items__stock_item')
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated(), HasPermission('view_inventory')]
+        elif self.action in ['create', 'update', 'partial_update', 'start', 'complete', 'cancel']:
+            return [IsAuthenticated(), HasPermission('manage_inventory')]
+        return [IsAuthenticated()]
+    
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['status', 'branch', 'count_date']
+    ordering_fields = ['created_at', 'count_date', 'status']
+    ordering = ['-created_at']
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return PhysicalCountSessionCreateSerializer
+        return PhysicalCountSessionSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        
+        if not user or not user.is_authenticated:
+            return queryset.none()
+            
+        # Filter by accessible branches
+        from apps.branches.utils import get_user_accessible_branches
+        accessible_branches = get_user_accessible_branches(user)
+        
+        if user.role == 'admin':
+            return queryset
+            
+        return queryset.filter(branch__in=accessible_branches)
+
+    def perform_create(self, serializer):
+        """Create a new physical count session"""
+        serializer.save(created_by=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def start(self, request, pk=None):
+        """Start a physical count session"""
+        session = self.get_object()
+        try:
+            session.start()
+            serializer = self.get_serializer(session)
+            return Response(serializer.data)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def complete(self, request, pk=None):
+        """Complete a physical count session"""
+        session = self.get_object()
+        try:
+            session.complete(request.user)
+            serializer = self.get_serializer(session)
+            return Response(serializer.data)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """Cancel a physical count session"""
+        session = self.get_object()
+        try:
+            session.cancel()
+            serializer = self.get_serializer(session)
+            return Response(serializer.data)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['get'])
+    def discrepancies(self, request, pk=None):
+        """Get all items with discrepancies in this session"""
+        session = self.get_object()
+        items = session.count_items.filter(
+            discrepancy__isnull=False
+        ).exclude(discrepancy=0).select_related('part', 'stock_item')
+        
+        serializer = PhysicalCountItemSerializer(items, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def unreconciled(self, request, pk=None):
+        """Get all unreconciled items in this session"""
+        session = self.get_object()
+        items = session.count_items.filter(reconciled=False).select_related('part', 'stock_item')
+        
+        serializer = PhysicalCountItemSerializer(items, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def add_item(self, request, pk=None):
+        """Add a count item to the session"""
+        session = self.get_object()
+        
+        if session.status not in ['draft', 'in_progress']:
+            return Response(
+                {'error': 'Can only add items to draft or in-progress sessions'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        serializer = PhysicalCountItemCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        part = serializer.validated_data['part']
+        stock_item = serializer.validated_data['stock_item']
+        
+        # Validate stock_item belongs to session branch
+        if stock_item.branch != session.branch:
+            return Response(
+                {'error': 'StockItem must belong to the session branch'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate part matches stock_item
+        if stock_item.part != part:
+            return Response(
+                {'error': 'Part must match the StockItem part'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get system quantity
+        system_quantity = stock_item.quantity_in_stock
+        physical_quantity = serializer.validated_data['physical_quantity']
+        
+        # Create or update count item
+        count_item, created = PhysicalCountItem.objects.update_or_create(
+            session=session,
+            part=part,
+            stock_item=stock_item,
+            defaults={
+                'system_quantity': system_quantity,
+                'physical_quantity': physical_quantity,
+                'notes': serializer.validated_data.get('notes', '')
+            }
+        )
+        
+        serializer = PhysicalCountItemSerializer(count_item)
+        return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+class PhysicalCountItemViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing physical count items
+    """
+    queryset = PhysicalCountItem.objects.select_related(
+        'session', 'part', 'stock_item', 'reconciled_by'
+    )
+    permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve']:
+            return [IsAuthenticated(), HasPermission('view_inventory')]
+        elif self.action in ['update', 'partial_update', 'reconcile']:
+            return [IsAuthenticated(), HasPermission('manage_inventory')]
+        return [IsAuthenticated()]
+    
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['session', 'part', 'reconciled']
+    ordering_fields = ['discrepancy', 'created_at']
+    ordering = ['-discrepancy']
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return PhysicalCountItemCreateSerializer
+        return PhysicalCountItemSerializer
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        
+        if not user or not user.is_authenticated:
+            return queryset.none()
+        
+        # Filter by accessible branches through session
+        from apps.branches.utils import get_user_accessible_branches
+        accessible_branches = get_user_accessible_branches(user)
+        
+        if user.role == 'admin':
+            return queryset
+        
+        return queryset.filter(session__branch__in=accessible_branches)
+    
+    @action(detail=True, methods=['post'])
+    def reconcile(self, request, pk=None):
+        """Reconcile a count item (create adjustment if needed)"""
+        count_item = self.get_object()
+        
+        if count_item.reconciled:
+            return Response(
+                {'error': 'Item is already reconciled'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        create_adjustment = request.data.get('create_adjustment', True)
+        
+        try:
+            count_item.reconcile(request.user, create_adjustment=create_adjustment)
+            serializer = self.get_serializer(count_item)
+            return Response(serializer.data)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['post'])
+    def bulk_reconcile(self, request):
+        """Bulk reconcile multiple count items"""
+        item_ids = request.data.get('item_ids', [])
+        create_adjustment = request.data.get('create_adjustment', True)
+        
+        if not item_ids:
+            return Response(
+                {'error': 'No item IDs provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        items = self.get_queryset().filter(id__in=item_ids, reconciled=False)
+        
+        reconciled_count = 0
+        failed = []
+        
+        for item in items:
+            try:
+                item.reconcile(request.user, create_adjustment=create_adjustment)
+                reconciled_count += 1
+            except Exception as e:
+                failed.append({
+                    'item_id': item.id,
+                    'error': str(e)
+                })
+        
+        return Response({
+            'reconciled': reconciled_count,
+            'failed': failed,
+            'total_requested': len(item_ids)
+        })
+
+
+class ServiceBundleViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Service Bundles management
+    """
+    queryset = ServiceBundle.objects.prefetch_related('items', 'items__part', 'service_type').all()
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['is_active', 'service_type']
+    search_fields = ['name', 'description']
+    ordering_fields = ['name', 'created_at']
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return ServiceBundleCreateUpdateSerializer
+        return ServiceBundleSerializer
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), HasPermission('inventory.manage_bundles')]
+        return [IsAuthenticated()]
+
+    @action(detail=False, methods=['get'])
+    def forecast(self, request):
+        """
+        Calculates how many of each active bundle can be fulfilled based on current branch stock.
+        Usage: /api/inventory/service-bundles/forecast/?branch=<branch_id>
+        """
+        branch_id = request.query_params.get('branch')
+        if not branch_id:
+            # Try to get active branch from user's session/context if possible
+            # For now, we'll require it as a query param or return error
+            return Response({'error': 'Branch ID is required for forecasting.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        bundles = ServiceBundle.objects.filter(is_active=True).prefetch_related('items__part', 'service_type')
+        
+        results = []
+        for bundle in bundles:
+            full_bundles_possible = float('inf')
+            part_breakdown = []
+            
+            items = bundle.items.all()
+            if not items:
+                full_bundles_possible = 0
+            
+            for item in items:
+                stock_item = StockItem.objects.filter(part=item.part, branch_id=branch_id).first()
+                in_stock = stock_item.quantity_in_stock if stock_item else 0
+                reserved = stock_item.quantity_reserved if stock_item else 0
+                available = in_stock - reserved
+                
+                # How many of THIS part do we have to fulfill THIS bundle?
+                possible_contribution = available // item.quantity if item.quantity > 0 else 0
+                full_bundles_possible = min(full_bundles_possible, possible_contribution)
+                
+                part_breakdown.append({
+                    'part_name': item.part.name,
+                    'part_number': item.part.part_number,
+                    'required_qty': item.quantity,
+                    'available_qty': available,
+                    'potential_contribution': int(possible_contribution)
+                })
+            
+            if full_bundles_possible == float('inf'):
+                full_bundles_possible = 0
+                
+            results.append({
+                'id': bundle.id,
+                'name': bundle.name,
+                'service_type': bundle.service_type.name if bundle.service_type else None,
+                'bundles_available': int(full_bundles_possible),
+                'part_breakdown': part_breakdown
+            })
+            
+        return Response(results)

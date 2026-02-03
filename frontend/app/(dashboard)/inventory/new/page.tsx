@@ -46,10 +46,13 @@ export default function NewPartPage() {
   const onSubmit = async (data: PartFormData, imageFile: File | null) => {
     setServerError(null);
     try {
+      // Exclude quantity_in_stock - stock is managed via StockItem per branch
+      const { quantity_in_stock, ...dataWithoutStock } = data as any;
+      
       if (imageFile) {
         const formData = new FormData();
-        Object.keys(data).forEach((key) => {
-          const value = data[key as keyof PartFormData];
+        Object.keys(dataWithoutStock).forEach((key) => {
+          const value = dataWithoutStock[key as keyof typeof dataWithoutStock];
           if (value !== undefined && value !== null) {
             formData.append(key, value.toString());
           }
@@ -58,7 +61,7 @@ export default function NewPartPage() {
         await createMutation.mutateAsync(formData);
       } else {
         const apiData: Partial<Part> = {
-          ...data,
+          ...dataWithoutStock,
           cost_price: data.cost_price?.toString(),
           selling_price: data.selling_price?.toString(),
           list_price: data.list_price?.toString(),

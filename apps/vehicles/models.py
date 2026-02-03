@@ -99,6 +99,7 @@ class Vehicle(models.Model):
     # License & Registration
     license_plate = models.CharField(
         max_length=20,
+        unique=True,
         db_index=True,
         help_text="License plate number"
     )
@@ -317,6 +318,64 @@ class VehicleMileageHistory(models.Model):
         return f"{self.vehicle} - {self.mileage} {self.vehicle.mileage_unit} on {self.recorded_date}"
 
 
+class VehicleOwnershipHistory(models.Model):
+    """
+    Track vehicle ownership changes over time
+    """
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.CASCADE,
+        related_name='ownership_history',
+        help_text="The vehicle whose ownership changed"
+    )
+    previous_owner = models.ForeignKey(
+        Customer,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='previous_vehicle_ownerships',
+        help_text="Previous owner of the vehicle"
+    )
+    new_owner = models.ForeignKey(
+        Customer,
+        on_delete=models.PROTECT,
+        related_name='vehicle_ownership_transfers',
+        help_text="New owner of the vehicle"
+    )
+    transfer_date = models.DateField(
+        help_text="Date when ownership was transferred"
+    )
+    transferred_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='vehicle_ownership_transfers',
+        help_text="User who performed the transfer"
+    )
+    notes = models.TextField(
+        blank=True,
+        help_text="Additional notes about the ownership transfer"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Timestamp when this record was created"
+    )
+    
+    class Meta:
+        ordering = ['-transfer_date', '-created_at']
+        verbose_name = 'Ownership History'
+        verbose_name_plural = 'Ownership Histories'
+        indexes = [
+            models.Index(fields=['vehicle', '-transfer_date']),
+            models.Index(fields=['new_owner', '-transfer_date']),
+            models.Index(fields=['previous_owner', '-transfer_date']),
+        ]
+    
+    def __str__(self):
+        prev_owner = self.previous_owner.user.get_full_name() if self.previous_owner and self.previous_owner.user else f"Customer #{self.previous_owner.id}" if self.previous_owner else "Unknown"
+        new_owner = self.new_owner.user.get_full_name() if self.new_owner.user else f"Customer #{self.new_owner.id}"
+        return f"{self.vehicle} - {prev_owner} → {new_owner} on {self.transfer_date}"
+
+
 class VehicleDocument(models.Model):
     """
     Store vehicle-related documents
@@ -428,4 +487,202 @@ class VehiclePhoto(models.Model):
     
     def __str__(self):
         return f"{self.vehicle} - {self.photo_type} photo"
+
+
+class ServiceType(models.Model):
+    """
+    Service type definitions (e.g., Oil Change, Tire Rotation)
+    Can be predefined system types or custom types created by users
+    """
+    name = models.CharField(
+        max_length=100,
+        help_text="Service type name (e.g., Oil Change, Tire Rotation)"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Service description"
+    )
+    default_interval_months = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Default months between services (null if not time-based)"
+    )
+    default_interval_miles = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Default miles between services (null if not mileage-based)"
+    )
+    is_predefined = models.BooleanField(
+        default=False,
+        help_text="True for system defaults, False for custom types"
+    )
+    progression_order = models.IntegerField(
+        default=0,
+        help_text="Order in which services should be performed (1=Minor, 2=Medium, 3=Major, etc.)"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this service type is active"
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='service_types_created',
+        help_text="User who created this service type"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Service Type'
+        verbose_name_plural = 'Service Types'
+        indexes = [
+            models.Index(fields=['is_active', 'is_predefined']),
+        ]
+    
+    def __str__(self):
+        return self.name
+
+
+class VehicleServiceSchedule(models.Model):
+    """
+    Track individual service schedules per vehicle
+    Links a vehicle to a service type with last service and next due dates
+    """
+    vehicle = models.ForeignKey(
+        Vehicle,
+        on_delete=models.CASCADE,
+        related_name='service_schedules',
+        help_text="Vehicle this schedule applies to"
+    )
+    service_type = models.ForeignKey(
+        ServiceType,
+        on_delete=models.PROTECT,
+        related_name='vehicle_schedules',
+        help_text="Type of service"
+    )
+    last_service_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date when this service was last performed"
+    )
+    last_service_mileage = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Vehicle mileage when service was last performed"
+    )
+    next_service_due_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Next service due date (calculated or manually set)"
+    )
+    next_service_due_mileage = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Next service due mileage (calculated or manually set)"
+    )
+    interval_months = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Override default interval months for this vehicle (null uses service type default)"
+    )
+    interval_miles = models.IntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Override default interval miles for this vehicle (null uses service type default)"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this service schedule is active"
+    )
+    notes = models.TextField(
+        blank=True,
+        help_text="Additional notes about this service schedule"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['next_service_due_date', 'next_service_due_mileage']
+        verbose_name = 'Vehicle Service Schedule'
+        verbose_name_plural = 'Vehicle Service Schedules'
+        unique_together = [['vehicle', 'service_type']]
+        indexes = [
+            models.Index(fields=['vehicle', 'is_active']),
+            models.Index(fields=['next_service_due_date']),
+            models.Index(fields=['next_service_due_mileage']),
+            models.Index(fields=['is_active', 'next_service_due_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.vehicle} - {self.service_type.name}"
+    
+    def calculate_next_service_due(self):
+        """
+        Calculate next service due date and mileage based on last service and intervals
+        """
+        from django.utils import timezone
+        from dateutil.relativedelta import relativedelta
+        
+        # Get intervals (use override if set, otherwise use service type default)
+        interval_months = self.interval_months if self.interval_months is not None else self.service_type.default_interval_months
+        interval_miles = self.interval_miles if self.interval_miles is not None else self.service_type.default_interval_miles
+        
+        # Calculate next due date
+        if self.last_service_date and interval_months:
+            self.next_service_due_date = self.last_service_date + relativedelta(months=interval_months)
+        
+        # Calculate next due mileage
+        if self.last_service_mileage is not None and interval_miles:
+            self.next_service_due_mileage = self.last_service_mileage + interval_miles
+        
+        self.save(update_fields=['next_service_due_date', 'next_service_due_mileage'])
+    
+    @property
+    def is_due(self):
+        """Check if service is currently due"""
+        from django.utils import timezone
+        
+        today = timezone.now().date()
+        current_mileage = self.vehicle.current_mileage or 0
+        
+        # Check date-based due
+        if self.next_service_due_date and self.next_service_due_date <= today:
+            return True
+        
+        # Check mileage-based due
+        if self.next_service_due_mileage and current_mileage >= self.next_service_due_mileage:
+            return True
+        
+        return False
+    
+    @property
+    def days_until_due(self):
+        """Calculate days until service is due (returns negative if overdue)"""
+        from django.utils import timezone
+        
+        if not self.next_service_due_date:
+            return None
+        
+        today = timezone.now().date()
+        delta = (self.next_service_due_date - today).days
+        return delta
+    
+    @property
+    def miles_until_due(self):
+        """Calculate miles until service is due (returns negative if overdue)"""
+        if not self.next_service_due_mileage:
+            return None
+        
+        current_mileage = self.vehicle.current_mileage or 0
+        return self.next_service_due_mileage - current_mileage
 

@@ -87,6 +87,46 @@ export const vehiclesApi = {
     await apiClient.delete(`/vehicles/vehicles/${id}/`);
   },
 
+  reassignOwner: async (
+    id: number,
+    data: {
+      new_owner_id: number;
+      transfer_date?: string;
+      notes?: string;
+    }
+  ): Promise<{
+    success: boolean;
+    message: string;
+    vehicle: Vehicle;
+    old_owner: { id: number; name: string };
+    new_owner: { id: number; name: string };
+    transfer_date: string;
+  }> => {
+    const response = await apiClient.post(`/vehicles/vehicles/${id}/reassign_owner/`, data);
+    return response.data;
+  },
+
+  getOwnershipHistory: async (id: number): Promise<{
+    count: number;
+    results: Array<{
+      id: number;
+      vehicle: number;
+      vehicle_display: string;
+      previous_owner: number | null;
+      previous_owner_name: string;
+      new_owner: number;
+      new_owner_name: string;
+      transfer_date: string;
+      transferred_by: number;
+      transferred_by_name: string;
+      notes: string;
+      created_at: string;
+    }>;
+  }> => {
+    const response = await apiClient.get(`/vehicles/vehicles/${id}/ownership_history/`);
+    return response.data;
+  },
+
   import: async (file: File): Promise<{ imported: number; skipped: number; errors?: string[] }> => {
     const formData = new FormData();
     formData.append("file", file);
@@ -162,6 +202,33 @@ export const vehiclesApi = {
       license_plate: licensePlate,
       vehicle_id: vehicleId
     });
+    return response.data;
+  },
+
+  getServiceTypes: async (): Promise<{
+    count: number;
+    results: Array<{
+      id: number;
+      name: string;
+      description?: string;
+      interval_months?: number;
+      interval_miles?: number;
+      has_bundle?: boolean;
+    }>;
+  }> => {
+    const response = await apiClient.get("/vehicles/service-types/");
+    return response.data;
+  },
+
+  getSuggestedService: async (id: number): Promise<{
+    suggested_service_id: number;
+    suggested_service_name: string;
+    reason: string;
+    last_service_id?: number;
+    last_service_name?: string;
+    last_service_date?: string;
+  }> => {
+    const response = await apiClient.get(`/vehicles/vehicles/${id}/suggested_service/`);
     return response.data;
   },
 };

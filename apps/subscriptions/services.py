@@ -325,6 +325,43 @@ class SubscriptionService:
 class SubscriptionUsageService:
     """Service class for subscription usage operations"""
     
+    # Map usage types to feature keys for package lookup (support both friendly and internal keys)
+    USAGE_TO_FEATURE_KEY = {
+        # Towing services
+        'towing': 'towing_services_km',
+        'towing_services': 'towing_services_km',
+        'towing_services_km': 'towing_services_km',
+        # Call out charges
+        'call_out': 'call_out_charges',
+        'call_out_charges': 'call_out_charges',
+        # Kilometers
+        'kilometer': 'kilometers',
+        'kilometers': 'kilometers',
+        # Inspections
+        'inspection': 'free_inspections',
+        'free_inspections': 'free_inspections',
+        # Battery services
+        'battery_boost': 'battery_boosts',
+        'battery_boosts': 'battery_boosts',
+        # Flat tyre
+        'flat_tyre': 'flat_tyre_service',
+        'flat_tyre_service': 'flat_tyre_service',
+        # Extrication
+        'extrication': 'extrication',
+        # First aid / roadside assistance
+        'first_aid': 'roadside_first_aid',
+        'mechanical_first_aid': 'roadside_first_aid',
+        'roadside_first_aid': 'roadside_first_aid',
+        # Key lockout
+        'key_lockout': 'key_lock_out',
+        'key_lock_out': 'key_lock_out',
+        # Emergency fuel
+        'emergency_fuel': 'emergency_fuel',
+        # Other services
+        'accident_estimate': 'accident_estimate',
+        'pre_purchase_inspection': 'pre_purchase_inspection',
+    }
+    
     @staticmethod
     @transaction.atomic
     def consume_allowance(subscription, usage_type, quantity_used=1, reference_type=None, reference_id=None, description='', created_by=None):
@@ -351,44 +388,7 @@ class SubscriptionUsageService:
         if subscription.status != 'active' or subscription.is_expired():
             raise ValidationError('Subscription is not active or has expired')
         
-        # Map usage types to feature keys for package lookup (support both friendly and internal keys)
-        usage_to_feature = {
-            # Towing services
-            'towing': 'towing_services_km',
-            'towing_services': 'towing_services_km',
-            'towing_services_km': 'towing_services_km',
-            # Call out charges
-            'call_out': 'call_out_charges',
-            'call_out_charges': 'call_out_charges',
-            # Kilometers
-            'kilometer': 'kilometers',
-            'kilometers': 'kilometers',
-            # Inspections
-            'inspection': 'free_inspections',
-            'free_inspections': 'free_inspections',
-            # Battery services
-            'battery_boost': 'battery_boosts',
-            'battery_boosts': 'battery_boosts',
-            # Flat tyre
-            'flat_tyre': 'flat_tyre_service',
-            'flat_tyre_service': 'flat_tyre_service',
-            # Extrication
-            'extrication': 'extrication',
-            # First aid / roadside assistance
-            'first_aid': 'roadside_first_aid',
-            'mechanical_first_aid': 'roadside_first_aid',
-            'roadside_first_aid': 'roadside_first_aid',
-            # Key lockout
-            'key_lockout': 'key_lock_out',
-            'key_lock_out': 'key_lock_out',
-            # Emergency fuel
-            'emergency_fuel': 'emergency_fuel',
-            # Other services
-            'accident_estimate': 'accident_estimate',
-            'pre_purchase_inspection': 'pre_purchase_inspection',
-        }
-        
-        feature_key = usage_to_feature.get(usage_type, usage_type)
+        feature_key = SubscriptionUsageService.USAGE_TO_FEATURE_KEY.get(usage_type, usage_type)
         
         # Check remaining allowance using feature key
         remaining = subscription.get_remaining_allowance(feature_key)
@@ -400,7 +400,7 @@ class SubscriptionUsageService:
         # Create usage record
         usage = SubscriptionUsage.objects.create(
             subscription=subscription,
-            usage_type=usage_type,
+            usage_type=feature_key, # Store canonical key
             quantity_used=quantity_used,
             service_date=timezone.now().date(),
             reference_type=reference_type,
@@ -420,6 +420,28 @@ class SubscriptionUsageService:
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to send low allowance notification: {e}")
         
+        return usage
+    
+    @staticmethod
+    @transaction.atomic
+    def refund_allowance(subscription, usage_type, quantity_to_refund, reference_type=None, reference_id=None, description='', created_by=None):
+        """
+        Refund subscription allowance (e.g. for cancelled services)
+        Creates a negative usage record.
+        """
+        feature_key = SubscriptionUsageService.USAGE_TO_FEATURE_KEY.get(usage_type, usage_type)
+        
+        # Create negative usage record
+        usage = SubscriptionUsage.objects.create(
+            subscription=subscription,
+            usage_type=feature_key, # Store canonical key
+            quantity_used=-abs(quantity_to_refund), # Ensure it is negative
+            service_date=timezone.now().date(),
+            reference_type=reference_type,
+            reference_id=reference_id,
+            description=description,
+            created_by=created_by
+        )
         return usage
     
     @staticmethod

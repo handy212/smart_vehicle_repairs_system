@@ -12,3 +12,6 @@ class NotificationsAppConfig(AppConfig):
         """
         from .firebase import initialize_firebase
         initialize_firebase()
+        
+        # Register signals
+        import apps.notifications_app.signals

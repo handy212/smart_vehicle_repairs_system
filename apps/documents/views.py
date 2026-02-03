@@ -14,6 +14,7 @@ from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from datetime import timedelta
 import mimetypes
+from apps.branches.utils import get_user_accessible_branches
 
 from .models import (
     DocumentCategory,
@@ -131,14 +132,37 @@ class DocumentViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
     
     def get_queryset(self):
-        """Filter queryset based on permissions"""
+        """Filter queryset based on permissions and branch context"""
         queryset = super().get_queryset()
         user = self.request.user
         
         # If user can only view own, filter accordingly
         if user_has_permission(user, 'view_own_documents') and not user_has_permission(user, 'view_documents'):
             queryset = queryset.filter(uploaded_by=user)
-        
+            
+        # Branch Filtering (Hybrid)
+        if hasattr(user, 'is_superuser') and not user.is_superuser:
+            branches = get_user_accessible_branches(user)
+            
+            # 1. Documents directly linked to my branches via transactional entities
+            branch_linked = (
+                Q(work_order__branch__in=branches) |
+                Q(appointment__branch__in=branches) |
+                Q(invoice__branch__in=branches) |
+                Q(estimate__branch__in=branches)
+            )
+            
+            # 2. Documents linked to ANY transactional entity
+            has_transactional_entity = (
+                Q(work_order__isnull=False) |
+                Q(appointment__isnull=False) |
+                Q(invoice__isnull=False) |
+                Q(estimate__isnull=False)
+            )
+            
+            # Filter: (Linked to MY branch) OR (NOT Linked to ANY transactional entity)
+            queryset = queryset.filter(branch_linked | ~has_transactional_entity).distinct()
+
         return queryset
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter, DjangoFilterBackend]

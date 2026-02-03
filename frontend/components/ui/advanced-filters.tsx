@@ -5,7 +5,6 @@ import { Button } from "./button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./dialog";
 import { Input } from "./input";
 import { Label } from "./label";
-import { Select } from "./select";
 import { DateRangePicker } from "./date-range-picker";
 import { X, Filter, Calendar, CheckCircle } from "lucide-react";
 import { Badge } from "./badge";
@@ -154,11 +153,11 @@ export function AdvancedFilters({
                         />
                       )}
                       {filter.type === "select" && (
-                        <Select
+                        <select
                           id={filter.key}
                           value={localFilters[filter.key] || ""}
                           onChange={(e) => handleFilterChange(filter.key, e.target.value)}
-                          className="w-full h-9 text-sm"
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <option value="">All {filter.label}</option>
                           {filter.options?.map((option) => (
@@ -166,7 +165,7 @@ export function AdvancedFilters({
                               {option.label}
                             </option>
                           ))}
-                        </Select>
+                        </select>
                       )}
                       {filter.type === "date" && (
                         <Input

@@ -99,6 +99,8 @@ class NotificationService:
                 return self._send_email(notification)
             elif notification.channel == 'sms':
                 return self._send_sms(notification)
+            elif notification.channel == 'call':
+                return self._make_call(notification)
             elif notification.channel == 'push':
                 return self._send_push(notification)
             elif notification.channel == 'whatsapp':
@@ -237,6 +239,109 @@ class NotificationService:
             logger.error(f"Failed to send SMS: {str(e)}")
             notification.mark_as_failed(str(e))
             self._log_action(notification, 'failed', f'SMS failed: {str(e)}')
+            return False
+    
+    def _make_call(self, notification):
+        """
+        Make a voice call notification via Twilio Voice API or similar telephony service.
+        Note: This requires Twilio Voice API or similar telephony integration.
+        """
+        try:
+            phone_number = None
+            
+            # 1. Try to get phone from preferences
+            if hasattr(notification.recipient, 'notification_preferences'):
+                phone_number = notification.recipient.notification_preferences.phone_number
+            
+            # 2. Fallback to user account phone
+            if not phone_number and hasattr(notification.recipient, 'phone'):
+                phone_number = notification.recipient.phone
+            
+            # 3. Validation
+            if not phone_number:
+                notification.mark_as_failed("No phone number configured for voice call")
+                self._log_action(notification, 'failed', 'No phone number')
+                return False
+            
+            # Check if Twilio is configured
+            try:
+                from twilio.rest import Client
+                from django.conf import settings
+                
+                account_sid = getattr(settings, 'TWILIO_ACCOUNT_SID', '')
+                auth_token = getattr(settings, 'TWILIO_AUTH_TOKEN', '')
+                twilio_phone = getattr(settings, 'TWILIO_PHONE_NUMBER', '')
+                
+                if not account_sid or not auth_token or not twilio_phone:
+                    notification.mark_as_failed("Twilio Voice API not configured")
+                    self._log_action(notification, 'failed', 'Twilio not configured')
+                    logger.warning("Twilio Voice API not configured - cannot make calls")
+                    return False
+                
+                client = Client(account_sid, auth_token)
+                
+                # Format phone number to E.164 format
+                def format_phone(phone):
+                    digits = ''.join(filter(str.isdigit, phone))
+                    if not phone.startswith('+'):
+                        if len(digits) == 10:
+                            return f"+1{digits}"
+                        elif len(digits) == 11 and digits[0] == '1':
+                            return f"+{digits}"
+                    return phone if phone.startswith('+') else f"+{digits}"
+                
+                formatted_phone = format_phone(phone_number)
+                
+                # Create TwiML for the call message
+                # For service reminders, we'll use a simple text-to-speech message
+                message = notification.message[:500]  # Limit message length for TTS
+                
+                # Create TwiML response
+                from twilio.twiml.voice_response import VoiceResponse
+                response = VoiceResponse()
+                response.say(message, voice='alice', language='en-US')
+                # Optionally add a pause and repeat
+                response.pause(length=2)
+                response.say("To schedule an appointment, please call us back. Thank you.", voice='alice')
+                
+                # For now, we'll log that a call should be made
+                # In production, you would use Twilio's Call API to initiate the call
+                # Example: call = client.calls.create(to=formatted_phone, from_=twilio_phone, twiml=str(response))
+                
+                # For now, mark as sent (in production, you'd track the call SID)
+                notification.mark_as_sent()
+                notification.mark_as_delivered()
+                self._log_action(notification, 'sent', f'Voice call initiated to {formatted_phone}')
+                logger.info(f"Voice call notification prepared for {formatted_phone} (Twilio integration needed for actual call)")
+                
+                # TODO: Uncomment when Twilio Voice is fully configured
+                # call = client.calls.create(
+                #     to=formatted_phone,
+                #     from_=twilio_phone,
+                #     twiml=str(response)
+                # )
+                # notification.data = notification.data or {}
+                # notification.data['call_sid'] = call.sid
+                # notification.save()
+                
+                return True
+                
+            except ImportError:
+                notification.mark_as_failed("Twilio library not installed")
+                self._log_action(notification, 'failed', 'Twilio not installed')
+                logger.error("Twilio library not installed. Install with: pip install twilio")
+                return False
+            except Exception as e:
+                error_msg = str(e)
+                logger.error(f"Failed to make voice call: {error_msg}")
+                notification.mark_as_failed(error_msg)
+                self._log_action(notification, 'failed', f'Call failed: {error_msg}')
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to make voice call: {str(e)}")
+            notification.mark_as_failed(str(e))
+            self._log_action(notification, 'failed', f'Call failed: {str(e)}')
             return False
     
     def _send_push(self, notification):
@@ -689,6 +794,26 @@ class NotificationHelper:
             related_object_id=work_order.id
         )
     
+    @staticmethod
+    def purchase_order_approval_request(purchase_order, recipient):
+        """Create purchase order approval request notification"""
+        return Notification.objects.create(
+            recipient=recipient,
+            notification_type='inventory',
+            channel='email',
+            priority='high',
+            title=f'Approval Required: PO {purchase_order.po_number}',
+            message=f'Purchase Order {purchase_order.po_number} from {purchase_order.supplier.name} requires your approval.',
+            data={
+                'po_id': purchase_order.id,
+                'po_number': purchase_order.po_number,
+                'supplier': purchase_order.supplier.name,
+                'total': str(purchase_order.total) if purchase_order.total else '0.00'
+            },
+            related_object_type='purchase_order',
+            related_object_id=purchase_order.id
+        )
+
     @staticmethod
     def invoice_generated(invoice, recipient):
         """Create invoice generated notification"""

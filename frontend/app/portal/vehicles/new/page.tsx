@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -103,23 +102,23 @@ export default function AddVehiclePage() {
     },
     onError: (error: any) => {
       console.error("Error creating vehicle:", error);
-      
+
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
-        
+
         // Handle field-level errors
         Object.keys(errorData).forEach((field) => {
           if (field !== 'non_field_errors' && field !== 'detail') {
-            const fieldError = Array.isArray(errorData[field]) 
-              ? errorData[field][0] 
+            const fieldError = Array.isArray(errorData[field])
+              ? errorData[field][0]
               : errorData[field];
-            setError(field as keyof VehicleFormData, { 
-              type: "server", 
-              message: fieldError 
+            setError(field as keyof VehicleFormData, {
+              type: "server",
+              message: fieldError
             });
           }
         });
-        
+
         // Handle non-field errors
         if (errorData.non_field_errors) {
           const nonFieldError = Array.isArray(errorData.non_field_errors)
@@ -342,22 +341,23 @@ export default function AddVehiclePage() {
             {/* Engine Type */}
             <div className="space-y-2">
               <Label htmlFor="engine_type">Engine Type</Label>
-              <Select
+              <select
                 id="engine_type"
                 {...register("engine_type")}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="gasoline">Gasoline</option>
                 <option value="diesel">Diesel</option>
                 <option value="electric">Electric</option>
                 <option value="hybrid">Hybrid</option>
                 <option value="plug_in_hybrid">Plug-in Hybrid</option>
-              </Select>
+              </select>
             </div>
 
             {/* Submit Buttons */}
             <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <Link href="/portal/vehicles">
-                <Button type="button"variant="secondary" disabled={isSubmitting}>
+                <Button type="button" variant="secondary" disabled={isSubmitting}>
                   Cancel
                 </Button>
               </Link>

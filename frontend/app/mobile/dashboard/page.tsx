@@ -13,7 +13,11 @@ import {
   AlertCircle,
   Play,
   ClipboardCheck,
+  Pause,
+  Square,
+  Truck,
 } from "lucide-react";
+import apiClient from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,10 +36,23 @@ export default function MobileDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeWorkOrders, setActiveWorkOrders] = useState<WorkOrder[]>([]);
   const [recentWorkOrders, setRecentWorkOrders] = useState<any[]>([]);
+  const [activeLog, setActiveLog] = useState<any | null>(null);
 
   useEffect(() => {
     loadData();
+    checkActiveLog();
   }, []);
+
+  const checkActiveLog = async () => {
+    try {
+      if (isOnline) {
+        const response = await apiClient.get("/workorders/time-logs/active/");
+        setActiveLog(response.data);
+      }
+    } catch (error) {
+      setActiveLog(null);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -52,12 +69,11 @@ export default function MobileDashboardPage() {
         });
 
 
-        // Fetch all recent work orders and filter for active ones client-side
-        // Backend doesn't support comma-separated status values
-        const allWOs = await workordersApi.list({
+        // Fetch active work orders
+        const allWOsResponse = await workordersApi.list({
           page: 1,
         });
-        const woResults = Array.isArray(allWOs) ? allWOs : allWOs.results || [];
+        const woResults = allWOsResponse.results || [];
         const activeWOs = woResults.filter(wo =>
           wo.status === 'in_progress' || wo.status === 'assigned'
         ).slice(0, 5);
@@ -138,6 +154,30 @@ export default function MobileDashboardPage() {
           </Button>
         )}
       </div>
+
+      {/* Active Time Log Widget */}
+      {activeLog && (
+        <Card className="border-primary/50 bg-primary/5 dark:bg-primary/10">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/20 p-2 rounded-full animate-pulse">
+                <Clock className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Currently Clocked In
+                </div>
+                <div className="text-xs text-gray-500">
+                  {activeLog.work_order_number || `WO #${activeLog.work_order}`}
+                </div>
+              </div>
+            </div>
+            <Link href="/mobile/time-tracking">
+              <Button size="sm">View</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <Card>
@@ -295,6 +335,12 @@ export default function MobileDashboardPage() {
             <Button variant="outline" className="w-full justify-start">
               <Clock className="h-4 w-4 mr-2" />
               Time Tracking
+            </Button>
+          </Link>
+          <Link href="/mobile/roadside">
+            <Button variant="outline" className="w-full justify-start">
+              <Truck className="h-4 w-4 mr-2" />
+              Roadside Requests
             </Button>
           </Link>
         </CardContent>

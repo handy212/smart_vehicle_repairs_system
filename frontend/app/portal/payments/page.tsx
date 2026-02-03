@@ -9,7 +9,6 @@ import { CreditCard, Calendar, DollarSign, FileText, Filter, Download } from "lu
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select } from "@/components/ui/select";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -163,21 +162,21 @@ export default function PaymentHistoryPage() {
         <CardContent className="p-4">
           <div className="flex items-center space-x-4">
             <Filter className="w-5 h-5 text-gray-400" />
-            <Select
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-48"
+              className="flex h-10 w-48 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="all">All Status</option>
               <option value="completed">Completed</option>
               <option value="pending">Pending</option>
               <option value="failed">Failed</option>
               <option value="refunded">Refunded</option>
-            </Select>
-            <Select
+            </select>
+            <select
               value={methodFilter}
               onChange={(e) => setMethodFilter(e.target.value)}
-              className="w-48"
+              className="flex h-10 w-48 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="all">All Methods</option>
               <option value="cash">Cash</option>
@@ -190,7 +189,7 @@ export default function PaymentHistoryPage() {
               <option value="stripe">Stripe</option>
               <option value="square">Square</option>
               <option value="hubtel">Hubtel</option>
-            </Select>
+            </select>
           </div>
         </CardContent>
       </Card>

@@ -175,7 +175,7 @@ export default function InspectionDetailPage() {
       </div>
 
       {/* Approval Actions - Show when inspection is completed and not yet approved/rejected */}
-      {inspection.status === "completed" && inspection.status !== "approved" && inspection.status !== "rejected" && (
+      {inspection.status === "completed" && (
         <Card className="border-primary/20 bg-primary/5">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -359,8 +359,8 @@ export default function InspectionDetailPage() {
                                   result.result === "pass"
                                     ? "default"
                                     : result.result === "fail"
-                                    ? "destructive"
-                                    : "secondary"
+                                      ? "danger"
+                                      : "secondary"
                                 }
                                 className="text-[10px] h-5 shrink-0"
                               >
@@ -422,8 +422,8 @@ export default function InspectionDetailPage() {
       </div>
 
       {/* Approval Dialog with Signature */}
-      <Dialog 
-        open={showApproveDialog} 
+      <Dialog
+        open={showApproveDialog}
         onOpenChange={(open) => {
           setShowApproveDialog(open);
           if (!open) {

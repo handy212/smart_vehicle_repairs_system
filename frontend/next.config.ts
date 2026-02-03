@@ -27,9 +27,7 @@ const nextConfig: NextConfig = {
   // alongside the Django project (which may have its own package-lock.json).
   outputFileTracingRoot: path.resolve(__dirname),
 
-  turbopack: {
-    root: path.resolve(__dirname),
-  },
+
   images: {
     remotePatterns: [
       {
@@ -58,4 +56,13 @@ const nextConfig: NextConfig = {
 };
 
 
-export default nextConfig;
+
+const withPWA = require("@ducanh2912/next-pwa").default({
+  dest: "public",
+  disable: false,
+  workboxOptions: {
+    swSrc: "worker/index.ts",
+  },
+});
+
+export default withPWA(nextConfig);

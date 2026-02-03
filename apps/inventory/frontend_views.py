@@ -22,9 +22,11 @@ from datetime import datetime, timedelta
 
 from .models import (
     Part, Supplier, PurchaseOrder, PurchaseOrderItem, 
-    PartCategory, InventoryTransaction
+    PartCategory, InventoryTransaction, StockItem
 )
+from .services import InventoryService
 from apps.accounts.models import User
+from apps.branches.utils import resolve_branch
 
 
 @login_required
@@ -882,7 +884,7 @@ def purchase_order_create_view(request):
 @require_http_methods(["POST"])
 def adjust_stock(request, pk):
     """
-    Adjust part stock level
+    Adjust part stock level using InventoryService (branch-aware)
     """
     part = get_object_or_404(Part, pk=pk)
     
@@ -891,6 +893,14 @@ def adjust_stock(request, pk):
         return JsonResponse({'success': False, 'error': 'Permission denied'})
     
     try:
+        # Resolve branch from request
+        branch = resolve_branch(request)
+        if not branch:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Branch is required for stock adjustments. Please select an active branch.'
+            })
+        
         adjustment_type = request.POST.get('adjustment_type', 'adjustment')
         quantity_change = int(request.POST.get('quantity_change', 0))
         reason = request.POST.get('reason', '')
@@ -899,36 +909,49 @@ def adjust_stock(request, pk):
         if quantity_change == 0:
             return JsonResponse({'success': False, 'error': 'Quantity change cannot be zero'})
         
-        # Calculate new balance (prevent negative stock)
-        old_balance = part.quantity_in_stock
-        new_balance = max(0, old_balance + quantity_change)
-        actual_change = new_balance - old_balance
-        
-        # Create transaction with the calculated balance_after
-        # The model will update the part's stock to match balance_after
-        transaction = InventoryTransaction.objects.create(
+        # Get current stock for this branch
+        stock_item, created = StockItem.objects.get_or_create(
             part=part,
+            branch=branch,
+            defaults={'quantity_in_stock': 0}
+        )
+        old_balance = stock_item.quantity_in_stock
+        
+        # Check if adjustment would result in negative stock
+        if quantity_change < 0 and abs(quantity_change) > old_balance:
+            return JsonResponse({
+                'success': False,
+                'error': f'Insufficient stock. Current stock: {old_balance}, requested adjustment: {quantity_change}'
+            })
+        
+        # Use InventoryService to record the transaction
+        # This will update StockItem and create InventoryTransaction
+        transaction = InventoryService.record_transaction(
+            part=part,
+            quantity=quantity_change,
             transaction_type=adjustment_type,
-            quantity=actual_change,
-            balance_after=new_balance,  # Set explicitly to prevent double calculation
-            unit_cost=part.cost_price,
-            total_cost=part.cost_price * abs(actual_change) if part.cost_price else None,
-            reason=reason,
+            user=request.user,
+            branch=branch,
+            reason=reason or f'Manual stock adjustment',
             notes=notes,
-            created_by=request.user
+            unit_cost=part.cost_price
         )
         
         # Refresh to get updated stock
-        part.refresh_from_db()
+        stock_item.refresh_from_db()
+        new_balance = stock_item.quantity_in_stock
         
         return JsonResponse({
             'success': True,
-            'message': f'Stock adjusted successfully. New balance: {part.quantity_in_stock}',
-            'new_balance': part.quantity_in_stock
+            'message': f'Stock adjusted successfully. New balance: {new_balance}',
+            'new_balance': new_balance,
+            'branch': branch.name
         })
         
-    except Exception as e:
+    except ValueError as e:
         return JsonResponse({'success': False, 'error': str(e)})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'An error occurred: {str(e)}'})
 
 
 @login_required
@@ -951,36 +974,59 @@ def supplier_import_view(request):
 @login_required
 def inventory_dashboard_view(request):
     """
-    Inventory dashboard with key metrics
+    Inventory dashboard with key metrics (branch-aware using StockItem)
     """
     # Check permissions
     if request.user.role not in ['admin', 'manager', 'parts_manager']:
         messages.error(request, 'You do not have permission to view inventory dashboard.')
         return redirect('dashboard:home')
     
-    # Key metrics
-    total_parts = Part.objects.count()
-    total_value = Part.objects.aggregate(
-        total=Sum(F('quantity_in_stock') * F('cost_price'))
+    # Get accessible branches and active branch
+    accessible_branches = request.user.get_accessible_branches()
+    active_branch = resolve_branch(request)
+    
+    # Filter StockItems by accessible branches
+    stock_items = StockItem.objects.filter(branch__in=accessible_branches).select_related('part', 'branch')
+    
+    # If active branch is set, filter by it; otherwise show aggregate across all accessible branches
+    if active_branch:
+        stock_items = stock_items.filter(branch=active_branch)
+    
+    # Key metrics using StockItem
+    total_parts = Part.objects.filter(stock_items__in=stock_items).distinct().count()
+    
+    # Calculate total value: sum of (quantity_in_stock * cost_price) for all stock items
+    total_value = stock_items.aggregate(
+        total=Sum(F('quantity_in_stock') * F('part__cost_price'))
     )['total'] or 0
     
-    low_stock_parts = Part.objects.filter(quantity_in_stock__lte=F('minimum_stock'))
-    low_stock_count = low_stock_parts.count()
+    # Low stock: quantity_in_stock <= reorder_point (using StockItem's reorder_point)
+    low_stock_items = stock_items.filter(quantity_in_stock__lte=F('reorder_point'))
+    low_stock_count = low_stock_items.count()
+    low_stock_parts = Part.objects.filter(
+        stock_items__in=low_stock_items
+    ).distinct()[:10]
     
-    out_of_stock_count = Part.objects.filter(quantity_in_stock=0).count()
+    # Out of stock
+    out_of_stock_count = stock_items.filter(quantity_in_stock=0).count()
     
-    reorder_needed = Part.objects.filter(quantity_in_stock__lte=F('reorder_point'))
-    reorder_count = reorder_needed.count()
+    # Reorder needed: quantity_in_stock <= reorder_point
+    reorder_needed_items = stock_items.filter(quantity_in_stock__lte=F('reorder_point'))
+    reorder_count = reorder_needed_items.count()
+    reorder_needed = Part.objects.filter(
+        stock_items__in=reorder_needed_items
+    ).distinct()[:10]
     
-    # Recent transactions
+    # Recent transactions (filter by accessible branches if transaction has branch info)
     recent_transactions = InventoryTransaction.objects.select_related(
         'part', 'created_by'
     ).order_by('-created_at')[:10]
     
-    # Pending purchase orders
+    # Pending purchase orders (filter by accessible branches)
     pending_pos = PurchaseOrder.objects.filter(
-        status__in=['draft', 'submitted', 'confirmed']
-    ).select_related('supplier').order_by('-created_at')[:5]
+        status__in=['draft', 'submitted', 'confirmed'],
+        branch__in=accessible_branches
+    ).select_related('supplier', 'branch').order_by('-created_at')[:5]
     
     # Supplier statistics
     total_suppliers = Supplier.objects.count()
@@ -989,7 +1035,8 @@ def inventory_dashboard_view(request):
         Q(preferred_supplier__isnull=False) | Q(suppliers__isnull=False)
     ).distinct().count()
     pending_orders = PurchaseOrder.objects.filter(
-        status__in=['draft', 'submitted', 'confirmed']
+        status__in=['draft', 'submitted', 'confirmed'],
+        branch__in=accessible_branches
     ).count()
     
     context = {
@@ -998,14 +1045,16 @@ def inventory_dashboard_view(request):
         'low_stock_count': low_stock_count,
         'out_of_stock_count': out_of_stock_count,
         'reorder_count': reorder_count,
-        'low_stock_parts': low_stock_parts[:10],
-        'reorder_needed': reorder_needed[:10],
+        'low_stock_parts': low_stock_parts,
+        'reorder_needed': reorder_needed,
         'recent_transactions': recent_transactions,
         'pending_pos': pending_pos,
         'total_suppliers': total_suppliers,
         'active_suppliers': active_suppliers,
         'parts_with_suppliers': parts_with_suppliers,
         'pending_orders': pending_orders,
+        'active_branch': active_branch,
+        'accessible_branches': accessible_branches,
     }
     
     return render(request, 'inventory/dashboard.html', context)

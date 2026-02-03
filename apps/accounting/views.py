@@ -16,6 +16,18 @@ from .serializers import JournalEntrySerializer, JournalEntryCreateSerializer, A
 from .serializers import JournalEntrySerializer, JournalEntryCreateSerializer, AccountSimpleSerializer, AccountingControlSerializer, AuditLogSerializer
 from django.http import HttpResponse
 from apps.accounts.permissions import HasPermission
+from apps.branches.utils import resolve_branch
+
+def get_report_branch_id(request):
+    """
+    Get branch ID for reports.
+    Superusers can see global data (None) if no branch specified.
+    Regular users are forced to a branch context.
+    """
+    if request.user.is_superuser and not request.query_params.get('branch') and not request.query_params.get('branch_id'):
+        return None
+    branch = resolve_branch(request)
+    return branch.id if branch else None
 
 class BalanceSheetView(APIView):
     permission_classes = [IsAuthenticated, HasPermission('view_financial_reports')]
@@ -24,7 +36,8 @@ class BalanceSheetView(APIView):
         date_str = request.query_params.get('date')
         date = parse_date(date_str) if date_str else timezone.now().date()
         
-        report = ReportingService.get_balance_sheet(date)
+        branch_id = get_report_branch_id(request)
+        report = ReportingService.get_balance_sheet(date, branch_id=branch_id)
         return Response(report)
 
 class ProfitLossView(APIView):
@@ -49,7 +62,8 @@ class ProfitLossView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
             
-        report = ReportingService.get_profit_loss(start_date, end_date)
+        branch_id = get_report_branch_id(request)
+        report = ReportingService.get_profit_loss(start_date, end_date, branch_id=branch_id)
         return Response(report)
 
 class TrialBalanceView(APIView):
@@ -59,7 +73,8 @@ class TrialBalanceView(APIView):
         date_str = request.query_params.get('date')
         date = parse_date(date_str) if date_str else timezone.now().date()
         
-        report = ReportingService.get_trial_balance(date)
+        branch_id = get_report_branch_id(request)
+        report = ReportingService.get_trial_balance(date, branch_id=branch_id)
         return Response(report)
 
 class AgingReportView(APIView):
@@ -70,7 +85,8 @@ class AgingReportView(APIView):
         date_str = request.query_params.get('date')
         date = parse_date(date_str) if date_str else timezone.now().date()
         
-        report = ReportingService.get_aging_report(report_type, date)
+        branch_id = get_report_branch_id(request)
+        report = ReportingService.get_aging_report(report_type, date, branch_id=branch_id)
         return Response(report)
 
 class CashFlowView(APIView):
@@ -83,7 +99,8 @@ class CashFlowView(APIView):
         start_date = parse_date(start_date_str) if start_date_str else None
         end_date = parse_date(end_date_str) if end_date_str else timezone.now().date()
         
-        report = ReportingService.get_cash_flow_statement(start_date, end_date)
+        branch_id = get_report_branch_id(request)
+        report = ReportingService.get_cash_flow_statement(start_date, end_date, branch_id=branch_id)
         return Response(report)
 
 class TaxReportView(APIView):
@@ -96,7 +113,8 @@ class TaxReportView(APIView):
         start_date = parse_date(start_date_str) if start_date_str else None
         end_date = parse_date(end_date_str) if end_date_str else None
             
-        report = ReportingService.get_tax_report(start_date, end_date)
+        branch_id = get_report_branch_id(request)
+        report = ReportingService.get_tax_report(start_date, end_date, branch_id=branch_id)
         return Response(report)
 
 
@@ -316,7 +334,7 @@ class JobProfitabilityView(APIView):
     
     def get(self, request):
         work_order_id = request.query_params.get('work_order_id')
-        branch_id = request.query_params.get('branch_id')
+        branch_id = get_report_branch_id(request)
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
         

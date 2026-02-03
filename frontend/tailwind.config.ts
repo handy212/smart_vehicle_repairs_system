@@ -27,6 +27,8 @@ const config: Config = {
         "accent-foreground": "rgb(var(--accent-foreground) / <alpha-value>)",
         destructive: "rgb(var(--destructive) / <alpha-value>)",
         "destructive-foreground": "rgb(var(--destructive-foreground) / <alpha-value>)",
+        success: "rgb(var(--success) / <alpha-value>)",
+        "success-foreground": "rgb(var(--success-foreground) / <alpha-value>)",
       },
       borderColor: {
         DEFAULT: "rgb(var(--border) / <alpha-value>)",
@@ -37,6 +39,15 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
+      },
+      keyframes: {
+        "pulse-border": {
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(249, 115, 22, 0.4)" },
+          "50%": { boxShadow: "0 0 0 4px rgba(249, 115, 22, 0.1)" },
+        },
+      },
+      animation: {
+        "pulse-border": "pulse-border 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
     },
   },

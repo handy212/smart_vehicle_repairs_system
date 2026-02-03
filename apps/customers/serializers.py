@@ -30,6 +30,24 @@ class CustomerListSerializer(serializers.ModelSerializer):
         decimal_places=2, 
         read_only=True
     )
+    last_visit_date = serializers.SerializerMethodField()
+    days_since_last_visit = serializers.SerializerMethodField()
+    is_inactive = serializers.SerializerMethodField()
+    
+    def get_last_visit_date(self, obj):
+        return obj.get_last_visit_date()
+    
+    def get_days_since_last_visit(self, obj):
+        return obj.get_days_since_last_visit()
+    
+    def get_is_inactive(self, obj):
+        """Check if customer is inactive based on threshold (default 6 months)"""
+        days = obj.get_days_since_last_visit()
+        if days is None:
+            return None  # Never visited
+        # Default threshold: 180 days (6 months)
+        threshold = self.context.get('inactive_threshold_days', 180)
+        return days >= threshold
     
     class Meta:
         model = Customer
@@ -37,7 +55,8 @@ class CustomerListSerializer(serializers.ModelSerializer):
             'id', 'customer_number', 'full_name', 'email', 'phone',
             'company_name', 'customer_type', 'status', 'customer_since',
             'vehicle_count', 'current_balance', 'available_credit',
-            'loyalty_points', 'loyalty_tier', 'created_at'
+            'loyalty_points', 'loyalty_tier', 'created_at',
+            'last_visit_date', 'days_since_last_visit', 'is_inactive'
         ]
 
 

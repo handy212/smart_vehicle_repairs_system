@@ -16,6 +16,7 @@ export default function NewVehiclePage() {
   const customerId = searchParams.get("customer");
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const createMutation = useMutation({
     mutationFn: (data: VehicleFormData | FormData) => vehiclesApi.create(data as any),
@@ -29,19 +30,48 @@ export default function NewVehiclePage() {
     },
     onError: (error) => {
       console.error("Error creating vehicle:", error);
+      setFieldErrors({});
+      
       if (error instanceof AxiosError && error.response?.data) {
         const errorData = error.response.data;
-        if (errorData.non_field_errors) {
+        
+        // Extract field-level errors
+        const extractedFieldErrors: Record<string, string> = {};
+        let hasFieldErrors = false;
+        
+        Object.keys(errorData).forEach((field) => {
+          if (field !== 'non_field_errors' && field !== 'detail') {
+            const fieldError = Array.isArray(errorData[field])
+              ? errorData[field][0]
+              : errorData[field];
+            if (fieldError) {
+              extractedFieldErrors[field] = fieldError;
+              hasFieldErrors = true;
+            }
+          }
+        });
+        
+        if (hasFieldErrors) {
+          setFieldErrors(extractedFieldErrors);
+          // Show a summary message
+          const fieldNames = Object.keys(extractedFieldErrors);
+          const fieldLabels: Record<string, string> = {
+            vin: 'VIN',
+            license_plate: 'License Plate',
+            owner: 'Owner',
+            year: 'Year',
+            make: 'Make',
+            model: 'Model',
+          };
+          const labels = fieldNames.map(f => fieldLabels[f] || f).join(', ');
+          setServerError(`Please fix the following field(s): ${labels}`);
+        } else if (errorData.non_field_errors) {
           setServerError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors);
         } else if (typeof errorData === 'string') {
           setServerError(errorData);
         } else if (errorData.detail) {
           setServerError(errorData.detail);
         } else {
-          // If field errors exist, they might not be handled here if we don't pass setError down.
-          // But VehicleForm handles basic validation. Server side validation could be passed back.
-          // For now, complex server errors on fields (unlikely if unique checks pass) might be missed, 
-          // but we display a generic error.
           setServerError("An error occurred. Please check the form details.");
         }
       } else {
@@ -102,6 +132,7 @@ export default function NewVehiclePage() {
         isSubmitting={createMutation.isPending}
         mode="create"
         onCancel={() => router.back()}
+        serverFieldErrors={fieldErrors}
       />
     </div>
   );

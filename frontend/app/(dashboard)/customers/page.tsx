@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Search, Filter, Trash2, Download, X, Upload, ChevronDown, FileDown, FileUp, MoreVertical, Eye, Edit, Mail, UserCheck, UserX, MessageSquare, Calendar, Wrench, Package, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo, useCallback, memo } from "react";
 import { useToast } from "@/lib/hooks/useToast";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { exportToCSV, formatDateForCSV } from "@/lib/utils/export";
@@ -40,6 +40,202 @@ import { cn } from "@/lib/utils/cn";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
+// Memoized Customer Row Component
+interface CustomerRowProps {
+  customer: any;
+  visibleColumns: Set<string>;
+  formatCurrency: (amount: number) => string;
+  bulkSelection: ReturnType<typeof useBulkSelection>;
+  router: ReturnType<typeof useRouter>;
+  onDelete: (customer: any) => void;
+}
+
+const CustomerRow = memo(function CustomerRow({
+  customer,
+  visibleColumns,
+  formatCurrency,
+  bulkSelection,
+  router,
+  onDelete,
+}: CustomerRowProps) {
+  return (
+    <TableRow key={customer.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 cursor-pointer transition-colors" onDoubleClick={() => router.push(`/customers/${customer.id}`)}>
+      {visibleColumns.has("checkbox") && (
+        <TableCell className="px-4 py-2 whitespace-nowrap">
+          <input
+            type="checkbox"
+            checked={bulkSelection.isSelected(customer.id)}
+            onChange={() => bulkSelection.toggleSelection(customer.id)}
+            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+          />
+        </TableCell>
+      )}
+      {visibleColumns.has("name") && (
+        <TableCell className="px-4 py-2 whitespace-nowrap">
+          <div className="flex items-center">
+            <div className="h-8 w-8 rounded-full bg-primary dark:bg-orange-700 flex items-center justify-center text-white font-medium text-xs flex-shrink-0">
+              {customer.user?.first_name?.[0]?.toUpperCase() || customer.full_name?.[0]?.toUpperCase() || customer.email?.[0]?.toUpperCase() || "C"}
+            </div>
+            <div className="ml-3">
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {customer.full_name || customer.company_name || (customer.user?.first_name && customer.user?.last_name ? `${customer.user.first_name} ${customer.user.last_name}` : null) || "-"}
+              </div>
+              {customer.company_name && customer.full_name && (
+                <div className="text-xs text-gray-500 dark:text-gray-400">{customer.company_name}</div>
+              )}
+              {customer.user?.phone && (
+                <div className="text-xs text-gray-400 dark:text-gray-500">{customer.user.phone}</div>
+              )}
+            </div>
+          </div>
+        </TableCell>
+      )}
+      {visibleColumns.has("email") && (
+        <TableCell className="px-4 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+          {customer.email || customer.user?.email || "-"}
+        </TableCell>
+      )}
+      {visibleColumns.has("type") && (
+        <TableCell className="px-4 py-2 whitespace-nowrap">
+          <Badge variant="outline" className="capitalize text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700">
+            {customer.customer_type || "-"}
+          </Badge>
+        </TableCell>
+      )}
+      {visibleColumns.has("balance") && (
+        <TableCell className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
+          <span className={cn(
+            parseFloat(customer.current_balance || "0") > 0 ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
+          )}>
+            {formatCurrency(parseFloat(customer.current_balance || "0"))}
+          </span>
+        </TableCell>
+      )}
+      {visibleColumns.has("created_at") && (
+        <TableCell className="px-4 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+          {new Date(customer.created_at).toLocaleDateString()}
+        </TableCell>
+      )}
+      {visibleColumns.has("last_visit") && (
+        <TableCell className="px-4 py-2 whitespace-nowrap">
+          <div className="flex flex-col gap-1">
+            {customer.last_visit_date ? (
+              <>
+                <span className="text-sm text-gray-900 dark:text-gray-100">
+                  {new Date(customer.last_visit_date).toLocaleDateString()}
+                </span>
+                {customer.days_since_last_visit !== null && customer.days_since_last_visit !== undefined && (
+                  <span className={cn(
+                    "text-xs",
+                    customer.days_since_last_visit >= 730 ? "text-red-600 dark:text-red-400 font-semibold" :
+                    customer.days_since_last_visit >= 365 ? "text-orange-600 dark:text-orange-400" :
+                    customer.days_since_last_visit >= 180 ? "text-yellow-600 dark:text-yellow-400" :
+                    "text-gray-500 dark:text-gray-400"
+                  )}>
+                    {customer.days_since_last_visit} days ago
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-sm text-gray-400 dark:text-gray-500 italic">Never visited</span>
+            )}
+            {customer.is_inactive && (
+              <Badge
+                variant="danger"
+                className="text-[10px] px-1.5 py-0.5 mt-1 w-fit"
+              >
+                Inactive
+              </Badge>
+            )}
+          </div>
+        </TableCell>
+      )}
+      {visibleColumns.has("status") && (
+        <TableCell className="px-4 py-2 whitespace-nowrap">
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[10px] px-2 py-0.5 font-medium border shadow-none",
+              customer.status === "active" && "border-green-200 text-green-700 bg-green-50/50 dark:border-green-800 dark:text-green-400 dark:bg-green-900/30",
+              customer.status === "inactive" && "border-gray-200 text-gray-700 bg-gray-50/50 dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800",
+              customer.status === "suspended" && "border-red-200 text-red-700 bg-red-50/50 dark:border-red-800 dark:text-red-400 dark:bg-red-900/30"
+            )}
+          >
+            {customer.status || "-"}
+          </Badge>
+        </TableCell>
+      )}
+      {visibleColumns.has("actions") && (
+        <TableCell className="px-4 py-2 whitespace-nowrap text-right">
+          <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-800">
+                  <div className="flex gap-0.5">
+                    <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
+                    <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
+                    <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}`)}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Details
+                </DropdownMenuItem>
+                <PermissionGuard permission="edit_customers">
+                  <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}/edit`)}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Customer
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission="edit_customers">
+                  <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}#notes`)}>
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Add Note
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission="send_notifications">
+                  <DropdownMenuItem onClick={() => router.push(`/sms?recipient_id=${customer.user?.id}&recipient_name=${encodeURIComponent(customer.full_name || customer.company_name || '')}&phone=${customer.user?.phone || ''}`)}>
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Send SMS
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <DropdownMenuSeparator />
+                <PermissionGuard permission="create_vehicles">
+                  <DropdownMenuItem onClick={() => router.push(`/vehicles/new?customer=${customer.id}`)}>
+                    <Package className="w-4 h-4 mr-2" />
+                    Add Vehicle
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission="create_workorders">
+                  <DropdownMenuItem onClick={() => router.push(`/workorders/new?customer=${customer.id}`)}>
+                    <Wrench className="w-4 h-4 mr-2" />
+                    Create Work Order
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission="create_appointments">
+                  <DropdownMenuItem onClick={() => router.push(`/appointments/new?customer=${customer.id}`)}>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Schedule Appointment
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <DropdownMenuSeparator />
+                <PermissionGuard permission="delete_customers">
+                  <DropdownMenuItem onClick={() => onDelete(customer)} className="text-red-600 dark:text-red-400">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </PermissionGuard>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </TableCell>
+      )}
+    </TableRow>
+  );
+});
+
 export default function CustomersPage() {
   const router = useRouter();
   const { formatCurrency } = useCurrency();
@@ -50,13 +246,16 @@ export default function CustomersPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
+  const [inactivePeriod, setInactivePeriod] = useState<string | null>(null);
+  const [customDays, setCustomDays] = useState<number>(180);
+  const [showCustomDaysInput, setShowCustomDaysInput] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<string>("active");
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, any>>({});
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
-    new Set(["checkbox", "name", "email", "type", "balance", "created_at", "status", "actions"])
+    new Set(["checkbox", "name", "email", "type", "balance", "last_visit", "created_at", "status", "actions"])
   );
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -67,6 +266,7 @@ export default function CustomersPage() {
     { key: "email", label: "Email", defaultVisible: true },
     { key: "type", label: "Type", defaultVisible: true },
     { key: "balance", label: "Balance", defaultVisible: true },
+    { key: "last_visit", label: "Last Visit", defaultVisible: true },
     { key: "created_at", label: "Joined", defaultVisible: true },
     { key: "status", label: "Status", defaultVisible: true },
   ];
@@ -136,7 +336,7 @@ export default function CustomersPage() {
     },
   ];
 
-  const handleSort = (field: string) => {
+  const handleSort = useCallback((field: string) => {
     setSortConfig((current) => {
       if (current?.field === field) {
         if (current.direction === "asc") {
@@ -148,7 +348,7 @@ export default function CustomersPage() {
       return { field, direction: "asc" };
     });
     setPage(1);
-  };
+  }, []);
 
   const { data: stats } = useQuery({
     queryKey: ["customer-stats"],
@@ -156,7 +356,7 @@ export default function CustomersPage() {
   });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["customers", page, debouncedSearch, advancedFilters, sortConfig],
+    queryKey: ["customers", page, debouncedSearch, advancedFilters, sortConfig, inactivePeriod],
     queryFn: () => {
       const ordering = sortConfig
         ? `${sortConfig.direction === "desc" ? "-" : ""}${sortConfig.field}`
@@ -169,6 +369,7 @@ export default function CustomersPage() {
         created_at__gte: advancedFilters.customer_since_from || undefined,
         created_at__lte: advancedFilters.customer_since_to || undefined,
         loyalty_tier: advancedFilters.loyalty_tier || undefined,
+        inactive_period: inactivePeriod || undefined,
         ordering,
       });
     },
@@ -235,28 +436,28 @@ export default function CustomersPage() {
     },
   });
 
-  const handleDelete = (customer: any) => {
+  const handleDelete = useCallback((customer: any) => {
     if (confirm(`Are you sure you want to delete customer "${customer.full_name || customer.company_name || customer.user?.email || 'this customer'}"? This action cannot be undone.`)) {
       deleteMutation.mutate(customer.id);
     }
-  };
+  }, [deleteMutation]);
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = useCallback(() => {
     if (confirm(`Are you sure you want to delete ${bulkSelection.selectedCount} customer(s)? This action cannot be undone.`)) {
       bulkDeleteMutation.mutate(bulkSelection.selectedIds);
     }
-  };
+  }, [bulkSelection.selectedCount, bulkSelection.selectedIds, bulkDeleteMutation]);
 
-  const handleBulkStatusUpdate = () => {
+  const handleBulkStatusUpdate = useCallback(() => {
     setShowStatusDialog(true);
-  };
+  }, []);
 
-  const confirmBulkStatusUpdate = () => {
+  const confirmBulkStatusUpdate = useCallback(() => {
     bulkStatusUpdateMutation.mutate({
       ids: bulkSelection.selectedIds,
       status: newStatus,
     });
-  };
+  }, [bulkSelection.selectedIds, newStatus, bulkStatusUpdateMutation]);
 
   const handleExport = () => {
     if (!data?.results || data.results.length === 0) {
@@ -373,6 +574,58 @@ export default function CustomersPage() {
             />
           </div>
 
+          {/* Inactive Period Filter */}
+          <Select
+            value={inactivePeriod?.startsWith('custom_') ? "custom" : (inactivePeriod || "all")}
+            onValueChange={(value) => {
+              if (value === "all") {
+                setInactivePeriod(null);
+                setShowCustomDaysInput(false);
+                setPage(1);
+              } else if (value === "custom") {
+                setShowCustomDaysInput(true);
+                setInactivePeriod(`custom_${customDays}`);
+                setPage(1);
+              } else {
+                setInactivePeriod(value);
+                setShowCustomDaysInput(false);
+                setPage(1);
+              }
+            }}
+          >
+            <SelectTrigger className="h-9 w-[180px] text-sm bg-gray-50 dark:bg-gray-800 border-none">
+              <SelectValue placeholder="Inactive Period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Customers</SelectItem>
+              <SelectItem value="3_months">Inactive 3+ Months</SelectItem>
+              <SelectItem value="6_months">Inactive 6+ Months</SelectItem>
+              <SelectItem value="1_year">Inactive 1+ Year</SelectItem>
+              <SelectItem value="2_years">Inactive 2+ Years</SelectItem>
+              <SelectItem value="custom">Custom Period</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Custom Days Input */}
+          {showCustomDaysInput && (
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                placeholder="Days"
+                value={customDays}
+                onChange={(e) => {
+                  const days = parseInt(e.target.value) || 180;
+                  setCustomDays(days);
+                  setInactivePeriod(`custom_${days}`);
+                  setPage(1);
+                }}
+                className="h-9 w-24 text-sm bg-gray-50 dark:bg-gray-800 border-none"
+                min="1"
+              />
+              <span className="text-xs text-gray-500">days</span>
+            </div>
+          )}
+
           {/* Advanced Filters Button */}
           <AdvancedFilters
             filters={filterOptions}
@@ -388,12 +641,14 @@ export default function CustomersPage() {
               setTypeFilter("all");
               setStartDate("");
               setEndDate("");
+              setInactivePeriod(null);
+              setShowCustomDaysInput(false);
             }}
             title="Filter"
           />
 
           {/* Clear Filters (Icon only for compactness) */}
-          {(search || Object.keys(advancedFilters).length > 0) && (
+          {(search || Object.keys(advancedFilters).length > 0 || inactivePeriod) && (
             <Button
               variant="ghost"
               size="sm"
@@ -404,6 +659,8 @@ export default function CustomersPage() {
                 setTypeFilter("all");
                 setStartDate("");
                 setEndDate("");
+                setInactivePeriod(null);
+                setShowCustomDaysInput(false);
                 setPage(1);
               }}
               className="h-9 w-9 p-0 text-gray-500 hover:text-red-600"
@@ -555,6 +812,11 @@ export default function CustomersPage() {
                         Balance
                       </SortableHeader>
                     )}
+                    {visibleColumns.has("last_visit") && (
+                      <TableHead className="px-4 h-10 text-[10px] uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">
+                        Last Visit
+                      </TableHead>
+                    )}
                     {visibleColumns.has("created_at") && (
                       <SortableHeader
                         field="created_at"
@@ -584,146 +846,15 @@ export default function CustomersPage() {
                 </TableHeader>
                 <TableBody>
                   {data.results.map((customer) => (
-                    <TableRow key={customer.id} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 cursor-pointer transition-colors" onDoubleClick={() => router.push(`/customers/${customer.id}`)}>
-                      {visibleColumns.has("checkbox") && (
-                        <TableCell className="px-4 py-2 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            checked={bulkSelection.isSelected(customer.id)}
-                            onChange={() => bulkSelection.toggleSelection(customer.id)}
-                            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                          />
-                        </TableCell>
-                      )}
-                      {visibleColumns.has("name") && (
-                        <TableCell className="px-4 py-2 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-primary dark:bg-orange-700 flex items-center justify-center text-white font-medium text-xs flex-shrink-0">
-                              {customer.user?.first_name?.[0]?.toUpperCase() || customer.full_name?.[0]?.toUpperCase() || customer.email?.[0]?.toUpperCase() || "C"}
-                            </div>
-                            <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {customer.full_name || customer.company_name || (customer.user?.first_name && customer.user?.last_name ? `${customer.user.first_name} ${customer.user.last_name}` : null) || "-"}
-                              </div>
-                              {customer.company_name && customer.full_name && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400">{customer.company_name}</div>
-                              )}
-                              {customer.user?.phone && (
-                                <div className="text-xs text-gray-400 dark:text-gray-500">{customer.user.phone}</div>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                      )}
-                      {visibleColumns.has("email") && (
-                        <TableCell className="px-4 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                          {customer.email || customer.user?.email || "-"}
-                        </TableCell>
-                      )}
-                      {visibleColumns.has("type") && (
-                        <TableCell className="px-4 py-2 whitespace-nowrap">
-                          <Badge variant="outline" className="capitalize text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700">
-                            {customer.customer_type || "-"}
-                          </Badge>
-                        </TableCell>
-                      )}
-                      {visibleColumns.has("balance") && (
-                        <TableCell className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
-                          <span className={cn(
-                            parseFloat(customer.current_balance || "0") > 0 ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
-                          )}>
-                            {formatCurrency(parseFloat(customer.current_balance || "0"))}
-                          </span>
-                        </TableCell>
-                      )}
-                      {visibleColumns.has("created_at") && (
-                        <TableCell className="px-4 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(customer.created_at).toLocaleDateString()}
-                        </TableCell>
-                      )}
-                      {visibleColumns.has("status") && (
-                        <TableCell className="px-4 py-2 whitespace-nowrap">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-[10px] px-2 py-0.5 font-medium border shadow-none",
-                              customer.status === "active" && "border-green-200 text-green-700 bg-green-50/50 dark:border-green-800 dark:text-green-400 dark:bg-green-900/30",
-                              customer.status === "inactive" && "border-gray-200 text-gray-700 bg-gray-50/50 dark:border-gray-700 dark:text-gray-300 dark:bg-gray-800",
-                              customer.status === "suspended" && "border-red-200 text-red-700 bg-red-50/50 dark:border-red-800 dark:text-red-400 dark:bg-red-900/30"
-                            )}
-                          >
-                            {customer.status || "-"}
-                          </Badge>
-                        </TableCell>
-                      )}
-                      {visibleColumns.has("actions") && (
-                        <TableCell className="px-4 py-2 whitespace-nowrap text-right">
-                          <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()} className="h-6 w-6 p-0 hover:bg-gray-100 dark:hover:bg-gray-800">
-                                  <div className="flex gap-0.5">
-                                    <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
-                                    <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
-                                    <div className="h-0.5 w-0.5 rounded-full bg-gray-500" />
-                                  </div>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}`)}>
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <PermissionGuard permission="edit_customers">
-                                  <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}/edit`)}>
-                                    <Edit className="w-4 h-4 mr-2" />
-                                    Edit Customer
-                                  </DropdownMenuItem>
-                                </PermissionGuard>
-                                <PermissionGuard permission="edit_customers">
-                                  <DropdownMenuItem onClick={() => router.push(`/customers/${customer.id}#notes`)}>
-                                    <MessageSquare className="w-4 h-4 mr-2" />
-                                    Add Note
-                                  </DropdownMenuItem>
-                                </PermissionGuard>
-                                <PermissionGuard permission="send_notifications">
-                                  <DropdownMenuItem onClick={() => router.push(`/sms?recipient_id=${customer.user?.id}&recipient_name=${encodeURIComponent(customer.full_name || customer.company_name || '')}&phone=${customer.user?.phone || ''}`)}>
-                                    <MessageSquare className="w-4 h-4 mr-2" />
-                                    Send SMS
-                                  </DropdownMenuItem>
-                                </PermissionGuard>
-                                <DropdownMenuSeparator />
-                                <PermissionGuard permission="create_vehicles">
-                                  <DropdownMenuItem onClick={() => router.push(`/vehicles/new?customer=${customer.id}`)}>
-                                    <Package className="w-4 h-4 mr-2" />
-                                    Add Vehicle
-                                  </DropdownMenuItem>
-                                </PermissionGuard>
-                                <PermissionGuard permission="create_appointments">
-                                  <DropdownMenuItem onClick={() => router.push(`/appointments/new?customer=${customer.id}`)}>
-                                    <Calendar className="w-4 h-4 mr-2" />
-                                    Schedule Appointment
-                                  </DropdownMenuItem>
-                                </PermissionGuard>
-                                <PermissionGuard permission="create_work_orders">
-                                  <DropdownMenuItem onClick={() => router.push(`/workorders/new?customer=${customer.id}`)}>
-                                    <Wrench className="w-4 h-4 mr-2" />
-                                    Create Work Order
-                                  </DropdownMenuItem>
-                                </PermissionGuard>
-                                <DropdownMenuSeparator />
-                                <PermissionGuard permission="delete_customers">
-                                  <DropdownMenuItem onClick={() => { if (window.confirm(`Delete customer "${customer.full_name || customer.company_name || 'this customer'}"?`)) handleDelete(customer); }} disabled={deleteMutation.isPending} className="text-red-600 dark:text-red-400">
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Delete Customer
-                                  </DropdownMenuItem>
-                                </PermissionGuard>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
+                    <CustomerRow
+                      key={customer.id}
+                      customer={customer}
+                      visibleColumns={visibleColumns}
+                      formatCurrency={formatCurrency}
+                      bulkSelection={bulkSelection}
+                      router={router}
+                      onDelete={handleDelete}
+                    />
                   ))}
                 </TableBody>
               </Table>

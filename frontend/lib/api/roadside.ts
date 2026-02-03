@@ -3,41 +3,57 @@ import apiClient from "./client";
 export interface RoadsideRequest {
     id: number;
     request_number: string;
-    customer: number;
-    customer_name?: string;
-    vehicle: number;
-    vehicle_display?: string;
-    branch?: number;
-    service_type: 'towing' | 'battery_boost' | 'flat_tyre' | 'key_lockout' | 'emergency_fuel' | 'extrication' | 'mechanical_first_aid' | 'other';
-    service_type_display?: string;
     status: 'requested' | 'dispatched' | 'en_route' | 'on_site' | 'in_progress' | 'completed' | 'cancelled' | 'failed';
-    status_display?: string;
+    service_type: string;
+    customer: {
+        id: number;
+        company_name?: string;
+        first_name?: string;
+        last_name?: string;
+        phone?: string;
+        user: {
+            first_name: string;
+            last_name: string;
+            phone: string;
+        }
+    };
+    vehicle: {
+        id: number;
+        make: string;
+        model: string;
+        year: number;
+        license_plate: string;
+    };
     breakdown_location: string;
-    latitude?: string | number;
-    longitude?: string | number;
-    description?: string;
+    latitude?: string;
+    longitude?: string;
+    description: string;
     customer_phone: string;
     tow_distance_km?: string | number;
     destination?: string;
-    assigned_technician?: number;
-    assigned_technician_name?: string;
+    notes?: string;
+    created_at: string;
+
+    // Additional fields for Portal
+    requested_at: string;
+    status_display?: string;
+    is_covered_by_subscription?: boolean;
+    subscription_number?: string;
+    vehicle_display?: string;
+    can_be_cancelled?: boolean;
+    charge_amount?: string;
     dispatched_at?: string;
     arrived_at?: string;
     completed_at?: string;
-    subscription_used?: number;
-    subscription_number?: string;
-    subscription_allowance_deducted: boolean;
-    is_covered_by_subscription: boolean;
-    charge_amount?: string;
+    assigned_technician_name?: string;
+    customer_feedback?: string;
+    customer_name?: string;
+    service_type_display?: string;
+    subscription_allowance_deducted?: boolean;
     invoice?: number;
     invoice_number?: string;
-    notes?: string;
-    customer_feedback?: string;
-    requested_at: string;
-    created_by?: number;
-    updated_at: string;
-    is_active: boolean;
-    can_be_cancelled: boolean;
+    subscription_used?: number;
+    assigned_technician?: number;
 }
 
 export interface RoadsideRequestCreate {
@@ -45,127 +61,137 @@ export interface RoadsideRequestCreate {
     vehicle: number;
     service_type: string;
     breakdown_location: string;
-    latitude?: string | number;
-    longitude?: string | number;
+    latitude?: number;
+    longitude?: number;
     description?: string;
     customer_phone: string;
-    tow_distance_km?: string | number;
+    tow_distance_km?: number;
     destination?: string;
     notes?: string;
 }
 
-export interface RoadsideRequestListResponse {
-    count: number;
-    next: string | null;
-    previous: string | null;
-    results: RoadsideRequest[];
-}
-
 export const roadsideApi = {
-    list: async (params?: {
-        page?: number;
-        search?: string;
-        status?: string;
-        service_type?: string;
-        customer?: number;
-        vehicle?: number;
-        branch?: number;
-        assigned_technician?: number;
-        is_covered_by_subscription?: boolean;
-        ordering?: string;
-    }): Promise<RoadsideRequestListResponse> => {
-        const response = await apiClient.get("/roadside/requests/", { params });
+    /**
+     * Get requests assigned to the current user (technician)
+     */
+    getAssignedRequests: async () => {
+        const response = await apiClient.get<RoadsideRequest[]>("/roadside/");
         return response.data;
     },
 
-    dashboardStats: async (): Promise<{
-        total_requests: number;
-        active_requests: number;
-        completed_requests: number;
-        covered_by_subscription: number;
-    }> => {
-        const response = await apiClient.get("/roadside/requests/dashboard_stats/");
+    /**
+     * Get a single request
+     */
+    getRequest: async (id: number | string) => {
+        const response = await apiClient.get<RoadsideRequest>(`/roadside/${id}/`);
         return response.data;
     },
 
-    get: async (id: number): Promise<RoadsideRequest> => {
-        const response = await apiClient.get(`/roadside/requests/${id}/`);
+    /**
+     * Update status actions
+     */
+    enRoute: async (id: number | string) => {
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/en_route/`);
         return response.data;
     },
 
-    create: async (data: RoadsideRequestCreate): Promise<RoadsideRequest> => {
-        const response = await apiClient.post("/roadside/requests/", data);
+    arrive: async (id: number | string) => {
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/arrive/`);
         return response.data;
     },
 
-    update: async (id: number, data: Partial<RoadsideRequest>): Promise<RoadsideRequest> => {
-        const response = await apiClient.put(`/roadside/requests/${id}/`, data);
+    inProgress: async (id: number | string) => {
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/in_progress/`);
         return response.data;
     },
 
-    partialUpdate: async (id: number, data: Partial<RoadsideRequest>): Promise<RoadsideRequest> => {
-        const response = await apiClient.patch(`/roadside/requests/${id}/`, data);
+    complete: async (id: number | string) => {
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/complete/`);
         return response.data;
     },
 
-    delete: async (id: number): Promise<void> => {
-        await apiClient.delete(`/roadside/requests/${id}/`);
-    },
-
-    // Custom actions
-    myRequests: async (): Promise<RoadsideRequest[]> => {
-        const response = await apiClient.get("/roadside/requests/my_requests/");
+    fail: async (id: number | string, reason: string) => {
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/fail/`, { reason });
         return response.data;
     },
 
-    assignDispatch: async (id: number, technicianId?: number): Promise<RoadsideRequest> => {
-        const response = await apiClient.post(`/roadside/requests/${id}/assign_dispatch/`, {
-            technician_id: technicianId
-        });
+    /**
+     * Get requests for the current user (customer)
+     */
+    myRequests: async () => {
+        const response = await apiClient.get<RoadsideRequest[]>("/roadside/my_requests/");
         return response.data;
     },
 
-    enRoute: async (id: number): Promise<RoadsideRequest> => {
-        const response = await apiClient.post(`/roadside/requests/${id}/en_route/`);
+    /**
+     * Rate a completed request
+     */
+    rate: async (id: number | string, data: { rating: number; customer_feedback?: string }) => {
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/rate_service/`, data);
         return response.data;
     },
 
-    arrive: async (id: number): Promise<RoadsideRequest> => {
-        const response = await apiClient.post(`/roadside/requests/${id}/arrive/`);
+    /**
+     * Alias for getRequest to match Portal usage
+     */
+    get: async (id: number | string) => {
+        const response = await apiClient.get<RoadsideRequest>(`/roadside/${id}/`);
         return response.data;
     },
 
-    inProgress: async (id: number): Promise<RoadsideRequest> => {
-        const response = await apiClient.post(`/roadside/requests/${id}/in_progress/`);
+    /**
+     * Cancel a request
+     */
+    cancel: async (id: number | string) => {
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/cancel/`);
         return response.data;
     },
 
-    complete: async (id: number): Promise<RoadsideRequest & { invoice_id?: number }> => {
-        const response = await apiClient.post(`/roadside/requests/${id}/complete/`);
+    /**
+     * Admin: Get dashboard stats
+     */
+    dashboardStats: async () => {
+        const response = await apiClient.get<any>("/roadside/dashboard_stats/");
         return response.data;
     },
 
-    cancel: async (id: number): Promise<RoadsideRequest> => {
-        const response = await apiClient.post(`/roadside/requests/${id}/cancel/`);
+    /**
+     * Admin: List all requests with filtering
+     */
+    list: async (params?: any) => {
+        const response = await apiClient.get<{ results: RoadsideRequest[]; count: number; next?: string; previous?: string }>("/roadside/", { params });
         return response.data;
     },
 
-    fail: async (id: number, reason: string): Promise<RoadsideRequest> => {
-        const response = await apiClient.post(`/roadside/requests/${id}/fail/`, {
-            reason
-        });
+    /**
+     * Admin: Assign/Dispatch technician
+     */
+    assignDispatch: async (id: number | string, technicianId: number) => {
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/assign_dispatch/`, { technician_id: technicianId });
         return response.data;
     },
 
-    sendCustomerSms: async (id: number, message: string): Promise<{ success: boolean; message: string }> => {
-        const response = await apiClient.post(`/roadside/requests/${id}/send_customer_sms/`, {
-            message
-        });
+    /**
+     * Admin: Update request details
+     */
+    partialUpdate: async (id: number | string, data: Partial<RoadsideRequest>) => {
+        const response = await apiClient.patch<RoadsideRequest>(`/roadside/${id}/`, data);
         return response.data;
     },
 
-    rate: async (id: number, data: { rating: number; customer_feedback?: string }): Promise<RoadsideRequest> => {
-        const response = await apiClient.post(`/roadside/requests/${id}/rate_service/`, data);
+    /**
+     * Admin: Send SMS to customer
+     */
+    sendCustomerSms: async (id: number | string, message: string) => {
+        const response = await apiClient.post<{ success: boolean; message: string }>(`/roadside/${id}/send_customer_sms/`, { message });
         return response.data;
     },
+
+    /**
+     * Create a new request (Admin/Manager)
+     */
+    create: async (data: any) => {
+        const response = await apiClient.post<RoadsideRequest>("/roadside/", data);
+        return response.data;
+    }
 };

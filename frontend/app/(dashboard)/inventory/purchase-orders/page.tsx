@@ -107,7 +107,8 @@ export default function PurchaseOrdersPage() {
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "draft": return "secondary";
-      case "submitted": return "info";
+      case "pending_approval": return "warning";
+      case "approved": return "info";
       case "confirmed": return "success";
       case "received": return "success";
       case "partially_received": return "warning";
@@ -117,7 +118,16 @@ export default function PurchaseOrdersPage() {
   };
 
   const getStatusLabel = (status: string) => {
-    return status.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+    const labels: Record<string, string> = {
+      draft: "Draft",
+      pending_approval: "Pending Approval",
+      approved: "Approved",
+      confirmed: "Confirmed",
+      received: "Received",
+      partially_received: "Partially Received",
+      cancelled: "Cancelled",
+    };
+    return labels[status] || status.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
   };
 
   const filterOptions: FilterOption[] = [
@@ -127,7 +137,8 @@ export default function PurchaseOrdersPage() {
       type: "select",
       options: [
         { value: "draft", label: "Draft" },
-        { value: "submitted", label: "Submitted" },
+        { value: "pending_approval", label: "Pending Approval" },
+        { value: "approved", label: "Approved" },
         { value: "confirmed", label: "Confirmed" },
         { value: "partially_received", label: "Partially Received" },
         { value: "received", label: "Received" },

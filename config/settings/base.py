@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'apps.customers',
     'apps.appointments',
     'apps.workorders',
+    'apps.gatepass',
     'apps.inventory',
     'apps.billing',
     'apps.inspections',

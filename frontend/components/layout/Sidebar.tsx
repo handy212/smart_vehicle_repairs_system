@@ -31,6 +31,8 @@ const navigationGroups = [
       { name: "Vehicles", href: "/vehicles", icon: PremiumIcons.Car, permission: "view_vehicles" },
       { name: "Appointments", href: "/appointments", icon: PremiumIcons.Calendar, permission: "view_appointments" },
       { name: "Work Orders", href: "/workorders", icon: PremiumIcons.Wrench, permission: "view_workorders" },
+      { name: "Services Due", href: "/services-due", icon: PremiumIcons.Clock, permission: "view_vehicles" },
+      { name: "Gate Passes", href: "/gatepass", icon: PremiumIcons.FileText, permission: "view_gatepass" },
       { name: "Roadside", href: "/roadside", icon: PremiumIcons.Truck, permission: "view_roadside" },
       { name: "Technicians", href: "/technicians", icon: PremiumIcons.UserCog, permission: "view_users" },
     ],
@@ -120,7 +122,7 @@ export function Sidebar({ isOpen = true, onClose, isCollapsed = false, onToggleC
         <nav className={cn("flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800", isCollapsed && "px-2")}>
           {navigationGroups.map((group) => (
             <div key={group.name}>
-              {!isCollapsed && (
+              {!isCollapsed && group.name !== "Main" && (
                 <h3 className="px-3 mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {group.name}
                 </h3>

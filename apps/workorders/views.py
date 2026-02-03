@@ -157,6 +157,75 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             logger.error(traceback.format_exc())
             raise
     
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def check_unapproved_recommendations(self, request):
+        """
+        Check for unapproved recommendations for a vehicle from previous work orders.
+        Query params: vehicle_id (required)
+        Returns: List of unapproved recommendations with work order context
+        """
+        vehicle_id = request.query_params.get('vehicle_id')
+        if not vehicle_id:
+            return Response(
+                {'error': 'vehicle_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from apps.diagnosis.models import Diagnosis, RepairRecommendation
+            from apps.vehicles.models import Vehicle
+            
+            vehicle = Vehicle.objects.get(id=vehicle_id)
+            
+            # Get completed/invoiced/closed work orders for this vehicle
+            completed_work_orders = WorkOrder.objects.filter(
+                vehicle=vehicle,
+                status__in=['completed', 'invoiced', 'closed']
+            ).select_related('customer', 'branch')
+            
+            unapproved_recommendations = []
+            
+            for wo in completed_work_orders:
+                diagnosis = Diagnosis.objects.filter(work_order=wo).first()
+                if diagnosis:
+                    recommendations = diagnosis.repair_recommendations.filter(
+                        customer_approved=False
+                    )
+                    for rec in recommendations:
+                        unapproved_recommendations.append({
+                            'id': rec.id,
+                            'description': rec.description,
+                            'priority': rec.priority,
+                            'priority_display': rec.get_priority_display(),
+                            'recommendation_type': rec.recommendation_type,
+                            'recommendation_type_display': rec.get_recommendation_type_display(),
+                            'estimated_total_cost': str(rec.estimated_total_cost),
+                            'work_order_id': wo.id,
+                            'work_order_number': wo.work_order_number,
+                            'work_order_completed_at': wo.completed_at.isoformat() if wo.completed_at else None,
+                            'diagnosis_id': diagnosis.id,
+                        })
+            
+            return Response({
+                'vehicle_id': vehicle_id,
+                'vehicle_display': vehicle.display_name,
+                'count': len(unapproved_recommendations),
+                'recommendations': unapproved_recommendations
+            })
+        except Vehicle.DoesNotExist:
+            return Response(
+                {'error': 'Vehicle not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error checking unapproved recommendations: {str(e)}", exc_info=True)
+            return Response(
+                {'error': f'Failed to check recommendations: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     @action(detail=False, methods=['post'])
     def check_repeat_visit(self, request):
         """
@@ -227,6 +296,100 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             'has_repeat': len(matches) > 0,
             'matches': matches
         })
+    
+    @action(detail=False, methods=['get'])
+    def get_recent_work_orders(self, request):
+        """
+        Get recent completed/closed work orders for a vehicle.
+        Useful for linking rework/return jobs to previous work orders.
+        
+        Query parameters:
+        - vehicle: Vehicle ID (required)
+        - days: Number of days to look back (default: 90)
+        - status: Comma-separated list of statuses to filter (default: completed,invoiced,closed)
+        - limit: Maximum number of results (default: 10)
+        
+        Returns:
+        {
+            "results": [
+                {
+                    "id": int,
+                    "work_order_number": str,
+                    "status": str,
+                    "completed_at": str (ISO format),
+                    "customer_concerns": str,
+                    "technician_name": str,
+                    "branch_name": str,
+                    "days_ago": int
+                }
+            ]
+        }
+        """
+        from .utils import get_recent_completed_work_orders
+        
+        vehicle_id = request.query_params.get('vehicle')
+        if not vehicle_id:
+            return Response(
+                {'error': 'vehicle parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            vehicle_id = int(vehicle_id)
+        except (ValueError, TypeError):
+            return Response(
+                {'error': 'vehicle must be a valid integer'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get parameters with defaults
+        days = int(request.query_params.get('days', 90))
+        status_filter = request.query_params.get('status', 'completed,invoiced,closed')
+        limit = int(request.query_params.get('limit', 10))
+        
+        # Parse status filter
+        status_list = [s.strip() for s in status_filter.split(',')]
+        
+        # Get recent work orders
+        work_orders = get_recent_completed_work_orders(vehicle_id, days=days)
+        
+        # Filter by status if provided
+        if status_list:
+            work_orders = work_orders.filter(status__in=status_list)
+        
+        # Prefetch assigned technicians to avoid N+1 queries
+        work_orders = work_orders.prefetch_related('assigned_technicians')
+        
+        # Apply limit
+        work_orders = work_orders[:limit]
+        
+        # Serialize results
+        results = []
+        check_date = timezone.now()
+        
+        for wo in work_orders:
+            technician_name = None
+            if wo.primary_technician:
+                technician_name = f"{wo.primary_technician.first_name} {wo.primary_technician.last_name}".strip()
+            elif wo.assigned_technicians.exists():
+                tech = wo.assigned_technicians.first()
+                technician_name = f"{tech.first_name} {tech.last_name}".strip()
+            
+            branch_name = wo.branch.name if wo.branch else 'Unknown Branch'
+            days_ago = (check_date - wo.completed_at).days if wo.completed_at else None
+            
+            results.append({
+                'id': wo.id,
+                'work_order_number': wo.work_order_number,
+                'status': wo.status,
+                'completed_at': wo.completed_at.isoformat() if wo.completed_at else None,
+                'customer_concerns': wo.customer_concerns or '',
+                'technician_name': technician_name or 'Not assigned',
+                'branch_name': branch_name,
+                'days_ago': days_ago,
+            })
+        
+        return Response({'results': results})
     
     # ========== STATUS WORKFLOW ACTIONS ==========
 
@@ -607,6 +770,162 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             )
     
     @action(detail=True, methods=['get'])
+    def print_recommendations(self, request, pk=None):
+        """
+        Get recommendations data for printing.
+        Returns recommendations that are unapproved (not yet approved by customer).
+        """
+        work_order = self.get_object()
+        
+        try:
+            from apps.diagnosis.models import Diagnosis, RepairRecommendation
+            
+            # Get diagnosis for this work order
+            diagnosis = Diagnosis.objects.filter(work_order=work_order).first()
+            
+            if not diagnosis:
+                return Response(
+                    {'error': 'No diagnosis found for this work order'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Filter for unapproved recommendations (as per user selection)
+            recommendations = diagnosis.repair_recommendations.filter(
+                customer_approved=False
+            ).order_by('priority', 'order', 'created_at')
+            
+            # Serialize recommendations
+            from apps.diagnosis.serializers import RepairRecommendationSerializer
+            recommendations_data = RepairRecommendationSerializer(recommendations, many=True).data
+            
+            # Get work order and vehicle details
+            work_order_data = {
+                'id': work_order.id,
+                'work_order_number': work_order.work_order_number,
+                'created_at': work_order.created_at,
+                'completed_at': work_order.completed_at,
+                'status': work_order.status,
+            }
+            
+            vehicle_data = {
+                'id': work_order.vehicle.id,
+                'year': work_order.vehicle.year,
+                'make': work_order.vehicle.make,
+                'model': work_order.vehicle.model,
+                'vin': work_order.vehicle.vin,
+                'license_plate': work_order.vehicle.license_plate,
+                'display_name': work_order.vehicle.display_name,
+            }
+            
+            customer_data = {
+                'id': work_order.customer.id,
+                'customer_number': work_order.customer.customer_number,
+                'full_name': work_order.customer.user.get_full_name() if work_order.customer.user else f"Customer #{work_order.customer.id}",
+                'company_name': work_order.customer.company_name,
+            }
+            
+            return Response({
+                'work_order': work_order_data,
+                'vehicle': vehicle_data,
+                'customer': customer_data,
+                'recommendations': recommendations_data,
+                'count': recommendations.count(),
+            })
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error getting recommendations for print: {str(e)}", exc_info=True)
+            return Response(
+                {'error': f'Failed to get recommendations: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def recommendations_pdf(self, request, pk=None):
+        """
+        Generate PDF of recommendations for vehicle dashboard.
+        Returns PDF file that can be downloaded.
+        """
+        from django.http import HttpResponse
+        from django.template.loader import render_to_string
+        
+        work_order = self.get_object()
+        
+        try:
+            from apps.diagnosis.models import Diagnosis, RepairRecommendation
+            
+            # Get diagnosis for this work order
+            diagnosis = Diagnosis.objects.filter(work_order=work_order).first()
+            
+            if not diagnosis:
+                return Response(
+                    {'error': 'No diagnosis found for this work order'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Filter for unapproved recommendations
+            recommendations = diagnosis.repair_recommendations.filter(
+                customer_approved=False
+            ).order_by('priority', 'order', 'created_at')
+            
+            if not recommendations.exists():
+                return Response(
+                    {'error': 'No unapproved recommendations found for this work order'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Get branch info
+            branch = work_order.branch
+            
+            context = {
+                'work_order': work_order,
+                'vehicle': work_order.vehicle,
+                'customer': work_order.customer,
+                'recommendations': recommendations,
+                'diagnosis': diagnosis,
+                'print_generated_at': timezone.now(),
+                'print_branch': branch,
+            }
+            
+            try:
+                from weasyprint import HTML
+                
+                # Render HTML template
+                html_string = render_to_string('workorders/recommendations_print.html', context, request=request)
+                
+                # Generate PDF
+                pdf = HTML(string=html_string).write_pdf()
+                
+                # Return PDF response
+                response = HttpResponse(pdf, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="recommendations_{work_order.work_order_number}.pdf"'
+                return response
+                
+            except ImportError:
+                return Response(
+                    {'error': 'PDF generation requires WeasyPrint. Please install it: pip install weasyprint'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error generating PDF: {str(e)}", exc_info=True)
+                return Response(
+                    {'error': f'Error generating PDF: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error getting recommendations for PDF: {str(e)}", exc_info=True)
+            return Response(
+                {'error': f'Failed to generate PDF: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
     def check_readiness(self, request, pk=None):
         """Check if work order is ready to start work"""
         work_order = self.get_object()
@@ -735,9 +1054,11 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
             try:
                 work_order.transition_to('completed', user=request.user)
                 
-                # Update vehicle's last service date
+                # Update vehicle's last service date and schedule
+                from .services import update_vehicle_service_schedule
                 work_order.vehicle.last_service_date = timezone.now().date()
                 work_order.vehicle.save()
+                update_vehicle_service_schedule(work_order)
             except ValidationError as e:
                 logger.warning(f"Validation error during QC completion for WO {work_order.work_order_number}: {e}")
                 return Response(
@@ -796,9 +1117,11 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         try:
             work_order.transition_to('completed', user=request.user)
             
-            # Update vehicle's last service date
+            # Update vehicle's last service date and schedule
+            from .services import update_vehicle_service_schedule
             work_order.vehicle.last_service_date = timezone.now().date()
             work_order.vehicle.save()
+            update_vehicle_service_schedule(work_order)
             
             # Create completion note
             if completion_notes:
@@ -1943,6 +2266,33 @@ class TechnicianTimeLogViewSet(viewsets.ModelViewSet):
             return TechnicianTimeLogCreateSerializer
         return TechnicianTimeLogSerializer
     
+    @action(detail=False, methods=['get'])
+    def active(self, request):
+        """Get current user's active time log (not clocked out)"""
+        active_log = self.get_queryset().filter(
+            technician=request.user,
+            clock_out__isnull=True
+        ).first()
+        
+        if not active_log:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+            
+        serializer = self.get_serializer(active_log)
+        return Response(serializer.data)
+    
+    def perform_create(self, serializer):
+        """Auto-populate technician and hourly_rate if not provided"""
+        data = {}
+        if not serializer.validated_data.get('technician'):
+            data['technician'] = self.request.user
+            
+        if not serializer.validated_data.get('hourly_rate'):
+            # Get hourly rate from user profile
+            rate = getattr(self.request.user, 'hourly_rate', 0)
+            data['hourly_rate'] = rate or 0
+            
+        serializer.save(**data)
+
     @action(detail=True, methods=['post'])
     def clock_out(self, request, pk=None):
         """Clock out of time log"""

@@ -5,14 +5,16 @@ import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Vehicle } from "@/lib/api/vehicles";
+import { Vehicle, vehiclesApi } from "@/lib/api/vehicles";
 import Image from "next/image";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
-import { Gauge, Fuel, Calendar, FileText, ArrowUpRight, Car, ShieldCheck, User, MapPin, Hash, Activity, Cog } from "lucide-react";
+import { Gauge, Fuel, Calendar, FileText, ArrowUpRight, Car, ShieldCheck, User, MapPin, Hash, Activity, Cog, History, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "@tanstack/react-query";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface VehicleProfileViewProps {
     vehicle: Vehicle;
@@ -23,6 +25,13 @@ interface VehicleProfileViewProps {
 export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleAppointments = [] }: VehicleProfileViewProps) {
     const { formatCurrency } = useCurrency();
     const [showImageModal, setShowImageModal] = useState(false);
+    const [showOwnershipHistory, setShowOwnershipHistory] = useState(false);
+
+    const { data: ownershipHistory } = useQuery({
+        queryKey: ["vehicle-ownership-history", vehicle.id],
+        queryFn: () => vehiclesApi.getOwnershipHistory(vehicle.id),
+        enabled: showOwnershipHistory,
+    });
 
     // Calculate stats
     const totalServices = vehicleWorkOrders.length;
@@ -196,8 +205,17 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
 
                     {/* Owner Card */}
                     <Card>
-                        <CardHeader className="py-3 px-4 border-b bg-gray-50/30">
+                        <CardHeader className="py-3 px-4 border-b bg-gray-50/30 flex flex-row items-center justify-between">
                             <CardTitle className="text-sm font-semibold text-gray-700">Owner</CardTitle>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => setShowOwnershipHistory(true)}
+                            >
+                                <History className="w-3 h-3 mr-1" />
+                                History
+                            </Button>
                         </CardHeader>
                         <CardContent className="p-4">
                             {vehicle.owner ? (
@@ -291,6 +309,63 @@ export function VehicleProfileView({ vehicle, vehicleWorkOrders = [], vehicleApp
                             />
                         )}
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Ownership History Dialog */}
+            <Dialog open={showOwnershipHistory} onOpenChange={setShowOwnershipHistory}>
+                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                    <CardHeader className="px-0 pt-0">
+                        <CardTitle className="text-lg">Ownership History</CardTitle>
+                        <CardDescription>
+                            Complete history of ownership transfers for this vehicle
+                        </CardDescription>
+                    </CardHeader>
+                    {ownershipHistory && ownershipHistory.results.length > 0 ? (
+                        <div className="space-y-4">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Transfer Date</TableHead>
+                                        <TableHead>Previous Owner</TableHead>
+                                        <TableHead>New Owner</TableHead>
+                                        <TableHead>Transferred By</TableHead>
+                                        <TableHead>Notes</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {ownershipHistory.results.map((record) => (
+                                        <TableRow key={record.id}>
+                                            <TableCell className="font-medium">
+                                                {format(new Date(record.transfer_date), "MMM dd, yyyy")}
+                                            </TableCell>
+                                            <TableCell>
+                                                {record.previous_owner_name}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <ArrowRight className="w-4 h-4 text-gray-400" />
+                                                    <span className="font-medium">{record.new_owner_name}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-sm text-gray-600">
+                                                {record.transferred_by_name}
+                                            </TableCell>
+                                            <TableCell className="text-sm text-gray-500 max-w-xs truncate">
+                                                {record.notes || "-"}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">
+                            <History className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                            <p>No ownership history available</p>
+                            <p className="text-sm mt-1">This vehicle has not been transferred to a new owner yet.</p>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>

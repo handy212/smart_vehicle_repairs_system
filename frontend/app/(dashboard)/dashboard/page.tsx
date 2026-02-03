@@ -149,7 +149,7 @@ export default function DashboardPage() {
   // Memoize chart data preparation
   const revenueChartData = useMemo(
     () =>
-      revenueData?.revenue_by_period?.slice(-7).map((item) => ({
+      revenueData?.revenue_by_period?.slice(-7).map((item: { period: string | number | Date; revenue: any; }) => ({
         period: item.period,
         date: format(new Date(item.period), "MMM d"),
         revenue: item.revenue || 0,
@@ -231,7 +231,7 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <WorkOrderPieChart data={workOrderStats?.by_status?.map((item) => ({
+                <WorkOrderPieChart data={workOrderStats?.by_status?.map((item: { status: string; count: number }) => ({
                   status: item.status.replace(/_/g, " "),
                   count: item.count,
                 })) || []} />

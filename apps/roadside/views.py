@@ -19,17 +19,53 @@ from .serializers import (
 )
 from apps.accounts.permissions import HasPermission, HasAnyPermission
 from apps.branches.utils import resolve_branch
+from apps.branches.utils import filter_queryset_for_user_branches
 
 
 class RoadsideRequestViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing roadside assistance requests
     """
-    queryset = RoadsideRequest.objects.select_related(
-        'customer', 'vehicle', 'branch', 'assigned_technician', 
-        'subscription_used', 'created_by'
-    )
+    queryset = RoadsideRequest.objects.all()
+
+    def get_queryset(self):
+        """Filter requests based on user role and branch"""
+        user = self.request.user
+        action = getattr(self, 'action', None)
+        
+        queryset = RoadsideRequest.objects.select_related(
+            'customer', 'vehicle', 'branch', 'assigned_technician', 
+            'subscription_used', 'created_by'
+        )
+        
+        # For my_requests action, let the action handle filtering
+        if action == 'my_requests':
+            return queryset.none()  # Will be filtered in the action itself
+        
+        if not user or user.is_anonymous:
+            return queryset.none()
+        
+        if user.role == 'customer':
+            try:
+                customer = user.customer_profile
+                return queryset.filter(customer=customer)
+            except AttributeError:
+                from apps.customers.models import Customer
+                try:
+                    customer = Customer.objects.get(user=user)
+                    return queryset.filter(customer=customer)
+                except Customer.DoesNotExist:
+                    return queryset.none()
+        
+        elif getattr(user, 'is_technician', False):
+             # Technicians can only see requests assigned to them
+             return queryset.filter(assigned_technician=user)
+             
+        # Admin, Manager, and other staff -> Apply branch filtering
+        return filter_queryset_for_user_branches(queryset, user, self.request)
+
     permission_classes = [IsAuthenticated]
+
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['status', 'service_type', 'customer', 'vehicle', 'branch', 'is_covered_by_subscription', 'assigned_technician']
     search_fields = ['request_number', 'customer__user__first_name', 'customer__user__last_name', 'vehicle__license_plate', 'breakdown_location']
@@ -69,8 +105,16 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'create_roadside_requests'])]
         elif action == 'cancel':
              return [IsAuthenticated()]
-        elif action in ['update', 'partial_update', 'assign_dispatch', 'arrive', 'complete']:
+        elif action == 'assign_dispatch':
             return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'dispatch_roadside'])]
+        elif action in ['en_route', 'in_progress', 'arrive', 'complete', 'fail']:
+             # Allow dispatchers OR the assigned technician (via object permission or get_queryset security)
+             # But we must Block customers
+             if getattr(self.request.user, "role", None) == "customer":
+                 return [IsAuthenticated(), HasAnyPermission(['manage_roadside'])] # Effectively blocks customers
+             return [IsAuthenticated()]
+        elif action in ['update', 'partial_update']:
+             return [IsAuthenticated(), HasAnyPermission(['manage_roadside', 'dispatch_roadside'])]
         return [IsAuthenticated()]
     
     def get_serializer_class(self):
@@ -81,37 +125,7 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
             return RoadsideRequestUpdateSerializer
         return RoadsideRequestSerializer
     
-    def get_queryset(self):
-        """Filter requests based on user role"""
-        user = self.request.user
-        action = getattr(self, 'action', None)
-        
-        # For my_requests action, let the action handle filtering
-        if action == 'my_requests':
-            return self.queryset.none()  # Will be filtered in the action itself
-        
-        if not user or user.is_anonymous:
-            return self.queryset.none()
-        
-        if user.role == 'customer':
-            try:
-                customer = user.customer_profile
-                return self.queryset.filter(customer=customer)
-            except AttributeError:
-                from apps.customers.models import Customer
-                try:
-                    customer = Customer.objects.get(user=user)
-                    return self.queryset.filter(customer=customer)
-                except Customer.DoesNotExist:
-                    return self.queryset.none()
-        elif user.role in ['admin', 'manager']:
-            return self.queryset.all()
-        elif getattr(user, 'is_technician', False):
-             # Technicians can only see requests assigned to them
-             return self.queryset.filter(assigned_technician=user)
-        else:
-            # Other staff have no access to roadside requests
-            return self.queryset.none()
+
     
     
     def perform_create(self, serializer):
@@ -424,6 +438,29 @@ class RoadsideRequestViewSet(viewsets.ModelViewSet):
         roadside_request = self.get_object()
         
         try:
+            # Check for subscription refund before cancelling
+            if roadside_request.subscription_allowance_deducted and roadside_request.subscription_usage_record:
+                try:
+                    from apps.subscriptions.services import SubscriptionUsageService
+                    usage_record = roadside_request.subscription_usage_record
+                    
+                    SubscriptionUsageService.refund_allowance(
+                        subscription=usage_record.subscription,
+                        usage_type=usage_record.usage_type,
+                        quantity_to_refund=usage_record.quantity_used,
+                        reference_type='roadside',
+                        reference_id=roadside_request.id,
+                        description=f"Refund: Cancelled Request {roadside_request.request_number}",
+                        created_by=request.user
+                    )
+                    
+                    roadside_request.subscription_allowance_deducted = False
+                    roadside_request.save(update_fields=['subscription_allowance_deducted'])
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Failed to refund allowance for cancelled request {roadside_request.id}: {e}")
+
             roadside_request.mark_cancelled()
         except ValueError as e:
             return Response(

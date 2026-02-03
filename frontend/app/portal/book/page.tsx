@@ -10,7 +10,7 @@ import { Calendar, Car, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils/cn";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/lib/hooks/useToast";
 import { useRouter } from "next/navigation";
@@ -87,7 +87,7 @@ export default function BookAppointmentPage() {
     onError: (error: any) => {
       console.error("Appointment creation error:", error.response?.data);
       let errorMessage = "Failed to book appointment. Please try again.";
-      
+
       if (error.response?.data) {
         const data = error.response.data;
         if (data.detail) {
@@ -102,7 +102,7 @@ export default function BookAppointmentPage() {
           }
         }
       }
-      
+
       toast({
         title: "Booking Failed",
         description: errorMessage,
@@ -167,10 +167,13 @@ export default function BookAppointmentPage() {
                 <Label htmlFor="vehicle">
                   Vehicle <span className="text-red-500">*</span>
                 </Label>
-                <Select
+                <select
                   id="vehicle"
                   {...register("vehicle")}
-                  className={errors.vehicle ? "border-red-500" : ""}
+                  className={cn(
+                    "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                    errors.vehicle ? "border-red-500" : ""
+                  )}
                 >
                   <option value="">Select a vehicle</option>
                   {vehicles.map((vehicle: any) => (
@@ -178,7 +181,7 @@ export default function BookAppointmentPage() {
                       {vehicle.year} {vehicle.make} {vehicle.model} ({vehicle.license_plate || "N/A"})
                     </option>
                   ))}
-                </Select>
+                </select>
                 {errors.vehicle && (
                   <p className="text-sm text-red-600 dark:text-red-400">{errors.vehicle.message}</p>
                 )}
@@ -189,10 +192,13 @@ export default function BookAppointmentPage() {
                 <Label htmlFor="service_type">
                   Service Type <span className="text-red-500">*</span>
                 </Label>
-                <Select
+                <select
                   id="service_type"
                   {...register("service_type")}
-                  className={errors.service_type ? "border-red-500" : ""}
+                  className={cn(
+                    "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                    errors.service_type ? "border-red-500" : ""
+                  )}
                 >
                   <option value="">Select service type</option>
                   {serviceTypes.map((type) => (
@@ -200,7 +206,7 @@ export default function BookAppointmentPage() {
                       {type.label}
                     </option>
                   ))}
-                </Select>
+                </select>
                 {errors.service_type && (
                   <p className="text-sm text-red-600 dark:text-red-400">{errors.service_type.message}</p>
                 )}
@@ -270,7 +276,7 @@ export default function BookAppointmentPage() {
               <div className="flex items-center justify-end space-x-4">
                 <Button
                   type="button"
-                 variant="secondary"
+                  variant="secondary"
                   onClick={() => router.back()}
                   disabled={isSubmitting}
                 >

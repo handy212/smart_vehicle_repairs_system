@@ -9,10 +9,10 @@ import { branchesApi } from "@/lib/api/branches";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CheckCircle2, Image as ImageIcon, X, Package } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
 import { useState } from "react";
 import Image from "next/image";
 import { useCurrency } from "@/lib/hooks/useCurrency";
@@ -28,7 +28,7 @@ export const partSchema = z.object({
     manufacturer: z.string().optional(),
     manufacturer_part_number: z.string().optional(),
     preferred_supplier: z.number().optional(),
-    quantity_in_stock: z.number().min(0),
+    // quantity_in_stock removed - stock is managed via StockItem per branch
     reorder_point: z.number().min(0),
     reorder_quantity: z.number().min(0),
     minimum_stock: z.number().min(0),
@@ -96,7 +96,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
     } = useForm<PartFormData>({
         resolver: zodResolver(partSchema),
         defaultValues: {
-            quantity_in_stock: 0,
+            // quantity_in_stock removed - stock is managed via StockItem per branch
             reorder_point: 10,
             reorder_quantity: 20,
             minimum_stock: 5,
@@ -161,13 +161,19 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                             {errors.part_number && <p className="text-xs text-red-500">{errors.part_number.message}</p>}
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="category">Category <span className="text-red-500">*</span></Label>
-                                            <Select id="category" {...register("category", { valueAsNumber: true })} className={errors.category ? "border-red-500" : ""}>
+                                            <select
+                                                id="category"
+                                                {...register("category", { valueAsNumber: true })}
+                                                className={cn(
+                                                    "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+                                                    errors.category ? "border-red-500" : ""
+                                                )}
+                                            >
                                                 <option value="">Select Category</option>
-                                                {categories.map((cat) => (
+                                                {categories.map((cat: any) => (
                                                     <option key={cat.id} value={cat.id}>{cat.full_path || cat.name}</option>
                                                 ))}
-                                            </Select>
+                                            </select>
                                             {errors.category && <p className="text-xs text-red-500">{errors.category.message}</p>}
                                         </div>
                                     </div>
@@ -183,10 +189,14 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                     <div className="grid grid-cols-3 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="branch">Branch</Label>
-                                            <Select id="branch" {...register("branch", { valueAsNumber: true })}>
+                                            <select
+                                                id="branch"
+                                                {...register("branch", { valueAsNumber: true })}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
                                                 <option value="">Any Branch</option>
-                                                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                                            </Select>
+                                                {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                            </select>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="manufacturer">Manufacturer</Label>
@@ -201,14 +211,20 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
 
                                 {/* Inventory Tab */}
                                 <TabsContent value="inventory" className="p-6 space-y-4">
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="quantity_in_stock">Stock Qty</Label>
-                                            <Input type="number" id="quantity_in_stock" {...register("quantity_in_stock", { valueAsNumber: true })} />
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 mb-4">
+                                        <p className="text-sm text-blue-800 dark:text-blue-200">
+                                            <strong>Note:</strong> Stock quantities are managed per branch via Stock Items. 
+                                            Set initial stock after creating the part, or use purchase orders to receive inventory.
+                                        </p>
                                         </div>
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="unit">Unit <span className="text-red-500">*</span></Label>
-                                            <Select id="unit" {...register("unit")}>
+                                            <select
+                                                id="unit"
+                                                {...register("unit")}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
                                                 <option value="piece">Piece</option>
                                                 <option value="set">Set</option>
                                                 <option value="pair">Pair</option>
@@ -223,7 +239,7 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                                                 <option value="foot">Foot</option>
                                                 <option value="meter">Meter</option>
                                                 <option value="other">Other</option>
-                                            </Select>
+                                            </select>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="maximum_stock">Max Stock</Label>
@@ -328,10 +344,13 @@ export function PartForm({ initialData, onSubmit, isSubmitting, mode, onCancel }
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-4">
-                            <Select {...register("preferred_supplier", { valueAsNumber: true })}>
+                            <select
+                                {...register("preferred_supplier", { valueAsNumber: true })}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
                                 <option value="">None</option>
-                                {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.supplier_code})</option>)}
-                            </Select>
+                                {suppliers.map((s: any) => <option key={s.id} value={s.id}>{s.name} ({s.supplier_code})</option>)}
+                            </select>
                         </CardContent>
                     </Card>
 

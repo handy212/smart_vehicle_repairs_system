@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { techniciansApi, PerformanceMetrics as PerformanceMetricsType } from "@/lib/api/technicians";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
 import { TrendingUp, TrendingDown, DollarSign, Clock, Briefcase, Calendar, Award, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -54,17 +53,17 @@ export function PerformanceMetrics({ technicianId }: PerformanceMetricsProps) {
                     <h3 className="text-lg font-semibold">Performance Overview</h3>
                     <p className="text-sm text-muted-foreground">Key metrics and analytics</p>
                 </div>
-                <Select
+                <select
                     value={period}
                     onChange={(e) => setPeriod(e.target.value)}
-                    className="w-48"
+                    className="flex h-10 w-48 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     <option value="week">This Week</option>
                     <option value="month">This Month</option>
                     <option value="quarter">This Quarter</option>
                     <option value="year">This Year</option>
                     <option value="all">All Time</option>
-                </Select>
+                </select>
             </div>
 
             {/* Productivity Metrics */}

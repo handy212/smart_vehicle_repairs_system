@@ -91,6 +91,11 @@ class Branch(models.Model):
         default=1,
         help_text="Next sequential number for inspections"
     )
+    next_gatepass_number = models.PositiveIntegerField(
+        _('next gate pass number'),
+        default=1,
+        help_text="Next sequential number for gate passes"
+    )
     
     # Django Ledger Entity reference (for accounting integration)
     # ledger_entity = models.OneToOneField(
@@ -176,6 +181,13 @@ class Branch(models.Model):
         self.next_inspection_number += 1
         self.save(update_fields=['next_inspection_number'])
         return f"{self.code}-INS{current:06d}"
+    
+    def get_next_gatepass_number(self):
+        """Get and increment the next gate pass number for this branch"""
+        current = self.next_gatepass_number
+        self.next_gatepass_number += 1
+        self.save(update_fields=['next_gatepass_number'])
+        return f"{self.code}-GP{current:06d}"
     
     @property
     def staff_count(self):

@@ -113,7 +113,7 @@ export default function EstimateDetailPage() {
         <div className="flex items-center space-x-2">
           {canApprove && (
             <Button
-              variant="success"
+              variant="default"
               onClick={() => approveMutation.mutate()}
               disabled={approveMutation.isPending}
             >

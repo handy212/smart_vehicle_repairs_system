@@ -253,6 +253,26 @@ class WorkOrder(models.Model):
         blank=True,
         help_text="Reason for warranty/rework"
     )
+
+    # Maintenance Type Link
+    MAINTENANCE_TYPE_CHOICES = [
+        ('general', 'General Repair'),
+        ('routine', 'Routine Maintenance'),
+    ]
+    maintenance_type = models.CharField(
+        max_length=20,
+        choices=MAINTENANCE_TYPE_CHOICES,
+        default='general',
+        help_text="Type of maintenance (General or Routine)"
+    )
+    service_type = models.ForeignKey(
+        'vehicles.ServiceType',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='work_orders',
+        help_text="Required if maintenance_type is 'routine'"
+    )
     
     class Meta:
         ordering = ['-created_at']
@@ -420,10 +440,10 @@ class WorkOrder(models.Model):
                 return False, "At least one task must exist before completing"
             if self.quality_check_required and not self.quality_check_completed:
                 return False, "Quality check must be completed first"
-            # Check if all parts are installed or returned
-            pending_parts = self.parts.exclude(status__in=['installed', 'returned'])
+            # Check if all parts are installed, returned, or ready (ready parts will be consumed during transition)
+            pending_parts = self.parts.exclude(status__in=['installed', 'returned', 'ready'])
             if pending_parts.exists():
-                return False, f"{pending_parts.count()} part(s) are not installed or returned"
+                return False, f"{pending_parts.count()} part(s) are not ready, installed, or returned"
         
         if new_status == 'invoiced':
             if not self.odometer_out:
@@ -455,9 +475,9 @@ class WorkOrder(models.Model):
                 errors.append("Work order must be approved")
         
         if new_status == 'completed':
-            pending_parts = self.parts.exclude(status__in=['installed', 'returned'])
+            pending_parts = self.parts.exclude(status__in=['installed', 'returned', 'ready'])
             if pending_parts.exists():
-                errors.append(f"{pending_parts.count()} part(s) are not installed or returned")
+                errors.append(f"{pending_parts.count()} part(s) are not ready, installed, or returned")
         
         if new_status == 'invoiced':
             if not self.odometer_out:
@@ -528,6 +548,16 @@ class WorkOrder(models.Model):
             logger = logging.getLogger(__name__)
             logger.error(f"Inventory integration failed for WO {self.work_order_number}: {e}")
         
+        # Update service schedules when work order is completed
+        if new_status == 'completed' and old_status != 'completed':
+            try:
+                self._update_service_schedules()
+            except Exception as e:
+                # Log error but don't fail the transition
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to update service schedules for WO {self.work_order_number}: {e}", exc_info=True)
+        
         # Convert repair recommendations to tasks when starting work
         if new_status == 'in_progress' and old_status != 'in_progress':
             # This will be called from start_work endpoint, but also handle here as backup
@@ -591,6 +621,80 @@ class WorkOrder(models.Model):
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Failed to send notification for work order {self.id}: {e}")
+    
+    def _update_service_schedules(self):
+        """
+        Update vehicle service schedules when work order is completed.
+        Checks service tasks and matches them to service types, then updates schedules.
+        """
+        try:
+            from apps.vehicles.models import ServiceType, VehicleServiceSchedule
+            from django.utils import timezone
+            
+            if not self.vehicle:
+                return
+            
+            # Get completed service tasks that might match service types
+            # Look for maintenance tasks or tasks with descriptions matching service types
+            completed_tasks = self.tasks.filter(
+                status='completed',
+                task_type='maintenance'
+            )
+            
+            if not completed_tasks.exists():
+                return
+            
+            # Get all active service types
+            service_types = ServiceType.objects.filter(is_active=True)
+            
+            # Try to match tasks to service types
+            for task in completed_tasks:
+                # Try to find matching service type by name in task description
+                task_description_lower = task.description.lower()
+                
+                for service_type in service_types:
+                    service_name_lower = service_type.name.lower()
+                    
+                    # Check if service type name appears in task description
+                    if service_name_lower in task_description_lower:
+                        # Found a match - update or create service schedule
+                        schedule, created = VehicleServiceSchedule.objects.get_or_create(
+                            vehicle=self.vehicle,
+                            service_type=service_type,
+                            defaults={
+                                'is_active': True,
+                            }
+                        )
+                        
+                        # Update last service info
+                        service_date = self.completed_at.date() if self.completed_at else timezone.now().date()
+                        schedule.last_service_date = service_date
+                        schedule.last_service_mileage = self.odometer_in or self.vehicle.current_mileage
+                        
+                        # Recalculate next service due
+                        schedule.calculate_next_service_due()
+                        
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.info(
+                            f"Updated service schedule for {self.vehicle} - {service_type.name} "
+                            f"from work order {self.work_order_number}"
+                        )
+                        break  # Only match to first service type found
+            
+            # Also check if work order has a general service completion
+            # Update vehicle's general last_service_date if not already set
+            if self.vehicle and not self.vehicle.last_service_date:
+                self.vehicle.last_service_date = self.completed_at.date() if self.completed_at else timezone.now().date()
+                if self.odometer_in:
+                    self.vehicle.current_mileage = self.odometer_in
+                self.vehicle.save(update_fields=['last_service_date', 'current_mileage'])
+                
+        except Exception as e:
+            # Log error but don't fail the work order completion
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error updating service schedules for work order {self.id}: {e}", exc_info=True)
     
     def recalculate_totals(self):
         """
@@ -750,7 +854,7 @@ class WorkOrder(models.Model):
                     sequence_order=max_sequence + tasks_created + 1,
                     assigned_to=assigned_user,
                     estimated_hours=rec.estimated_labor_hours or Decimal('0'),
-                    labor_rate=getattr(self.primary_technician, 'hourly_rate', Decimal('0')) if self.primary_technician else Decimal('0'),
+                    labor_rate=(getattr(self.primary_technician, 'hourly_rate', None) or Decimal('0')) if self.primary_technician else Decimal('0'),
                     workflow_phase=None,
                     is_workflow_task=False,
                 )
@@ -1471,16 +1575,69 @@ class TechnicianTimeLog(models.Model):
         return f"{self.technician} - {self.work_order.work_order_number} - {self.duration_hours}h"
     
     def save(self, *args, **kwargs):
-        # Calculate duration if clock_out is set
+        # Calculate duration and cost if clock_out is set
         if self.clock_out and self.clock_in:
             duration = self.clock_out - self.clock_in
-            self.duration_hours = duration.total_seconds() / 3600
+            hours = Decimal(duration.total_seconds()) / Decimal(3600)
+            self.duration_hours = round(hours, 2)
+            
+            # Calculate labor cost
+            if self.hourly_rate:
+                self.labor_cost = round(self.duration_hours * self.hourly_rate, 2)
         
-        # Calculate labor cost
-        if self.duration_hours and self.hourly_rate:
-            self.labor_cost = self.duration_hours * self.hourly_rate
-        
+        # Auto-set hourly rate from user profile if not set and available
+        if not self.hourly_rate and self.technician:
+            # Try to get rate from technician profile or user
+            if hasattr(self.technician, 'technician_profile'):
+                 # Assuming rate might be on profile in future, currently maybe on user? 
+                 # The view used getattr(user, 'hourly_rate', 0).
+                 # Let's stick to what the view did but also allow for profile expansion
+                 pass
+            
+            rate = getattr(self.technician, 'hourly_rate', Decimal('0.00'))
+            if rate:
+                self.hourly_rate = rate
+
         super().save(*args, **kwargs)
+        
+        # Update Technician Status
+        self._update_technician_status()
+
+    def _update_technician_status(self):
+        """
+        Update the associated technician's status based on clock in/out
+        """
+        if not self.technician:
+            return
+            
+        try:
+            # Access the reverse relation for Technician profile
+            # defined in apps/technicians/models.py as related_name='technician_profile'
+            tech_profile = getattr(self.technician, 'technician_profile', None)
+            
+            if tech_profile:
+                if not self.clock_out:
+                    # If clocked in and not clocked out, they are busy
+                    if tech_profile.current_status != 'busy':
+                        tech_profile.current_status = 'busy'
+                        tech_profile.save(update_fields=['current_status'])
+                else:
+                    # If clocked out, check if they have any OTHER active logs
+                    # If no other active logs, set to available
+                    has_other_active = self.technician.time_logs.filter(
+                        clock_out__isnull=True
+                    ).exclude(id=self.id).exists()
+                    
+                    if not has_other_active:
+                        if tech_profile.current_status == 'busy':
+                            tech_profile.current_status = 'available'
+                            tech_profile.save(update_fields=['current_status'])
+                            
+        except Exception as e:
+            # Log error strictly, don't crash the save
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to update technician status for user {self.technician.id}: {e}")
 
 
 class WorkOrderNote(models.Model):

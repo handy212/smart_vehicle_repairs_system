@@ -620,7 +620,9 @@ export default function RoadsideDetailPage() {
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-600 dark:text-gray-400">Status:</span>
-                                    <span className="font-medium text-emerald-600 dark:text-emerald-400">Deducted</span>
+                                    <span className={`font-medium ${request.subscription_allowance_deducted ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+                                        {request.subscription_allowance_deducted ? "Deducted" : "Refunded"}
+                                    </span>
                                 </div>
                             </CardContent>
                         </Card>

@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
-import { User, FileText, Wrench, Search, Truck, Clock } from "lucide-react";
+import { User, FileText, Wrench, Search, Truck, Clock, Calendar } from "lucide-react";
 
 interface VehicleSidebarProps {
     vehicleId: number;
@@ -27,7 +27,12 @@ export function VehicleSidebar({ vehicleId, activeView, onViewChange }: VehicleS
             icon: Clock,
             href: `/vehicles/${vehicleId}?view=history`,
         },
-
+        {
+            id: "services",
+            label: "Service Schedule",
+            icon: Calendar,
+            href: `/vehicles/${vehicleId}?view=services`,
+        },
         {
             id: "documents",
             label: "Documents",

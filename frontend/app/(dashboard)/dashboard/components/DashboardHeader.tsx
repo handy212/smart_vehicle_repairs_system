@@ -20,7 +20,7 @@ export function DashboardHeader() {
                 <div className="flex items-center gap-3">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight flex items-center gap-2">
                         <PremiumIcons.Dashboard className="w-8 h-8 text-primary dark:text-primary" />
-                        Shop Overview
+                        Dashboard
                     </h1>
                     {currentTime && (
                         <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 dark:bg-orange-900/20 text-[10px] font-medium text-primary dark:text-orange-300 uppercase tracking-wider border border-orange-100 dark:border-orange-800">
@@ -32,9 +32,6 @@ export function DashboardHeader() {
                         </div>
                     )}
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Welcome back to your shop command center
-                </p>
             </div>
 
             <div className="flex items-center gap-2">

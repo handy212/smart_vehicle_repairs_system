@@ -866,7 +866,7 @@ class ReportingService:
             return credits - debits
 
     @classmethod
-    def get_balance_sheet(cls, date=None):
+    def get_balance_sheet(cls, date=None, branch_id=None):
         if not date:
             date = timezone.now().date()
             
@@ -882,21 +882,21 @@ class ReportingService:
         # Optimize: fetch all relevant accounts with balances in one go? 
         # For simplicity, iterating is fine for < 100 accounts.
         for account in Account.objects.filter(account_type='asset', is_active=True):
-            bal = cls.get_account_balance(account, date=date)
+            bal = cls.get_account_balance(account, date=date, branch_id=branch_id)
             if bal != 0:
                 assets.append({'code': account.code, 'name': account.name, 'balance': bal})
                 total_assets += bal
                 
         # 2. Liabilities
         for account in Account.objects.filter(account_type='liability', is_active=True):
-            bal = cls.get_account_balance(account, date=date)
+            bal = cls.get_account_balance(account, date=date, branch_id=branch_id)
             if bal != 0:
                 liabilities.append({'code': account.code, 'name': account.name, 'balance': bal})
                 total_liabilities += bal
 
         # 3. Equity (Explicit Accounts)
         for account in Account.objects.filter(account_type='equity', is_active=True):
-            bal = cls.get_account_balance(account, date=date)
+            bal = cls.get_account_balance(account, date=date, branch_id=branch_id)
             if bal != 0:
                 equity.append({'code': account.code, 'name': account.name, 'balance': bal})
                 total_equity += bal
@@ -905,8 +905,8 @@ class ReportingService:
         # Income - Expenses (All time up to date)
         # Net Income = Total Income (Credit) - Total Expenses (Debit)
         
-        total_income_lifetime = sum(cls.get_account_balance(a, date=date) for a in Account.objects.filter(account_type='income'))
-        total_expense_lifetime = sum(cls.get_account_balance(a, date=date) for a in Account.objects.filter(account_type='expense'))
+        total_income_lifetime = sum(cls.get_account_balance(a, date=date, branch_id=branch_id) for a in Account.objects.filter(account_type='income'))
+        total_expense_lifetime = sum(cls.get_account_balance(a, date=date, branch_id=branch_id) for a in Account.objects.filter(account_type='expense'))
         
         retained_earnings = total_income_lifetime - total_expense_lifetime
         
@@ -963,7 +963,7 @@ class ReportingService:
         }
 
     @classmethod
-    def get_trial_balance(cls, date=None):
+    def get_trial_balance(cls, date=None, branch_id=None):
         """
         Generates a Trial Balance report.
         Lists all accounts with their debit/credit balances.
@@ -983,6 +983,8 @@ class ReportingService:
                 account=account,
                 journal_entry__date__lte=date
             )
+            if branch_id:
+                qs = qs.filter(journal_entry__branch_id=branch_id)
             aggregates = qs.aggregate(
                 debits=Sum('amount', filter=Q(transaction_type='debit')),
                 credits=Sum('amount', filter=Q(transaction_type='credit'))
@@ -1025,7 +1027,7 @@ class ReportingService:
         }
 
     @staticmethod
-    def get_cash_flow_statement(start_date=None, end_date=None):
+    def get_cash_flow_statement(start_date=None, end_date=None, branch_id=None):
         """
         Generates Statement of Cash Flows (Direct Method - Simplified).
         Classifies cash movements into Operating, Investing, and Financing.
@@ -1058,6 +1060,8 @@ class ReportingService:
             journal_entry__posted=True,
             journal_entry__date__lt=start_date
         )
+        if branch_id:
+            opening_qs = opening_qs.filter(journal_entry__branch_id=branch_id)
         op_agg = opening_qs.aggregate(
             debits=Sum('amount', filter=Q(transaction_type='debit')),
             credits=Sum('amount', filter=Q(transaction_type='credit'))
@@ -1072,7 +1076,11 @@ class ReportingService:
             account__in=cash_accounts,
             journal_entry__posted=True,
             journal_entry__date__range=[start_date, end_date]
-        ).select_related('journal_entry')
+        )
+        if branch_id:
+            transactions = transactions.filter(journal_entry__branch_id=branch_id)
+            
+        transactions = transactions.select_related('journal_entry')
         
         for txn in transactions:
             je = txn.journal_entry
@@ -1114,7 +1122,7 @@ class ReportingService:
         return report
 
     @staticmethod
-    def get_tax_report(start_date=None, end_date=None):
+    def get_tax_report(start_date=None, end_date=None, branch_id=None):
         """
         Generate Tax Report (Sales Tax Collected vs Input Tax Paid)
         """
@@ -1134,6 +1142,9 @@ class ReportingService:
             status__in=['open', 'partial', 'paid']  # Only finalized invoices
         )
         
+        if branch_id:
+            invoices = invoices.filter(branch_id=branch_id)
+        
         tax_collected = invoices.aggregate(
             vat=Sum('tax_vat_amount') or Decimal('0'),
             nhil=Sum('tax_nhil_amount') or Decimal('0'),
@@ -1148,6 +1159,9 @@ class ReportingService:
             bill_date__lte=end_date,
             status__in=['open', 'partially_paid', 'paid']
         )
+        
+        if branch_id:
+            bills = bills.filter(branch_id=branch_id)
         
         tax_paid = bills.aggregate(
             total=Sum('tax_amount') or Decimal('0')
@@ -1177,7 +1191,7 @@ class ReportingService:
         }
 
     @staticmethod
-    def get_aging_report(report_type='ar', date=None):
+    def get_aging_report(report_type='ar', date=None, branch_id=None):
         """
         Generates AP (Accounts Payable) or AR (Accounts Receivable) Aging Report.
         Buckets: Current, 1-30, 31-60, 61-90, 90+
@@ -1202,6 +1216,9 @@ class ReportingService:
             queryset = Invoice.objects.filter(
                 status__in=['sent', 'viewed', 'partial', 'overdue']
             ).exclude(amount_due=0)
+            
+            if branch_id:
+                queryset = queryset.filter(branch_id=branch_id)
             
             for invoice in queryset:
                 due_date = invoice.due_date
@@ -1239,6 +1256,9 @@ class ReportingService:
             queryset = Bill.objects.filter(
                 status__in=['open', 'partially_paid', 'overdue']
             ).exclude(amount_due=0)
+            
+            if branch_id:
+                queryset = queryset.filter(branch_id=branch_id)
             
             for bill in queryset:
                 due_date = bill.due_date

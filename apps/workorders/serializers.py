@@ -4,9 +4,12 @@ from .models import (
     WorkOrder, ServiceTask, WorkOrderPart, 
     TechnicianTimeLog, WorkOrderNote, WorkOrderPhoto
 )
+from django.contrib.auth import get_user_model
 from apps.customers.serializers import CustomerListSerializer
 from apps.vehicles.serializers import VehicleListSerializer
 from apps.appointments.serializers import AppointmentListSerializer
+
+User = get_user_model()
 
 
 # ============= Work Order Serializers =============
@@ -15,6 +18,7 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
     """List view with nested customer/vehicle info"""
     customer_name = serializers.SerializerMethodField()
     vehicle_info = serializers.SerializerMethodField()
+    vehicle_display = serializers.SerializerMethodField()
     primary_technician_name = serializers.SerializerMethodField()
     is_overdue = serializers.BooleanField(read_only=True)
     days_in_shop = serializers.IntegerField(read_only=True)
@@ -26,7 +30,7 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
         model = WorkOrder
         fields = [
             'id', 'work_order_number', 'status', 'priority',
-            'customer', 'customer_name', 'vehicle', 'vehicle_info',
+            'customer', 'customer_name', 'vehicle', 'vehicle_info', 'vehicle_display',
             'primary_technician', 'primary_technician_name',
             'created_at', 'started_at', 'completed_at', 'estimated_completion',
             'estimated_total', 'actual_total', 'total_cost', 'is_overdue', 'days_in_shop',
@@ -45,6 +49,9 @@ class WorkOrderListSerializer(serializers.ModelSerializer):
         if obj.vehicle:
             return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model} - {obj.vehicle.license_plate}"
         return "N/A"
+    
+    def get_vehicle_display(self, obj):
+        return self.get_vehicle_info(obj)
     
     def get_total_cost(self, obj):
         """Get total cost (use actual_total if available, otherwise estimated_total)"""
@@ -69,6 +76,7 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     appointment = AppointmentListSerializer(read_only=True)
     
     primary_technician_name = serializers.SerializerMethodField()
+    vehicle_display = serializers.SerializerMethodField()
     technician_names = serializers.CharField(read_only=True)
     assigned_technicians_detail = serializers.SerializerMethodField()
     
@@ -89,6 +97,11 @@ class WorkOrderDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkOrder
         fields = '__all__'
+    
+    def get_vehicle_display(self, obj):
+        if obj.vehicle:
+            return f"{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model} - {obj.vehicle.license_plate}"
+        return "N/A"
     
     def get_primary_technician_name(self, obj):
         if obj.primary_technician:
@@ -142,7 +155,7 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
         model = WorkOrder
         fields = [
             'id', 'work_order_number',
-            'appointment', 'customer', 'vehicle',
+            'appointment', 'customer', 'vehicle', 'branch',
             'status', 'priority',
             'service_coordinator',
             'primary_technician', 'assigned_technicians',
@@ -153,7 +166,8 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             'odometer_in',
             'requires_approval', 'is_warranty', 'is_recall',
             'is_customer_waiting', 'quality_check_required',
-            'is_warranty_rework', 'related_work_order', 'warranty_reason'
+            'is_warranty_rework', 'related_work_order', 'warranty_reason',
+            'maintenance_type', 'service_type'
         ]
     
     def validate(self, data):
@@ -213,6 +227,33 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
                         f"work order has been closed at the branch where it was opened."
                     )
         
+        # Validate warranty rework fields
+        is_warranty_rework = data.get('is_warranty_rework', False)
+        related_work_order = data.get('related_work_order')
+        
+        if is_warranty_rework:
+            if not related_work_order:
+                raise serializers.ValidationError({
+                    'related_work_order': 'Related work order is required when marking as warranty/rework.'
+                })
+            
+            # Validate that related work order exists and is completed/closed
+            try:
+                related_wo = WorkOrder.objects.get(pk=related_work_order.id if hasattr(related_work_order, 'id') else related_work_order)
+                if related_wo.status not in ['completed', 'invoiced', 'closed']:
+                    raise serializers.ValidationError({
+                        'related_work_order': 'Related work order must be completed, invoiced, or closed.'
+                    })
+                # Optionally validate same vehicle (comment out if cross-vehicle rework is allowed)
+                # if related_wo.vehicle != data['vehicle']:
+                #     raise serializers.ValidationError({
+                #         'related_work_order': 'Related work order must be for the same vehicle.'
+                #     })
+            except WorkOrder.DoesNotExist:
+                raise serializers.ValidationError({
+                    'related_work_order': 'Related work order not found.'
+                })
+        
         # Check for repeat visits (non-blocking - stored in context for frontend)
         from django.conf import settings
         if settings.REPEAT_VISIT_ENABLED and data.get('customer_concerns'):
@@ -270,7 +311,11 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             validated_data['is_warranty'] = True
             validated_data['is_warranty_rework'] = True
             if related_work_order_id:
-                validated_data['related_work_order_id'] = related_work_order_id
+                # related_work_order_id might be an ID or a WorkOrder instance
+                if hasattr(related_work_order_id, 'id'):
+                    validated_data['related_work_order'] = related_work_order_id
+                else:
+                    validated_data['related_work_order_id'] = related_work_order_id
             if warranty_reason:
                 validated_data['warranty_reason'] = warranty_reason
         
@@ -330,6 +375,10 @@ class WorkOrderCreateSerializer(serializers.ModelSerializer):
             except WorkOrder.DoesNotExist:
                 pass  # Related work order not found, skip alert creation
         
+        # Apply service bundle if applicable
+        from .services import apply_service_bundle
+        apply_service_bundle(work_order)
+        
         return work_order
 
 
@@ -351,7 +400,9 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
             'odometer_out',
             'quality_check_required', 'quality_check_completed',
             'quality_check_by', 'quality_check_notes', 'quality_check_passed',
-            'is_customer_waiting'
+            'quality_check_by', 'quality_check_notes', 'quality_check_passed',
+            'is_customer_waiting',
+            'maintenance_type', 'service_type'
         ]
     
     def __init__(self, *args, **kwargs):
@@ -403,6 +454,21 @@ class WorkOrderUpdateSerializer(serializers.ModelSerializer):
         # Update other fields first
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+            
+        # Check if maintenance type or service type implies applied bundle
+        # We only apply if it wasn't applied before or explicit change. 
+        # For simplicity, if changed to 'routine', apply it.
+        # Note: This might duplicate items if applied multiple times. ideally we check if items exist.
+        # But 'apply_service_bundle' is basic. We'll trust user intent.
+        if instance.maintenance_type == 'routine' and instance.service_type:
+            # We could check if we just switched to routine
+            # For now, let's assuming if they update it, they might want to re-apply or apply.
+            # But let's be careful not to spam parts.
+            # Only apply if we have 0 parts? Or just let the user delete updates?
+            # Let's simple check: if parts count is 0, auto apply.
+            if instance.parts.count() == 0:
+                 from .services import apply_service_bundle
+                 apply_service_bundle(instance)
         
         # Handle status transition if status is being changed
         if new_status and new_status != instance.status:
@@ -559,6 +625,7 @@ class WorkOrderPartCreateSerializer(serializers.ModelSerializer):
 class TechnicianTimeLogSerializer(serializers.ModelSerializer):
     """Time log with technician info"""
     technician_name = serializers.SerializerMethodField()
+    work_order_number = serializers.CharField(source='work_order.work_order_number', read_only=True)
     
     class Meta:
         model = TechnicianTimeLog
@@ -570,11 +637,20 @@ class TechnicianTimeLogSerializer(serializers.ModelSerializer):
 
 class TechnicianTimeLogCreateSerializer(serializers.ModelSerializer):
     """Create time log (clock in)"""
+    technician = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        required=False
+    )
+    hourly_rate = serializers.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        required=False
+    )
     
     class Meta:
         model = TechnicianTimeLog
         fields = [
-            'work_order', 'task', 'technician',
+            'id', 'work_order', 'task', 'technician',
             'clock_in', 'description', 'hourly_rate', 'is_billable'
         ]
     

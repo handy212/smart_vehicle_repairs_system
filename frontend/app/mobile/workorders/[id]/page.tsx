@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { workordersApi, WorkOrder } from "@/lib/api/workorders";
 import { workOrderTasksApi, ServiceTask } from "@/lib/api/workorder-tasks";
 import { workOrderPartsApi, WorkOrderPart } from "@/lib/api/workorder-parts";
+import { workOrderNotesApi } from "@/lib/api/workorder-notes";
 import { useOfflineStore } from "@/store/offlineStore";
 import { workOrdersDB } from "@/lib/offline/db";
 import { queueRequest } from "@/lib/offline/queue";
@@ -26,6 +27,7 @@ import {
   Package,
   AlertTriangle,
   X,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,10 +50,29 @@ export default function MobileWorkOrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showAdditionalWorkDialog, setShowAdditionalWorkDialog] = useState(false);
   const [additionalWorkNotes, setAdditionalWorkNotes] = useState("");
+  const [activeLog, setActiveLog] = useState<any | null>(null);
+  const [showPartRequestDialog, setShowPartRequestDialog] = useState(false);
+  const [newPart, setNewPart] = useState({
+    part_name: "",
+    quantity: 1,
+    description: "",
+  });
 
   useEffect(() => {
     loadWorkOrder();
+    checkActiveLog();
   }, [workOrderId]);
+
+  const checkActiveLog = async () => {
+    try {
+      if (isOnline) {
+        const response = await apiClient.get("/workorders/time-logs/active/");
+        setActiveLog(response.data);
+      }
+    } catch (error) {
+      setActiveLog(null);
+    }
+  };
 
   const loadWorkOrder = async () => {
     setLoading(true);
@@ -82,27 +103,54 @@ export default function MobileWorkOrderDetailPage() {
     }
   };
 
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChangeAction = async (action: 'startWork' | 'pause' | 'resume' | 'requestQualityCheck' | 'complete' | 'updateStatus', status?: string) => {
     if (!workOrder) return;
 
     try {
       if (isOnline) {
-        await workordersApi.updateStatus(workOrder.id, newStatus);
+        let updatedWO;
+        if (action === 'startWork') updatedWO = await workordersApi.startWork(workOrder.id);
+        else if (action === 'pause') updatedWO = await workordersApi.pause(workOrder.id);
+        else if (action === 'resume') updatedWO = await workordersApi.resume(workOrder.id);
+        else if (action === 'requestQualityCheck') updatedWO = await workordersApi.requestQualityCheck(workOrder.id);
+        else if (action === 'complete') updatedWO = await workordersApi.complete(workOrder.id);
+        else if (action === 'updateStatus' && status) updatedWO = await workordersApi.updateStatus(workOrder.id, status);
+
         await loadWorkOrder();
         toast({
           title: "Success",
           description: "Status updated successfully",
         });
       } else {
-        // Queue for offline sync
+        // Fallback for offline (approximate)
+        const newStatus = status || (action === 'startWork' ? 'in_progress' : action === 'pause' ? 'paused' : action === 'resume' ? 'in_progress' : action === 'requestQualityCheck' ? 'quality_check' : action === 'complete' ? 'completed' : workOrder.status);
         const updated = { ...workOrder, status: newStatus };
         await workOrdersDB.set(workOrder.id, updated, false);
-        await queueRequest(
-          "update",
-          `/workorders/work-orders/${workOrder.id}/`,
-          "PATCH",
-          { status: newStatus }
-        );
+
+        const pathMap: any = {
+          startWork: 'start_work',
+          pause: 'pause',
+          resume: 'resume',
+          requestQualityCheck: 'request_quality_check',
+          complete: 'complete',
+        };
+
+        if (action === 'updateStatus') {
+          await queueRequest(
+            "update",
+            `/workorders/work-orders/${workOrder.id}/`,
+            "PATCH",
+            { status: newStatus }
+          );
+        } else {
+          await queueRequest(
+            "create", // specialized actions are POST
+            `/workorders/work-orders/${workOrder.id}/${pathMap[action]}/`,
+            "POST",
+            {}
+          );
+        }
+
         setWorkOrder(updated);
         toast({
           title: "Queued",
@@ -110,13 +158,90 @@ export default function MobileWorkOrderDetailPage() {
         });
       }
     } catch (error: any) {
-      console.error("Failed to update status:", error);
+      console.error(`Failed to update status via ${action}:`, error);
       const errorMessage = error.response?.data?.error || error.response?.data?.detail || "Failed to update status";
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive",
       });
+    }
+  };
+
+  const handlePartRequest = async () => {
+    if (!workOrder) return;
+    setLoading(true);
+    try {
+      const partData = {
+        work_order: workOrder.id,
+        ...newPart,
+        status: 'pending' as any,
+      };
+
+      if (isOnline) {
+        await workOrderPartsApi.create(partData);
+        await loadWorkOrder();
+        setShowPartRequestDialog(false);
+        setNewPart({ part_name: "", quantity: 1, description: "" });
+        toast({ title: "Success", description: "Part requested successfully" });
+      } else {
+        await queueRequest("create", "/workorders/parts/", "POST", partData);
+        setParts([...parts, { id: Date.now(), ...partData } as any]);
+        setShowPartRequestDialog(false);
+        setNewPart({ part_name: "", quantity: 1, description: "" });
+        toast({ title: "Queued", description: "Part request will sync when online" });
+      }
+    } catch (error) {
+      console.error("Failed to request part:", error);
+      toast({ title: "Error", description: "Failed to request part", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClockIn = async () => {
+    if (!workOrder) return;
+    setLoading(true);
+    try {
+      const timeLog = {
+        work_order: workOrder.id,
+        clock_in: new Date().toISOString(),
+        description: "Started work via Mobile detail",
+      };
+
+      if (isOnline) {
+        const response = await apiClient.post("/workorders/time-logs/", timeLog);
+        setActiveLog(response.data);
+        if (workOrder.status === 'assigned') {
+          await handleStatusChangeAction('startWork');
+        }
+        toast({ title: "Clocked In", description: `Started time for WO #${workOrder.work_order_number}` });
+      }
+    } catch (error) {
+      console.error("Failed to clock in:", error);
+      toast({ title: "Error", description: "Failed to clock in", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClockOut = async () => {
+    if (!activeLog) return;
+    setLoading(true);
+    try {
+      const clockOut = new Date().toISOString();
+      if (isOnline && activeLog.id) {
+        await apiClient.post(`/workorders/time-logs/${activeLog.id}/clock_out/`, {
+          clock_out: clockOut,
+        });
+      }
+      setActiveLog(null);
+      toast({ title: "Clocked Out", description: "Time log saved" });
+    } catch (error) {
+      console.error("Failed to clock out:", error);
+      toast({ title: "Error", description: "Failed to clock out", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -128,8 +253,13 @@ export default function MobileWorkOrderDetailPage() {
         await workordersApi.updateStatus(workOrder.id, "additional_work_found");
         // Create note if provided
         if (additionalWorkNotes.trim()) {
-          // Note: workOrderNotesApi not imported yet, will add in next iteration
-          console.log("Additional work notes:", additionalWorkNotes);
+          await workOrderNotesApi.create({
+            work_order: workOrder.id,
+            note: additionalWorkNotes,
+            note_type: 'technician',
+            is_important: true,
+            is_customer_visible: false
+          });
         }
         await loadWorkOrder();
         setShowAdditionalWorkDialog(false);
@@ -147,6 +277,21 @@ export default function MobileWorkOrderDetailPage() {
           "PATCH",
           { status: "additional_work_found" }
         );
+        // Queue note
+        if (additionalWorkNotes.trim()) {
+          await queueRequest(
+            "create",
+            "/workorders/notes/",
+            "POST",
+            {
+              work_order: workOrder.id,
+              note: additionalWorkNotes,
+              note_type: 'technician',
+              is_important: true,
+              is_customer_visible: false
+            }
+          );
+        }
         setWorkOrder(updated);
         setShowAdditionalWorkDialog(false);
         setAdditionalWorkNotes("");
@@ -346,10 +491,46 @@ export default function MobileWorkOrderDetailPage() {
           <CardTitle className="text-base">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
+          {/* Time Tracking */}
+          {activeLog && activeLog.work_order === workOrderId ? (
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={handleClockOut}
+              disabled={loading}
+            >
+              <Clock className="h-4 w-4 mr-2" />
+              Clock Out
+            </Button>
+          ) : activeLog ? (
+            <Button
+              variant="outline"
+              className="w-full border-primary text-primary"
+              onClick={async () => {
+                await handleClockOut();
+                await handleClockIn();
+              }}
+              disabled={loading}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Switch to this Work Order
+            </Button>
+          ) : (
+            <Button
+              className="w-full bg-primary"
+              onClick={handleClockIn}
+              disabled={loading}
+            >
+              <Clock className="h-4 w-4 mr-2" />
+              Clock In
+            </Button>
+          )}
+
           {canStart && (
             <Button
               className="w-full"
-              onClick={() => handleStatusChange("in_progress")}
+              variant="outline"
+              onClick={() => handleStatusChangeAction("startWork")}
             >
               <Play className="h-4 w-4 mr-2" />
               Start Work
@@ -359,7 +540,8 @@ export default function MobileWorkOrderDetailPage() {
           {canResume && (
             <Button
               className="w-full"
-              onClick={() => handleStatusChange("in_progress")}
+              variant="outline"
+              onClick={() => handleStatusChangeAction("resume")}
             >
               <Play className="h-4 w-4 mr-2" />
               Resume Work
@@ -370,7 +552,7 @@ export default function MobileWorkOrderDetailPage() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => handleStatusChange("paused")}
+              onClick={() => handleStatusChangeAction("pause")}
             >
               <Pause className="h-4 w-4 mr-2" />
               Pause
@@ -380,7 +562,7 @@ export default function MobileWorkOrderDetailPage() {
           {canRequestQC && (
             <Button
               className="w-full"
-              onClick={() => handleStatusChange("quality_check")}
+              onClick={() => handleStatusChangeAction("requestQualityCheck")}
             >
               <CheckCheck className="h-4 w-4 mr-2" />
               Request Quality Check
@@ -390,7 +572,7 @@ export default function MobileWorkOrderDetailPage() {
           {canComplete && (
             <Button
               className="w-full bg-green-600 hover:bg-green-700"
-              onClick={() => handleStatusChange("completed")}
+              onClick={() => handleStatusChangeAction("complete")}
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Mark Complete
@@ -411,16 +593,26 @@ export default function MobileWorkOrderDetailPage() {
       </Card>
 
       {/* Parts */}
-      {parts.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center justify-between">
-              <span>Parts Required ({parts.length})</span>
-              <Package className="h-4 w-4 text-gray-500" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {parts.map((part) => (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center justify-between">
+            <span>Parts Required ({parts.length})</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs font-normal"
+              onClick={() => setShowPartRequestDialog(true)}
+            >
+              <Package className="h-4 w-4 mr-1" />
+              Request Part
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {parts.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">No parts requested</p>
+          ) : (
+            parts.map((part) => (
               <div
                 key={part.id}
                 className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
@@ -437,7 +629,7 @@ export default function MobileWorkOrderDetailPage() {
                     )}
                   </div>
                   <Badge className={cn("text-xs ml-2", getPartStatusColor(part.status))}>
-                    {part.status.replace("_", " ").toUpperCase()}
+                    {part.status?.replace("_", " ").toUpperCase() || 'UNKNOWN'}
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between mt-2 text-xs">
@@ -449,10 +641,10 @@ export default function MobileWorkOrderDetailPage() {
                   )}
                 </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+            ))
+          )}
+        </CardContent>
+      </Card>
 
       {/* Tasks */}
       <Card>
@@ -571,6 +763,56 @@ export default function MobileWorkOrderDetailPage() {
             >
               <AlertTriangle className="h-4 w-4 mr-2" />
               Flag for Approval
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Part Request Dialog */}
+      <Dialog open={showPartRequestDialog} onOpenChange={setShowPartRequestDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request New Part</DialogTitle>
+            <DialogDescription>
+              Submit a request for a part that is not currently listed for this work order.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="part-name">Part Name</Label>
+              <input
+                id="part-name"
+                className="w-full p-2 border rounded-md"
+                placeholder="e.g. Oil Filter"
+                value={newPart.part_name}
+                onChange={(e) => setNewPart({ ...newPart, part_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="part-qty">Quantity</Label>
+              <input
+                id="part-qty"
+                type="number"
+                className="w-full p-2 border rounded-md"
+                value={newPart.quantity}
+                onChange={(e) => setNewPart({ ...newPart, quantity: parseInt(e.target.value) || 1 })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="part-desc">Description/Notes</Label>
+              <Textarea
+                id="part-desc"
+                placeholder="Specific brand, model or other details..."
+                value={newPart.description}
+                onChange={(e) => setNewPart({ ...newPart, description: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPartRequestDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handlePartRequest} disabled={!newPart.part_name}>
+              Submit Request
             </Button>
           </DialogFooter>
         </DialogContent>

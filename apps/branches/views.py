@@ -305,12 +305,15 @@ class BranchViewSet(viewsets.ModelViewSet):
                 appointment_date__gte=timezone.now().date()
             ).count()
             
-            # Inventory stats - Parts have a branch field
+            # Inventory stats - Use StockItem model
             try:
-                parts = Part.objects.filter(branch=branch)
-                total_parts = parts.count()
-                # Part model uses quantity_in_stock and minimum_stock
-                low_stock_parts = parts.filter(quantity_in_stock__lte=F('minimum_stock')).count()
+                from apps.inventory.models import StockItem
+                stock_items = StockItem.objects.filter(branch=branch).select_related('part')
+                total_parts = stock_items.values('part').distinct().count()
+                # Count parts where quantity_in_stock <= minimum_stock
+                low_stock_parts = stock_items.filter(
+                    quantity_in_stock__lte=F('minimum_stock')
+                ).values('part').distinct().count()
             except Exception as e:
                 import logging
                 logger = logging.getLogger(__name__)

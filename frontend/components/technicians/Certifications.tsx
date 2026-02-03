@@ -21,7 +21,7 @@ import {
     DialogTitle,
     DialogClose,
 } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils/cn";
 import { format, parseISO } from "date-fns";
 
 interface CertificationsProps {
@@ -420,16 +420,17 @@ export function Certifications({ technicianId }: CertificationsProps) {
 
                                 <div className="col-span-2 space-y-2">
                                     <Label htmlFor="status">Status</Label>
-                                    <Select
+                                    <select
                                         id="status"
                                         value={formData.status}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value as Certification['status'] })}
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         <option value="active">Active</option>
                                         <option value="expired">Expired</option>
                                         <option value="pending_renewal">Pending Renewal</option>
                                         <option value="suspended">Suspended</option>
-                                    </Select>
+                                    </select>
                                 </div>
 
                                 <div className="col-span-2 space-y-2">

@@ -11,6 +11,7 @@ urlpatterns = [
     path('<int:pk>/', frontend_views.workorder_detail_view, name='detail'),
     path('<int:pk>/edit/', frontend_views.workorder_edit_view, name='edit'),
     path('<int:pk>/print/', frontend_views.workorder_print_view, name='print'),
+    path('<int:pk>/print-recommendations/', frontend_views.recommendations_print_view, name='print-recommendations'),
     
     # AJAX endpoints
     path('<int:pk>/update-status/', frontend_views.update_workorder_status, name='update-status'),
