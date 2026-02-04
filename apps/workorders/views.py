@@ -97,8 +97,15 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         })
     
     def get_queryset(self):
-        """Filter work orders by active branch from session"""
+        """Filter work orders by active branch and customer profile"""
         queryset = super().get_queryset()
+        user = self.request.user
+
+        # For customers, filter by their customer profile
+        if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+            queryset = queryset.filter(customer=user.customer_profile)
+            return queryset
+
         # Check if user wants to see all branches (for admins) or just active branch
         show_all = self.request.query_params.get('all_branches', 'false').lower() == 'true'
         queryset = filter_queryset_for_user_branches(

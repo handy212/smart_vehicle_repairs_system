@@ -163,7 +163,7 @@ def user_management(request):
     role_filter = request.GET.get('role', '')
     status_filter = request.GET.get('status', '')
     
-    users = User.objects.all().order_by('-date_joined')
+    users = User.objects.exclude(role__in=['technician', 'service_coordinator']).order_by('-date_joined')
     
     if search_query:
         users = users.filter(

@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils/cn";
+import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 
 export default function UsersManagementPage() {
   const router = useRouter();
@@ -142,6 +143,7 @@ export default function UsersManagementPage() {
 
   return (
     <div className="space-y-4 dark:bg-gray-900 min-h-screen">
+      <DynamicPageTitle title="User Management" />
       <div className="flex items-center justify-between px-4 pt-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0">

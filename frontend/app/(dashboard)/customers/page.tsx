@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils/cn";
+import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 
 import { useCurrency } from "@/lib/hooks/useCurrency";
 
@@ -128,9 +129,9 @@ const CustomerRow = memo(function CustomerRow({
                   <span className={cn(
                     "text-xs",
                     customer.days_since_last_visit >= 730 ? "text-red-600 dark:text-red-400 font-semibold" :
-                    customer.days_since_last_visit >= 365 ? "text-orange-600 dark:text-orange-400" :
-                    customer.days_since_last_visit >= 180 ? "text-yellow-600 dark:text-yellow-400" :
-                    "text-gray-500 dark:text-gray-400"
+                      customer.days_since_last_visit >= 365 ? "text-orange-600 dark:text-orange-400" :
+                        customer.days_since_last_visit >= 180 ? "text-yellow-600 dark:text-yellow-400" :
+                          "text-gray-500 dark:text-gray-400"
                   )}>
                     {customer.days_since_last_visit} days ago
                   </span>
@@ -515,6 +516,7 @@ export default function CustomersPage() {
   return (
     <div className="space-y-5">
       {/* Page Title & Stats */}
+      <DynamicPageTitle title="Customers" />
       <div className="space-y-4">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Customers</h1>

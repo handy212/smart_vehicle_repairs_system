@@ -36,10 +36,12 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 
 export default function TechniciansPage() {
     return (
         <PermissionGuard permission="view_technicians">
+            <DynamicPageTitle title="Technicians" />
             <TechniciansContent />
         </PermissionGuard>
     );

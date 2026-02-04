@@ -4,3 +4,6 @@ class TechniciansConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.technicians'
     verbose_name = 'Technicians'
+
+    def ready(self):
+        import apps.technicians.signals

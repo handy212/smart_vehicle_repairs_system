@@ -17,6 +17,7 @@ import { setSystemThemeMode } from "@/lib/hooks/useTheme";
 import { ReCAPTCHAComponent } from "@/components/ui/recaptcha";
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 import CompleteRegistrationForm from "@/components/auth/CompleteRegistrationForm";
+import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -173,6 +174,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <DynamicPageTitle title="Login" />
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2">
         {/* Left side: Hero Image & Branding */}
         <div

@@ -24,7 +24,17 @@ class PaymentAllocationViewSet(viewsets.ModelViewSet):
     queryset = PaymentAllocation.objects.select_related(
         'payment', 'invoice', 'invoice__customer', 'allocated_by'
     ).all()
+    from apps.accounts.permissions import IsStaff, HasPermission
     permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action in ['list', 'retrieve', 'by_customer']:
+            # Customers can view their own allocations through get_queryset filtering
+            return [IsAuthenticated()]
+        # Creating, updating, and allocating (custom action) are staff-only
+        return [IsAuthenticated(), IsStaff()]
+    
     serializer_class = PaymentAllocationSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['payment', 'invoice', 'invoice__customer']

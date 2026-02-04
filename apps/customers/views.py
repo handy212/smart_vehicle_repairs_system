@@ -65,7 +65,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         user = self.request.user
         
         # Filter based on permissions - if user can only view own, filter accordingly
-        if user_has_permission(user, 'view_own_customers') and not user_has_permission(user, 'view_customers'):
+        if user_has_permission(user, 'view_own_profile') and not user_has_permission(user, 'view_customers'):
             # User can only view own customer profile
             if hasattr(user, 'customer_profile'):
                 queryset = queryset.filter(id=user.customer_profile.id)
@@ -696,7 +696,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class CustomerNoteViewSet(viewsets.ModelViewSet):
     """ViewSet for customer notes"""
     serializer_class = CustomerNoteSerializer
-    permission_classes = [IsAuthenticated]
+    from apps.accounts.permissions import IsStaff
+    permission_classes = [IsAuthenticated, IsStaff]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['customer', 'note_type', 'is_important']
     ordering = ['-created_at']
@@ -710,7 +711,8 @@ class CustomerNoteViewSet(viewsets.ModelViewSet):
 class CustomerContactViewSet(viewsets.ModelViewSet):
     """ViewSet for customer contacts"""
     serializer_class = CustomerContactSerializer
-    permission_classes = [IsAuthenticated]
+    from apps.accounts.permissions import IsStaff
+    permission_classes = [IsAuthenticated, IsStaff]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['customer', 'is_primary', 'is_billing']
     ordering = ['-is_primary', 'first_name']
@@ -722,7 +724,8 @@ class CustomerContactViewSet(viewsets.ModelViewSet):
 class CustomerReminderViewSet(viewsets.ModelViewSet):
     """ViewSet for customer reminders"""
     serializer_class = CustomerReminderSerializer
-    permission_classes = [IsAuthenticated]
+    from apps.accounts.permissions import IsStaff
+    permission_classes = [IsAuthenticated, IsStaff]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['customer', 'status', 'is_system_generated']
     ordering = ['due_date']
@@ -740,7 +743,8 @@ from .serializers import CustomerDocumentSerializer, CustomerContractSerializer
 class CustomerDocumentViewSet(viewsets.ModelViewSet):
     """ViewSet for customer documents"""
     serializer_class = CustomerDocumentSerializer
-    permission_classes = [IsAuthenticated]
+    from apps.accounts.permissions import IsStaff
+    permission_classes = [IsAuthenticated, IsStaff]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['customer', 'is_public']
     ordering = ['-created_at']
@@ -755,7 +759,8 @@ class CustomerDocumentViewSet(viewsets.ModelViewSet):
 class CustomerContractViewSet(viewsets.ModelViewSet):
     """ViewSet for customer contracts"""
     serializer_class = CustomerContractSerializer
-    permission_classes = [IsAuthenticated]
+    from apps.accounts.permissions import IsStaff
+    permission_classes = [IsAuthenticated, IsStaff]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['customer', 'status']
     ordering = ['-created_at']

@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { servicesApi, VehicleServiceSchedule } from "@/lib/api/services";
+import { inventoryApi, ServiceBundle } from "@/lib/api/inventory";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +80,13 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
     queryFn: () => servicesApi.listServiceTypes({ is_active: true }),
   });
 
+  const { data: bundlesData } = useQuery({
+    queryKey: ["service-bundles"],
+    queryFn: () => inventoryApi.listBundles({ is_active: true }),
+  });
+
   const schedules = schedulesData?.results || [];
+  const bundles = (Array.isArray(bundlesData) ? bundlesData : (bundlesData as any)?.results || []) as ServiceBundle[];
 
   const createMutation = useMutation({
     mutationFn: (data: any) => servicesApi.createServiceSchedule(data),
@@ -356,7 +363,47 @@ export function VehicleServicesView({ vehicleId }: VehicleServicesViewProps) {
         </Card>
       )}
 
-      {/* Add/Edit Service Dialog */}
+      {/* Service Bundles Section */}
+      <div className="pt-6">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Available Service Bundles</h2>
+        {bundles.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {bundles.map((bundle) => (
+              <Card key={bundle.id} className="border border-gray-200 dark:border-gray-800">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-base font-semibold">{bundle.name}</CardTitle>
+                    <Badge variant="outline" className="text-xs">
+                      {bundle.service_type_name}
+                    </Badge>
+                  </div>
+                  <CardDescription>{bundle.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm">
+                  <div className="mb-2 font-medium text-gray-700 dark:text-gray-300">Included Parts:</div>
+                  <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
+                    {bundle.items.slice(0, 3).map((item) => (
+                      <li key={item.id} className="truncate">
+                        {item.quantity}x {item.part_name}
+                      </li>
+                    ))}
+                    {bundle.items.length > 3 && (
+                      <li className="list-none text-xs text-muted-foreground pt-1">
+                        + {bundle.items.length - 3} more items
+                      </li>
+                    )}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-dashed">
+            No service bundles available.
+          </div>
+        )}
+      </div>
+
       {/* Add/Edit Service Dialog */}
       <Dialog open={showAddEditDialog} onOpenChange={setShowAddEditDialog}>
         <DialogContent className="max-w-lg">

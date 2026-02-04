@@ -115,14 +115,6 @@ class TechnicianSerializer(serializers.ModelSerializer):
         # Update Technician (handled by super for remaining fields)
         return super().update(instance, validated_data)
 
-    def validate_email(self, value):
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("A user with this email already exists.")
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError("A user with this username already exists.")
-        return value
 
 class TimeOffRequestSerializer(serializers.ModelSerializer):
     class Meta:

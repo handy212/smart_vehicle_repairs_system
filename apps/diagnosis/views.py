@@ -31,13 +31,33 @@ from apps.diagnosis.serializers import (
 
 def filter_diagnosis_queryset_for_branches(queryset, user, request, branch_lookup='work_order__branch'):
     """
-    Helper function to filter diagnosis-related querysets by branch access.
+    Helper function to filter diagnosis-related querysets by branch access AND customer ownership.
     Handles nested lookups like 'work_order__branch' or 'diagnosis__work_order__branch'.
     Includes unassigned items (where branch is null) to handle migration period.
     """
     if not user or not getattr(user, "is_authenticated", False):
         return queryset.none()
     
+    # Customer ownership check - HIGHEST PRIORITY for security
+    if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+        customer = user.customer_profile
+        # Determine the customer lookup path based on the branch_lookup
+        # If branch_lookup is 'work_order__branch', customer lookup is 'work_order__customer'
+        # If branch_lookup is 'diagnosis__work_order__branch', customer lookup is 'diagnosis__work_order__customer'
+        if 'work_order__branch' in branch_lookup:
+            customer_lookup = branch_lookup.replace('__branch', '__customer')
+            return queryset.filter(**{customer_lookup: customer})
+        
+        # Fallback for models that might have a direct customer link or work_order link
+        if hasattr(queryset.model, 'customer'):
+            return queryset.filter(customer=customer)
+        if hasattr(queryset.model, 'work_order'):
+            return queryset.filter(work_order__customer=customer)
+        
+        # If we can't find a customer path, return none for safety if it's a customer
+        return queryset.none()
+
+    # Staff branch filtering follows
     # Check if user wants to see all branches (for admins) or just active branch
     show_all = request.query_params.get('all_branches', 'false').lower() == 'true' if request else False
     use_active_branch = not show_all

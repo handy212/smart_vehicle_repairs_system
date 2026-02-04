@@ -36,10 +36,10 @@ class UserViewSet(viewsets.ModelViewSet):
         For list action, exclude customers (they should be managed via Customer module).
         """
         queryset = super().get_queryset()
-        
-        # Exclude customers from list view - they should be managed via Customer module
+        # Exclude customers, technicians and service coordinators from list view 
+        # as they should be managed via their respective modules.
         if self.action == 'list':
-            queryset = queryset.exclude(role='customer')
+            queryset = queryset.exclude(role__in=['customer', 'technician', 'service_coordinator'])
         
         # Support branch filtering via query params
         branch_id = self.request.query_params.get('branch')

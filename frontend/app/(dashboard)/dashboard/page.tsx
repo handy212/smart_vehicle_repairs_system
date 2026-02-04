@@ -16,6 +16,7 @@ import { DashboardHeader } from "./components/DashboardHeader";
 import { SummaryStatsGrid } from "./components/SummaryStatsGrid";
 import { ShopPulse } from "./components/ShopPulse";
 import { CompactActivityList } from "./components/CompactActivityList";
+import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 
 // Lazy load heavy chart components
 const RevenueAreaChart = dynamic(() => import("./components/RevenueAreaChart"), {
@@ -170,6 +171,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-4 p-4 sm:p-6">
       {/* Header with Breadcrumbs */}
+      <DynamicPageTitle title="Dashboard" />
       <DashboardHeader />
 
       {/* Error Banner */}

@@ -30,6 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DynamicPageTitle } from "@/components/shared/DynamicPageTitle";
 
 export default function VehiclesPage() {
   const router = useRouter();
@@ -331,6 +332,7 @@ export default function VehiclesPage() {
   return (
     <div className="space-y-5">
       {/* Header with Stats */}
+      <DynamicPageTitle title="Vehicles" />
       <div className="space-y-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Vehicles</h1>

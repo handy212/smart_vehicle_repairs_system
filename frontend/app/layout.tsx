@@ -4,11 +4,32 @@ import "../styles/print.css";
 import { Providers } from "./providers";
 import { ThemeScript } from "./theme-script";
 
-export const metadata: Metadata = {
-  title: "Smart Vehicle Repairs",
-  description: "Comprehensive vehicle repair and workshop management system",
-  manifest: "/manifest.json",
-};
+import { APP_CONFIG } from "@/lib/config";
+
+import { adminApi } from "@/lib/api/admin";
+
+export async function generateMetadata(): Promise<Metadata> {
+  let companyName = APP_CONFIG.name;
+
+  try {
+    const settings = await adminApi.settings.publicBranding();
+    const setting = settings.find((s) => s.key === "company_name" || s.key === "site_name");
+    if (setting && setting.value) {
+      companyName = setting.value;
+    }
+  } catch (error) {
+    console.warn("Failed to fetch branding for metadata:", error);
+  }
+
+  return {
+    title: {
+      template: `${companyName} | %s`,
+      default: companyName,
+    },
+    description: APP_CONFIG.description,
+    manifest: "/manifest.json",
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#4f46e5",

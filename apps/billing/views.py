@@ -1652,7 +1652,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
             )
         
         try:
-            invoice = Invoice.objects.get(id=invoice_id)
+            # Secure lookup - ensure invoice belongs to customer if user is a customer
+            user = request.user
+            if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+                invoice = Invoice.objects.get(id=invoice_id, customer=user.customer_profile)
+            else:
+                # Staff can look up any invoice
+                invoice = Invoice.objects.get(id=invoice_id)
+            
             amount_decimal = Decimal(str(amount))
             
             # Get payment gateway
@@ -1737,7 +1744,14 @@ class PaymentViewSet(viewsets.ModelViewSet):
             )
         
         try:
-            invoice = Invoice.objects.get(id=invoice_id)
+            # Secure lookup - ensure invoice belongs to customer if user is a customer
+            user = request.user
+            if getattr(user, 'role', None) == 'customer' and hasattr(user, 'customer_profile'):
+                invoice = Invoice.objects.get(id=invoice_id, customer=user.customer_profile)
+            else:
+                # Staff can look up any invoice
+                invoice = Invoice.objects.get(id=invoice_id)
+            
             gateway = get_payment_gateway(gateway_name)
             
             # Confirm/verify payment
