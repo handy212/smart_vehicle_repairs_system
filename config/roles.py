@@ -20,6 +20,21 @@ class Admin(AbstractUserRole):
         'manage_branch_staff': True,
         'reset_user_passwords': True,
         'view_audit_logs': True,
+        'view_technicians': True,
+        'manage_technician_schedules': True,
+        'manage_technician_skills': True,
+        'approve_time_off': True,
+        'view_technician_performance': True,
+        
+        # Fixed Assets
+        'view_assets': True,
+        'create_assets': True,
+        'edit_assets': True,
+        'delete_assets': True,
+        'manage_assets': True,
+        'run_depreciation': True,
+        'view_asset_maintenance': True,
+        'create_asset_maintenance': True,
         
         # Customer Management
         'view_customers': True,
@@ -47,6 +62,7 @@ class Admin(AbstractUserRole):
         'edit_roadside': True,
         'manage_roadside': True,
         'dispatch_roadside': True,
+        'export_roadside': True,
         
         # Appointments
         'view_appointments': True,
@@ -150,6 +166,11 @@ class Admin(AbstractUserRole):
         'send_estimates': True,
         'view_payment_history': True,
         'export_billing': True,
+        'delete_estimates': True,
+        'view_bills': True,
+        'create_bills': True,
+        'edit_bills': True,
+        'delete_bills': True,
         
         # Reports
         'view_reports': True,
@@ -217,6 +238,18 @@ class Manager(AbstractUserRole):
         'edit_users': True,
         'manage_branch_staff': True,
         'reset_user_passwords': True,
+        'view_technicians': True,
+        'manage_technician_schedules': True,
+        'manage_technician_skills': True,
+        'approve_time_off': True,
+        'view_technician_performance': True,
+        
+        # Fixed Assets
+        'view_assets': True,
+        'create_assets': True,
+        'edit_assets': True,
+        'view_asset_maintenance': True,
+        'create_asset_maintenance': True,
         
         # Customer Management
         'view_customers': True,
@@ -240,6 +273,7 @@ class Manager(AbstractUserRole):
         'edit_roadside': True,
         'manage_roadside': True,
         'dispatch_roadside': True,
+        'export_roadside': True,
         
         # Appointments
         'view_appointments': True,
@@ -317,6 +351,11 @@ class Manager(AbstractUserRole):
         'send_estimates': True,
         'view_payment_history': True,
         'export_billing': True,
+        'delete_estimates': True,
+        'view_bills': True,
+        'create_bills': True,
+        'edit_bills': True,
+        'delete_bills': True,
         
         # Subscriptions
         'view_subscriptions': True,
@@ -427,6 +466,10 @@ class ServiceCoordinator(AbstractUserRole):
         'view_reports': True,
         'view_service_reports': True,
         'view_technician_reports': True,
+        
+        # Technician Management
+        'view_technicians': True,
+        'manage_technician_schedules': True,
         
         # Documents
         'view_documents': True,
@@ -601,6 +644,11 @@ class Accountant(AbstractUserRole):
         'send_estimates': True,
         'view_payment_history': True,
         'export_billing': True,
+        'delete_estimates': True,
+        'view_bills': True,
+        'create_bills': True,
+        'edit_bills': True,
+        'delete_bills': True,
         
         # Reports
         'view_reports': True,
@@ -627,6 +675,11 @@ class Accountant(AbstractUserRole):
         'manage_budgets': True,
         'view_transfer_requests': True,
         'manage_transfers': True,
+        
+        # Fixed Assets
+        'view_assets': True,
+        'run_depreciation': True,
+        'view_asset_maintenance': True,
     }
 
 

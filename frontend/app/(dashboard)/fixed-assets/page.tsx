@@ -21,8 +21,18 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { DataTable } from "@/components/shared/DataTable";
 import { format } from "date-fns";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionButton } from "@/components/auth/PermissionButton";
 
 export default function FixedAssetsListPage() {
+    return (
+        <PermissionGuard permission="view_assets">
+            <FixedAssetsContent />
+        </PermissionGuard>
+    );
+}
+
+function FixedAssetsContent() {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("active");
     const [categoryFilter, setCategoryFilter] = useState("");
@@ -190,10 +200,10 @@ export default function FixedAssetsListPage() {
                             </Button>
                         </Link>
                         <Link href="/fixed-assets/new">
-                            <Button size="sm" className="h-9 text-xs font-bold">
+                            <PermissionButton size="sm" className="h-9 text-xs font-bold" permission="create_assets">
                                 <Plus className="mr-1.5 h-3.5 w-3.5" />
                                 Add Asset
-                            </Button>
+                            </PermissionButton>
                         </Link>
                     </div>
                 </div>

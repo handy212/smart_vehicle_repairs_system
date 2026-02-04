@@ -718,7 +718,7 @@ def work_order_statistics(request):
 @permission_classes([IsAuthenticated])
 def technician_performance(request):
     """
-    Technician performance metrics
+    Technician performance metrics including efficiency
     """
     start_date = request.query_params.get('start_date')
     end_date = request.query_params.get('end_date')
@@ -748,24 +748,45 @@ def technician_performance(request):
         
         completed = work_orders.filter(status='completed')
         
-        # Calculate revenue
+        # Calculate revenue & hours
         revenue = Decimal('0')
+        total_estimated_hours = Decimal('0')
+        total_actual_hours = Decimal('0')
+        
         for wo in completed:
             if hasattr(wo, 'invoice') and wo.invoice.status in ['paid', 'partial']:
                 revenue += wo.invoice.amount_paid
+            
+            # Sum hours for efficiency
+            total_estimated_hours += wo.estimated_labor_hours or Decimal('0')
+            total_actual_hours += wo.actual_labor_hours or Decimal('0')
         
+        # Calculate efficiency
+        # Efficiency = (Standard Hours / Actual Hours) * 100
+        # If actual is 0 or less, efficiency is undefined (or 100% if estimated > 0?)
+        # Let's say if actual is 0 but estimated > 0, efficiency is capped?
+        efficiency = 0.0
+        if total_actual_hours > 0:
+            efficiency = float((total_estimated_hours / total_actual_hours) * 100)
+        elif total_estimated_hours > 0:
+            efficiency = 100.0 # Perfect efficiency if done in 0 time?
+            
         # Calculate average time
         avg_time = None
         if completed.exists():
-            total_time = timedelta()
+            total_duration = timedelta()
             count = 0
             for wo in completed:
-                if wo.completed_at:
+                if wo.completed_at and wo.started_at: # Better to use started to completed
+                     time_diff = wo.completed_at - wo.started_at
+                     total_duration += time_diff
+                     count += 1
+                elif wo.completed_at: # Fallback to created_at
                     time_diff = wo.completed_at - wo.created_at
-                    total_time += time_diff
+                    total_duration += time_diff
                     count += 1
             if count > 0:
-                avg_time = (total_time / count).total_seconds() / 3600
+                avg_time = (total_duration / count).total_seconds() / 3600
         
         performance_data.append({
             'technician': {
@@ -778,7 +799,10 @@ def technician_performance(request):
                 'completed': completed.count(),
                 'in_progress': work_orders.filter(status='in_progress').count(),
                 'revenue': float(revenue),
-                'average_completion_hours': float(avg_time) if avg_time else None
+                'average_completion_hours': float(avg_time) if avg_time else None,
+                'total_estimated_hours': float(total_estimated_hours),
+                'total_actual_hours': float(total_actual_hours),
+                'efficiency_percentage': efficiency
             }
         })
     
@@ -1426,3 +1450,79 @@ def service_due_report(request):
             'error': str(e),
             'traceback': traceback.format_exc()
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def service_bundle_popularity(request):
+    """
+    Detailed report on service bundle popularity and revenue
+    """
+    # Import locally to avoid potential circular imports
+    from apps.inventory.models import ServiceBundle
+    
+    start_date = request.query_params.get('start_date')
+    end_date = request.query_params.get('end_date')
+    
+    if not start_date or not end_date:
+        end_date = timezone.now().date()
+        start_date = end_date - timedelta(days=30)
+    else:
+        try:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+             return Response({'error': 'Invalid date format'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Get all active bundles
+    bundles = ServiceBundle.objects.filter(is_active=True).order_by('name')
+    
+    report_data = []
+    
+    for bundle in bundles:
+        # Count appointments for this bundle in range
+        appt_count = Appointment.objects.filter(
+            service_bundle=bundle,
+            appointment_date__gte=start_date,
+            appointment_date__lte=end_date
+        ).count()
+        
+        # Count work orders for this bundle in range
+        wo_qs = WorkOrder.objects.filter(
+            service_bundle=bundle,
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date
+        )
+        wo_count = wo_qs.count()
+        
+        # Calculate revenue from completed work orders linked to this bundle
+        revenue = Decimal('0')
+        completed_wos = wo_qs.filter(status='completed')
+        
+        for wo in completed_wos:
+            if hasattr(wo, 'invoice') and wo.invoice:
+                 # Use amount_paid to be conservative and match other reports
+                 revenue += wo.invoice.amount_paid
+        
+        if appt_count > 0 or wo_count > 0:
+            report_data.append({
+                'id': bundle.id,
+                'name': bundle.name,
+                'description': bundle.description,
+                'price': float(bundle.total_price) if bundle.total_price else 0.0,
+                'appointment_count': appt_count,
+                'work_order_count': wo_count,
+                'total_revenue': float(revenue),
+                'conversion_rate': float((wo_count / appt_count * 100)) if appt_count > 0 else 0.0
+            })
+            
+    # Sort by revenue descending
+    report_data.sort(key=lambda x: x['total_revenue'], reverse=True)
+    
+    return Response({
+        'period': {
+            'start_date': start_date.isoformat(),
+            'end_date': end_date.isoformat()
+        },
+        'bundles': report_data
+    })

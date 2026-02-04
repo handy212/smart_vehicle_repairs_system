@@ -8,9 +8,6 @@ import { SyncStatusBanner } from "@/components/mobile/SyncStatusBanner";
 import { BellRing, Home, Wrench, ClipboardCheck, Clock, Truck } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { OfflineIndicator } from "@/components/mobile/OfflineIndicator";
-import { InstallPrompt } from "@/components/pwa/InstallPrompt";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export default function MobileLayout({
   children,
@@ -20,7 +17,6 @@ export default function MobileLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { user, setUser, isAuthenticated } = useAuthStore();
-  const pushNotifications = usePushNotifications();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -112,32 +108,6 @@ export default function MobileLayout({
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <OfflineIndicator />
-          {pushNotifications.isSupported && !pushNotifications.isSubscribed && (
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded-md border border-orange-200 bg-primary/10 px-2 py-1 text-xs font-medium text-orange-700 hover:bg-orange-100 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300"
-              onClick={() => {
-                pushNotifications
-                  .requestPermission()
-                  .then((permission) => {
-                    if (permission === "granted") {
-                      return pushNotifications.subscribe("Mobile App");
-                    }
-                    return null;
-                  })
-                  .catch((error) => {
-                    console.warn(
-                      "[Push] Manual subscribe failed:",
-                      error?.message || "Unknown error"
-                    );
-                  });
-              }}
-            >
-              <BellRing className="h-3 w-3" />
-              Enable Push
-            </button>
-          )}
           <div className="text-sm text-gray-600 dark:text-gray-400">
             {user?.first_name} {user?.last_name}
           </div>
@@ -145,8 +115,6 @@ export default function MobileLayout({
       </header>
 
       <main className="flex-1 overflow-y-auto">{children}</main>
-
-      <InstallPrompt />
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 z-50 safe-area-inset-bottom">
         <div className="grid grid-cols-5 h-16">

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Card, CardContent } from "@/components/ui/card";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 interface PortalStats {
     total_vehicles: number;
@@ -21,6 +22,8 @@ interface PortalStatsGridProps {
 }
 
 export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
+    const { formatCurrency } = useCurrency();
+
     const items = [
         {
             label: "My Vehicles",
@@ -50,7 +53,7 @@ export function PortalStatsGrid({ stats }: PortalStatsGridProps) {
         },
         {
             label: "Total Spent",
-            value: `$${parseFloat(String(stats.total_spent || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            value: formatCurrency(stats.total_spent || 0),
             icon: DollarSign,
             color: "text-purple-600 dark:text-purple-400",
             bg: "bg-purple-50 dark:bg-purple-900/20",

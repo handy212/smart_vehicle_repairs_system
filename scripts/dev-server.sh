@@ -192,7 +192,7 @@ FRONTEND_ENV_FILE="$FRONTEND_DIR/.env.local"
 echo -e "${YELLOW}Configuring frontend env: $FRONTEND_ENV_FILE${NC}"
 
 # Extract Google Client ID from backend .env
-GOOGLE_CLIENT_ID=$(grep "^GOOGLE_OAUTH_CLIENT_ID=" "$PROJECT_DIR/.env" | cut -d '=' -f2-)
+GOOGLE_CLIENT_ID=$(grep "^GOOGLE_OAUTH_CLIENT_ID=" "$PROJECT_DIR/.env" | cut -d '=' -f2- | tr -d '\r')
 
 cat > "$FRONTEND_ENV_FILE" << EOF
 NEXT_PUBLIC_API_URL=http://localhost:$DJANGO_PORT/api

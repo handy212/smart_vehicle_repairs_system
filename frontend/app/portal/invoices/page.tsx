@@ -14,9 +14,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PortalPageHeader } from "../components/PortalPageHeader";
 import { PortalList } from "../components/PortalList";
 import { PortalCard } from "../components/PortalCard";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function MyInvoicesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { formatCurrency } = useCurrency();
   const { data: user } = useQuery({
     queryKey: ["user"],
     queryFn: () => authApi.getCurrentUser(),
@@ -73,7 +75,7 @@ export default function MyInvoicesPage() {
           <CardContent className="p-4 flex flex-col justify-center h-full">
             <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">Pending Amount</p>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
-              ${totalPending.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {formatCurrency(totalPending)}
             </div>
           </CardContent>
         </Card>
@@ -122,7 +124,7 @@ export default function MyInvoicesPage() {
                   header: "Amount",
                   cell: (inv) => (
                     <div className="font-bold text-gray-900 dark:text-gray-100">
-                      ${parseFloat(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {formatCurrency(inv.total || 0)}
                     </div>
                   )
                 },
@@ -172,7 +174,7 @@ export default function MyInvoicesPage() {
                   status={
                     <div className="flex flex-col items-end gap-1">
                       <span className="font-bold text-gray-900 dark:text-gray-100">
-                        ${parseFloat(inv.total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {formatCurrency(inv.total || 0)}
                       </span>
                       <Badge variant={getStatusVariant(inv.status)} className="capitalize text-[10px] h-5 px-1.5">
                         {inv.status}

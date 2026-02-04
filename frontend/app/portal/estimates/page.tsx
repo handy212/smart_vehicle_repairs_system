@@ -12,11 +12,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/lib/hooks/useToast";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function MyEstimatesPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { formatCurrency } = useCurrency();
   const { data: user } = useQuery({
     queryKey: ["user"],
     queryFn: () => authApi.getCurrentUser(),
@@ -195,10 +197,7 @@ export default function MyEstimatesPage() {
                   </div>
                   <div className="text-right space-y-2">
                     <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                      ${parseFloat(estimate.total || 0).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatCurrency(estimate.total || 0)}
                     </div>
                     <Badge variant={getStatusVariant(estimate.status)}>{estimate.status}</Badge>
                     <div className="flex items-center space-x-2 mt-2">

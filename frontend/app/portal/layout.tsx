@@ -90,12 +90,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <PortalNavbar
         onMenuToggle={() => setIsSidebarOpen(!isSidebarOpen)}
         isSidebarOpen={isSidebarOpen}
-        user={user}
-      />
-      <PortalSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        isCollapsed={mounted ? isSidebarCollapsed : false}
         onToggleCollapse={() => {
           const newCollapsed = !isSidebarCollapsed;
           setIsSidebarCollapsed(newCollapsed);
@@ -103,6 +97,13 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             localStorage.setItem("portalSidebarCollapsed", newCollapsed.toString());
           }
         }}
+        isSidebarCollapsed={mounted ? isSidebarCollapsed : false}
+        user={user}
+      />
+      <PortalSidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        isCollapsed={mounted ? isSidebarCollapsed : false}
       />
       <main
         className="min-h-screen px-3 sm:px-4 md:px-6 lg:px-8 py-0 pb-4 sm:pb-6 lg:pb-8 transition-all duration-300"

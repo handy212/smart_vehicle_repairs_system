@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     'apps.fixed_assets.apps.FixedAssetsConfig',  
     'apps.technicians',
     'apps.accounting',
+    'apps.portal',
 ]
 
 MIDDLEWARE = [

@@ -12,10 +12,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function PaymentHistoryPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [methodFilter, setMethodFilter] = useState<string>("all");
+  const { formatCurrency } = useCurrency();
   const { data: user } = useQuery({
     queryKey: ["user"],
     queryFn: () => authApi.getCurrentUser(),
@@ -134,10 +136,7 @@ export default function PaymentHistoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              ${totalPaid.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              {formatCurrency(totalPaid)}
             </div>
           </CardContent>
         </Card>
@@ -237,10 +236,7 @@ export default function PaymentHistoryPage() {
                         )}
                       </TableCell>
                       <TableCell className="font-semibold">
-                        ${parseFloat(payment.amount || "0").toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                        {formatCurrency(payment.amount || 0)}
                       </TableCell>
                       <TableCell>{getMethodDisplay(payment.payment_method)}</TableCell>
                       <TableCell>

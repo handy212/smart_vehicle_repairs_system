@@ -25,6 +25,7 @@ import { Select } from "@/components/ui/select";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "@/lib/hooks/useToast";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 const formSchema = z.object({
     asset_number: z.string().min(1, "Asset number is required"),
@@ -47,6 +48,14 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function NewFixedAssetPage() {
+    return (
+        <PermissionGuard permission="create_assets">
+            <NewFixedAssetContent />
+        </PermissionGuard>
+    );
+}
+
+function NewFixedAssetContent() {
     const router = useRouter();
     const { toast } = useToast();
     const queryClient = useQueryClient();
@@ -447,10 +456,10 @@ export default function NewFixedAssetPage() {
                                     {createMutation.isPending ? "Creating..." : "Create Asset"}
                                 </Button>
                             </div>
-                        </form >
-                    </Form >
-                </CardContent >
-            </Card >
-        </div >
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+        </div>
     );
 }

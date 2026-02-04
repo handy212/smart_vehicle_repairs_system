@@ -30,6 +30,11 @@ class Command(BaseCommand):
                 'manage_branch_staff': ('users', 'Manage Branch Staff', 'Manage staff at assigned branches'),
                 'reset_user_passwords': ('users', 'Reset User Passwords', 'Reset passwords for user accounts'),
                 'view_audit_logs': ('users', 'View Audit Logs', 'View system audit logs and activity history'),
+                'view_technicians': ('users', 'View Technicians', 'View technician list and profiles'),
+                'manage_technician_schedules': ('users', 'Manage Schedules', 'Manage technician shifts and schedules'),
+                'manage_technician_skills': ('users', 'Manage Skills', 'Manage technician skills and certifications'),
+                'approve_time_off': ('users', 'Approve Time Off', 'Approve technician time off requests'),
+                'view_technician_performance': ('reports', 'View Performance', 'View technician performance metrics'),
                 
                 # ==================== CUSTOMER MANAGEMENT ====================
                 'view_customers': ('customers', 'View Customers', 'View customer information'),
@@ -61,6 +66,7 @@ class Command(BaseCommand):
                 'edit_roadside': ('vehicles', 'Edit Roadside', 'Edit roadside assistance requests'),
                 'manage_roadside': ('vehicles', 'Manage Roadside', 'Full roadside assistance management'),
                 'dispatch_roadside': ('vehicles', 'Dispatch Roadside', 'Dispatch technicians for roadside assistance'),
+                'export_roadside': ('vehicles', 'Export Roadside', 'Export roadside assistance data'),
                 
                 # ==================== APPOINTMENTS ====================
                 'view_appointments': ('appointments', 'View Appointments', 'View appointment schedules'),
@@ -165,6 +171,7 @@ class Command(BaseCommand):
                 'edit_estimates': ('billing', 'Edit Estimates', 'Edit estimate details'),
                 'approve_estimates': ('billing', 'Approve Estimates', 'Approve repair estimates'),
                 'reject_estimates': ('billing', 'Reject Estimates', 'Reject estimates'),
+                'delete_estimates': ('billing', 'Delete Estimates', 'Delete or void repair estimates'),
                 'convert_estimate_to_invoice': ('billing', 'Convert to Invoice', 'Convert estimate to invoice'),
                 'print_invoices': ('billing', 'Print Invoices', 'Print invoice documents'),
                 'print_estimates': ('billing', 'Print Estimates', 'Print estimate documents'),
@@ -172,6 +179,10 @@ class Command(BaseCommand):
                 'send_estimates': ('billing', 'Send Estimates', 'Send estimates to customers'),
                 'view_payment_history': ('billing', 'View Payment History', 'View payment transaction history'),
                 'export_billing': ('billing', 'Export Billing', 'Export billing and invoice data'),
+                'view_bills': ('billing', 'View Bills', 'View vendor bills'),
+                'create_bills': ('billing', 'Create Bills', 'Create new vendor bills'),
+                'edit_bills': ('billing', 'Edit Bills', 'Edit vendor bill details'),
+                'delete_bills': ('billing', 'Delete Bills', 'Delete or void vendor bills'),
                 
                 # ==================== REPORTS ====================
                 'view_reports': ('reports', 'View Reports', 'View assigned reports'),
@@ -229,6 +240,15 @@ class Command(BaseCommand):
                 'approve_budgets': ('accounting', 'Approve Budgets', 'Approve budgets'),
                 'view_transfer_requests': ('accounting', 'View Transfers', 'View fund transfer requests'),
                 'manage_transfers': ('accounting', 'Manage Transfers', 'Create and manage fund transfers'),
+                # ==================== FIXED ASSETS ====================
+                'view_assets': ('fixed_assets', 'View Assets', 'View fixed assets'),
+                'create_assets': ('fixed_assets', 'Create Assets', 'Create new fixed assets'),
+                'edit_assets': ('fixed_assets', 'Edit Assets', 'Edit fixed asset details'),
+                'delete_assets': ('fixed_assets', 'Delete Assets', 'Delete fixed assets'),
+                'manage_assets': ('fixed_assets', 'Manage Assets', 'Full fixed asset management'),
+                'run_depreciation': ('fixed_assets', 'Run Depreciation', 'Run asset depreciation'),
+                'view_asset_maintenance': ('fixed_assets', 'View Asset Maintenance', 'View asset maintenance records'),
+                'create_asset_maintenance': ('fixed_assets', 'Create Maintenance', 'Record asset maintenance'),
             }
             
             # Create all permissions

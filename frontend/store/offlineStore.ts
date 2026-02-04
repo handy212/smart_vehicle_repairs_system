@@ -122,7 +122,10 @@ export const useOfflineStore = create<OfflineState>((set, get) => ({
 }));
 
 // Initialize online/offline listeners
-if (typeof window !== 'undefined') {
+// Initialize online/offline listeners
+if (typeof window !== 'undefined' && !(window as any).__offline_listeners_initialized__) {
+  (window as any).__offline_listeners_initialized__ = true;
+
   window.addEventListener('online', () => {
     useOfflineStore.getState().setOnline(true);
   });

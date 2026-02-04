@@ -30,4 +30,7 @@ urlpatterns = [
     # Vehicle Reports
     path('vehicle-statistics/', views.vehicle_statistics, name='vehicle_statistics'),
     path('service-due-report/', views.service_due_report, name='service_due_report'),
+    
+    # Service Bundle Reports
+    path('service-bundle-popularity/', views.service_bundle_popularity, name='service_bundle_popularity'),
 ]

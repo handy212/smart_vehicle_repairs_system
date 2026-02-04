@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { PortalStatsGrid } from "./components/PortalStatsGrid";
 import { PortalQuickActions } from "./components/PortalQuickActions";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function PortalHomePage() {
   const { data: user } = useQuery({
@@ -27,6 +28,8 @@ export default function PortalHomePage() {
     queryKey: ["portal", "dashboard"],
     queryFn: () => portalApi.dashboard(),
   });
+
+  const { formatCurrency } = useCurrency();
 
   if (isLoading) {
     return (
@@ -147,7 +150,7 @@ export default function PortalHomePage() {
                         <div className="flex justify-between items-start mb-1">
                           <p className="font-mono text-xs font-medium text-gray-500">#{inv.invoice_number}</p>
                           <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
-                            ${parseFloat(String(inv.total || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {formatCurrency(inv.total || 0)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">

@@ -273,6 +273,14 @@ class WorkOrder(models.Model):
         related_name='work_orders',
         help_text="Required if maintenance_type is 'routine'"
     )
+    service_bundle = models.ForeignKey(
+        'inventory.ServiceBundle',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='work_orders',
+        help_text="Service bundle associated with this work order"
+    )
     
     class Meta:
         ordering = ['-created_at']

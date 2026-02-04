@@ -34,7 +34,7 @@ const navigationGroups = [
       { name: "Services Due", href: "/services-due", icon: PremiumIcons.Clock, permission: "view_vehicles" },
       { name: "Gate Passes", href: "/gatepass", icon: PremiumIcons.FileText, permission: "view_gatepass" },
       { name: "Roadside", href: "/roadside", icon: PremiumIcons.Truck, permission: "view_roadside" },
-      { name: "Technicians", href: "/technicians", icon: PremiumIcons.UserCog, permission: "view_users" },
+      { name: "Technicians", href: "/technicians", icon: PremiumIcons.UserCog, permission: "view_technicians" },
     ],
   },
   {
@@ -43,7 +43,7 @@ const navigationGroups = [
       { name: "Inventory", href: "/inventory", icon: PremiumIcons.Package, permission: "view_inventory" },
       { name: "Billing", href: "/billing", icon: PremiumIcons.Receipt, permission: "view_billing" },
       { name: "Accounting", href: "/accounting", icon: PremiumIcons.Calculator, permission: "view_accounting" },
-      { name: "Fixed Assets", href: "/fixed-assets", icon: PremiumIcons.Landmark, permission: "view_fixed_assets" },
+      { name: "Fixed Assets", href: "/fixed-assets", icon: PremiumIcons.Landmark, permission: "view_assets" },
       { name: "Subscriptions", href: "/subscriptions", icon: PremiumIcons.CreditCard, permission: "view_subscriptions" },
     ],
   },
@@ -58,7 +58,7 @@ const navigationGroups = [
   {
     name: "System",
     items: [
-      { name: "Configurations", href: "/admin", icon: PremiumIcons.Settings, permission: "view_admin" },
+      { name: "Configurations", href: "/admin", icon: PremiumIcons.Settings, permission: "view_settings" },
       { name: "SMS Console", href: "/sms", icon: PremiumIcons.MessageSquare, permission: "send_notifications" },
     ],
   },

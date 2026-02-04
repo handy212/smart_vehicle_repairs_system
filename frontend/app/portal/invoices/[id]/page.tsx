@@ -11,11 +11,13 @@ import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
   const invoiceId = parseInt(params.id as string);
+  const { formatCurrency } = useCurrency();
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["portal", "invoice", invoiceId],
@@ -207,16 +209,10 @@ export default function InvoiceDetailPage() {
                             {item.quantity || "-"}
                           </td>
                           <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-400">
-                            ${parseFloat(item.unit_price || 0).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
+                            {formatCurrency(item.unit_price || 0)}
                           </td>
                           <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">
-                            ${parseFloat(item.total || 0).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
+                            {formatCurrency(item.total || 0)}
                           </td>
                         </tr>
                       ))}
@@ -267,10 +263,7 @@ export default function InvoiceDetailPage() {
                             {payment.payment_method}
                           </TableCell>
                           <TableCell className="text-right font-medium text-gray-900 dark:text-gray-100">
-                            ${parseFloat(payment.amount || "0").toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
+                            {formatCurrency(payment.amount || 0)}
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -297,13 +290,7 @@ export default function InvoiceDetailPage() {
                         Total Paid:
                       </span>
                       <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                        $
-                        {payments
-                          .reduce((sum, p) => sum + parseFloat(p.amount || "0"), 0)
-                          .toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
+                        {formatCurrency(payments.reduce((sum, p) => sum + parseFloat(p.amount || "0"), 0))}
                       </span>
                     </div>
                   </div>
@@ -327,10 +314,7 @@ export default function InvoiceDetailPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
                   <span className="text-gray-900 dark:text-gray-100">
-                    ${parseFloat(invoice.subtotal).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatCurrency(invoice.subtotal)}
                   </span>
                 </div>
               )}
@@ -338,10 +322,7 @@ export default function InvoiceDetailPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Tax</span>
                   <span className="text-gray-900 dark:text-gray-100">
-                    ${parseFloat(invoice.tax_amount).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatCurrency(invoice.tax_amount)}
                   </span>
                 </div>
               )}
@@ -349,30 +330,21 @@ export default function InvoiceDetailPage() {
                 <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
                   <span>Discount</span>
                   <span>
-                    -${parseFloat(invoice.discount_amount).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    -{formatCurrency(invoice.discount_amount)}
                   </span>
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
                 <span className="text-gray-900 dark:text-gray-100">Total</span>
                 <span className="text-gray-900 dark:text-gray-100">
-                  ${parseFloat(invoice.total || "0").toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatCurrency(invoice.total || 0)}
                 </span>
               </div>
               {invoice.amount_paid && parseFloat(invoice.amount_paid) > 0 && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Amount Paid</span>
                   <span className="text-gray-900 dark:text-gray-100">
-                    ${parseFloat(invoice.amount_paid).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatCurrency(invoice.amount_paid)}
                   </span>
                 </div>
               )}
@@ -380,10 +352,7 @@ export default function InvoiceDetailPage() {
                 <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
                   <span className="text-gray-900 dark:text-gray-100">Amount Due</span>
                   <span className="text-primary dark:text-primary">
-                    ${amountDue.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatCurrency(amountDue)}
                   </span>
                 </div>
               )}

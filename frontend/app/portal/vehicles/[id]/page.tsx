@@ -15,12 +15,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useState } from "react";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function VehicleDetailPage() {
   const params = useParams();
   const router = useRouter();
   const vehicleId = parseInt(params.id as string);
   const [activeTab, setActiveTab] = useState<string>("overview");
+  const { formatCurrency } = useCurrency();
 
   const { data: vehicle, isLoading: vehicleLoading } = useQuery({
     queryKey: ["portal", "vehicle", vehicleId],
@@ -287,10 +289,7 @@ export default function VehicleDetailPage() {
                         )}
                         {wo.estimated_total && (
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-2">
-                            Total: ${parseFloat(wo.estimated_total || 0).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
+                            Total: {formatCurrency(wo.estimated_total || 0)}
                           </p>
                         )}
                       </div>

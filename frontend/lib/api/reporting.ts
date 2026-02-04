@@ -111,4 +111,9 @@ export const reportingApi = {
     const response = await apiClient.get('/reporting/subscription-analytics/', { params });
     return response.data;
   },
+
+  serviceBundlePopularity: async (params: Omit<DateRangeParams, 'period'>) => {
+    const response = await apiClient.get('/reporting/service-bundle-popularity/', { params });
+    return response.data;
+  },
 };

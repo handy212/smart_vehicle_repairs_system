@@ -75,15 +75,18 @@ export const roadsideApi = {
      * Get requests assigned to the current user (technician)
      */
     getAssignedRequests: async () => {
-        const response = await apiClient.get<RoadsideRequest[]>("/roadside/");
-        return response.data;
+        const response = await apiClient.get<any>("/roadside/requests/");
+        if (response.data && Array.isArray(response.data.results)) {
+            return response.data.results;
+        }
+        return Array.isArray(response.data) ? response.data : [];
     },
 
     /**
      * Get a single request
      */
     getRequest: async (id: number | string) => {
-        const response = await apiClient.get<RoadsideRequest>(`/roadside/${id}/`);
+        const response = await apiClient.get<RoadsideRequest>(`/roadside/requests/${id}/`);
         return response.data;
     },
 
@@ -91,27 +94,27 @@ export const roadsideApi = {
      * Update status actions
      */
     enRoute: async (id: number | string) => {
-        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/en_route/`);
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/requests/${id}/en_route/`);
         return response.data;
     },
 
     arrive: async (id: number | string) => {
-        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/arrive/`);
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/requests/${id}/arrive/`);
         return response.data;
     },
 
     inProgress: async (id: number | string) => {
-        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/in_progress/`);
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/requests/${id}/in_progress/`);
         return response.data;
     },
 
     complete: async (id: number | string) => {
-        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/complete/`);
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/requests/${id}/complete/`);
         return response.data;
     },
 
     fail: async (id: number | string, reason: string) => {
-        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/fail/`, { reason });
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/requests/${id}/fail/`, { reason });
         return response.data;
     },
 
@@ -119,7 +122,7 @@ export const roadsideApi = {
      * Get requests for the current user (customer)
      */
     myRequests: async () => {
-        const response = await apiClient.get<RoadsideRequest[]>("/roadside/my_requests/");
+        const response = await apiClient.get<RoadsideRequest[]>("/roadside/requests/my_requests/");
         return response.data;
     },
 
@@ -127,7 +130,7 @@ export const roadsideApi = {
      * Rate a completed request
      */
     rate: async (id: number | string, data: { rating: number; customer_feedback?: string }) => {
-        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/rate_service/`, data);
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/requests/${id}/rate_service/`, data);
         return response.data;
     },
 
@@ -135,7 +138,7 @@ export const roadsideApi = {
      * Alias for getRequest to match Portal usage
      */
     get: async (id: number | string) => {
-        const response = await apiClient.get<RoadsideRequest>(`/roadside/${id}/`);
+        const response = await apiClient.get<RoadsideRequest>(`/roadside/requests/${id}/`);
         return response.data;
     },
 
@@ -143,7 +146,7 @@ export const roadsideApi = {
      * Cancel a request
      */
     cancel: async (id: number | string) => {
-        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/cancel/`);
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/requests/${id}/cancel/`);
         return response.data;
     },
 
@@ -151,7 +154,7 @@ export const roadsideApi = {
      * Admin: Get dashboard stats
      */
     dashboardStats: async () => {
-        const response = await apiClient.get<any>("/roadside/dashboard_stats/");
+        const response = await apiClient.get<any>("/roadside/requests/dashboard_stats/");
         return response.data;
     },
 
@@ -159,7 +162,7 @@ export const roadsideApi = {
      * Admin: List all requests with filtering
      */
     list: async (params?: any) => {
-        const response = await apiClient.get<{ results: RoadsideRequest[]; count: number; next?: string; previous?: string }>("/roadside/", { params });
+        const response = await apiClient.get<{ results: RoadsideRequest[]; count: number; next?: string; previous?: string }>("/roadside/requests/", { params });
         return response.data;
     },
 
@@ -167,7 +170,7 @@ export const roadsideApi = {
      * Admin: Assign/Dispatch technician
      */
     assignDispatch: async (id: number | string, technicianId: number) => {
-        const response = await apiClient.post<RoadsideRequest>(`/roadside/${id}/assign_dispatch/`, { technician_id: technicianId });
+        const response = await apiClient.post<RoadsideRequest>(`/roadside/requests/${id}/assign_dispatch/`, { technician_id: technicianId });
         return response.data;
     },
 
@@ -175,7 +178,7 @@ export const roadsideApi = {
      * Admin: Update request details
      */
     partialUpdate: async (id: number | string, data: Partial<RoadsideRequest>) => {
-        const response = await apiClient.patch<RoadsideRequest>(`/roadside/${id}/`, data);
+        const response = await apiClient.patch<RoadsideRequest>(`/roadside/requests/${id}/`, data);
         return response.data;
     },
 
@@ -183,7 +186,7 @@ export const roadsideApi = {
      * Admin: Send SMS to customer
      */
     sendCustomerSms: async (id: number | string, message: string) => {
-        const response = await apiClient.post<{ success: boolean; message: string }>(`/roadside/${id}/send_customer_sms/`, { message });
+        const response = await apiClient.post<{ success: boolean; message: string }>(`/roadside/requests/${id}/send_customer_sms/`, { message });
         return response.data;
     },
 
@@ -191,7 +194,7 @@ export const roadsideApi = {
      * Create a new request (Admin/Manager)
      */
     create: async (data: any) => {
-        const response = await apiClient.post<RoadsideRequest>("/roadside/", data);
+        const response = await apiClient.post<RoadsideRequest>("/roadside/requests/", data);
         return response.data;
     }
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { User, LogOut, Settings } from "lucide-react"; // Keep specialized icons for now if missing in Premium
@@ -9,19 +9,103 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils/cn";
 import { authApi } from "@/lib/api/auth";
+import { adminApi, type SystemSetting } from "@/lib/api/admin";
+import { useQuery } from "@tanstack/react-query";
+import { useTheme } from "@/lib/hooks/useTheme";
 import { Badge } from "@/components/ui/badge";
 import { NotificationDropdown } from "./NotificationDropdown";
 
 interface PortalNavbarProps {
   onMenuToggle?: () => void;
   isSidebarOpen?: boolean;
+  onToggleCollapse?: () => void;
+  isSidebarCollapsed?: boolean;
   user?: any;
 }
 
-export function PortalNavbar({ onMenuToggle, isSidebarOpen, user }: PortalNavbarProps) {
+export function PortalNavbar({ onMenuToggle, isSidebarOpen, onToggleCollapse, isSidebarCollapsed, user }: PortalNavbarProps) {
   const router = useRouter();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const { theme, resolvedTheme } = useTheme();
+
+  // Fetch branding settings (site_name, company_tagline, logo)
+  const { data: brandingSettings } = useQuery<SystemSetting[]>({
+    queryKey: ["settings", "branding", "public"],
+    queryFn: () => adminApi.settings.publicBranding(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Extract branding values
+  const branding = useMemo(() => {
+    if (!brandingSettings) {
+      return {
+        siteName: "Smart Vehicle Repairs",
+        logoPath: null,
+        logoDarkPath: null,
+        logoUpdatedAt: null,
+        logoDarkUpdatedAt: null,
+      };
+    }
+
+    const getSetting = (key: string): string | null => {
+      const setting = brandingSettings.find((s) => s.key === key);
+      return setting?.value && setting.value.trim() !== "" ? setting.value : null;
+    };
+
+    const getSettingUpdatedAt = (key: string): string | null => {
+      const setting = brandingSettings.find((s) => s.key === key);
+      return setting?.updated_at || null;
+    };
+
+    return {
+      siteName: getSetting("site_name") || "Smart Vehicle Repairs",
+      logoPath: getSetting("logo_path"),
+      logoDarkPath: getSetting("logo_dark_path"),
+      logoUpdatedAt: getSettingUpdatedAt("logo_path"),
+      logoDarkUpdatedAt: getSettingUpdatedAt("logo_dark_path"),
+    };
+  }, [brandingSettings]);
+
+  // Determine which logo to use based on theme
+  const logoToUse = useMemo(() => {
+    const isDark = resolvedTheme === "dark" || theme === "dark";
+    if (isDark && branding.logoDarkPath) {
+      return {
+        path: branding.logoDarkPath,
+        cacheKey: branding.logoDarkUpdatedAt ? new Date(branding.logoDarkUpdatedAt).getTime() : Date.now(),
+      };
+    }
+    if (branding.logoPath) {
+      return {
+        path: branding.logoPath,
+        cacheKey: branding.logoUpdatedAt ? new Date(branding.logoUpdatedAt).getTime() : Date.now(),
+      };
+    }
+    return null;
+  }, [branding.logoPath, branding.logoDarkPath, branding.logoUpdatedAt, branding.logoDarkUpdatedAt, resolvedTheme, theme]);
+
+  // Get media base URL from API URL (remove /api suffix)
+  const mediaBaseUrl = useMemo(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+    return apiUrl.replace(/\/api\/?$/, "");
+  }, []);
+
+  const getMediaUrl = useCallback(
+    (path: string, cacheKey?: number) => {
+      if (path.startsWith("http")) {
+        return cacheKey ? `${path}${path.includes("?") ? "&" : "?"}v=${cacheKey}` : path;
+      }
+      const url = `${mediaBaseUrl}/media/${path}`;
+      return cacheKey ? `${url}${url.includes("?") ? "&" : "?"}v=${cacheKey}` : url;
+    },
+    [mediaBaseUrl]
+  );
+
+  const logoSrc = useMemo(
+    () => (logoToUse ? getMediaUrl(logoToUse.path, logoToUse.cacheKey) : null),
+    [logoToUse, getMediaUrl]
+  );
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -58,12 +142,40 @@ export function PortalNavbar({ onMenuToggle, isSidebarOpen, user }: PortalNavbar
             >
               {isSidebarOpen ? <PremiumIcons.X className="w-6 h-6" /> : <PremiumIcons.Menu className="w-6 h-6" />}
             </button>
+
+            {/* Desktop Sidebar Toggle */}
+            {onToggleCollapse && (
+              <button
+                onClick={onToggleCollapse}
+                className="hidden lg:block p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={isSidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
+              >
+                {isSidebarCollapsed ? (
+                  <PremiumIcons.PanelLeftOpen className="w-5 h-5 transition-transform duration-200" />
+                ) : (
+                  <PremiumIcons.PanelLeftClose className="w-5 h-5 transition-transform duration-200" />
+                )}
+              </button>
+            )}
+
             <Link href="/portal" className="flex items-center space-x-2" aria-label="Go to dashboard">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-lg shadow-primary/20" aria-hidden="true">
-                <PremiumIcons.Car className="w-5 h-5 text-white" />
-              </div>
+              {logoSrc ? (
+                <div className="h-8 w-8 rounded-lg overflow-hidden bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm border border-gray-200 dark:border-gray-700 relative">
+                  <img
+                    src={logoSrc}
+                    alt={branding.siteName}
+                    key={`${logoToUse?.path ?? "logo"}-${logoToUse?.cacheKey ?? "0"}`}
+                    className="h-full w-full object-contain p-1"
+                  />
+                </div>
+              ) : (
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center shadow-lg shadow-primary/20" aria-hidden="true">
+                  <PremiumIcons.Car className="w-5 h-5 text-white" />
+                </div>
+              )}
               <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 hidden sm:inline tracking-tight">
-                Smart Auto
+                {branding.siteName}
               </span>
             </Link>
           </div>

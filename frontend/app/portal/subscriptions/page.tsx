@@ -13,10 +13,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/lib/hooks/useToast";
 import { authApi } from "@/lib/api/auth";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function MySubscriptionsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { formatCurrency } = useCurrency();
   const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<Package | null>(null);
   const [viewMode, setViewMode] = useState<"my-subscriptions" | "available-packages">("my-subscriptions");
@@ -101,7 +103,7 @@ export default function MySubscriptionsPage() {
       });
       return;
     }
-    
+
     if (subscription.days_remaining && subscription.days_remaining > 30) {
       toast({
         title: "Too Early",
@@ -110,7 +112,7 @@ export default function MySubscriptionsPage() {
       });
       return;
     }
-    
+
     if (confirm(`Renew subscription ${subscription.subscription_number}? An invoice will be created for payment.`)) {
       renewMutation.mutate(subscription);
     }
@@ -201,8 +203,8 @@ export default function MySubscriptionsPage() {
                           subscription.status === "active"
                             ? "default"
                             : subscription.status === "expired"
-                            ? "danger"
-                            : "secondary"
+                              ? "danger"
+                              : "secondary"
                         }
                       >
                         {subscription.status}
@@ -240,8 +242,8 @@ export default function MySubscriptionsPage() {
                             {subscription.payment_status}
                           </Badge>
                           {subscription.payment_status === "pending" && (
-                            <Link 
-                              href={subscription.invoice_id 
+                            <Link
+                              href={subscription.invoice_id
                                 ? `/portal/payment/${subscription.invoice_id}`
                                 : `/portal/subscriptions`
                               }
@@ -289,25 +291,23 @@ export default function MySubscriptionsPage() {
                             const isLow = numValue <= 1 && numValue > 0;
                             const isEmpty = numValue === 0;
                             return (
-                              <div 
-                                key={key} 
-                                className={`p-2 rounded border ${
-                                  isEmpty 
-                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' 
-                                    : isLow 
-                                    ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
-                                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                                }`}
+                              <div
+                                key={key}
+                                className={`p-2 rounded border ${isEmpty
+                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                                    : isLow
+                                      ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                                      : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                  }`}
                               >
                                 <div className="flex justify-between items-center">
                                   <span className="text-xs text-muted-foreground capitalize">
                                     {key.replace(/_/g, " ")}
                                   </span>
-                                  <span className={`text-sm font-bold ${
-                                    isEmpty ? 'text-red-600 dark:text-red-400' 
-                                    : isLow ? 'text-yellow-600 dark:text-yellow-400'
-                                    : 'text-green-600 dark:text-green-400'
-                                  }`}>
+                                  <span className={`text-sm font-bold ${isEmpty ? 'text-red-600 dark:text-red-400'
+                                      : isLow ? 'text-yellow-600 dark:text-yellow-400'
+                                        : 'text-green-600 dark:text-green-400'
+                                    }`}>
                                     {value}
                                   </span>
                                 </div>
@@ -388,7 +388,7 @@ export default function MySubscriptionsPage() {
                       <Badge variant="outline">{pkg.code}</Badge>
                     </CardTitle>
                     <div className="mt-2">
-                      <span className="text-3xl font-bold">${parseFloat(pkg.price).toFixed(2)}</span>
+                      <span className="text-3xl font-bold">{formatCurrency(pkg.price)}</span>
                       <span className="text-muted-foreground"> / {pkg.duration_months} months</span>
                     </div>
                   </CardHeader>
@@ -464,7 +464,7 @@ export default function MySubscriptionsPage() {
               <div className="border-t pt-4">
                 <div className="flex justify-between mb-2">
                   <span>Price:</span>
-                  <span className="font-bold">${parseFloat(selectedPackage.price).toFixed(2)}</span>
+                  <span className="font-bold">{formatCurrency(selectedPackage.price)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Duration:</span>

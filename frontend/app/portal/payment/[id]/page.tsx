@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/lib/hooks/useToast";
 import { useState } from "react";
 import apiClient from "@/lib/api/client";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function PaymentPage() {
   const params = useParams();
@@ -21,6 +22,7 @@ export default function PaymentPage() {
   const queryClient = useQueryClient();
   const invoiceId = parseInt(params.id as string);
   const [isProcessing, setIsProcessing] = useState(false);
+  const { formatCurrency } = useCurrency();
 
   const { data: invoice, isLoading } = useQuery({
     queryKey: ["portal", "invoice", invoiceId],
@@ -36,7 +38,7 @@ export default function PaymentPage() {
   const initiatePaymentMutation = useMutation({
     mutationFn: async () => {
       if (!invoice) throw new Error("Invoice not found");
-      
+
       // Initiate Paystack payment
       const response = await apiClient.post(`/billing/payments/paystack/initiate/${invoiceId}/`);
       return response.data;
@@ -64,7 +66,7 @@ export default function PaymentPage() {
 
   const handlePayNow = () => {
     if (!invoice) return;
-    
+
     if (invoice.status === "paid") {
       toast({
         title: "Already Paid",
@@ -164,8 +166,8 @@ export default function PaymentPage() {
                       invoice.status === "paid"
                         ? "success"
                         : invoice.status === "overdue"
-                        ? "danger"
-                        : "warning"
+                          ? "danger"
+                          : "warning"
                     }
                   >
                     {invoice.status}
@@ -206,16 +208,10 @@ export default function PaymentPage() {
                               {item.quantity || "-"}
                             </td>
                             <td className="px-4 py-2 text-sm text-right text-gray-600 dark:text-gray-400">
-                              ${parseFloat(item.unit_price || 0).toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
+                              {formatCurrency(item.unit_price || 0)}
                             </td>
                             <td className="px-4 py-2 text-sm text-right font-medium text-gray-900 dark:text-gray-100">
-                              ${parseFloat(item.total || 0).toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
+                              {formatCurrency(item.total || 0)}
                             </td>
                           </tr>
                         ))}
@@ -230,10 +226,7 @@ export default function PaymentPage() {
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
                     <span className="text-gray-900 dark:text-gray-100">
-                      ${parseFloat(invoice.subtotal).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatCurrency(invoice.subtotal)}
                     </span>
                   </div>
                 )}
@@ -241,10 +234,7 @@ export default function PaymentPage() {
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">Tax</span>
                     <span className="text-gray-900 dark:text-gray-100">
-                      ${parseFloat(invoice.tax_amount).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatCurrency(invoice.tax_amount)}
                     </span>
                   </div>
                 )}
@@ -252,30 +242,21 @@ export default function PaymentPage() {
                   <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
                     <span>Discount</span>
                     <span>
-                      -${parseFloat(invoice.discount_amount).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      -{formatCurrency(invoice.discount_amount)}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
                   <span className="text-gray-900 dark:text-gray-100">Total</span>
                   <span className="text-gray-900 dark:text-gray-100">
-                    ${parseFloat(invoice.total || "0").toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatCurrency(invoice.total || 0)}
                   </span>
                 </div>
                 {invoice.amount_paid && parseFloat(invoice.amount_paid) > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">Amount Paid</span>
                     <span className="text-gray-900 dark:text-gray-100">
-                      ${parseFloat(invoice.amount_paid).toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatCurrency(invoice.amount_paid)}
                     </span>
                   </div>
                 )}
@@ -283,10 +264,7 @@ export default function PaymentPage() {
                   <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
                     <span className="text-gray-900 dark:text-gray-100">Amount Due</span>
                     <span className="text-primary dark:text-primary">
-                      ${amountDue.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatCurrency(amountDue)}
                     </span>
                   </div>
                 )}
@@ -308,10 +286,7 @@ export default function PaymentPage() {
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Amount to Pay</p>
                 <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                  ${amountDue.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatCurrency(amountDue)}
                 </p>
               </div>
 
@@ -350,7 +325,7 @@ export default function PaymentPage() {
                       <AlertCircle className="w-5 h-5 text-primary dark:text-primary flex-shrink-0 mt-0.5" />
                       <div className="text-sm text-orange-800 dark:text-orange-300">
                         <p className="font-medium mb-1">Secure Payment</p>
-                        
+
                       </div>
                     </div>
                   </div>
@@ -368,7 +343,7 @@ export default function PaymentPage() {
 
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <Button
-                 variant="secondary"
+                  variant="secondary"
                   onClick={() => router.push("/portal/invoices")}
                   className="w-full"
                 >

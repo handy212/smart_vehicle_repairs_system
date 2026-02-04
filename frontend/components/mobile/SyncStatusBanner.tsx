@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useOfflineStore } from "@/store/offlineStore";
 import { queueDB } from "@/lib/offline/queue";
 import { photosDB } from "@/lib/offline/photos";
@@ -15,12 +15,18 @@ export function SyncStatusBanner() {
     const [lastSync, setLastSync] = useState<Date | null>(null);
     const [showBanner, setShowBanner] = useState(false);
 
+    const isMountedRef = useRef(true);
+
     useEffect(() => {
+        isMountedRef.current = true;
         loadPendingCount();
 
         // Update count every 10 seconds
         const interval = setInterval(loadPendingCount, 10000);
-        return () => clearInterval(interval);
+        return () => {
+            isMountedRef.current = false;
+            clearInterval(interval);
+        };
     }, []);
 
     useEffect(() => {
@@ -32,7 +38,10 @@ export function SyncStatusBanner() {
         try {
             const queue = await queueDB.getAll();
             const photos = await photosDB.getUnuploaded();
-            setPendingCount(queue.length + photos.length);
+
+            if (isMountedRef.current) {
+                setPendingCount(queue.length + photos.length);
+            }
         } catch (error) {
             console.error("Failed to load pending count:", error);
         }

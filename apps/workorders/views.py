@@ -33,7 +33,7 @@ from .serializers import (
 )
 
 
-from .filters import WorkOrderFilter
+from .filters import WorkOrderFilter, TechnicianTimeLogFilter
 
 
 class WorkOrderViewSet(viewsets.ModelViewSet):
@@ -63,7 +63,7 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Return appropriate permissions based on action"""
         if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), HasPermission('view_workorders')]
+            return [IsAuthenticated()]
         elif self.action == 'create':
             return [IsAuthenticated(), HasPermission('create_workorders')]
         elif self.action in ['update', 'partial_update']:
@@ -71,7 +71,7 @@ class WorkOrderViewSet(viewsets.ModelViewSet):
         elif self.action == 'destroy':
             return [IsAuthenticated(), HasPermission('delete_workorders')]
         elif self.action == 'dashboard_stats':
-            return [IsAuthenticated(), HasPermission('view_workorders')]
+            return [IsAuthenticated()]
         return [IsAuthenticated()]
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
@@ -2258,8 +2258,10 @@ class TechnicianTimeLogViewSet(viewsets.ModelViewSet):
     """Technician Time Log management"""
     queryset = TechnicianTimeLog.objects.all().select_related('work_order', 'task', 'technician')
     permission_classes = [IsAuthenticated]
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['work_order', 'technician', 'is_billable', 'is_approved']
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = TechnicianTimeLogFilter
+    ordering_fields = ['clock_in', 'created_at']
+    ordering = ['-clock_in']
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -2275,7 +2277,7 @@ class TechnicianTimeLogViewSet(viewsets.ModelViewSet):
         ).first()
         
         if not active_log:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+            return Response(None, status=status.HTTP_200_OK)
             
         serializer = self.get_serializer(active_log)
         return Response(serializer.data)

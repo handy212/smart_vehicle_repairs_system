@@ -172,6 +172,14 @@ class Appointment(models.Model):
         default='maintenance',
         help_text="Type of service requested"
     )
+    service_bundle = models.ForeignKey(
+        'inventory.ServiceBundle',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='appointments',
+        help_text="Service bundle requested"
+    )
     priority = models.CharField(
         max_length=10,
         choices=PRIORITY_CHOICES,

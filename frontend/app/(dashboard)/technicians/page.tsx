@@ -38,6 +38,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function TechniciansPage() {
+    return (
+        <PermissionGuard permission="view_technicians">
+            <TechniciansContent />
+        </PermissionGuard>
+    );
+}
+
+function TechniciansContent() {
     const router = useRouter();
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
     const [searchQuery, setSearchQuery] = useState("");

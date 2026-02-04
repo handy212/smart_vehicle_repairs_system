@@ -29,8 +29,17 @@ import { ShiftSchedule } from "@/components/technicians/ShiftSchedule";
 import { JobHistory } from "@/components/technicians/JobHistory";
 import { Certifications } from "@/components/technicians/Certifications";
 import { PerformanceMetrics } from "@/components/technicians/PerformanceMetrics";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 export default function TechnicianProfilePage() {
+    return (
+        <PermissionGuard permission="view_technicians">
+            <TechnicianProfileContent />
+        </PermissionGuard>
+    );
+}
+
+function TechnicianProfileContent() {
     const params = useParams();
     const id = Number(params?.id);
 
@@ -200,9 +209,15 @@ export default function TechnicianProfilePage() {
                     <Tabs defaultValue="overview" className="space-y-6">
                         <TabsList>
                             <TabsTrigger value="overview">Overview</TabsTrigger>
-                            <TabsTrigger value="performance">Performance</TabsTrigger>
-                            <TabsTrigger value="certifications">Certifications</TabsTrigger>
-                            <TabsTrigger value="schedule">Schedule</TabsTrigger>
+                            <PermissionGuard permission="view_technician_performance">
+                                <TabsTrigger value="performance">Performance</TabsTrigger>
+                            </PermissionGuard>
+                            <PermissionGuard permission="manage_technician_skills">
+                                <TabsTrigger value="certifications">Certifications</TabsTrigger>
+                            </PermissionGuard>
+                            <PermissionGuard permission="manage_technician_schedules">
+                                <TabsTrigger value="schedule">Schedule</TabsTrigger>
+                            </PermissionGuard>
                             <TabsTrigger value="history">Job History</TabsTrigger>
                             <TabsTrigger value="location">Live Location</TabsTrigger>
                         </TabsList>

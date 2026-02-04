@@ -337,7 +337,10 @@ Please bring your appointment confirmation and payment method.'''
             message = self.service._render_template(template.body, {
                 'customer_name': customer_name,
                 'vehicle_display': vehicle_display,
+                'vehicle': vehicle_display,
                 'work_order_number': appointment.work_order.work_order_number if hasattr(appointment, 'work_order') and appointment.work_order else "N/A",
+                'ready_time': timezone.now().strftime("%Y-%m-%d %H:%M"),
+                'pickup_location': get_company_info().get('company_address', 'Workshop'),
                 'pickup_instructions': 'Please bring your appointment confirmation and payment method.',
                 'company_name': self._get_company_name(),
             })
@@ -384,7 +387,7 @@ Work Order: {work_order.work_order_number}
 Vehicle: {vehicle_display}
 Status: {work_order.get_status_display()}
 
-Description: {work_order.description}
+Description: {work_order.customer_concerns}
 
 We'll keep you updated on the progress.'''
         if template and template.body:
@@ -393,7 +396,9 @@ We'll keep you updated on the progress.'''
                 'work_order_number': work_order.work_order_number,
                 'vehicle': vehicle_display,
                 'vehicle_display': vehicle_display,
-                'problem_description': work_order.description or work_order.problem_description or "See work order for details",
+                'problem_description': work_order.customer_concerns or "See work order for details",
+                'service_description': work_order.customer_concerns or "General Service",
+                'estimated_completion': work_order.estimated_completion.strftime("%Y-%m-%d %H:%M") if work_order.estimated_completion else "TBD",
                 'status': work_order.get_status_display(),
                 'company_name': self._get_company_name(),
             })
@@ -412,7 +417,7 @@ We'll keep you updated on the progress.'''
                 'vehicle': vehicle_display,
                 'vehicle_display': vehicle_display,
                 'customer_name': customer_name,
-                'problem_description': work_order.description or work_order.problem_description or "See work order for details",
+                'problem_description': work_order.customer_concerns or "See work order for details",
             },
             related_object_type='work_order',
             related_object_id=work_order.id
@@ -484,6 +489,7 @@ You can now start work.'''
                 'work_order_number': work_order.work_order_number,
                 'vehicle': vehicle_display,
                 'vehicle_display': vehicle_display,
+                'completion_date': work_order.completed_at.strftime("%Y-%m-%d %H:%M") if work_order.completed_at else timezone.now().strftime("%Y-%m-%d %H:%M"),
                 'total_amount': str(work_order.actual_total or work_order.estimated_total or 0),
                 'company_name': self._get_company_name(),
             })

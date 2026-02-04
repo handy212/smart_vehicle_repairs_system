@@ -28,6 +28,27 @@ export function BrandingThemeSync() {
         if (secondaryColor) {
             root.style.setProperty("--secondary", secondaryColor);
         }
+
+        // Favicon handling
+        const faviconPath = brandingSettings.find((s) => s.key === "favicon_path")?.value;
+        if (faviconPath) {
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:8000";
+            const faviconUrl = `${baseUrl}/media/${faviconPath}`;
+
+            // Function to update or create link tag
+            const updateLinkTag = (rel: string) => {
+                let link = document.querySelector(`link[rel*='${rel}']`) as HTMLLinkElement;
+                if (!link) {
+                    link = document.createElement('link');
+                    link.rel = rel;
+                    document.head.appendChild(link);
+                }
+                link.href = faviconUrl;
+            };
+
+            updateLinkTag('icon');
+            updateLinkTag('shortcut icon');
+        }
     }, [brandingSettings]);
 
     return null;

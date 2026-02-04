@@ -69,7 +69,11 @@ export default function TimeTrackingPage() {
     try {
       if (isOnline) {
         const response = await apiClient.get("/workorders/time-logs/", {
-          params: { limit: 10, ordering: "-clock_in", technician: user?.id },
+          params: { 
+            limit: 10, 
+            ordering: "-clock_in", 
+            ...(user?.id ? { technician: user.id } : {})
+          },
         });
         const logs = response.data.results || response.data || [];
         setRecentLogs(Array.isArray(logs) ? logs : []);

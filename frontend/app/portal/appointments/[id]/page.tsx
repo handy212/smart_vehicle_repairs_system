@@ -4,13 +4,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { appointmentsApi } from "@/lib/api/appointments";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Calendar, 
-  Clock, 
-  Car, 
-  User, 
-  Phone, 
-  Mail, 
+import {
+  Calendar,
+  Clock,
+  Car,
+  User,
+  Phone,
+  Mail,
   MapPin,
   Wrench,
   AlertCircle,
@@ -38,6 +38,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function AppointmentDetailPage() {
   const params = useParams();
@@ -47,6 +48,7 @@ export default function AppointmentDetailPage() {
   const appointmentId = parseInt(params.id as string);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false);
+  const { formatCurrency } = useCurrency();
   const [cancelReason, setCancelReason] = useState("");
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
@@ -195,7 +197,7 @@ export default function AppointmentDetailPage() {
             <div className="flex items-center space-x-4">
               {canReschedule && (
                 <Button
-                 variant="secondary"
+                  variant="secondary"
                   onClick={() => setShowRescheduleDialog(true)}
                   disabled={rescheduleMutation.isPending}
                 >
@@ -205,7 +207,7 @@ export default function AppointmentDetailPage() {
               )}
               {canCancel && (
                 <Button
-                 variant="secondary"
+                  variant="secondary"
                   onClick={() => setShowCancelDialog(true)}
                   disabled={cancelMutation.isPending}
                   className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
@@ -368,10 +370,7 @@ export default function AppointmentDetailPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  ${parseFloat(String(apt.estimated_cost)).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatCurrency(apt.estimated_cost)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Final cost may vary

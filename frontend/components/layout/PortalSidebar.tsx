@@ -39,8 +39,8 @@ const navigationGroups: NavigationGroup[] = [
   {
     name: "My Services",
     items: [
-      { name: "My Vehicles", href: "/portal/vehicles", icon: PremiumIcons.Car },
-      { name: "My Appointments", href: "/portal/appointments", icon: PremiumIcons.Calendar },
+      { name: "Vehicles", href: "/portal/vehicles", icon: PremiumIcons.Car },
+      { name: "Appointments", href: "/portal/appointments", icon: PremiumIcons.Calendar },
       { name: "Book Appointment", href: "/portal/book", icon: PlusCircle }, // Keep PlusCircle for now
       { name: "Roadside Assistance", href: "/portal/roadside", icon: PremiumIcons.Truck },
     ],
@@ -48,10 +48,10 @@ const navigationGroups: NavigationGroup[] = [
   {
     name: "Billing & Documents",
     items: [
-      { name: "My Invoices", href: "/portal/invoices", icon: PremiumIcons.FileText },
-      { name: "My Estimates", href: "/portal/estimates", icon: PremiumIcons.FileText },
+      { name: "Invoices", href: "/portal/invoices", icon: PremiumIcons.FileText },
+      { name: "Estimates", href: "/portal/estimates", icon: PremiumIcons.FileText },
       { name: "Payment History", href: "/portal/payments", icon: PremiumIcons.CreditCard },
-      { name: "My Subscriptions", href: "/portal/subscriptions", icon: PremiumIcons.Package },
+      { name: "Subscriptions", href: "/portal/subscriptions", icon: PremiumIcons.Package },
     ],
   },
 ];
@@ -60,10 +60,9 @@ interface PortalSidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
   isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
 }
 
-export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false, onToggleCollapse }: PortalSidebarProps) {
+export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false }: PortalSidebarProps) {
   const pathname = usePathname();
 
   const { data: brandingSettings } = useQuery<SystemSetting[]>({
@@ -110,33 +109,7 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false, onT
           isCollapsed ? "w-20" : "w-72" // Slightly wider for premium feel
         )}
       >
-        {/* Collapse/Expand Toggle Button */}
-        {onToggleCollapse && (
-          <div
-            className={cn(
-              "hidden lg:block fixed z-50 transition-all duration-300 ease-in-out",
-              isCollapsed ? "left-20" : "left-64"
-            )}
-            style={{
-              top: '4rem', // 64px - at the top, aligned with header
-              transform: "translateX(-50%)"
-            }}
-          >
-            <Button
-              variant="default"
-              size="icon"
-              onClick={onToggleCollapse}
-              className="h-10 w-10 rounded-full shadow-md border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-primary/10 dark:hover:bg-orange-900/30 hover:text-orange-700 dark:hover:text-orange-400 hover:border-orange-400 dark:hover:border-primary hover:shadow-lg transition-all"
-              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {isCollapsed ? (
-                <ChevronRight className="w-5 h-5" />
-              ) : (
-                <ChevronLeft className="w-5 h-5" />
-              )}
-            </Button>
-          </div>
-        )}
+
 
         <nav className={cn("p-4 space-y-6", isCollapsed && "px-2")}>
           {navigationGroups.map((group) => (
@@ -204,9 +177,9 @@ export function PortalSidebar({ isOpen = true, onClose, isCollapsed = false, onT
         {/* Footer section with user info when expanded */}
         {!isCollapsed && (
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
-            <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+            {/* <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
               <p>Version 1.0</p>
-            </div>
+            </div> */}
           </div>
         )}
       </aside>

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/lib/hooks/useToast";
+import { useCurrency } from "@/lib/hooks/useCurrency";
 
 export default function EstimateDetailPage() {
   const params = useParams();
@@ -17,6 +18,7 @@ export default function EstimateDetailPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const estimateId = parseInt(params.id as string);
+  const { formatCurrency } = useCurrency();
 
   const { data: estimate, isLoading } = useQuery({
     queryKey: ["portal", "estimate", estimateId],
@@ -197,10 +199,10 @@ export default function EstimateDetailPage() {
                       estimate.status === "approved"
                         ? "success"
                         : estimate.status === "declined"
-                        ? "danger"
-                        : estimate.status === "expired"
-                        ? "danger"
-                        : "warning"
+                          ? "danger"
+                          : estimate.status === "expired"
+                            ? "danger"
+                            : "warning"
                     }
                   >
                     {estimate.status}
@@ -208,7 +210,7 @@ export default function EstimateDetailPage() {
                 </div>
               </div>
 
-               {estimate.vehicle_display && (
+              {estimate.vehicle_display && (
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Vehicle</p>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
@@ -221,8 +223,8 @@ export default function EstimateDetailPage() {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Work Order</p>
                   <p className="font-medium text-gray-900 dark:text-gray-100">
-                    #{typeof estimate.work_order === 'object' && estimate.work_order !== null 
-                      ? estimate.work_order.id 
+                    #{typeof estimate.work_order === 'object' && estimate.work_order !== null
+                      ? estimate.work_order.id
                       : estimate.work_order}
                   </p>
                 </div>
@@ -274,16 +276,10 @@ export default function EstimateDetailPage() {
                             {item.quantity || "-"}
                           </td>
                           <td className="px-4 py-3 text-sm text-right text-gray-600 dark:text-gray-400">
-                            ${parseFloat(item.unit_price || 0).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
+                            {formatCurrency(item.unit_price || 0)}
                           </td>
                           <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">
-                            ${parseFloat(item.total || 0).toLocaleString(undefined, {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
+                            {formatCurrency(item.total || 0)}
                           </td>
                         </tr>
                       ))}
@@ -309,10 +305,7 @@ export default function EstimateDetailPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
                   <span className="text-gray-900 dark:text-gray-100">
-                    ${parseFloat(estimate.subtotal).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatCurrency(estimate.subtotal)}
                   </span>
                 </div>
               )}
@@ -320,10 +313,7 @@ export default function EstimateDetailPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Tax</span>
                   <span className="text-gray-900 dark:text-gray-100">
-                    ${parseFloat(estimate.tax_amount).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatCurrency(estimate.tax_amount)}
                   </span>
                 </div>
               )}
@@ -331,20 +321,14 @@ export default function EstimateDetailPage() {
                 <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
                   <span>Discount</span>
                   <span>
-                    -${parseFloat(estimate.discount_amount).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    -{formatCurrency(estimate.discount_amount)}
                   </span>
                 </div>
               )}
               <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-200 dark:border-gray-700">
                 <span className="text-gray-900 dark:text-gray-100">Total</span>
                 <span className="text-gray-900 dark:text-gray-100">
-                  ${parseFloat(estimate.total || "0").toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatCurrency(estimate.total || 0)}
                 </span>
               </div>
             </CardContent>

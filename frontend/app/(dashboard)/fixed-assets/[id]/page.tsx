@@ -11,8 +11,18 @@ import { Badge } from "@/components/ui/badge";
 import { useCurrency } from "@/lib/hooks/useCurrency";
 import { format } from "date-fns";
 import { use } from "react";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
+import { PermissionButton } from "@/components/auth/PermissionButton";
 
 export default function AssetDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+    return (
+        <PermissionGuard permission="view_assets">
+            <AssetDetailsContent params={params} />
+        </PermissionGuard>
+    );
+}
+
+function AssetDetailsContent({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
     const { id } = use(params);
     const assetId = parseInt(id);
@@ -74,10 +84,10 @@ export default function AssetDetailsPage({ params }: { params: Promise<{ id: str
                     </div>
                 </div>
                 <Link href={`/fixed-assets/${assetId}/edit`}>
-                    <Button>
+                    <PermissionButton permission="edit_assets">
                         <Edit className="w-4 h-4 mr-2" />
                         Edit Asset
-                    </Button>
+                    </PermissionButton>
                 </Link>
             </div>
 

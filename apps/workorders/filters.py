@@ -1,5 +1,9 @@
 import django_filters
-from .models import WorkOrder
+from .models import WorkOrder, TechnicianTimeLog
+
+
+class CharInFilter(django_filters.BaseInFilter, django_filters.CharFilter):
+    pass
 
 
 class WorkOrderFilter(django_filters.FilterSet):
@@ -9,11 +13,11 @@ class WorkOrderFilter(django_filters.FilterSet):
     primary_technician = django_filters.NumberFilter(field_name='primary_technician__id')
     customer = django_filters.NumberFilter(field_name='customer__id')
     vehicle = django_filters.NumberFilter(field_name='vehicle__id')
+    status = CharInFilter(field_name='status', lookup_expr='in')
     
     class Meta:
         model = WorkOrder
         fields = {
-            'status': ['exact'],
             'priority': ['exact'],
             'is_customer_waiting': ['exact'],
             'requires_approval': ['exact'],
@@ -22,4 +26,18 @@ class WorkOrderFilter(django_filters.FilterSet):
             'quality_check_completed': ['exact'],
             'is_warranty': ['exact'],
             'is_recall': ['exact'],
+        }
+
+
+class TechnicianTimeLogFilter(django_filters.FilterSet):
+    """Filter for Technician Time Logs"""
+    technician = django_filters.NumberFilter(field_name='technician__id')
+    work_order = django_filters.NumberFilter(field_name='work_order__id')
+    
+    class Meta:
+        model = TechnicianTimeLog
+        fields = {
+            'is_billable': ['exact'],
+            'is_approved': ['exact'],
+            'clock_in': ['gte', 'lte', 'exact'],
         }

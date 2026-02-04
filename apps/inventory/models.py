@@ -1256,6 +1256,13 @@ class ServiceBundle(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
     
+    total_price = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=Decimal('0.00'),
+        help_text="Total price for the bundle"
+    )
+    
     # Link to ServiceType (from vehicles app)
     service_type = models.OneToOneField(
         'vehicles.ServiceType',

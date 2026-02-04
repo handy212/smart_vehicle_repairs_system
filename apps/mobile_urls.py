@@ -23,7 +23,4 @@ urlpatterns = [
     path('api/quick-update/', mobile_views.mobile_quick_update, name='quick_update'),
     path('api/search/', mobile_views.mobile_search_api, name='search_api'),
     path('api/sync/', mobile_views.mobile_offline_sync, name='offline_sync'),
-    
-    # PWA Manifest
-    path('manifest.json', mobile_views.pwa_manifest, name='manifest'),
 ]
